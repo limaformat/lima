@@ -938,6 +938,77 @@ describe('dotted-path references', () => {
 	})
 })
 
+// ─── Quoted reference tokens stay inactive (References §2.3) ──────────────────
+// A reference-like token inside a quoted string is always literal — never
+// resolved, at any nesting depth, in either mode.
+
+describe('quoted reference tokens', () => {
+	it('stays literal at the top level', () => {
+		const result = parse(`
+			source: 42
+			value: "($source)"
+		`)
+		expect(result.value).toBe('($source)')
+	})
+
+	it('stays literal nested inside a block mapping', () => {
+		const result = parse(`
+			source: 42
+			wrapper:
+			  value: "($source)"
+		`)
+		expect((result.wrapper as any).value).toBe('($source)')
+	})
+
+	it('stays literal nested inside a block array item', () => {
+		const result = parse(`
+			source: 42
+			list:
+			  - "($source)"
+		`)
+		expect(result.list).toEqual(['($source)'])
+	})
+
+	it('stays literal nested inside a flow mapping', () => {
+		const result = parse(`
+			source: 42
+			wrapper: {value: "($source)"}
+		`)
+		expect((result.wrapper as any).value).toBe('($source)')
+	})
+
+	it('stays literal nested inside a flow sequence', () => {
+		const result = parse(`
+			source: 42
+			list: ["($source)", other]
+		`)
+		expect(result.list).toEqual(['($source)', 'other'])
+	})
+
+	it('stays literal for a forward reference (phase 2), not just backward', () => {
+		const result = parse(`
+			wrapper:
+			  value: "($source)"
+			source: 42
+		`)
+		expect((result.wrapper as any).value).toBe('($source)')
+	})
+
+	it('does not trigger a strict-mode unresolved-reference error when nested', () => {
+		expect(() => parse(`
+			wrapper:
+			  value: "($source)"
+		`, { strict: true })).not.toThrow()
+	})
+
+	it('never leaks the internal inactive-value marker to the public result', () => {
+		const result = parse(`wrapper:\n  value: "($source)"`)
+		const nested = (result.wrapper as any).value
+		expect(typeof nested).toBe('string')
+		expect(Object.getOwnPropertySymbols(result.wrapper as any)).toHaveLength(0)
+	})
+})
+
 // ─── Key syntax ────────────────────────────────────────────────────────────────
 
 describe('key syntax', () => {
@@ -1330,6 +1401,74 @@ describe('strict mode', () => {
 			b: ($a)
 			a: ($c)
 		`), { strict: true })).toThrow('LIMA')
+	})
+})
+
+// ─── Resource limits (Core §9) ─────────────────────────────────────────────────
+// All hard errors in both modes — none of these tests use strict: true.
+
+describe('resource limits', () => {
+	const nestedDoc = (depth: number): string => {
+		const lines: string[] = []
+		for (let level = 0; level < depth; level++) lines.push('  '.repeat(level) + 'k:')
+		lines.push('  '.repeat(depth) + 'k: v')
+		return lines.join('\n')
+	}
+
+	it('accepts a scalar exactly at the 16,384-code-point limit', () => {
+		const result = parse(`value: ${'x'.repeat(16384)}`)
+		expect((result.value as string).length).toBe(16384)
+	})
+
+	it('rejects a scalar one code point over the limit', () => {
+		expect(() => parse(`value: ${'x'.repeat(16385)}`)).toThrow('LIMA')
+	})
+
+	it('rejects an oversized scalar inside a flow sequence', () => {
+		expect(() => parse(`tags: [${'x'.repeat(16385)}]`)).toThrow('LIMA')
+	})
+
+	it('rejects an oversized scalar inside a flow mapping', () => {
+		expect(() => parse(`author: {name: ${'x'.repeat(16385)}}`)).toThrow('LIMA')
+	})
+
+	it('rejects an oversized scalar inside a block array item', () => {
+		expect(() => parse(`tags:\n  - ${'x'.repeat(16385)}`)).toThrow('LIMA')
+	})
+
+	it('rejects an oversized | block scalar', () => {
+		expect(() => parse(`description: |\n  ${'x'.repeat(16385)}`)).toThrow('LIMA')
+	})
+
+	it('accepts a key exactly at the 128-code-point limit', () => {
+		const key = 'k'.repeat(128)
+		expect(parse(`${key}: value`)[key]).toBe('value')
+	})
+
+	it('rejects a key exceeding the 128-code-point limit', () => {
+		expect(() => parse(`${'k'.repeat(129)}: value`)).toThrow('LIMA')
+	})
+
+	it('accepts exactly 128 top-level key entries', () => {
+		const doc = Array.from({ length: 128 }, (_, i) => `k${i}: v`).join('\n')
+		expect(Object.keys(parse(doc))).toHaveLength(128)
+	})
+
+	it('rejects more than 128 top-level key entries', () => {
+		const doc = Array.from({ length: 129 }, (_, i) => `k${i}: v`).join('\n')
+		expect(() => parse(doc)).toThrow('LIMA')
+	})
+
+	it('rejects a document exceeding the 64 KB size limit', () => {
+		expect(() => parse('k: ' + 'x'.repeat(70000))).toThrow('LIMA')
+	})
+
+	it('accepts nesting exactly at the 16-level limit', () => {
+		expect(() => parse(nestedDoc(16))).not.toThrow()
+	})
+
+	it('rejects nesting one level deeper than the limit', () => {
+		expect(() => parse(nestedDoc(17))).toThrow('LIMA')
 	})
 })
 

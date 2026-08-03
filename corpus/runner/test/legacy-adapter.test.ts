@@ -77,6 +77,20 @@ describe('adaptLegacyError', () => {
 		}
 	})
 
+	it('maps an invalid interpolation error with token and line', () => {
+		const result = adaptLegacyError(
+			new Error(
+				'LIMA: invalid interpolation of "($person)" at line 3: mapping cannot be interpolated into a string'
+			)
+		)
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_INTERPOLATION')
+			expect(result.diagnostic.token).toBe('($person)')
+			expect(result.diagnostic.line).toBe(3)
+		}
+	})
+
 	it('maps an invalid partial error with partial name and path', () => {
 		const result = adaptLegacyError(
 			new Error('LIMA: invalid partial "bad" at path "bad": non-finite number')

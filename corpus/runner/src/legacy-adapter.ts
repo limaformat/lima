@@ -60,8 +60,13 @@ const rules: Rule[] = [
 		extract: (m) => ({ partial: m[1], path: m[2] }),
 	},
 	{
-		pattern: /exceeds maximum length/,
+		pattern: /exceeds maximum (length|size)|too many top-level key entries|nesting depth exceeds maximum/,
 		code: 'RESOURCE_LIMIT',
+	},
+	{
+		pattern: /invalid interpolation of "([^"]+)"/,
+		code: 'INVALID_INTERPOLATION',
+		extract: (m) => ({ token: m[1] }),
 	},
 ]
 

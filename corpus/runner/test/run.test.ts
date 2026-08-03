@@ -28,22 +28,22 @@ describe('runCorpus', () => {
 	 * 11/6/1 (^^ leading marker, strict trailing-comma, strict unknown-escape)
 	 * → 17/0/1 (float exponent, partial NaN validation, one-hop snapshot fix,
 	 * quoted-token inactivity, unresolved-reference line number, scalar
-	 * resource limit). Every originally-failing case now passes; the one
-	 * remaining BLOCKED case is a distinct, deliberately unfixed crash (see
-	 * the test below). This snapshot is a regression trip-wire: update it
-	 * deliberately (with a written reason) if this ever regresses, never to
-	 * silently "make the test pass".
+	 * resource limit) → 18/0/0 (mapping-interpolation now rejected with
+	 * INVALID_INTERPOLATION instead of crashing). Every corpus case passes.
+	 * This snapshot is a regression trip-wire: update it deliberately (with
+	 * a written reason) if this ever regresses, never to silently "make the
+	 * test pass".
 	 */
 	it('matches today\'s known Phase-2 baseline classification counts', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 17, FAIL: 0, BLOCKED: 1 })
+		expect(counts).toEqual({ PASS: 18, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {
-		// Regression guard for the fix above: the eight cases that used to
-		// fail only on this check are now expected to PASS outright.
+		// Regression guard: the eight cases that used to fail only on this
+		// check are now expected to PASS outright.
 		const { outcomes } = runCorpus(corpusRoot)
 		const onlyBindingIssue = outcomes.filter(
 			(o) =>
@@ -54,16 +54,13 @@ describe('runCorpus', () => {
 		expect(onlyBindingIssue).toEqual([])
 	})
 
-	it('classifies the one known remaining crash as BLOCKED, not a false PASS', () => {
-		// references.interpolation.mapping.error: the legacy parser calls
-		// String() on a mapping during interpolation instead of rejecting it
-		// (References §3.5 requires INVALID_INTERPOLATION). Since results are
-		// now prototype-free, String() on the nested mapping throws a raw
-		// TypeError ("No default value") instead of silently producing
-		// "[object Object]" — same underlying bug, now impossible to miss.
-		// The legacy adapter correctly refuses to guess a code for it.
+	it('rejects mapping interpolation with INVALID_INTERPOLATION instead of crashing', () => {
+		// references.interpolation.mapping.error used to crash with a raw
+		// TypeError ("No default value" from String() on a prototype-free
+		// mapping) instead of being rejected per References §3.5. Regression
+		// guard for the fix.
 		const { outcomes } = runCorpus(corpusRoot)
 		const outcome = outcomes.find((o) => o.id === 'references.interpolation.mapping.error')
-		expect(outcome?.classification).toBe('BLOCKED')
+		expect(outcome?.classification).toBe('PASS')
 	})
 })

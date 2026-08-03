@@ -23,6 +23,45 @@ type Meta = Record<string, any>
 const emptyMapping = (): Meta => Object.create(null)
 
 /**
+ * References §2.3: a reference token inside a quoted string is inactive —
+ * literal text, never resolved. Once a quoted value's delimiters are
+ * stripped, its text can look identical to an active token, and later
+ * phases (forward-reference resolution, the strict unresolved-reference
+ * scan) must not rediscover it by re-scanning the final string ("[t]he
+ * resolution phases must not rediscover reference-like substrings by
+ * scanning final Core string values"). A quoted value is therefore wrapped
+ * in this internal marker at parse time — recognised and skipped by every
+ * later phase — and unwrapped back to a plain string in one final pass
+ * (`unwrapInactive`) before the result is returned. A `Symbol` key (rather
+ * than a string key like `"$inactive"`) avoids any chance of colliding
+ * with a real Lima mapping that happens to contain a same-shaped value.
+ */
+const INACTIVE_TOKEN = Symbol('limaInactive')
+interface InactiveValue {
+	[INACTIVE_TOKEN]: true
+	value: string
+}
+const markInactive = (value: string): InactiveValue => ({ [INACTIVE_TOKEN]: true, value })
+const isInactiveValue = (v: any): v is InactiveValue =>
+	v !== null && typeof v === 'object' && v[INACTIVE_TOKEN] === true
+
+/** Replaces every inactive-value marker in a tree with its plain string,
+ *  recursively. Must run once, at the very end of `parse`, before the
+ *  result is returned — no marker may ever reach the public API. */
+const unwrapInactive = (value: any): any => {
+	if (isInactiveValue(value)) return value.value
+	if (Array.isArray(value)) {
+		for (let i = 0; i < value.length; i++) value[i] = unwrapInactive(value[i])
+		return value
+	}
+	if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+		for (const key of Object.keys(value)) value[key] = unwrapInactive(value[key])
+		return value
+	}
+	return value
+}
+
+/**
  * Structural deep copy into a Lima-owned, prototype-free value. Pure
  * references must not alias their target — References §3.1: "The result
  * is a structural deep copy — object identity and aliasing are not part
@@ -32,6 +71,7 @@ const emptyMapping = (): Meta => Object.create(null)
  * directly in a result).
  */
 const deepCopyLimaValue = (value: any): any => {
+	if (isInactiveValue(value)) return markInactive(value.value)
 	if (value === null || typeof value !== 'object') return value
 	if (value instanceof Date) return new Date(value.getTime())
 	if (Array.isArray(value)) return value.map(deepCopyLimaValue)
@@ -120,9 +160,17 @@ const ANY_ESCAPE_RE = /\\(u[0-9a-fA-F]{0,4}|U[0-9a-fA-F]{0,8}|x[0-9a-fA-F]{0,2}|
 /** Matches exactly one recognised double-quote escape sequence. */
 const SINGLE_KNOWN_ESCAPE_RE = /^\\(["\\/bfnrt0]|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|x[0-9a-fA-F]{2})$/
 
-/** Core §9: maximum scalar length, in Unicode code points. Resource limits
- *  are hard errors in both modes — not gated on `strict`. */
+// Core §9 resource limits. All are hard errors in both modes — never gated
+// on `strict`; limits are security boundaries, not style preferences.
 const SCALAR_LENGTH_LIMIT = 16384
+const DOCUMENT_SIZE_LIMIT = 65536
+const KEY_LENGTH_LIMIT = 128
+const TOP_LEVEL_KEY_LIMIT = 128
+const NESTING_DEPTH_LIMIT = 16
+
+const utf8Encoder = new TextEncoder()
+/** UTF-8 byte length, per Core §9's document-size measurement convention. */
+const byteLength = (s: string): number => utf8Encoder.encode(s).length
 
 /**
  * Throws if a resolved scalar string exceeds the Core §9 length limit.
@@ -133,6 +181,30 @@ const checkScalarLimit = (value: unknown, line: number): void => {
 	if (typeof value === 'string' && [...value].length > SCALAR_LENGTH_LIMIT) {
 		throw new Error(`LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${line}`)
 	}
+}
+
+/** Throws if a key exceeds the Core §9 key-length limit (Unicode code points). */
+const checkKeyLength = (key: string, line: number): void => {
+	if ([...key].length > KEY_LENGTH_LIMIT) {
+		throw new Error(`LIMA: key "${key}" exceeds maximum length of ${KEY_LENGTH_LIMIT} code points at line ${line}`)
+	}
+}
+
+/**
+ * Core §9 nesting-depth formula: `depth(scalar) = 0`, `depth(collection) =
+ * 1 + max(depth(child))` (or 1 if empty). The document root mapping itself
+ * does not count as a level.
+ */
+const computeDepth = (value: any): number => {
+	if (isInactiveValue(value)) return 0
+	if (Array.isArray(value)) {
+		return value.length === 0 ? 1 : 1 + Math.max(...value.map(computeDepth))
+	}
+	if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+		const values = Object.values(value)
+		return values.length === 0 ? 1 : 1 + Math.max(...values.map(computeDepth))
+	}
+	return 0
 }
 
 /** Counts leading ASCII space characters without allocating a new string. */
@@ -305,6 +377,7 @@ const canonicalString = (value: any): string => {
  * one-hop limit).
  */
 const isReferenceFree = (value: any): boolean => {
+	if (isInactiveValue(value)) return true
 	if (typeof value === 'string') return !value.includes('($') && !value.includes('(%')
 	if (Array.isArray(value)) return value.every(isReferenceFree)
 	if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
@@ -313,7 +386,11 @@ const isReferenceFree = (value: any): boolean => {
 	return true
 }
 
-const resolve = (val: string, metadata: Meta, partials: Meta): any => {
+/** A mapping, as opposed to an array, Date, or scalar. */
+const isPlainMapping = (value: any): boolean =>
+	value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)
+
+const resolve = (val: string, metadata: Meta, partials: Meta, line = 0): any => {
 	if (!val || typeof val !== 'string') return val
 
 	// Bare %key shorthand: entire value is %key (no parentheses needed for pure partial refs).
@@ -342,7 +419,18 @@ const resolve = (val: string, metadata: Meta, partials: Meta): any => {
 		return val.replace(INTERP_RE, (match, sigil, key) => {
 			const resolved = sigil === '%' ? partials[key] : getNestedValue(metadata, key)
 			if (resolved === undefined || resolved === null || !isReferenceFree(resolved)) return match
-			if (Array.isArray(resolved)) return resolved.map(canonicalString).join(', ')
+			// References §3.5/§3.6: mappings can never be interpolated into a
+			// string, and arrays containing a nested array or mapping element
+			// throw too — both are hard errors in both modes, not a fallback.
+			if (isPlainMapping(resolved)) {
+				throw new Error(`LIMA: invalid interpolation of "${match}" at line ${line}: mapping cannot be interpolated into a string`)
+			}
+			if (Array.isArray(resolved)) {
+				if (resolved.some((item) => Array.isArray(item) || isPlainMapping(item))) {
+					throw new Error(`LIMA: invalid interpolation of "${match}" at line ${line}: array contains a nested array or mapping`)
+				}
+				return resolved.map(canonicalString).join(', ')
+			}
 			return canonicalString(resolved)
 		})
 	}
@@ -448,9 +536,12 @@ const resolveValue = (raw: string, metadata: Meta, partials: Meta, strict = fals
 		const unquoted = raw.slice(1, -1)
 		const value = first === 34 ? unescapeDQ(unquoted, strict, line) : unquoted.replace(/\\'/g, "'")
 		checkScalarLimit(value, line)
-		return value
+		// §2.3: quoted content is always inactive. Only wrap when it could be
+		// mistaken for a reference later — an ordinary quoted string is
+		// already safe without the extra indirection.
+		return value.includes('($') || value.includes('(%') ? markInactive(value) : value
 	}
-	const value = toType(resolve(raw, metadata, partials))
+	const value = toType(resolve(raw, metadata, partials, line))
 	checkScalarLimit(value, line)
 	return value
 }
@@ -519,9 +610,13 @@ const parseFlowSequence = (val: string, metadata: Meta, partials: Meta, strict =
 		const first = item.charCodeAt(0)
 		if ((first === 34 || first === 39) && item.charCodeAt(item.length - 1) === first) {
 			const unquoted = item.slice(1, -1)
-			return first === 34 ? unescapeDQ(unquoted, strict, line) : unquoted.replace(/\\'/g, "'")
+			const value = first === 34 ? unescapeDQ(unquoted, strict, line) : unquoted.replace(/\\'/g, "'")
+			checkScalarLimit(value, line)
+			return value.includes('($') || value.includes('(%') ? markInactive(value) : value
 		}
-		return toType(resolve(item, metadata, partials))
+		const value = toType(resolve(item, metadata, partials, line))
+		checkScalarLimit(value, line)
+		return value
 	})
 }
 
@@ -551,15 +646,20 @@ const parseFlowMapping = (val: string, metadata: Meta, partials: Meta, strict = 
 			if (strict) throw new Error(`LIMA: invalid flow mapping item (missing ": ") at line ${line}: "${item}"`)
 			return null // not a valid flow mapping — fall back to string
 		}
-		const key    = item.slice(0, colonPos).trim()
+		const key    = stripKeyQuotes(item.slice(0, colonPos).trim())
+		checkKeyLength(key, line)
 		const rawVal = item.slice(colonPos + 2).trim()
 		const first  = rawVal.charCodeAt(0)
 		// Quoted string: strip delimiters and unescape, return as string — no type coercion.
 		if ((first === 34 /* '"' */ || first === 39 /* "'" */) && rawVal.charCodeAt(rawVal.length - 1) === first) {
 			const unquoted = rawVal.slice(1, -1)
-			result[key] = first === 34 ? unescapeDQ(unquoted) : unquoted.replace(/\\'/g, "'")
+			const value = first === 34 ? unescapeDQ(unquoted, strict, line) : unquoted.replace(/\\'/g, "'")
+			checkScalarLimit(value, line)
+			result[key] = value.includes('($') || value.includes('(%') ? markInactive(value) : value
 		} else {
-			result[key] = toType(resolve(rawVal, metadata, partials))
+			const value = toType(resolve(rawVal, metadata, partials, line))
+			checkScalarLimit(value, line)
+			result[key] = value
 		}
 	}
 	return result
@@ -646,6 +746,7 @@ const parseBlock = (
 				const colonPos = findKeySep(trimmed)
 				if (colonPos !== -1) {
 					const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim())
+					checkKeyLength(itemKey, baseLine + idx)
 					const itemVal = trimmed.slice(colonPos + 2).trim()
 					const flowSeq = parseFlowSequence(itemVal, metadata, partials, strict, baseLine + idx)
 					const flowMap = flowSeq === null ? parseFlowMapping(itemVal, metadata, partials, strict, baseLine + idx) : null
@@ -654,6 +755,7 @@ const parseBlock = (
 				} else if (trimmed.endsWith(':')) {
 					// Nested block within an array item's continuation
 					const itemKey = stripKeyQuotes(trimmed.slice(0, -1).trim())
+					checkKeyLength(itemKey, baseLine + idx)
 					idx++
 					let ni = idx
 					while (ni < lines.length && !lines[ni].trim()) ni++
@@ -707,6 +809,7 @@ const parseBlock = (
 			} else if (colonPos !== -1) {
 				// Object item with inline value — may accumulate more keys via continuation lines
 				const pendingKey = stripKeyQuotes(afterDash.slice(0, colonPos).trim())
+				checkKeyLength(pendingKey, baseLine + idx)
 				const pendingRaw = afterDash.slice(colonPos + 2).trim()
 				const pendingFlowSeq = parseFlowSequence(pendingRaw, metadata, partials, strict, baseLine + idx)
 				const pendingFlowMap = pendingFlowSeq === null ? parseFlowMapping(pendingRaw, metadata, partials, strict, baseLine + idx) : null
@@ -716,6 +819,7 @@ const parseBlock = (
 			} else if (afterDash.endsWith(':')) {
 				// Object item whose value is a nested block
 				const itemKey = stripKeyQuotes(afterDash.slice(0, -1).trim())
+				checkKeyLength(itemKey, baseLine + idx)
 				idx++
 				let ni = idx
 				while (ni < lines.length && !lines[ni].trim()) ni++
@@ -737,13 +841,21 @@ const parseBlock = (
 				if ((qFirst === 34 || qFirst === 39) && afterDash.charCodeAt(afterDash.length - 1) === qFirst) {
 					// Quoted string: strip delimiters, unescape, no type coercion
 					const inner = afterDash.slice(1, -1)
-					;(result as any[]).push(qFirst === 34 ? unescapeDQ(inner) : inner.replace(/\\'/g, "'"))
+					const value = qFirst === 34 ? unescapeDQ(inner, strict, baseLine + idx) : inner.replace(/\\'/g, "'")
+					checkScalarLimit(value, baseLine + idx)
+					;(result as any[]).push(value.includes('($') || value.includes('(%') ? markInactive(value) : value)
 				} else {
-					const resolvedVal = resolve(afterDash, metadata, partials)
+					const resolvedVal = resolve(afterDash, metadata, partials, baseLine + idx)
 					if (Array.isArray(resolvedVal)) {
-						for (const item of resolvedVal) (result as any[]).push(toType(item))
+						for (const item of resolvedVal) {
+							const value = toType(item)
+							checkScalarLimit(value, baseLine + idx)
+							;(result as any[]).push(value)
+						}
 					} else {
-						(result as any[]).push(toType(resolvedVal))
+						const value = toType(resolvedVal)
+						checkScalarLimit(value, baseLine + idx)
+						;(result as any[]).push(value)
 					}
 				}
 				idx++
@@ -759,6 +871,7 @@ const parseBlock = (
 			const colonPos = findKeySep(trimmed)
 			if (colonPos !== -1) {
 				const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim())
+				checkKeyLength(itemKey, baseLine + idx)
 				const itemVal = trimmed.slice(colonPos + 2).trim()
 				const flowSeq = parseFlowSequence(itemVal, metadata, partials, strict, baseLine + idx)
 				const flowMap = flowSeq === null ? parseFlowMapping(itemVal, metadata, partials, strict, baseLine + idx) : null
@@ -767,6 +880,7 @@ const parseBlock = (
 			} else if (trimmed.endsWith(':')) {
 				// Key with no inline value → check for a nested block on the next lines
 				const itemKey = stripKeyQuotes(trimmed.slice(0, -1).trim())
+				checkKeyLength(itemKey, baseLine + idx)
 				idx++
 				let ni = idx
 				while (ni < lines.length && !lines[ni].trim()) ni++
@@ -805,6 +919,7 @@ const parseBlock = (
  * the same string and the loop terminates naturally.
  */
 const resolveForward = (val: any, metadata: Meta, partials: Meta): any => {
+	if (isInactiveValue(val)) return val // quoted at parse time — literal, never re-resolved (§2.3)
 	if (typeof val === 'string' && (val.includes('($') || val.includes('(%'))) {
 		return toType(resolve(val, metadata, partials))
 	}
@@ -840,6 +955,12 @@ const parse = <T extends Record<string, unknown> = Meta>(
 	// this must run even for an empty document.
 	for (const [name, value] of Object.entries(partials)) validatePartialValue(value, name, name)
 
+	// Core §9: document size is measured in UTF-8 bytes of the *original*
+	// input, before normalisation — a hard error in both modes.
+	if (byteLength(frontMatter) > DOCUMENT_SIZE_LIMIT) {
+		throw new Error(`LIMA: document exceeds maximum size of ${DOCUMENT_SIZE_LIMIT} bytes at line 1`)
+	}
+
 	if (!frontMatter) return emptyMapping() as unknown as T
 
 	// Normalize: CRLF → LF, tabs → 2 spaces, trailing spaces stripped per line
@@ -863,16 +984,6 @@ const parse = <T extends Record<string, unknown> = Meta>(
 	// Quick scan for reference syntax — if absent we can skip the entire second pass.
 	const hasRefs = frontMatter.includes('($') || frontMatter.includes('(%')
 
-	// References §2.3: a reference token inside a quoted string is inactive —
-	// literal text, never resolved. Once a quoted value's delimiters are
-	// stripped in the first pass, its text can look identical to an active
-	// token. Top-level keys whose *entire* inline value was quoted are
-	// tracked here so the second pass (below) does not rediscover and
-	// resolve them by re-scanning the final string content. (Quoted values
-	// nested inside block mappings/arrays are not tracked by this set —
-	// not exercised by any case in the current corpus.)
-	const inactiveKeys = new Set<string>()
-
 	// Split on keys. KEY_RE has 4 capture groups:
 	//   g1: unquoted key  g2: single-quoted key  g3: double-quoted key  g4: separator
 	// After slice(1) the parts array repeats every 5 elements:
@@ -886,6 +997,12 @@ const parse = <T extends Record<string, unknown> = Meta>(
 
 	if (keyCount === 0) return emptyMapping() as unknown as T
 
+	// Core §9: top-level key entries, counted before duplicate resolution —
+	// each occurrence (including duplicates) counts toward the budget.
+	if (keyCount > TOP_LEVEL_KEY_LIMIT) {
+		throw new Error(`LIMA: too many top-level key entries (max ${TOP_LEVEL_KEY_LIMIT}) at line 1`)
+	}
+
 	const metadata: Meta = emptyMapping()
 	// Top-level key name → its occurrence index, for on-demand line lookups
 	// (e.g. the final unresolved-reference scan below) without eagerly
@@ -897,6 +1014,7 @@ const parse = <T extends Record<string, unknown> = Meta>(
 		const key   = parts[i * 5] ?? parts[i * 5 + 1] ?? (rawDQ !== undefined ? unescapeDQ(rawDQ) : undefined)
 		if (key === undefined) continue
 		keyIndexByName[key] = i
+		checkKeyLength(key, keyLine(i))
 
 		if (key in metadata) {
 			const msg = `LIMA: duplicate key "${key}" at line ${keyLine(i)} — last value wins`
@@ -946,8 +1064,6 @@ const parse = <T extends Record<string, unknown> = Meta>(
 					if (flowMap !== null) {
 						metadata[key] = flowMap
 					} else {
-						const vc = val.charCodeAt(0)
-						if ((vc === 34 || vc === 39) && val.charCodeAt(val.length - 1) === vc) inactiveKeys.add(key)
 						// Line is needed unconditionally here (not just in strict mode):
 						// resource-limit errors (checkScalarLimit) are hard errors in
 						// both modes.
@@ -1028,6 +1144,7 @@ const parse = <T extends Record<string, unknown> = Meta>(
 			} else {
 				metadata[key] = mergedLines.join('\n')
 			}
+			checkScalarLimit(metadata[key], keyLine(i))
 		}
 	}
 
@@ -1046,7 +1163,6 @@ const parse = <T extends Record<string, unknown> = Meta>(
 		const phase1Snapshot: Meta = emptyMapping()
 		for (const key of Object.keys(metadata)) phase1Snapshot[key] = metadata[key]
 		for (const key of Object.keys(metadata)) {
-			if (inactiveKeys.has(key)) continue // quoted at parse time — stays literal (§2.3)
 			metadata[key] = resolveForward(metadata[key], phase1Snapshot, partials)
 		}
 	}
@@ -1059,6 +1175,7 @@ const parse = <T extends Record<string, unknown> = Meta>(
 		// §5 asks for the token's source line; this parser does not retain
 		// positions past the key level for values nested in blocks/arrays).
 		const scanUnresolved = (val: any, line: number): void => {
+			if (isInactiveValue(val)) return // quoted at parse time — literal, not unresolved (§2.3)
 			if (typeof val === 'string' && (val.includes('($') || val.includes('(%'))) {
 				const m = val.match(/\(([%$])([^)]+)\)/)
 				if (m) throw new Error(`LIMA: unresolved reference "(${m[1]}${m[2]})" at line ${line}`)
@@ -1069,10 +1186,24 @@ const parse = <T extends Record<string, unknown> = Meta>(
 			}
 		}
 		for (const key of Object.keys(metadata)) {
-			if (inactiveKeys.has(key)) continue // quoted at parse time — literal, not unresolved (§2.3)
 			scanUnresolved(metadata[key], keyLine(keyIndexByName[key]))
 		}
 	}
+
+	// Core §9: nesting depth of the final tree, both modes. The document
+	// root mapping does not count as a level (depth is computed over its
+	// values, not the root itself). Global resource errors without a more
+	// specific attributable token report line 1 (References §5 fallback).
+	const depth = Object.values(metadata).length === 0
+		? 0
+		: Math.max(...Object.values(metadata).map(computeDepth))
+	if (depth > NESTING_DEPTH_LIMIT) {
+		throw new Error(`LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line 1`)
+	}
+
+	// No inactive-value marker (§2.3) may reach the public API — replace
+	// every one, at any nesting depth, with its plain string.
+	for (const key of Object.keys(metadata)) metadata[key] = unwrapInactive(metadata[key])
 
 	return metadata as unknown as T
 }
