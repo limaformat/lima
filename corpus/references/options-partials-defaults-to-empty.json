@@ -1,0 +1,11 @@
+{
+  "id": "references.options.partials-defaults-to-empty",
+  "spec": "references",
+  "section": "6.2",
+  "description": "The partials option defaults to {} when omitted — a document with no partials option set still parses normally, and a (%key) reference simply stays unresolved.",
+  "input": "a: hello\nb: (%missing)\n",
+  "expect": {
+    "result": { "a": "hello", "b": "(%missing)" }
+  },
+  "tags": ["positive", "api"]
+}

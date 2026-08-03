@@ -1,0 +1,16 @@
+{
+  "id": "references.value-model.invalid-date-rejected",
+  "spec": "references",
+  "section": "6.2",
+  "description": "An invalid Date (NaN internally) is rejected as a partial value.",
+  "input": "a: (%d)",
+  "options": { "partials": { "d": { "$type": "host-date", "value": "invalid" } } },
+  "expect": {
+    "error": {
+      "partial": "d",
+      "path": "d",
+      "code": "INVALID_PARTIAL"
+    }
+  },
+  "tags": ["boundary", "error", "value-model"]
+}

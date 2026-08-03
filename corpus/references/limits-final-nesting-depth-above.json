@@ -1,0 +1,18 @@
+{
+  "id": "references.limits.final-nesting-depth.above",
+  "spec": "references",
+  "section": "6.2",
+  "description": "A nesting depth of 17 reached via reference insertion throws in both modes.",
+  "input": "a:\n  k:\n    k:\n      k:\n        k:\n          k:\n            k:\n              k:\n                k:\n                  k:\n                    k:\n                      k:\n                        k:\n                          k:\n                            k:\n                              k:\n                                k:\n                                  k: v\nwrapper:\n  inner: ($a.k)\n",
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "RESOURCE_LIMIT"
+    }
+  },
+  "tags": [
+    "boundary",
+    "error",
+    "final-limit"
+  ]
+}

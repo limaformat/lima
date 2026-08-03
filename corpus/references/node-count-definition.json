@@ -1,0 +1,24 @@
+{
+  "id": "references.node-count.definition",
+  "spec": "references",
+  "section": "6.2",
+  "description": "Node count: scalar = 1, array/mapping = 1 + sum(child node counts), mapping keys do not count as separate nodes. This partial has 6 nodes total (1 for the outer mapping + 1 for 'x' + 1 for the inner array + 3 for its elements) regardless of how long the key names are — well under the 4,096 combined limit.",
+  "input": "a: (%m)",
+  "options": {
+    "partials": {
+      "m": {
+        "a-very-long-key-name-that-does-not-count-as-a-node": 1,
+        "another-long-key-name": [1, 2, 3]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "a": {
+        "a-very-long-key-name-that-does-not-count-as-a-node": 1,
+        "another-long-key-name": [1, 2, 3]
+      }
+    }
+  },
+  "tags": ["positive", "partial"]
+}

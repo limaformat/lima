@@ -1,0 +1,25 @@
+{
+  "id": "references.limits.partial-mapping-key-length.allowed",
+  "spec": "references",
+  "section": "6.2",
+  "description": "A partial mapping key of exactly 128 Unicode code points (the limit) is allowed.",
+  "input": "a: (%m)",
+  "options": {
+    "partials": {
+      "m": {
+        "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "ok"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "a": {
+        "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "ok"
+      }
+    }
+  },
+  "tags": [
+    "boundary",
+    "partial"
+  ]
+}

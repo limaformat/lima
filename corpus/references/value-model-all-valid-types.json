@@ -1,0 +1,30 @@
+{
+  "id": "references.value-model.all-valid-types",
+  "spec": "references",
+  "section": "6.2",
+  "description": "null, boolean, finite number, string, UTC Instant, array, and mapping are all valid partial value types.",
+  "input": "n: (%n)\nb: (%b)\nnum: (%num)\ns: (%s)\ni: (%i)\na: (%a)\nm: (%m)\n",
+  "options": {
+    "partials": {
+      "n": null,
+      "b": true,
+      "num": 42,
+      "s": "hello",
+      "i": { "$type": "instant", "value": "2024-03-01T09:00:00Z" },
+      "a": [1, 2, 3],
+      "m": { "x": 1 }
+    }
+  },
+  "expect": {
+    "result": {
+      "n": null,
+      "b": true,
+      "num": 42,
+      "s": "hello",
+      "i": { "$type": "instant", "value": "2024-03-01T09:00:00Z" },
+      "a": [1, 2, 3],
+      "m": { "x": 1 }
+    }
+  },
+  "tags": ["positive", "value-model"]
+}

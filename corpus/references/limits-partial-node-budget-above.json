@@ -1,0 +1,22 @@
+{
+  "id": "references.limits.partial-node-budget.above",
+  "spec": "references",
+  "section": "6.2",
+  "description": "A partial value tree with 4,097 nodes throws.",
+  "generator": {
+    "name": "partial-node-tree",
+    "parameters": {
+      "totalNodes": 4097
+    }
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_PARTIAL"
+    }
+  },
+  "tags": [
+    "boundary",
+    "error",
+    "partial"
+  ]
+}

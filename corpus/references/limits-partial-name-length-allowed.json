@@ -1,0 +1,21 @@
+{
+  "id": "references.limits.partial-name-length.allowed",
+  "spec": "references",
+  "section": "6.2",
+  "description": "A partial name of exactly 128 Unicode code points (the limit) is allowed.",
+  "input": "a: (%xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)",
+  "options": {
+    "partials": {
+      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "ok"
+    }
+  },
+  "expect": {
+    "result": {
+      "a": "ok"
+    }
+  },
+  "tags": [
+    "boundary",
+    "partial"
+  ]
+}

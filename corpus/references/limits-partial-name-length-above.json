@@ -1,0 +1,23 @@
+{
+  "id": "references.limits.partial-name-length.above",
+  "spec": "references",
+  "section": "6.2",
+  "description": "A partial name of 129 Unicode code points throws.",
+  "input": "a: 1",
+  "options": {
+    "partials": {
+      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "v"
+    }
+  },
+  "expect": {
+    "error": {
+      "partial": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "code": "INVALID_PARTIAL"
+    }
+  },
+  "tags": [
+    "boundary",
+    "error",
+    "partial"
+  ]
+}

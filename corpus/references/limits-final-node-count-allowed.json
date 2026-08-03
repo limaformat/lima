@@ -1,0 +1,63 @@
+{
+  "id": "references.limits.final-node-count.allowed",
+  "spec": "references",
+  "section": "6.2",
+  "description": "Multiple references to the same partial stay well under the 65,536 final-result node-count limit and resolve normally. (The boundary itself — repeated large-partial references crossing 65,536 — is exercised by references.limits.final-node-count.above.)",
+  "input": "k0: (%small)\nk1: (%small)\nk2: (%small)\n",
+  "options": {
+    "partials": {
+      "small": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "k0": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "k1": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "k2": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    }
+  },
+  "tags": [
+    "positive",
+    "final-limit"
+  ]
+}

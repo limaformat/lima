@@ -1,0 +1,22 @@
+{
+  "id": "references.limits.partial-count.above",
+  "spec": "references",
+  "section": "6.2",
+  "description": "129 partial names throws.",
+  "generator": {
+    "name": "partial-count",
+    "parameters": {
+      "count": 129
+    }
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_PARTIAL"
+    }
+  },
+  "tags": [
+    "boundary",
+    "error",
+    "partial"
+  ]
+}

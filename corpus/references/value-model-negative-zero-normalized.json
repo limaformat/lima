@@ -1,0 +1,12 @@
+{
+  "id": "references.value-model.negative-zero-normalized",
+  "spec": "references",
+  "section": "6.2",
+  "description": "Negative zero is a valid, finite partial number, normalised to positive zero.",
+  "input": "a: (%n)",
+  "options": { "partials": { "n": { "$type": "host-number", "value": "-0" } } },
+  "expect": {
+    "result": { "a": 0 }
+  },
+  "tags": ["boundary", "value-model"]
+}

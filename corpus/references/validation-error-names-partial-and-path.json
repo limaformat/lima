@@ -1,0 +1,16 @@
+{
+  "id": "references.validation.error-names-partial-and-path",
+  "spec": "references",
+  "section": "6.2",
+  "description": "A partial-validation error names the failing partial key and the value path within it, not a document source line — the error is independent of the (otherwise unremarkable) document.",
+  "input": "value: a perfectly ordinary document",
+  "options": { "partials": { "settings": { "nested": { "$type": "host-number", "value": "nan" } } } },
+  "expect": {
+    "error": {
+      "partial": "settings",
+      "path": "settings.nested",
+      "code": "INVALID_PARTIAL"
+    }
+  },
+  "tags": ["error", "partial"]
+}

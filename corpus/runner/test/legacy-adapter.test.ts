@@ -226,6 +226,46 @@ describe('adaptLegacyError', () => {
 		}
 	})
 
+	it('maps an invalid partial error whose reason text itself contains "invalid date" without misrouting to INVALID_DATE', () => {
+		// Regression guard: the invalid-partial rule must be checked before
+		// the generic /invalid date/ rule, or a message like this one would
+		// incorrectly match that broader pattern instead.
+		const result = adaptLegacyError(new Error('LIMA: invalid partial "d" at path "d": invalid date'))
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_PARTIAL')
+			expect(result.diagnostic.partial).toBe('d')
+		}
+	})
+
+	it('maps a too-many-partials error to INVALID_PARTIAL with no partial/path attribution', () => {
+		const result = adaptLegacyError(new Error('LIMA: too many partials (max 128)'))
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_PARTIAL')
+			expect(result.diagnostic.partial).toBeUndefined()
+		}
+	})
+
+	it('maps a combined partial-node-budget error to INVALID_PARTIAL', () => {
+		const result = adaptLegacyError(
+			new Error('LIMA: partials exceed the combined maximum of 4096 value nodes')
+		)
+		expect(result.mapped).toBe(true)
+		if (result.mapped) expect(result.diagnostic.code).toBe('INVALID_PARTIAL')
+	})
+
+	it('maps a final result node-count error to RESOURCE_LIMIT', () => {
+		const result = adaptLegacyError(
+			new Error('LIMA: result exceeds maximum size of 65536 total nodes at line 1')
+		)
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('RESOURCE_LIMIT')
+			expect(result.diagnostic.line).toBe(1)
+		}
+	})
+
 	it('reports unmapped rather than guessing for an unrecognised message', () => {
 		const result = adaptLegacyError(
 			new Error('LIMA: mixed array and map entries for the same key at line 9')

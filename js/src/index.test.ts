@@ -1219,6 +1219,49 @@ describe('dotted-path references', () => {
 	})
 })
 
+// ─── Partial Value Model (References §6.2) — host-type checks not
+// expressible in the JSON corpus format ────────────────────────────────────
+// Cyclic object graphs and host types like functions/symbols/class
+// instances/accessor properties cannot be represented as corpus JSON
+// fixtures (the corpus schema's CorpusValue is plain-JSON-shaped) — these
+// are unit-test-only, analogous to the object-identity ("no aliasing") check
+// covered earlier for pure references.
+
+describe('partial value model — host-type validation', () => {
+	it('rejects a cyclic partial value', () => {
+		const cyclic: Record<string, unknown> = {}
+		cyclic.self = cyclic
+		expect(() => parse('a: (%c)', { partials: { c: cyclic } })).toThrow('cyclic reference')
+	})
+
+	it('rejects a class instance as a partial value, even though it has only own data properties', () => {
+		class Foo {
+			x = 1
+		}
+		expect(() => parse('a: (%c)', { partials: { c: new Foo() } })).toThrow('unsupported value type')
+	})
+
+	it('rejects a function as a partial value', () => {
+		expect(() => parse('a: (%f)', { partials: { f: () => {} } })).toThrow('unsupported value type')
+	})
+
+	it('rejects a symbol as a partial value', () => {
+		expect(() => parse('a: (%s)', { partials: { s: Symbol('x') } })).toThrow('unsupported value type')
+	})
+
+	it('rejects an accessor (getter) property inside a partial mapping', () => {
+		const withAccessor: Record<string, unknown> = {}
+		Object.defineProperty(withAccessor, 'x', { get: () => 1, enumerable: true })
+		expect(() => parse('a: (%o)', { partials: { o: withAccessor } })).toThrow('accessor properties are not supported')
+	})
+
+	it('truncates a partial UTC Instant\'s milliseconds to zero, without rounding', () => {
+		const result = parse('a: (%d)', { partials: { d: new Date('2024-03-01T09:00:00.999Z') } })
+		expect((result.a as Date).getUTCMilliseconds()).toBe(0)
+		expect((result.a as Date).toISOString()).toBe('2024-03-01T09:00:00.000Z')
+	})
+})
+
 // ─── One-hop limit is order-independent (References §3.7/§4) ──────────────────
 // A chain a → b → c must never fully resolve, regardless of the physical
 // order the keys are written in — moving c earlier in the document must not

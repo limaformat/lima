@@ -1,0 +1,16 @@
+{
+  "id": "references.value-model.date-out-of-range-rejected",
+  "spec": "references",
+  "section": "6.2",
+  "description": "A Date whose UTC year falls outside 0001-9999 is rejected as a partial value.",
+  "input": "a: (%d)",
+  "options": { "partials": { "d": { "$type": "host-date", "value": "year-overflow" } } },
+  "expect": {
+    "error": {
+      "partial": "d",
+      "path": "d",
+      "code": "INVALID_PARTIAL"
+    }
+  },
+  "tags": ["boundary", "error", "value-model"]
+}

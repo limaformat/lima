@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(204)
+		expect(outcomes).toHaveLength(229)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -251,7 +251,45 @@ describe('runCorpus', () => {
 	 * call in this file. R-112 (attributing a global resource-limit error to
 	 * the lowest participating reference token) remains a documented gap in
 	 * coverage/references.md — needs final-tree provenance tracking not yet
-	 * implemented, deferred alongside the related §6.2 Final Limits work.
+	 * implemented, deferred alongside the related §6.2 Final Limits work) →
+	 * 229/0/0 — this completes the References 1.0 matrix (§6-§7, the API/
+	 * Value-Model/Limits section). Found and fixed the largest cluster of
+	 * confirmed deviations yet: `validatePartialValue` previously checked
+	 * only for non-finite numbers, silently accepting or mishandling nearly
+	 * everything else the Lima Value Model (§6.2) actually requires —
+	 * nested arrays in partials, cyclic object graphs (crashed with a raw
+	 * "Maximum call stack size exceeded" instead of a clean error), Dates
+	 * with NaN internals or years outside 0001-9999, class instances and
+	 * accessor properties (silently read as if they were plain data — no
+	 * way to tell a getter's return value from a stored value via
+	 * `Object.keys()` alone without an explicit property-descriptor check),
+	 * functions and symbols, and per-partial nesting depth. Also missing
+	 * entirely: every partial resource limit (max 128 partial names, 128
+	 * code points per name, 4,096 combined value nodes, 128 code points per
+	 * partial mapping key) and the final-result total node count limit
+	 * (65,536) — the only §6.2 final-result check that had no
+	 * implementation at all (scalar length, nesting depth, and nested-array
+	 * rejection were already correctly enforced from earlier batches).
+	 * Rewrote `validatePartialValue` to recursively enforce the full value
+	 * model (with cycle detection via a path-scoped `Set`, not a
+	 * visited-everything set, so shared non-cyclic substructure is still
+	 * allowed), added the missing partial-count/name-length/node-budget
+	 * checks before parsing begins, and added the final node-count check
+	 * after resolution completes. `sanitizePartialValue` now also
+	 * normalises negative zero to positive zero and truncates a partial
+	 * Date's milliseconds to zero, both previously unimplemented parts of
+	 * the value model.
+	 * R-135 (cyclic partials) and R-137 (host-type rejection) are covered
+	 * by unit tests, not corpus cases — a cyclic object graph or a
+	 * function/symbol/class-instance/accessor-property cannot be
+	 * represented in the JSON corpus format at all (CorpusValue is
+	 * plain-JSON-shaped), the same reason R-032 (no-aliasing) was
+	 * unit-test-only. R-073 (array interpolation's own nested-array-element
+	 * check) is now structurally unreachable through any legitimate input
+	 * path — partial validation rejects nested arrays earlier in the
+	 * pipeline than array-interpolation ever sees them — so the corpus case
+	 * that previously exercised it via an (until now, incorrectly)
+	 * unvalidated partial was removed as obsolete.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -260,7 +298,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 204, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 229, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

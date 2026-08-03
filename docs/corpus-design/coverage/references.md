@@ -118,21 +118,41 @@ Two check points cannot currently be exercised against `js/src/index.ts`:
   the violation): not yet implemented. §5's error-ordering *collection*
   mechanism itself is implemented and covered (see
   `references.error-ordering.*`, added alongside the fix for a real
-  order-dependence bug this surfaced) — what's missing is specifically
-  *token attribution* for resource-limit violations, which requires
-  tracking, for every node in the final tree, whether it (or an ancestor)
-  originated from a reference insertion and at which source line. That
-  provenance tracking doesn't exist yet. R-113 (the line-1 fallback "when
-  no source token can be identified") is already correctly covered — the
-  existing unconditional "at line 1" resource-limit message satisfies it
-  for the case that never had a candidate token in the first place. R-112
-  is deferred to land together with the broader §6.2 Final Limits work
-  (R-140-143, particularly total node count, which isn't implemented at
-  all yet either) — both need the same kind of final-tree provenance
-  tracking, so implementing them separately would mean doing the tracking
-  twice.
+  order-dependence bug this surfaced), and all four §6.2 final-result
+  limits it would attribute (scalar length, nesting depth, total node
+  count, nested arrays) are themselves fully implemented and covered (see
+  `references.limits.final-*`) — what's missing is specifically *token
+  attribution*, which requires tracking, for every node in the final tree,
+  whether it (or an ancestor) originated from a reference insertion and at
+  which source line. That provenance tracking doesn't exist yet. R-113
+  (the line-1 fallback "when no source token can be identified") is
+  already correctly covered — the existing unconditional "at line 1"
+  resource-limit message satisfies it for the case that never had a
+  candidate token in the first place.
 
 R-001 ("References parser includes complete Core behavior") is, by
 contrast, directly testable even without a separate `parseCore` — it is a
 behavioral claim, not an API-shape one — and has a corpus case
 (`references.scope.includes-core-behavior`).
+
+## Coverage points resolved without a dedicated corpus case
+
+- **R-073** (array interpolation rejects an array containing a nested array
+  element): the check itself still exists in `resolve()`'s interpolation
+  branch, but as of the §6.2 Value Model fix (partial validation now
+  rejects nested arrays before parsing even begins), there is no longer any
+  legitimate input path that can construct a nested array and have it
+  survive long enough to reach that check — document-side nested arrays
+  are rejected by Core's flow-nesting rule and by the array-as-sequence-
+  item check (`INVALID_REFERENCE_SHAPE`), and partial-side nested arrays
+  are now rejected during partial validation (`INVALID_PARTIAL`). The
+  corpus case that used to exercise this via an (until then, unvalidated)
+  partial was removed as obsolete rather than kept pointing at a now-
+  incorrect error code.
+- **R-135** (cyclic partial values are invalid) and **R-137** (host types
+  with no Lima equivalent — functions, symbols, class instances, accessor
+  properties — are invalid): covered by unit tests in `index.test.ts`
+  instead of corpus cases. A cyclic object graph cannot be represented in
+  JSON at all, and the corpus schema's `CorpusValue` type has no way to
+  express a function, symbol, class instance, or accessor property — the
+  same reason R-032 (pure-reference no-aliasing) is unit-test-only.

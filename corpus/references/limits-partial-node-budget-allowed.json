@@ -1,0 +1,14 @@
+{
+  "id": "references.limits.partial-node-budget.allowed",
+  "spec": "references",
+  "section": "6.2",
+  "description": "A partial value tree with exactly 4,096 nodes (the combined limit across all partials) is allowed — parsing succeeds. The generator produces an empty document; the partial is never referenced, since the point is validation acceptance, not resolution (resolution of a large partial is covered separately by references.node-count.definition and other partial cases).",
+  "generator": {
+    "name": "partial-node-tree",
+    "parameters": { "totalNodes": 4096 }
+  },
+  "expect": {
+    "result": {}
+  },
+  "tags": ["boundary", "partial"]
+}

@@ -29,6 +29,20 @@ const LINE_RE = /at line (\d+)/
 
 const rules: Rule[] = [
 	{
+		// Checked first: partial validation happens before document parsing
+		// (References §5/§6.2), and its messages can otherwise collide with
+		// later, more general patterns — e.g. "invalid partial ... invalid
+		// date" would also match the plain `/invalid date/` rule below if
+		// that were checked first.
+		pattern: /invalid partial "([^"]+)" at path "([^"]+)"/,
+		code: 'INVALID_PARTIAL',
+		extract: (m) => ({ partial: m[1], path: m[2] }),
+	},
+	{
+		pattern: /too many partials|partials exceed the combined maximum/,
+		code: 'INVALID_PARTIAL',
+	},
+	{
 		pattern: /duplicate key "([^"]+)"/,
 		code: 'DUPLICATE_KEY',
 		extract: (m) => ({ key: m[1] }),
@@ -114,11 +128,6 @@ const rules: Rule[] = [
 		// Core §7.4/§7.5: a `[`/`{` value with no matching close.
 		pattern: /unclosed flow (sequence|mapping)/,
 		code: 'INVALID_FLOW_SYNTAX',
-	},
-	{
-		pattern: /invalid partial "([^"]+)" at path "([^"]+)"/,
-		code: 'INVALID_PARTIAL',
-		extract: (m) => ({ partial: m[1], path: m[2] }),
 	},
 	{
 		pattern: /exceeds maximum (length|size)|too many top-level key entries|nesting depth exceeds maximum/,

@@ -1,0 +1,16 @@
+{
+  "id": "references.value-model.nonfinite-numbers-invalid",
+  "spec": "references",
+  "section": "6.2",
+  "description": "NaN and Infinity are invalid partial numbers.",
+  "input": "a: (%n)",
+  "options": { "partials": { "n": { "$type": "host-number", "value": "nan" } } },
+  "expect": {
+    "error": {
+      "partial": "n",
+      "path": "n",
+      "code": "INVALID_PARTIAL"
+    }
+  },
+  "tags": ["boundary", "error", "value-model"]
+}

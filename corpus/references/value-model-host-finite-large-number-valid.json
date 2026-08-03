@@ -1,0 +1,12 @@
+{
+  "id": "references.value-model.host-finite-large-number-valid",
+  "spec": "references",
+  "section": "6.2",
+  "description": "Core's safe-integer restriction (±(2^53-1)) applies only to integer literals parsed from document text, not to host-provided partial numbers — a finite 1e20 partial is valid.",
+  "input": "a: (%n)",
+  "options": { "partials": { "n": 1e20 } },
+  "expect": {
+    "result": { "a": 1e20 }
+  },
+  "tags": ["positive", "value-model"]
+}

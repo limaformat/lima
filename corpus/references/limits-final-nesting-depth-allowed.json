@@ -1,0 +1,81 @@
+{
+  "id": "references.limits.final-nesting-depth.allowed",
+  "spec": "references",
+  "section": "6.2",
+  "description": "A nesting depth of exactly 16 (the limit) reached via reference insertion (a deep document value copied one level deeper through a wrapper) is allowed.",
+  "input": "a:\n  k:\n    k:\n      k:\n        k:\n          k:\n            k:\n              k:\n                k:\n                  k:\n                    k:\n                      k:\n                        k:\n                          k:\n                            k:\n                              k:\n                                k: v\nwrapper:\n  inner: ($a.k)\n",
+  "expect": {
+    "result": {
+      "a": {
+        "k": {
+          "k": {
+            "k": {
+              "k": {
+                "k": {
+                  "k": {
+                    "k": {
+                      "k": {
+                        "k": {
+                          "k": {
+                            "k": {
+                              "k": {
+                                "k": {
+                                  "k": {
+                                    "k": {
+                                      "k": "v"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "wrapper": {
+        "inner": {
+          "k": {
+            "k": {
+              "k": {
+                "k": {
+                  "k": {
+                    "k": {
+                      "k": {
+                        "k": {
+                          "k": {
+                            "k": {
+                              "k": {
+                                "k": {
+                                  "k": {
+                                    "k": {
+                                      "k": "v"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    "boundary",
+    "final-limit"
+  ]
+}

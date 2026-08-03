@@ -103,23 +103,113 @@ const deepCopyLimaValue = (value: any): any => {
 	return copy
 }
 
+/** References §6.2: partial mapping keys share Core's 128-code-point key limit. */
+const PARTIAL_KEY_LENGTH_LIMIT = 128
+/** References §6.2: "max 16 nesting levels combined with mappings", per partial value. */
+const PARTIAL_VALUE_DEPTH_LIMIT = 16
+/** References §6.2 partial resource limits. */
+const PARTIAL_COUNT_LIMIT = 128
+const PARTIAL_NAME_LENGTH_LIMIT = 128
+const PARTIAL_NODE_LIMIT = 4096
+/** References §6.2 final-result resource limit, checked after resolution completes. */
+const RESULT_NODE_LIMIT = 65536
+
 /**
- * Validates a partial value against the Lima Value Model (References §6.2)
- * before document parsing begins. Currently checks only for non-finite
- * numbers (`NaN`/`Infinity`/`-Infinity` are invalid; `-0` is finite and
- * therefore allowed — it is normalised to `+0` elsewhere, not rejected).
- * Other Value Model constraints (cyclic references, host-language types,
- * length/depth limits) are not yet enforced here.
+ * Validates a single host value against the Lima Value Model (References
+ * §6.2) before document parsing begins — recursively, at every depth of a
+ * partial's own value tree. `seen` tracks the current recursion path (not
+ * every visited object) to detect genuine cycles without rejecting shared,
+ * non-cyclic substructure. `depth` follows the same `depth(scalar) = 0` /
+ * `depth(collection) = 1 + depth(child)` convention as Core §9's document
+ * nesting-depth check.
+ *
+ * Host types with no Lima equivalent (functions, symbols, class instances,
+ * accessor properties) are rejected outright rather than silently coerced —
+ * "class instance with own data properties" is not the same value model as
+ * "plain mapping", even though `Object.keys()` cannot tell them apart
+ * without an explicit prototype check.
  */
-const validatePartialValue = (value: any, partialName: string, path: string): void => {
-	if (typeof value === 'number' && !Number.isFinite(value)) {
-		throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}": non-finite number`)
+const validatePartialValue = (
+	value: any, partialName: string, path: string, depth = 0, seen: Set<any> = new Set()
+): void => {
+	if (value === null || typeof value === 'boolean') return
+	if (typeof value === 'number') {
+		if (!Number.isFinite(value)) {
+			throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}": non-finite number`)
+		}
+		return
 	}
+	if (typeof value === 'string') {
+		if ([...value].length > SCALAR_LENGTH_LIMIT) {
+			throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}": string exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points`)
+		}
+		return
+	}
+	if (value instanceof Date) {
+		if (isNaN(value.getTime())) {
+			throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}": invalid date`)
+		}
+		const year = value.getUTCFullYear()
+		if (year < 1 || year > 9999) {
+			throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}": date year ${year} outside the range 0001-9999`)
+		}
+		return
+	}
+	if (value === undefined || typeof value !== 'object') {
+		// undefined, function, symbol, bigint, ... — no Lima equivalent.
+		throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}": unsupported value type`)
+	}
+	if (seen.has(value)) {
+		throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}": cyclic reference`)
+	}
+	if (depth >= PARTIAL_VALUE_DEPTH_LIMIT) {
+		throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}": nesting depth exceeds maximum of ${PARTIAL_VALUE_DEPTH_LIMIT}`)
+	}
+	seen.add(value)
 	if (Array.isArray(value)) {
-		value.forEach((item, i) => validatePartialValue(item, partialName, `${path}[${i}]`))
-	} else if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
-		for (const key of Object.keys(value)) validatePartialValue(value[key], partialName, `${path}.${key}`)
+		value.forEach((item, i) => {
+			if (Array.isArray(item)) {
+				throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}[${i}]": nested arrays are not supported`)
+			}
+			validatePartialValue(item, partialName, `${path}[${i}]`, depth + 1, seen)
+		})
+	} else {
+		// Plain-object check: `Object.keys()` alone can't distinguish a class
+		// instance's own data properties from a genuine plain mapping — a
+		// prototype check can. `Object.create(null)` (proto === null) is also
+		// accepted, matching this parser's own prototype-free convention.
+		const proto = Object.getPrototypeOf(value)
+		if (proto !== null && proto !== Object.prototype) {
+			throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}": unsupported value type`)
+		}
+		for (const key of Object.keys(value)) {
+			const descriptor = Object.getOwnPropertyDescriptor(value, key)
+			if (!descriptor || !('value' in descriptor)) {
+				throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}.${key}": accessor properties are not supported`)
+			}
+			if ([...key].length > PARTIAL_KEY_LENGTH_LIMIT) {
+				throw new Error(`LIMA: invalid partial "${partialName}" at path "${path}.${key}": key exceeds maximum length of ${PARTIAL_KEY_LENGTH_LIMIT} code points`)
+			}
+			validatePartialValue(value[key], partialName, `${path}.${key}`, depth + 1, seen)
+		}
 	}
+	seen.delete(value)
+}
+
+/**
+ * References §6.2 node-count definition, used both for the pre-parsing
+ * partial-node-budget check (4,096 across all partials combined) and the
+ * post-resolution final-result check (65,536). `nodeCount(scalar) = 1`,
+ * `nodeCount(collection) = 1 + sum(nodeCount(child))` — mapping keys do not
+ * count as separate nodes.
+ */
+const countValueNodes = (value: any): number => {
+	if (isInactiveValue(value)) return 1
+	if (Array.isArray(value)) return 1 + value.reduce((sum, item) => sum + countValueNodes(item), 0)
+	if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+		return 1 + Object.values(value).reduce((sum: number, v) => sum + countValueNodes(v), 0)
+	}
+	return 1
 }
 
 /**
@@ -132,9 +222,19 @@ const validatePartialValue = (value: any, partialName: string, path: string): vo
  * `resolveForward()` treat it as opaque without needing to inspect its
  * text. Containers (arrays/mappings) are rebuilt, not wrapped themselves —
  * only their string leaves are.
+ *
+ * Also normalises negative zero to positive zero (References §6.2: "Negative
+ * zero is normalised to positive zero") and rebuilds every plain object as a
+ * prototype-free mapping (Core §11.1), so a validated partial's containers
+ * match every other Lima mapping's binding shape.
  */
 const sanitizePartialValue = (value: any): any => {
 	if (typeof value === 'string') return markInactive(value)
+	if (typeof value === 'number') return value === 0 ? 0 : value
+	// References §6.2: "milliseconds are truncated (not rounded) to zero" —
+	// a copy, never the host's own Date instance (kept Lima-owned, matching
+	// pure-reference deep-copy semantics elsewhere).
+	if (value instanceof Date) return new Date(Math.floor(value.getTime() / 1000) * 1000)
 	if (Array.isArray(value)) return value.map(sanitizePartialValue)
 	if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
 		const out: Meta = emptyMapping()
@@ -1298,8 +1398,26 @@ const parse = <T extends Record<string, unknown> = Meta>(
 	const strict      = options?.strict   ?? false
 
 	// References §6.2: partials are validated before document parsing begins —
-	// this must run even for an empty document.
+	// this must run even for an empty document. Partial-validation errors
+	// (including these resource-limit ones) never carry a document line —
+	// they cannot, since document parsing has not started yet.
+	const partialNames = Object.keys(rawPartials)
+	if (partialNames.length > PARTIAL_COUNT_LIMIT) {
+		throw new Error(`LIMA: too many partials (max ${PARTIAL_COUNT_LIMIT})`)
+	}
+	for (const name of partialNames) {
+		if ([...name].length > PARTIAL_NAME_LENGTH_LIMIT) {
+			throw new Error(`LIMA: invalid partial "${name}" at path "${name}": name exceeds maximum length of ${PARTIAL_NAME_LENGTH_LIMIT} code points`)
+		}
+	}
 	for (const [name, value] of Object.entries(rawPartials)) validatePartialValue(value, name, name)
+	// Total value nodes across ALL partials combined, not per partial —
+	// summed only after every individual partial has already passed value-
+	// model validation above.
+	const totalPartialNodes = Object.values(rawPartials).reduce((sum: number, v) => sum + countValueNodes(v), 0)
+	if (totalPartialNodes > PARTIAL_NODE_LIMIT) {
+		throw new Error(`LIMA: partials exceed the combined maximum of ${PARTIAL_NODE_LIMIT} value nodes`)
+	}
 	// §3.8: every string leaf is marked inactive up front (see
 	// sanitizePartialValue's doc comment) so no later resolution step can
 	// mistake literal partial content for an active reference token.
@@ -1637,6 +1755,17 @@ const parse = <T extends Record<string, unknown> = Meta>(
 		: Math.max(...Object.values(metadata).map(computeDepth))
 	if (depth > NESTING_DEPTH_LIMIT) {
 		throw new Error(`LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line 1`)
+	}
+
+	// References §6.2: total node count of the final result tree, both
+	// modes — prevents unbounded growth through repeated deep copies of a
+	// large partial (e.g. 128 keys each referencing the same 4,096-node
+	// partial). The root mapping counts as one node itself, unlike the
+	// depth check above (Core §9 explicitly excludes the root from depth;
+	// no equivalent exclusion is stated for node count).
+	const totalResultNodes = countValueNodes(metadata)
+	if (totalResultNodes > RESULT_NODE_LIMIT) {
+		throw new Error(`LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line 1`)
 	}
 
 	// No inactive-value marker (§2.3) may reach the public API — replace

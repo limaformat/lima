@@ -1,0 +1,19 @@
+{
+  "id": "references.limits.partial-count.allowed",
+  "spec": "references",
+  "section": "6.2",
+  "description": "128 partial names (the limit) are allowed. The document itself is empty — partial validation happens before document parsing.",
+  "generator": {
+    "name": "partial-count",
+    "parameters": {
+      "count": 128
+    }
+  },
+  "expect": {
+    "result": {}
+  },
+  "tags": [
+    "boundary",
+    "partial"
+  ]
+}
