@@ -1,0 +1,11 @@
+{
+  "id": "core.numbers.float-overflow.non-strict",
+  "spec": "core",
+  "section": "6.4.2",
+  "description": "A float that overflows to a non-finite value falls back to a string in non-strict mode.",
+  "input": "v: 1e400\n",
+  "expect": {
+    "result": { "v": "1e400" }
+  },
+  "tags": ["fallback", "number"]
+}

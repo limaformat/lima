@@ -1,0 +1,15 @@
+{
+  "id": "core.numbers.float-underflow.strict",
+  "spec": "core",
+  "section": "6.4.2",
+  "description": "A syntactically non-zero float that underflows to zero throws in strict mode.",
+  "input": "v: 1e-400\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_NUMBER"
+    }
+  },
+  "tags": ["strict", "error", "number"]
+}

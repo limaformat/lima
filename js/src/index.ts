@@ -328,6 +328,26 @@ const parseDateUTC = (str: string): Date | null => {
 	return !isNaN(ts) ? new Date(s) : null
 }
 
+// Core §6.4.1 number grammar, applied directly rather than delegated to
+// Number()/parseFloat(): those accept far more than Lima does — leading
+// zeros ("01"), a bare trailing decimal point ("1."), surrounding
+// whitespace, and more.
+//   number       = "-"? significand exponent?
+//   significand  = integer-part | decimal | leading
+//   integer-part = "0" | [1-9][0-9]*
+//   decimal      = integer-part "." [0-9]+
+//   leading      = "." [0-9]+
+//   exponent     = [eE] [+-]? [0-9]+
+const NUMBER_RE = /^-?(?:(?:0|[1-9][0-9]*)(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/
+
+// Core §6.4.1: a number with a decimal point or an exponent (or both) is a float.
+const isFloatForm = (str: string): boolean => str.includes('.') || str.includes('e') || str.includes('E')
+
+// Whether the significand (sign and exponent stripped) is mathematically
+// zero as written — e.g. "0", "-0", "0.0", "-0.0" — as opposed to a
+// syntactically non-zero value that underflows to zero (Core §6.4.2).
+const isZeroLiteral = (str: string): boolean => /^0+(\.0+)?$/.test(str.replace(/^-/, '').split(/[eE]/)[0])
+
 /**
  * Attempts to convert a string value to its most natural JavaScript type.
  * Conversion order: null → boolean → number → Date → string (fallback).
@@ -339,24 +359,41 @@ const parseDateUTC = (str: string): Date | null => {
  * YAML 1.2 does not define these notations, so converting them silently would
  * diverge from YAML semantics and lose the original representation.
  *
- * Leading decimal point (`.5`) is accepted as a number (→ 0.5) because
- * JavaScript's `Number('.5')` returns 0.5. This is not YAML 1.2 syntax but is
- * valid JSON5 and a convenient shorthand.
+ * Leading decimal point (`.5`) is accepted as a number (→ 0.5) — valid under
+ * the Core §6.4.1 grammar's `leading` significand form.
  *
  * All dates are normalized to UTC — see parseDateUTC for details.
  */
-const toType = (str: string): string | boolean | number | Date | null => {
+const toType = (str: string, strict = false, line = 0): string | boolean | number | Date | null => {
+	if (typeof str !== 'string') return str
+	if (str === '' || str === 'null' || str === '~') return null
+	if (str === 'true') return true
+	if (str === 'false') return false
+	// Hex (0x/0X), octal (0o/0O), binary (0b/0B) — keep as strings (YAML 1.2 compatible)
+	if (str.length > 2 && str.charCodeAt(0) === 48 &&
+		(str.charCodeAt(1) === 120 || str.charCodeAt(1) === 88 ||
+		 str.charCodeAt(1) === 111 || str.charCodeAt(1) === 79 ||
+		 str.charCodeAt(1) === 98  || str.charCodeAt(1) === 66)) return str
+	if (NUMBER_RE.test(str)) {
+		const n = Number(str)
+		if (isFloatForm(str)) {
+			if (!Number.isFinite(n)) {
+				// Overflow to Infinity/-Infinity (Core §6.4.2)
+				if (strict) throw new Error(`LIMA: float value overflows to a non-finite value at line ${line}: "${str}"`)
+			} else if (n === 0 && !isZeroLiteral(str)) {
+				// Syntactically non-zero value that underflowed to zero (Core §6.4.2)
+				if (strict) throw new Error(`LIMA: non-zero float value underflows to zero at line ${line}: "${str}"`)
+			} else {
+				return n === 0 ? 0 : n // zero normalisation: -0 / -0.0 → +0
+			}
+		} else if (Math.abs(n) <= Number.MAX_SAFE_INTEGER) {
+			return n === 0 ? 0 : n // zero normalisation: -0 → +0
+		}
+		// Outside the safe integer range, or overflow/underflow in non-strict
+		// mode (the throws above already fired in strict mode): fall through
+		// to the string fallback below.
+	}
 	try {
-		if (typeof str !== 'string') return str
-		if (str === '' || str === 'null' || str === '~') return null
-		if (str === 'true') return true
-		if (str === 'false') return false
-		// Hex (0x/0X), octal (0o/0O), binary (0b/0B) — keep as strings (YAML 1.2 compatible)
-		if (str.length > 2 && str.charCodeAt(0) === 48 &&
-			(str.charCodeAt(1) === 120 || str.charCodeAt(1) === 88 ||
-			 str.charCodeAt(1) === 111 || str.charCodeAt(1) === 79 ||
-			 str.charCodeAt(1) === 98  || str.charCodeAt(1) === 66)) return str
-		if (isFinite(Number(str))) return +str
 		if (!str.includes('@') && DATE_PRE_RE.test(str)) {
 			const date = parseDateUTC(str)
 			if (date !== null) return date
@@ -603,7 +640,7 @@ const resolveValue = (raw: string, metadata: Meta, partials: Meta, strict = fals
 			throw new Error(`LIMA: non-whitespace content after closing quote at line ${line}`)
 		}
 	}
-	const value = toType(resolve(raw, metadata, partials, line))
+	const value = toType(resolve(raw, metadata, partials, line), strict, line)
 	checkScalarLimit(value, line)
 	return value
 }
@@ -676,7 +713,7 @@ const parseFlowSequence = (val: string, metadata: Meta, partials: Meta, strict =
 			checkScalarLimit(value, line)
 			return value.includes('($') || value.includes('(%') ? markInactive(value) : value
 		}
-		const value = toType(resolve(item, metadata, partials, line))
+		const value = toType(resolve(item, metadata, partials, line), strict, line)
 		checkScalarLimit(value, line)
 		return value
 	})
@@ -720,7 +757,7 @@ const parseFlowMapping = (val: string, metadata: Meta, partials: Meta, strict = 
 			checkScalarLimit(value, line)
 			result[key] = value.includes('($') || value.includes('(%') ? markInactive(value) : value
 		} else {
-			const value = toType(resolve(rawVal, metadata, partials, line))
+			const value = toType(resolve(rawVal, metadata, partials, line), strict, line)
 			checkScalarLimit(value, line)
 			result[key] = value
 		}
@@ -911,12 +948,12 @@ const parseBlock = (
 					const resolvedVal = resolve(afterDash, metadata, partials, baseLine + idx)
 					if (Array.isArray(resolvedVal)) {
 						for (const item of resolvedVal) {
-							const value = toType(item)
+							const value = toType(item, strict, baseLine + idx)
 							checkScalarLimit(value, baseLine + idx)
 							;(result as any[]).push(value)
 						}
 					} else {
-						const value = toType(resolvedVal)
+						const value = toType(resolvedVal, strict, baseLine + idx)
 						checkScalarLimit(value, baseLine + idx)
 						;(result as any[]).push(value)
 					}
@@ -996,17 +1033,17 @@ const parseBlock = (
  * the resolved value is the string `'($a)'` itself, so the second lookup returns
  * the same string and the loop terminates naturally.
  */
-const resolveForward = (val: any, metadata: Meta, partials: Meta): any => {
+const resolveForward = (val: any, metadata: Meta, partials: Meta, strict = false, line = 0): any => {
 	if (isInactiveValue(val)) return val // quoted at parse time — literal, never re-resolved (§2.3)
 	if (typeof val === 'string' && (val.includes('($') || val.includes('(%'))) {
-		return toType(resolve(val, metadata, partials))
+		return toType(resolve(val, metadata, partials, line), strict, line)
 	}
 	if (Array.isArray(val)) {
-		return val.map((item) => resolveForward(item, metadata, partials))
+		return val.map((item) => resolveForward(item, metadata, partials, strict, line))
 	}
 	if (val !== null && typeof val === 'object' && !(val instanceof Date)) {
 		for (const k of Object.keys(val)) {
-			val[k] = resolveForward(val[k], metadata, partials)
+			val[k] = resolveForward(val[k], metadata, partials, strict, line)
 		}
 	}
 	return val
@@ -1277,7 +1314,12 @@ const parse = <T extends Record<string, unknown> = Meta>(
 		const phase1Snapshot: Meta = emptyMapping()
 		for (const key of Object.keys(metadata)) phase1Snapshot[key] = metadata[key]
 		for (const key of Object.keys(metadata)) {
-			metadata[key] = resolveForward(metadata[key], phase1Snapshot, partials)
+			// keyLine(...) is only computed in strict mode — see the laziness
+			// note at the top-level duplicate-key check above.
+			metadata[key] = resolveForward(
+				metadata[key], phase1Snapshot, partials, strict,
+				strict ? keyLine(keyIndexByName[key]) : 0
+			)
 		}
 	}
 

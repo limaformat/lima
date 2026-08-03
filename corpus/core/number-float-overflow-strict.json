@@ -1,0 +1,15 @@
+{
+  "id": "core.numbers.float-overflow.strict",
+  "spec": "core",
+  "section": "6.4.2",
+  "description": "A float that overflows to a non-finite value throws in strict mode.",
+  "input": "v: 1e400\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_NUMBER"
+    }
+  },
+  "tags": ["strict", "error", "number"]
+}

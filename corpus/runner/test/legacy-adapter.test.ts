@@ -47,6 +47,39 @@ describe('adaptLegacyError', () => {
 		if (result.mapped) expect(result.diagnostic.code).toBe('INVALID_INDENTATION')
 	})
 
+	it('maps indented freetext without a block scalar marker to INVALID_INDENTATION', () => {
+		const result = adaptLegacyError(
+			new Error('LIMA: indented freetext without a block scalar marker at line 2: "x"')
+		)
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_INDENTATION')
+			expect(result.diagnostic.line).toBe(2)
+		}
+	})
+
+	it('maps float overflow to INVALID_NUMBER', () => {
+		const result = adaptLegacyError(
+			new Error('LIMA: float value overflows to a non-finite value at line 1: "1e400"')
+		)
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_NUMBER')
+			expect(result.diagnostic.line).toBe(1)
+		}
+	})
+
+	it('maps non-zero float underflow to zero to INVALID_NUMBER', () => {
+		const result = adaptLegacyError(
+			new Error('LIMA: non-zero float value underflows to zero at line 1: "1e-400"')
+		)
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_NUMBER')
+			expect(result.diagnostic.line).toBe(1)
+		}
+	})
+
 	it('maps an unknown escape sequence to INVALID_ESCAPE', () => {
 		const result = adaptLegacyError(new Error('LIMA: unknown escape sequence "\\q" at line 1'))
 		expect(result.mapped).toBe(true)

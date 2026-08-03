@@ -1,0 +1,18 @@
+{
+  "id": "core.boolean.case-sensitive",
+  "spec": "core",
+  "section": "6.3",
+  "description": "Only the lowercase literals true/false are booleans; True, TRUE, yes, and no remain strings.",
+  "input": "a: true\nb: false\nc: True\nd: TRUE\ne: yes\nf: no\n",
+  "expect": {
+    "result": {
+      "a": true,
+      "b": false,
+      "c": "True",
+      "d": "TRUE",
+      "e": "yes",
+      "f": "no"
+    }
+  },
+  "tags": ["positive", "boolean"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "core.numbers.invalid-exponent-forms",
+  "spec": "core",
+  "section": "6.4.1",
+  "description": "A bare exponent marker with no digits (1e, 1e+, .5E, 1e-) does not match the number grammar and remains a string.",
+  "input": "a: 1e\nb: 1e+\nc: .5E\nd: 1e-\n",
+  "expect": {
+    "result": { "a": "1e", "b": "1e+", "c": ".5E", "d": "1e-" }
+  },
+  "tags": ["fallback", "number"]
+}

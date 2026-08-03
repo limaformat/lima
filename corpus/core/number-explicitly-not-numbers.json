@@ -1,0 +1,24 @@
+{
+  "id": "core.numbers.explicitly-not-numbers",
+  "spec": "core",
+  "section": "6.4.3",
+  "description": "Forms not matched by the Core §6.4.1 grammar remain strings: explicit plus sign, trailing decimal point, non-zero leading zeros, hex/octal/binary notation, and the Infinity/NaN literals.",
+  "input": "a: +42\nb: 1.\nc: 01\nd: 007\ne: 0xFF\nf: 0XFF\ng: 0o77\nh: 0O77\ni: 0b1010\nj: 0B1010\nk: Infinity\nl: NaN\n",
+  "expect": {
+    "result": {
+      "a": "+42",
+      "b": "1.",
+      "c": "01",
+      "d": "007",
+      "e": "0xFF",
+      "f": "0XFF",
+      "g": "0o77",
+      "h": "0O77",
+      "i": "0b1010",
+      "j": "0B1010",
+      "k": "Infinity",
+      "l": "NaN"
+    }
+  },
+  "tags": ["fallback", "number"]
+}

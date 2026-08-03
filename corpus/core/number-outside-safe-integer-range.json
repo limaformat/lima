@@ -1,0 +1,11 @@
+{
+  "id": "core.numbers.outside-safe-integer-range",
+  "spec": "core",
+  "section": "6.4.2",
+  "description": "An integer outside the IEEE 754 safe-integer range (±(2^53-1)) falls back to a string in both modes, to keep output identical across host-language integer representations.",
+  "input": "v: 9007199254740993\n",
+  "expect": {
+    "result": { "v": "9007199254740993" }
+  },
+  "tags": ["fallback", "number"]
+}

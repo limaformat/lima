@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(70)
+		expect(outcomes).toHaveLength(83)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -61,7 +61,18 @@ describe('runCorpus', () => {
 	 * marker and no `:` produced an empty mapping `{}` instead of `null` in
 	 * non-strict mode, because `parseBlock`'s map-entry branch eagerly
 	 * created the result mapping before confirming the line was a valid
-	 * entry).
+	 * entry) → 83/0/0 (13 new Core §6.2-6.4 null/boolean/number cases added;
+	 * found and fixed four more real bugs in `toType`'s number handling,
+	 * which had delegated to JavaScript's permissive `Number()` instead of
+	 * applying the Core §6.4.1 grammar directly: leading zeros ("01") and a
+	 * bare trailing decimal point ("1.") were wrongly accepted as numbers;
+	 * an integer outside the IEEE 754 safe-integer range lost precision
+	 * silently instead of falling back to a string; float overflow to a
+	 * non-finite value and non-zero float underflow to zero were not
+	 * detected at all — non-strict mode returned Infinity/0 instead of a
+	 * string fallback, and strict mode never threw. Added the INVALID_NUMBER
+	 * diagnostic code for the two strict-mode number errors, since neither
+	 * fit an existing code (docs/corpus-design/error-api.md)).
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -70,7 +81,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 70, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 83, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

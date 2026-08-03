@@ -1,0 +1,11 @@
+{
+  "id": "core.null.all-forms",
+  "spec": "core",
+  "section": "6.2",
+  "description": "Empty value, the literal string null, and ~ all yield null.",
+  "input": "a:\nb: null\nc: ~\n",
+  "expect": {
+    "result": { "a": null, "b": null, "c": null }
+  },
+  "tags": ["positive", "null"]
+}

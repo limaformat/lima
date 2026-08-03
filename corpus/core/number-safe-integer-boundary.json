@@ -1,0 +1,11 @@
+{
+  "id": "core.numbers.safe-integer-boundary",
+  "spec": "core",
+  "section": "6.4.2",
+  "description": "The safe-integer maximum and minimum (±(2^53-1)) are accepted as numbers.",
+  "input": "max: 9007199254740991\nmin: -9007199254740991\n",
+  "expect": {
+    "result": { "max": 9007199254740991, "min": -9007199254740991 }
+  },
+  "tags": ["boundary", "number"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "core.numbers.zero-normalization",
+  "spec": "core",
+  "section": "6.4.2",
+  "description": "-0 and -0.0 are both normalized to positive zero, so output is identical across host languages that do and do not distinguish negative zero.",
+  "input": "a: -0\nb: -0.0\n",
+  "expect": {
+    "result": { "a": 0, "b": 0 }
+  },
+  "tags": ["positive", "number"]
+}

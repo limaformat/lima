@@ -59,6 +59,13 @@ const rules: Rule[] = [
 		code: 'INVALID_ESCAPE',
 	},
 	{
+		// Core §6.4.2: float overflow to a non-finite value, or a
+		// syntactically non-zero float underflowing to zero — neither is a
+		// date, quote, or resource-limit error, so INVALID_NUMBER was added.
+		pattern: /float value overflows to a non-finite value|non-zero float value underflows to zero/,
+		code: 'INVALID_NUMBER',
+	},
+	{
 		// Quote-structure errors (not escape-content errors) — Core §10.1
 		// lists this and "unterminated quoted string" as their own rows,
 		// distinct from the §6.1.2 escape-content error table.

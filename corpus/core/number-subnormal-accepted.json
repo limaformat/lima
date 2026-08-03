@@ -1,0 +1,11 @@
+{
+  "id": "core.numbers.subnormal-accepted",
+  "spec": "core",
+  "section": "6.4.2",
+  "description": "A subnormal (denormal) value that remains non-zero is accepted as a normal float value in both modes, distinguishing it from underflow-to-zero.",
+  "input": "v: 5e-320\n",
+  "expect": {
+    "result": { "v": 5e-320 }
+  },
+  "tags": ["boundary", "number"]
+}

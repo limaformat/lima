@@ -353,6 +353,12 @@ describe('type coercion', () => {
 		expect(parse('draft: false')).toEqual({ draft: false })
 	})
 
+	it('boolean coercion is case-sensitive (Core §6.3) — only lowercase true/false qualify', () => {
+		expect(parse('a: True\nb: TRUE\nc: yes\nd: no\n')).toEqual({
+			a: 'True', b: 'TRUE', c: 'yes', d: 'no',
+		})
+	})
+
 	it('parses integers as number', () => {
 		expect(parse('count: 42')).toEqual({ count: 42 })
 	})
@@ -427,6 +433,62 @@ describe('type coercion', () => {
 		expect(parse('ratio: .5')).toEqual({ ratio: 0.5 })
 		expect(typeof parse('ratio: .5').ratio).toBe('number')
 		expect(parse('neg: -.5')).toEqual({ neg: -0.5 })
+	})
+
+	it('rejects a non-zero leading zero (Core §6.4.1 grammar) — remains a string', () => {
+		expect(parse('v: 01')).toEqual({ v: '01' })
+		expect(parse('v: 007')).toEqual({ v: '007' })
+	})
+
+	it('rejects a trailing decimal point with no digits — remains a string', () => {
+		expect(parse('v: 1.')).toEqual({ v: '1.' })
+	})
+
+	it('rejects an explicit plus sign — remains a string', () => {
+		expect(parse('v: +42')).toEqual({ v: '+42' })
+	})
+
+	it('accepts the safe-integer boundary values (±(2^53-1)) as numbers', () => {
+		expect(parse('v: 9007199254740991')).toEqual({ v: 9007199254740991 })
+		expect(parse('v: -9007199254740991')).toEqual({ v: -9007199254740991 })
+	})
+
+	it('falls back to string for an integer outside the safe-integer range', () => {
+		const result = parse('v: 9007199254740993')
+		expect(result.v).toBe('9007199254740993')
+		expect(typeof result.v).toBe('string')
+	})
+
+	it('normalizes -0 and -0.0 to positive zero (Core §6.4.2)', () => {
+		expect(Object.is(parse('v: -0').v, -0)).toBe(false)
+		expect(parse('v: -0').v).toBe(0)
+		expect(Object.is(parse('v: -0.0').v, -0)).toBe(false)
+		expect(parse('v: -0.0').v).toBe(0)
+	})
+
+	it('falls back to string on float overflow to a non-finite value in non-strict mode', () => {
+		const result = parse('v: 1e400')
+		expect(result.v).toBe('1e400')
+		expect(typeof result.v).toBe('string')
+	})
+
+	it('throws on float overflow to a non-finite value in strict mode', () => {
+		expect(() => parse('v: 1e400', { strict: true })).toThrow('LIMA')
+	})
+
+	it('falls back to string when a non-zero float underflows to zero in non-strict mode', () => {
+		const result = parse('v: 1e-400')
+		expect(result.v).toBe('1e-400')
+		expect(typeof result.v).toBe('string')
+	})
+
+	it('throws when a non-zero float underflows to zero in strict mode', () => {
+		expect(() => parse('v: 1e-400', { strict: true })).toThrow('LIMA')
+	})
+
+	it('accepts a non-zero subnormal float as a number in both modes', () => {
+		expect(parse('v: 5e-320')).toEqual({ v: 5e-320 })
+		expect(parse('v: 5e-320', { strict: true })).toEqual({ v: 5e-320 })
 	})
 })
 

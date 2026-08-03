@@ -1,0 +1,23 @@
+{
+  "id": "core.numbers.grammar-forms",
+  "spec": "core",
+  "section": "6.4.1",
+  "description": "Integer, decimal, leading-dot, and exponent forms permitted by the Core §6.4.1 grammar all parse as numbers.",
+  "input": "a: 42\nb: -1\nc: 0\nd: 3.14\ne: -0.5\nf: .5\ng: -.5\nh: 1e3\ni: 1E+3\nj: .5e2\nk: 1.5e-2\n",
+  "expect": {
+    "result": {
+      "a": 42,
+      "b": -1,
+      "c": 0,
+      "d": 3.14,
+      "e": -0.5,
+      "f": 0.5,
+      "g": -0.5,
+      "h": 1000,
+      "i": 1000,
+      "j": 50,
+      "k": 0.015
+    }
+  },
+  "tags": ["positive", "number"]
+}

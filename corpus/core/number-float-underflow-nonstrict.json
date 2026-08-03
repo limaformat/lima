@@ -1,0 +1,11 @@
+{
+  "id": "core.numbers.float-underflow.non-strict",
+  "spec": "core",
+  "section": "6.4.2",
+  "description": "A syntactically non-zero float that underflows to zero falls back to a string in non-strict mode.",
+  "input": "v: 1e-400\n",
+  "expect": {
+    "result": { "v": "1e-400" }
+  },
+  "tags": ["fallback", "number"]
+}
