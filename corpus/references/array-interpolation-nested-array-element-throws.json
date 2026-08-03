@@ -1,0 +1,16 @@
+{
+  "id": "references.array-interpolation.nested-array-element-throws",
+  "spec": "references",
+  "section": "3.6",
+  "description": "An array containing a nested array element throws in both modes when used in string interpolation. Document-side nested arrays are already rejected earlier in the pipeline (Core §7.2, References §3.1/Appendix), so a partial is the only current path to exercise this specific check.",
+  "input": "label: Data: (%matrix)",
+  "options": { "partials": { "matrix": [[1, 2], [3, 4]] } },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "(%matrix)",
+      "code": "INVALID_INTERPOLATION"
+    }
+  },
+  "tags": ["error", "array-interpolation"]
+}

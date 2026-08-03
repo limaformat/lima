@@ -1,0 +1,11 @@
+{
+  "id": "references.canonical.null-empty-string",
+  "spec": "references",
+  "section": "3.5",
+  "description": "A null value's canonical interpolation representation is an empty string — the token is replaced with nothing, not the text 'null'.",
+  "input": "n: null\nlabel: before ($n) after\n",
+  "expect": {
+    "result": { "n": null, "label": "before  after" }
+  },
+  "tags": ["positive", "canonical"]
+}

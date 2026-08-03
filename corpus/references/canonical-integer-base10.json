@@ -1,0 +1,11 @@
+{
+  "id": "references.canonical.integer-base10",
+  "spec": "references",
+  "section": "3.5",
+  "description": "An integer value's canonical interpolation representation is base-10 decimal, no leading sign for positive values, and no exponent.",
+  "input": "i1: 42\ni2: -1\ni3: 0\nlabel: ($i1)/($i2)/($i3)\n",
+  "expect": {
+    "result": { "i1": 42, "i2": -1, "i3": 0, "label": "42/-1/0" }
+  },
+  "tags": ["positive", "canonical"]
+}

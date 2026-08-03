@@ -1,0 +1,11 @@
+{
+  "id": "references.array-interpolation.join",
+  "spec": "references",
+  "section": "3.6",
+  "description": "An array used in string interpolation has its scalar elements joined with ', ' (comma followed by a single space), each serialised via the canonical string representation.",
+  "input": "a: [1, 2, 3]\nlabel: Items: ($a)\n",
+  "expect": {
+    "result": { "a": [1, 2, 3], "label": "Items: 1, 2, 3" }
+  },
+  "tags": ["positive", "array-interpolation"]
+}

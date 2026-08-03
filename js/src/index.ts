@@ -99,6 +99,46 @@ const validatePartialValue = (value: any, partialName: string, path: string): vo
 	}
 }
 
+/**
+ * References §3.8 ("No Traversal into Partial Values"): reference-like
+ * strings inside a partial are always literal, never active tokens — the
+ * resolution phases must not rediscover them by scanning the string
+ * content. Every string leaf in a partial's value tree is therefore
+ * wrapped as inactive up front, the same internal marker quoted document
+ * strings use (see `markInactive`), so `isReferenceFree()` and
+ * `resolveForward()` treat it as opaque without needing to inspect its
+ * text. Containers (arrays/mappings) are rebuilt, not wrapped themselves —
+ * only their string leaves are.
+ */
+const sanitizePartialValue = (value: any): any => {
+	if (typeof value === 'string') return markInactive(value)
+	if (Array.isArray(value)) return value.map(sanitizePartialValue)
+	if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+		const out: Meta = emptyMapping()
+		for (const key of Object.keys(value)) out[key] = sanitizePartialValue(value[key])
+		return out
+	}
+	return value
+}
+
+/**
+ * Non-mutating counterpart to `unwrapInactive`, for consumption points
+ * (canonical-string interpolation, array-interpolation joining) that must
+ * read a partial's plain content without permanently stripping the
+ * inactive marker from the shared, sanitized `partials` map — the same
+ * partial may be referenced again elsewhere and must stay protected.
+ */
+const unwrapInactiveReadonly = (value: any): any => {
+	if (isInactiveValue(value)) return value.value
+	if (Array.isArray(value)) return value.map(unwrapInactiveReadonly)
+	if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+		const out: Meta = emptyMapping()
+		for (const key of Object.keys(value)) out[key] = unwrapInactiveReadonly(value[key])
+		return out
+	}
+	return value
+}
+
 type ParseOptions = {
 	/** Named values available via `(%key)` references. */
 	partials?: Meta
@@ -485,6 +525,15 @@ const getNestedValue = (obj: Meta, path: string): any => {
  * no `+` after `e`, no leading zeros in the exponent.
  */
 const canonicalString = (value: any): string => {
+	// References §3.5: null's canonical string representation is empty —
+	// the token is replaced with nothing, not the text "null".
+	if (value === null) return ''
+	// References §3.5: a UTC Instant's canonical string is an RFC 3339
+	// string with seconds and a Z suffix (e.g. "2024-03-01T09:00:00Z") —
+	// never the host's locale/timezone-dependent String(date) form, and
+	// never toISOString()'s trailing ".000" milliseconds (Lima instants
+	// are always zero-millisecond, but the canonical form omits them).
+	if (value instanceof Date) return value.toISOString().replace(/\.\d{3}Z$/, 'Z')
 	if (typeof value !== 'number') return String(value)
 	const s = String(value)
 	return s.includes('e') || s.includes('E')
@@ -543,20 +592,31 @@ const resolve = (val: string, metadata: Meta, partials: Meta, line = 0): any => 
 			const isPartial = partialKey !== undefined
 			const key = isPartial ? partialKey : docPath
 			const resolved = isPartial ? partials[key] : getNestedValue(metadata, key)
-			if (resolved === undefined || resolved === null || !isReferenceFree(resolved)) return match
+			// References §3.5: null is a valid, resolved interpolation value —
+			// it becomes an empty string, not "unresolved" fallback text. Only
+			// undefined (target not found) or a still-active target leaves the
+			// token unchanged.
+			if (resolved === undefined || !isReferenceFree(resolved)) return match
+			// Consumed here and now (never stored as a further resolution
+			// target), so it's safe to strip any partial-provenance inactive
+			// markers (§3.8) via the non-mutating unwrap — canonicalString/
+			// isPlainMapping/Array.isArray must see plain values, not marker
+			// wrapper objects, and the shared sanitized `partials` map must
+			// stay marked for any other reference to the same partial.
+			const plain = unwrapInactiveReadonly(resolved)
 			// References §3.5/§3.6: mappings can never be interpolated into a
 			// string, and arrays containing a nested array or mapping element
 			// throw too — both are hard errors in both modes, not a fallback.
-			if (isPlainMapping(resolved)) {
+			if (isPlainMapping(plain)) {
 				throw new Error(`LIMA: invalid interpolation of "${match}" at line ${line}: mapping cannot be interpolated into a string`)
 			}
-			if (Array.isArray(resolved)) {
-				if (resolved.some((item) => Array.isArray(item) || isPlainMapping(item))) {
+			if (Array.isArray(plain)) {
+				if (plain.some((item) => Array.isArray(item) || isPlainMapping(item))) {
 					throw new Error(`LIMA: invalid interpolation of "${match}" at line ${line}: array contains a nested array or mapping`)
 				}
-				return resolved.map(canonicalString).join(', ')
+				return plain.map(canonicalString).join(', ')
 			}
-			return canonicalString(resolved)
+			return canonicalString(plain)
 		})
 	}
 
@@ -1197,12 +1257,17 @@ const parse = <T extends Record<string, unknown> = Meta>(
 	frontMatter: string,
 	options?: ParseOptions
 ): T => {
-	const partials = options?.partials ?? {}
-	const strict   = options?.strict   ?? false
+	const rawPartials = options?.partials ?? {}
+	const strict      = options?.strict   ?? false
 
 	// References §6.2: partials are validated before document parsing begins —
 	// this must run even for an empty document.
-	for (const [name, value] of Object.entries(partials)) validatePartialValue(value, name, name)
+	for (const [name, value] of Object.entries(rawPartials)) validatePartialValue(value, name, name)
+	// §3.8: every string leaf is marked inactive up front (see
+	// sanitizePartialValue's doc comment) so no later resolution step can
+	// mistake literal partial content for an active reference token.
+	const partials: Meta = emptyMapping()
+	for (const [name, value] of Object.entries(rawPartials)) partials[name] = sanitizePartialValue(value)
 
 	// Core §9: document size is measured in UTF-8 bytes of the *original*
 	// input, before normalisation — a hard error in both modes.
@@ -1282,6 +1347,23 @@ const parse = <T extends Record<string, unknown> = Meta>(
 	// (e.g. the final unresolved-reference scan below) without eagerly
 	// computing positions for every key.
 	const keyIndexByName: Record<string, number> = {}
+	// References §4/§3.7 (one-hop limit): top-level key name → its ORIGINAL
+	// raw text, for every key whose inline value is itself a pure reference
+	// token. The live first pass below resolves backward references (a key
+	// targeting an earlier key) as it goes, so by the time a later key looks
+	// up an earlier one, the earlier key's value may already be resolved —
+	// correct for that earlier key's own output, but if used as-is when
+	// building the phase-2 snapshot, it would let a chain like `a: ($b)` /
+	// `b: ($c)` / `c: 42` fully resolve whenever `c` happens to be written
+	// before `b` (making `b`'s hop happen in phase 1 instead of phase 2),
+	// even though the identical reference graph must stay unresolved for
+	// `a` regardless of where `c` is written (§4: "the output is
+	// independent of mapping enumeration order"; Appendix 8: transitive
+	// references are not supported). The phase-2 snapshot substitutes this
+	// original text back in for such keys, so a key that was itself a pure
+	// reference is never a valid target for another key's hop — while its
+	// own resolved value (already computed) is untouched.
+	const originalPureRefText: Record<string, string> = {}
 
 	for (let i = 0; i < keyCount; i++) {
 		const rawDQ = parts[i * 5 + 2]
@@ -1344,6 +1426,13 @@ const parse = <T extends Record<string, unknown> = Meta>(
 				// marker on the first line, handled by the block below.
 				const line0   = lines[0]
 				const val     = line0.includes('#') ? stripComment(line0) : line0
+				// One-hop limit bookkeeping (see declaration above) — must be
+				// recorded regardless of whether this key ends up resolving in
+				// the live pass below, so it stays cheap: a single anchored
+				// regex test, only reached for values shaped like `(...)`.
+				if (val.charCodeAt(0) === 40 && val.charCodeAt(val.length - 1) === 41 && PURE_REF_RE.test(val)) {
+					originalPureRefText[key] = val
+				}
 				// Line is needed unconditionally (not just in strict mode):
 				// resource-limit checks and flow-mapping duplicate-key
 				// warnings apply in both modes, not only strict.
@@ -1446,7 +1535,12 @@ const parse = <T extends Record<string, unknown> = Meta>(
 	// incorrectly give `a` the text "($c)" instead of leaving it unresolved).
 	if (hasRefs) {
 		const phase1Snapshot: Meta = emptyMapping()
-		for (const key of Object.keys(metadata)) phase1Snapshot[key] = metadata[key]
+		for (const key of Object.keys(metadata)) {
+			// A key whose inline value was itself a pure reference token uses
+			// that ORIGINAL text here, not its (possibly already-resolved)
+			// current value — see originalPureRefText's declaration above.
+			phase1Snapshot[key] = key in originalPureRefText ? originalPureRefText[key] : metadata[key]
+		}
 		for (const key of Object.keys(metadata)) {
 			// keyLine(...) is only computed in strict mode — see the laziness
 			// note at the top-level duplicate-key check above.

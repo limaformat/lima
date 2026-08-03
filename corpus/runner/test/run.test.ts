@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(175)
+		expect(outcomes).toHaveLength(192)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -178,7 +178,54 @@ describe('runCorpus', () => {
 	 * unresolved-intermediate conditions (missing/null/non-mapping), and
 	 * missing-partial fallback/throw. No new deviations found — this batch
 	 * built entirely on resolution machinery already fixed during earlier
-	 * §1-§2 and Phase-2 work).
+	 * §1-§2 and Phase-2 work) → 192/0/0 (17 new References §3.5-3.8 cases
+	 * added: canonical string representation for every scalar type, numeric
+	 * kind rules, float serialization boundaries, array interpolation, the
+	 * one-hop limit's order-independence guarantee, and no-traversal-into-
+	 * partials). Found and fixed three more real deviations from the frozen
+	 * References spec, all in js/src/index.ts:
+	 * (1) A reference to `null` in string interpolation was treated as
+	 * "unresolved" (leaving the token unchanged) instead of substituting an
+	 * empty string — canonicalString() returned the text "null" via
+	 * String(null) if it had been reached at all, and the interpolation
+	 * replace callback additionally short-circuited on `resolved === null`
+	 * before ever calling it. Fixed both: canonicalString(null) now returns
+	 * '', and the null short-circuit was removed (only `undefined` — target
+	 * not found — still leaves the token unchanged).
+	 * (2) A UTC Instant interpolated into a string used JavaScript's
+	 * locale/timezone-dependent String(date) form (e.g. "Fri Mar 01 2024
+	 * 08:00:00 GMT+0100 (...)")  instead of the required RFC 3339 form with
+	 * seconds and a Z suffix. canonicalString() now special-cases Date
+	 * before falling through to the generic String() branch.
+	 * (3) The one-hop limit (§3.7) was order-dependent: a chain `a: ($b)` /
+	 * `b: ($c)` / `c: 42` only stayed correctly unresolved for `a` when `c`
+	 * was written after `b` in the document. Writing `c` before `a`/`b`
+	 * caused `b`'s own hop (from `c`) to happen during phase 1 (a
+	 * legitimate backward reference, since `c` now precedes `b`), and that
+	 * already-resolved value then leaked into the phase-2 snapshot used to
+	 * evaluate `a` — letting `a` piggyback a second hop and fully resolve,
+	 * in violation of both §4's explicit "the output is independent of
+	 * mapping enumeration order" and Appendix 8's "transitive references
+	 * ... not supported". Fixed by recording, for every top-level key whose
+	 * inline value is itself a pure reference token, that token's original
+	 * text; the phase-2 snapshot substitutes it back in for such keys
+	 * instead of using their (possibly already hop-resolved) current value,
+	 * so a key that was itself a reference can never serve as another key's
+	 * target, regardless of where its own target happened to be written.
+	 * While chasing (3), also found and fixed a related, independent bug:
+	 * `isReferenceFree()` recursively inspected the *string content* of a
+	 * partial's value looking for "($" / "(%" substrings — directly
+	 * violating §3.8 ("the resolution phases must not rediscover
+	 * reference-like substrings by scanning final ... values", stated for
+	 * partials specifically). A partial whose value happened to contain
+	 * reference-like text (e.g. `{name: "($defaultName)"}`) was therefore
+	 * never resolvable via `(%key)` at all. Fixed by marking every string
+	 * leaf in a partial's value tree as inactive up front (the same
+	 * internal marker quoted document strings already use), so
+	 * `isReferenceFree()` and `resolveForward()` treat it as opaque without
+	 * inspecting its text — with a new non-mutating unwrap at the
+	 * interpolation consumption point, so the shared sanitized partials map
+	 * stays protected for any other reference to the same partial.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -187,7 +234,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 175, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 192, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

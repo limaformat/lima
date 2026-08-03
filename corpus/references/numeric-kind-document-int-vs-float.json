@@ -1,0 +1,11 @@
+{
+  "id": "references.numeric-kind.document-int-vs-float",
+  "spec": "references",
+  "section": "3.5",
+  "description": "A parsed document numeric value retains its syntactic kind (integer or float) internally; both a document integer and a document float serialize correctly in interpolation (both '1000' here, since 1000.0 canonicalizes to '1000' via the float rule too).",
+  "input": "i: 1000\nf: 1000.0\nlabel: ($i)|($f)\n",
+  "expect": {
+    "result": { "i": 1000, "f": 1000.0, "label": "1000|1000" }
+  },
+  "tags": ["positive", "numeric-kind"]
+}

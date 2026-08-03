@@ -1,0 +1,12 @@
+{
+  "id": "references.numeric-kind.partial-always-float-rule",
+  "spec": "references",
+  "section": "3.5",
+  "description": "Host-provided partial numbers have no syntactic kind and are always serialised using the canonical float rule, regardless of whether their mathematical value is integral: a large integral partial (1e21) still uses exponential notation, not a 22-digit decimal expansion.",
+  "input": "label: (%n1)|(%n2)",
+  "options": { "partials": { "n1": 1000, "n2": 1e21 } },
+  "expect": {
+    "result": { "label": "1000|1e21" }
+  },
+  "tags": ["positive", "numeric-kind", "partial"]
+}

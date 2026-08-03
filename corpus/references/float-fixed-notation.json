@@ -1,0 +1,11 @@
+{
+  "id": "references.float.fixed-notation",
+  "spec": "references",
+  "section": "3.5.1",
+  "description": "3.14 and -0.5 serialize in fixed notation.",
+  "input": "f1: 3.14\nf2: -0.5\nlabel: ($f1)|($f2)\n",
+  "expect": {
+    "result": { "f1": 3.14, "f2": -0.5, "label": "3.14|-0.5" }
+  },
+  "tags": ["positive", "float"]
+}

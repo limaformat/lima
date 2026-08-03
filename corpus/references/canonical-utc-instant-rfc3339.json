@@ -1,0 +1,14 @@
+{
+  "id": "references.canonical.utc-instant-rfc3339",
+  "spec": "references",
+  "section": "3.5",
+  "description": "A UTC Instant's canonical interpolation representation is an RFC 3339 string with seconds and a Z suffix, converted from the source offset.",
+  "input": "d: 2024-03-01T09:00:00+02:00\nlabel: Value: ($d)\n",
+  "expect": {
+    "result": {
+      "d": { "$type": "instant", "value": "2024-03-01T07:00:00Z" },
+      "label": "Value: 2024-03-01T07:00:00Z"
+    }
+  },
+  "tags": ["positive", "canonical"]
+}

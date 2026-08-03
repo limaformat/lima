@@ -1,0 +1,15 @@
+{
+  "id": "references.array-interpolation.mapping-element-throws",
+  "spec": "references",
+  "section": "3.6",
+  "description": "An array containing a mapping element throws in both modes when used in string interpolation — each element must be a scalar Lima value.",
+  "input": "a:\n  - 1\n  - x: 2\nlabel: Items: ($a)\n",
+  "expect": {
+    "error": {
+      "line": 4,
+      "token": "($a)",
+      "code": "INVALID_INTERPOLATION"
+    }
+  },
+  "tags": ["error", "array-interpolation"]
+}

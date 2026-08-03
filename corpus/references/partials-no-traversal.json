@@ -1,0 +1,12 @@
+{
+  "id": "references.partials.no-traversal",
+  "spec": "references",
+  "section": "3.8",
+  "description": "A partial value is inserted as-is; the resolution phases never traverse into it to resolve references nested inside it.",
+  "input": "person: (%author)",
+  "options": { "partials": { "author": { "name": "Alice", "city": "Berlin" } } },
+  "expect": {
+    "result": { "person": { "name": "Alice", "city": "Berlin" } }
+  },
+  "tags": ["positive", "partial"]
+}

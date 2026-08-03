@@ -1013,6 +1013,29 @@ describe('references', () => {
 		expect(result.author).toBe('%unknown')
 	})
 
+	it('resolves a partial reference even when the partial value itself contains reference-like text (References §3.8)', () => {
+		// A partial's string content is always literal — the resolution
+		// phases must not scan into it looking for active tokens. Before this
+		// was fixed, isReferenceFree() recursively inspected the partial's
+		// nested string for a "($...)" substring and wrongly treated the
+		// whole partial as "not yet resolvable", so `person` never resolved
+		// at all.
+		const result = parse('person: (%author)', {
+			partials: { author: { name: '($defaultName)' } },
+		})
+		expect(result.person).toEqual({ name: '($defaultName)' })
+	})
+
+	it('does not resolve or throw on reference-like text embedded in an interpolated partial string', () => {
+		const result = parse('label: Hi (%name)!', { partials: { name: '($weird)' } })
+		expect(result.label).toBe('Hi ($weird)!')
+	})
+
+	it('joins a partial array containing reference-like string elements literally in interpolation', () => {
+		const result = parse('label: Items: (%arr)', { partials: { arr: ['($a)', 'b', '($c)'] } })
+		expect(result.label).toBe('Items: ($a), b, ($c)')
+	})
+
 	it('throws in both modes when an array-valued reference is inserted as a sequence item — array spreading was removed (References Appendix)', () => {
 		const doc = `
 			keywords:
@@ -1030,6 +1053,21 @@ describe('references', () => {
 			greeting: Hello ($name)!
 		`)
 		expect(result.greeting).toBe('Hello Alice!')
+	})
+
+	it('interpolates a UTC Instant as an RFC 3339 string with seconds and Z, not the local Date.toString() form (References §3.5)', () => {
+		const result = parse('d: 2024-03-01T09:00:00+02:00\nlabel: Value: ($d)\n')
+		expect(result.label).toBe('Value: 2024-03-01T07:00:00Z')
+	})
+
+	it('interpolates a reference to null as an empty string, not "null" or unresolved fallback (Core §3.5)', () => {
+		const result = parse('n: null\nlabel: before ($n) after\n')
+		expect(result.label).toBe('before  after')
+	})
+
+	it('joins array elements in interpolation, rendering a null element as an empty string', () => {
+		const result = parse('a: [1, null, 3]\nlabel: Items: ($a)\n')
+		expect(result.label).toBe('Items: 1, , 3')
 	})
 
 	it('interpolates multiple references in one string', () => {
@@ -1178,6 +1216,42 @@ describe('dotted-path references', () => {
 		// "1000" (canonical float rule), even after being deep-copied twice.
 		const result = parse('a:\n  x: 1000.0\ncopy1: ($a)\ncopy2: ($copy1)\nlabel: Value is ($copy2.x).\n')
 		expect(result.label).toBe('Value is 1000.')
+	})
+})
+
+// ─── One-hop limit is order-independent (References §3.7/§4) ──────────────────
+// A chain a → b → c must never fully resolve, regardless of the physical
+// order the keys are written in — moving c earlier in the document must not
+// let a "borrow" b's own one-hop resolution as a second hop.
+
+describe('one-hop limit order independence', () => {
+	const expected = { a: '($b)', b: 42, c: 42 }
+
+	it('resolves correctly with the normative a, b, c ordering', () => {
+		const result = parse('a: ($b)\nb: ($c)\nc: 42\n')
+		expect(result).toEqual(expected)
+	})
+
+	it('resolves identically when c is written first (b\'s hop now falls in phase 1)', () => {
+		const result = parse('c: 42\na: ($b)\nb: ($c)\n')
+		expect(result).toEqual(expected)
+	})
+
+	it('resolves identically with b, c, a ordering', () => {
+		const result = parse('b: ($c)\nc: 42\na: ($b)\n')
+		expect(result).toEqual(expected)
+	})
+
+	it('stays order-independent with unrelated keys interspersed', () => {
+		const result = parse('x: u1\na: ($b)\ny: u2\nb: ($c)\nz: u3\nc: 42\n')
+		expect(result).toMatchObject(expected)
+		const reordered = parse('z: u3\ny: u2\nx: u1\na: ($b)\nb: ($c)\nc: 42\n')
+		expect(reordered).toMatchObject(expected)
+	})
+
+	it('throws for a in strict mode regardless of ordering', () => {
+		expect(() => parse('a: ($b)\nb: ($c)\nc: 42\n', { strict: true })).toThrow('($b)')
+		expect(() => parse('c: 42\na: ($b)\nb: ($c)\n', { strict: true })).toThrow('($b)')
 	})
 })
 

@@ -1,0 +1,11 @@
+{
+  "id": "references.one-hop.order-independent",
+  "spec": "references",
+  "section": "3.7",
+  "description": "The a->b->c chain result is independent of mapping enumeration order: writing c before a and b must not let b's own one-hop resolution (from c) become a second hop for a. Compare with references.one-hop.chain.non-strict, which uses the normative a, b, c ordering.",
+  "input": "c: 42\na: ($b)\nb: ($c)\n",
+  "expect": {
+    "result": { "c": 42, "a": "($b)", "b": 42 }
+  },
+  "tags": ["cross-runner", "one-hop", "snapshot"]
+}

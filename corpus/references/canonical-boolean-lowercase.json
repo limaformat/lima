@@ -1,0 +1,11 @@
+{
+  "id": "references.canonical.boolean-lowercase",
+  "spec": "references",
+  "section": "3.5",
+  "description": "A boolean value's canonical interpolation representation is the lowercase literal true or false.",
+  "input": "b1: true\nb2: false\nlabel: ($b1)/($b2)\n",
+  "expect": {
+    "result": { "b1": true, "b2": false, "label": "true/false" }
+  },
+  "tags": ["positive", "canonical"]
+}

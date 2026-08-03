@@ -1,0 +1,11 @@
+{
+  "id": "references.float.trailing-zero-dropped",
+  "spec": "references",
+  "section": "3.5.1",
+  "description": "1000.0 becomes '1000' — fixed notation, no decimal point.",
+  "input": "f: 1000.0\nlabel: Value: ($f)\n",
+  "expect": {
+    "result": { "f": 1000.0, "label": "Value: 1000" }
+  },
+  "tags": ["positive", "float"]
+}
