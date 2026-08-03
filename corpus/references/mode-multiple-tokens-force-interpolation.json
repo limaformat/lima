@@ -1,0 +1,11 @@
+{
+  "id": "references.mode.multiple-tokens-force-interpolation",
+  "spec": "references",
+  "section": "2.5",
+  "description": "More than one active reference token forces string interpolation mode, even with no surrounding text and the tokens directly adjacent to each other.",
+  "input": "a: X\nb: Y\nc: ($a)($b)\n",
+  "expect": {
+    "result": { "a": "X", "b": "Y", "c": "XY" }
+  },
+  "tags": ["positive", "mode", "interpolation"]
+}

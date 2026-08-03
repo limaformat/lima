@@ -158,10 +158,25 @@ const KEY_RE = /^(?:([a-zA-Z\d_][a-zA-Z\d_:-]*)|'([^']*)'|"((?:[^"\\]|\\.)*)"):(
 const SPACE_BEFORE_COLON_RE = /^(?:'[^']*'|"(?:[^"\\]|\\.)*")[ \t]+:/
 /** Used to unescape `\#` → `#` after stripping comments. */
 const ESCAPED_HASH_RE = /\\#/g
-/** Pure reference: entire value is exactly one ($key) or (%key). */
-const PURE_REF_RE = /^\(([%$])([^)]+)\)$/
-/** Inline reference occurrences for string interpolation. */
-const INTERP_RE = /\(([%$])([^)]+)\)/g
+// References §2.1/§2.2/Appendix B: the normative reference grammar, per sigil.
+// A document path is dot-separated key-segments; a partial key is flat (no
+// dots — dotted partial syntax is explicitly not supported) but may contain
+// literal forward slashes for namespacing.
+//   key-segment = [a-zA-Z0-9_][a-zA-Z0-9_:\-]*
+//   doc-path    = key-segment ("." key-segment)*
+//   partial-key = [a-zA-Z0-9_][a-zA-Z0-9_:\-\/]*
+const DOC_SEGMENT = '[a-zA-Z0-9_][a-zA-Z0-9_:-]*'
+const DOC_PATH = `${DOC_SEGMENT}(?:\\.${DOC_SEGMENT})*`
+const PARTIAL_KEY = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*'
+/**
+ * Pure reference: entire value is exactly one ($path) or (%key), matched
+ * against the precise grammar above — not "any character but )". Capture
+ * groups: [1] = document path (only when the $ form matched), [2] = partial
+ * key (only when the % form matched); exactly one is ever defined.
+ */
+const PURE_REF_RE = new RegExp(`^\\((?:\\$(${DOC_PATH})|%(${PARTIAL_KEY}))\\)$`)
+/** Inline reference occurrences for string interpolation — same grammar, unanchored/global. */
+const INTERP_RE = new RegExp(`\\((?:\\$(${DOC_PATH})|%(${PARTIAL_KEY}))\\)`, 'g')
 /** Detects strings that might be a date (quick pre-check before Date.parse). */
 const DATE_PRE_RE = /\d[\d\-:.\/a-zA-Z]{4,}/
 /** Strips the leading `- ` from a block array item. */
@@ -502,31 +517,32 @@ const isPlainMapping = (value: any): boolean =>
 const resolve = (val: string, metadata: Meta, partials: Meta, line = 0): any => {
 	if (!val || typeof val !== 'string') return val
 
-	// Bare %key shorthand: entire value is %key (no parentheses needed for pure partial refs).
-	// CharCode 37 = '%'. No spaces allowed — avoids false positives on values like "100% done".
-	if (val.charCodeAt(0) === 37 /* '%' */ && val.length > 1 && !val.includes(' ')) {
-		const resolved = partials[val.slice(1)]
-		if (resolved !== undefined && isReferenceFree(resolved)) return deepCopyLimaValue(resolved)
-	}
-
-	// Pure reference: entire value is exactly one ($key) or (%key).
+	// Pure reference: entire value is exactly one ($path) or (%key).
 	// CharCode pre-check avoids running the regex on values that don't start
 	// with '(' (40) and end with ')' (41) — the common case for normal strings.
+	// The bare `%key` shorthand (no parentheses) from the pre-1.0 legacy
+	// parser is intentionally not supported — References 1.0 Appendix:
+	// "%key shorthand without parentheses | Removed; (%key) is the only
+	// partial syntax."
 	const pureMatch =
 		val.charCodeAt(0) === 40 /* '(' */ && val.charCodeAt(val.length - 1) === 41 /* ')' */
 			? val.match(PURE_REF_RE)
 			: null
 	if (pureMatch) {
-		const resolved = pureMatch[1] === '%' ? partials[pureMatch[2]] : getNestedValue(metadata, pureMatch[2])
+		const isPartial = pureMatch[2] !== undefined
+		const key = (isPartial ? pureMatch[2] : pureMatch[1])!
+		const resolved = isPartial ? partials[key] : getNestedValue(metadata, key)
 		if (resolved !== undefined && isReferenceFree(resolved)) return deepCopyLimaValue(resolved)
 		// Unresolved (or target not yet reference-free) — leave unchanged;
 		// strict check happens after the second pass
 	}
 
-	// String interpolation: replace all ($key) / (%key) occurrences
+	// String interpolation: replace all ($path) / (%key) occurrences
 	if (val.includes('($') || val.includes('(%')) {
-		return val.replace(INTERP_RE, (match, sigil, key) => {
-			const resolved = sigil === '%' ? partials[key] : getNestedValue(metadata, key)
+		return val.replace(INTERP_RE, (match, docPath, partialKey) => {
+			const isPartial = partialKey !== undefined
+			const key = isPartial ? partialKey : docPath
+			const resolved = isPartial ? partials[key] : getNestedValue(metadata, key)
 			if (resolved === undefined || resolved === null || !isReferenceFree(resolved)) return match
 			// References §3.5/§3.6: mappings can never be interpolated into a
 			// string, and arrays containing a nested array or mapping element
@@ -791,7 +807,15 @@ const parseFlowSequence = (val: string, metadata: Meta, partials: Meta, strict =
 			checkScalarLimit(value, line)
 			return value.includes('($') || value.includes('(%') ? markInactive(value) : value
 		}
-		const value = toType(resolve(item, metadata, partials, line), strict, line)
+		const resolved = resolve(item, metadata, partials, line)
+		if (Array.isArray(resolved)) {
+			// References Appendix: array spreading was removed, and a nested
+			// array produced by reference insertion violates Core §7.2
+			// ("sequences contain scalars or mappings only") — throws in
+			// BOTH modes (R-036/R-143), not just a fallback.
+			throw new Error(`LIMA: reference "${item}" resolves to an array, which cannot be inserted as a sequence item at line ${line}`)
+		}
+		const value = toType(resolved, strict, line)
 		checkScalarLimit(value, line)
 		return value
 	})
@@ -1055,11 +1079,11 @@ const parseBlock = (
 				} else {
 					const resolvedVal = resolve(afterDash, metadata, partials, baseLine + idx)
 					if (Array.isArray(resolvedVal)) {
-						for (const item of resolvedVal) {
-							const value = toType(item, strict, baseLine + idx)
-							checkScalarLimit(value, baseLine + idx)
-							;(result as any[]).push(value)
-						}
+						// References Appendix: array spreading was removed, and a
+						// nested array produced by reference insertion violates
+						// Core §7.2 ("sequences contain scalars or mappings
+						// only") — throws in BOTH modes (R-036/R-143).
+						throw new Error(`LIMA: reference "${afterDash}" resolves to an array, which cannot be inserted as a sequence item at line ${baseLine + idx}`)
 					} else {
 						const value = toType(resolvedVal, strict, baseLine + idx)
 						checkScalarLimit(value, baseLine + idx)

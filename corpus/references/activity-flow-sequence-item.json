@@ -1,0 +1,11 @@
+{
+  "id": "references.activity.flow-sequence-item",
+  "spec": "references",
+  "section": "2.3",
+  "description": "A reference token is active in a flow-sequence item.",
+  "input": "a: hello\nitems: [($a), world]\n",
+  "expect": {
+    "result": { "a": "hello", "items": ["hello", "world"] }
+  },
+  "tags": ["positive", "activity"]
+}

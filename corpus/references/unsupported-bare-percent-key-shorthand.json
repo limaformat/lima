@@ -1,0 +1,12 @@
+{
+  "id": "references.unsupported.bare-percent-key-shorthand",
+  "spec": "references",
+  "section": "8",
+  "description": "The %key shorthand without parentheses was removed from the References 1.0 spec — (%key) is the only partial syntax. A bare %key, even when it matches a provided partial name exactly, remains literal text.",
+  "input": "author: %persons/alice",
+  "options": { "partials": { "persons/alice": { "name": "Alice" } } },
+  "expect": {
+    "result": { "author": "%persons/alice" }
+  },
+  "tags": ["negative", "unsupported"]
+}

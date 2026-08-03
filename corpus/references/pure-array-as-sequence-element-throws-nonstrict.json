@@ -1,0 +1,14 @@
+{
+  "id": "references.pure.array-as-sequence-element.non-strict",
+  "spec": "references",
+  "section": "3.1",
+  "description": "A reference resolving to an array, used as a flow-sequence item, would produce a nested array — forbidden by Core §7.2 (sequences contain scalars or mappings only) — and throws even in non-strict mode.",
+  "input": "a:\n  - x\nitems: [($a), y]\n",
+  "expect": {
+    "error": {
+      "line": 3,
+      "code": "INVALID_REFERENCE_SHAPE"
+    }
+  },
+  "tags": ["error", "pure-reference"]
+}

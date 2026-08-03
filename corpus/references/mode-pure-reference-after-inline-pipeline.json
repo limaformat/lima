@@ -1,0 +1,11 @@
+{
+  "id": "references.mode.pure-reference-after-inline-pipeline",
+  "spec": "references",
+  "section": "2.4",
+  "description": "A value is a pure reference when, after the complete Core inline value processing pipeline (trimming, comment stripping, second trim), it consists of exactly one active reference token and nothing else — a trailing comment does not turn it into interpolation.",
+  "input": "a: 42\nb: ($a)   # comment\n",
+  "expect": {
+    "result": { "a": 42, "b": 42 }
+  },
+  "tags": ["positive", "mode"]
+}

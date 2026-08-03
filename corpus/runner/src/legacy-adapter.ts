@@ -77,6 +77,14 @@ const rules: Rule[] = [
 		code: 'INVALID_NUMBER',
 	},
 	{
+		// References §3.1/Appendix: a pure reference resolving to an array,
+		// inserted as a sequence item, would produce a nested array —
+		// forbidden by Core §7.2. Distinct from INVALID_INTERPOLATION, which
+		// covers the equivalent string-interpolation rules (§3.5/§3.6).
+		pattern: /resolves to an array, which cannot be inserted as a sequence item/,
+		code: 'INVALID_REFERENCE_SHAPE',
+	},
+	{
 		// Quote-structure errors (not escape-content errors) — Core §10.1
 		// lists this and "unterminated quoted string" as their own rows,
 		// distinct from the §6.1.2 escape-content error table.

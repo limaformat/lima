@@ -1,0 +1,11 @@
+{
+  "id": "references.mode.surrounding-text-forces-interpolation",
+  "spec": "references",
+  "section": "2.5",
+  "description": "Surrounding text around a reference token forces string interpolation mode, always producing a string even though the referenced value is a non-string type elsewhere.",
+  "input": "a: World\nb: Hello ($a)!\n",
+  "expect": {
+    "result": { "a": "World", "b": "Hello World!" }
+  },
+  "tags": ["positive", "mode", "interpolation"]
+}

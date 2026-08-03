@@ -971,15 +971,36 @@ describe('references', () => {
 		expect(result.author).toBe('Alice')
 	})
 
-	it('resolves bare %key shorthand to a provided partial, as a structural deep copy', () => {
-		// References §3.1/§6.2: pure references (including partials) never
-		// alias the original value — the result is a Lima-owned deep copy.
+	it('resolves a document reference with a dotted path through nested mappings', () => {
+		const result = parse(`
+			site:
+			  default:
+			    claim: Great blog
+			result: ($site.default.claim)
+		`)
+		expect(result.result).toBe('Great blog')
+	})
+
+	it('resolves a partial reference with a literal slash in the key (namespacing, not traversal)', () => {
+		const result = parse('a: (%persons/alice)', {
+			partials: { 'persons/alice': 'Alice' },
+		})
+		expect(result.a).toBe('Alice')
+	})
+
+	it('does not treat a dotted partial path as valid — partials are flat, not traversable (References Appendix)', () => {
+		const result = parse('a: (%foo.bar)', {
+			partials: { 'foo.bar': 'nope', foo: { bar: 'nested' } },
+		})
+		expect(result.a).toBe('(%foo.bar)')
+	})
+
+	it('does not resolve a bare %key without parentheses — the shorthand was removed (References Appendix)', () => {
 		const person = { name: 'Alice', url: 'https://alice.example' }
 		const result = parse('author: %persons/alice', {
 			partials: { 'persons/alice': person },
 		})
-		expect(result.author).toEqual(person)
-		expect(result.author).not.toBe(person)
+		expect(result.author).toBe('%persons/alice')
 	})
 
 	it('does not treat %key with spaces as a partial reference', () => {
@@ -987,21 +1008,20 @@ describe('references', () => {
 		expect(result.note).toBe('100% done')
 	})
 
-	it('bare %key shorthand leaves value unchanged when partial is not found', () => {
+	it('a bare %key with no matching partial is unaffected either way, since bare %key is never a reference', () => {
 		const result = parse('author: %unknown', { partials: {} })
 		expect(result.author).toBe('%unknown')
 	})
 
-	it('spreads an array partial into the target array', () => {
-		const result = parse(
-			`
+	it('throws in both modes when an array-valued reference is inserted as a sequence item — array spreading was removed (References Appendix)', () => {
+		const doc = `
 			keywords:
 			  - (%baseTags)
 			  - extra
-		`,
-			{ partials: { baseTags: ['javascript', 'webdev'] } },
-		)
-		expect(result.keywords).toEqual(['javascript', 'webdev', 'extra'])
+		`
+		const opts = { partials: { baseTags: ['javascript', 'webdev'] } }
+		expect(() => parse(doc, opts)).toThrow('LIMA')
+		expect(() => parse(doc, { ...opts, strict: true })).toThrow('LIMA')
 	})
 
 	it('interpolates references embedded in a string', () => {

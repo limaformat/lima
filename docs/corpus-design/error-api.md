@@ -11,6 +11,7 @@ export type LimaDiagnosticCode =
   | "INVALID_QUOTE"
   | "INVALID_DATE"
   | "INVALID_NUMBER"
+  | "INVALID_REFERENCE_SHAPE"
   | "INVALID_INDENTATION"
   | "INVALID_FLOW_SYNTAX"
   | "DUPLICATE_KEY"
@@ -57,6 +58,7 @@ export class LimaError extends Error {
 - `INVALID_QUOTE`
 - `INVALID_DATE`
 - `INVALID_NUMBER`
+- `INVALID_REFERENCE_SHAPE`
 - `INVALID_INDENTATION`
 - `INVALID_FLOW_SYNTAX`
 - `DUPLICATE_KEY`
@@ -74,6 +76,13 @@ the original nine codes. `INVALID_NUMBER` covers the two Core §6.4.2
 strict-mode number errors — float overflow to a non-finite value, and a
 syntactically non-zero float underflowing to zero — added for the same
 reason: neither is a date, quote, or resource-limit error.
+`INVALID_REFERENCE_SHAPE` covers a *pure*-reference resolution producing
+a value that violates the shape of its insertion context — currently: a
+reference resolving to an array, inserted as a sequence item, which
+would produce a nested array (References §3.1/Appendix; forbidden by
+Core §7.2's "sequences contain scalars or mappings only"). Distinct from
+`INVALID_INTERPOLATION`, which covers the equivalent string-interpolation
+rules (§3.5/§3.6) — this one is pure-reference mode, not interpolation.
 
 ## Non-goals
 

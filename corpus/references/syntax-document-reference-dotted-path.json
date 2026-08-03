@@ -1,0 +1,16 @@
+{
+  "id": "references.syntax.document-reference.dotted-path",
+  "spec": "references",
+  "section": "2.1",
+  "description": "A document reference grammar includes a dot-separated path traversing nested mappings, with key-segments that may include letters, digits, underscore, colon, and dash.",
+  "input": "site:\n  default:\n    claim: Great blog\n\"og:title\": Hello\nresult: ($site.default.claim)\nresult2: ($og:title)\n",
+  "expect": {
+    "result": {
+      "site": { "default": { "claim": "Great blog" } },
+      "og:title": "Hello",
+      "result": "Great blog",
+      "result2": "Hello"
+    }
+  },
+  "tags": ["positive", "syntax"]
+}

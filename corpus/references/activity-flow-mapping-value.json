@@ -1,0 +1,11 @@
+{
+  "id": "references.activity.flow-mapping-value",
+  "spec": "references",
+  "section": "2.3",
+  "description": "A reference token is active in a flow-mapping value.",
+  "input": "a: hello\nmap: {x: ($a)}\n",
+  "expect": {
+    "result": { "a": "hello", "map": { "x": "hello" } }
+  },
+  "tags": ["positive", "activity"]
+}

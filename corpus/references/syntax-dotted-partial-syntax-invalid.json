@@ -1,0 +1,12 @@
+{
+  "id": "references.syntax.dotted-partial-syntax-invalid",
+  "spec": "references",
+  "section": "2.2",
+  "description": "A dotted path is not valid partial-reference syntax — partials are flat. The token does not match the reference grammar at all and remains literal text in both modes (References Appendix: use slash notation for namespacing instead).",
+  "input": "a: (%foo.bar)",
+  "options": { "partials": { "foo.bar": "nope", "foo": { "bar": "nested" } } },
+  "expect": {
+    "result": { "a": "(%foo.bar)" }
+  },
+  "tags": ["negative", "syntax"]
+}

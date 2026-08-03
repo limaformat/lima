@@ -1,0 +1,15 @@
+{
+  "id": "references.unsupported.array-spreading",
+  "spec": "references",
+  "section": "8",
+  "description": "Array spreading of partial values was removed from the References 1.0 spec: the same value must behave identically regardless of insertion context. A partial reference resolving to an array, inserted as a sequence item, throws instead of spreading its elements into the surrounding sequence.",
+  "input": "keywords:\n  - (%baseTags)\n  - extra\n",
+  "options": { "partials": { "baseTags": ["javascript", "webdev"] } },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_REFERENCE_SHAPE"
+    }
+  },
+  "tags": ["error", "unsupported"]
+}

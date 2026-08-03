@@ -98,6 +98,17 @@ describe('adaptLegacyError', () => {
 		}
 	})
 
+	it('maps a reference resolving to an array as a sequence item to INVALID_REFERENCE_SHAPE', () => {
+		const result = adaptLegacyError(
+			new Error('LIMA: reference "($a)" resolves to an array, which cannot be inserted as a sequence item at line 3')
+		)
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_REFERENCE_SHAPE')
+			expect(result.diagnostic.line).toBe(3)
+		}
+	})
+
 	it('maps an unknown escape sequence to INVALID_ESCAPE', () => {
 		const result = adaptLegacyError(new Error('LIMA: unknown escape sequence "\\q" at line 1'))
 		expect(result.mapped).toBe(true)

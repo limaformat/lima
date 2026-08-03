@@ -1,0 +1,11 @@
+{
+  "id": "references.scope.includes-core-behavior",
+  "spec": "references",
+  "section": "1",
+  "description": "A References-conforming parser implements complete Core behavior for documents that contain no reference syntax at all.",
+  "input": "a: 42\nb: true\nc: hello\nd: [1, 2, 3]\n",
+  "expect": {
+    "result": { "a": 42, "b": true, "c": "hello", "d": [1, 2, 3] }
+  },
+  "tags": ["positive", "inheritance"]
+}

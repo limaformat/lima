@@ -102,3 +102,18 @@ This matrix complements the full Core matrix. A References runner must additiona
 | R-162 | Appendix | Unsupported | No array spreading | negative | both |
 
 **Scope:** 91 substantive check points. A check point can produce multiple concrete cases.
+
+## Known legacy-parser gaps
+
+One check point cannot currently be exercised against `js/src/index.ts`,
+for the same structural reason as Core's C-210 (see `coverage/core.md`):
+
+- **R-120** (`parseReferences` extends `parseCore`): the legacy parser
+  exposes a single `parse()` with no separate `parseCore`/`parseReferences`
+  functions, so there is nothing to test this API-composition claim
+  against. Revisit once `parseCore` distinct from `parseReferences` exists.
+
+R-001 ("References parser includes complete Core behavior") is, by
+contrast, directly testable even without a separate `parseCore` — it is a
+behavioral claim, not an API-shape one — and has a corpus case
+(`references.scope.includes-core-behavior`).

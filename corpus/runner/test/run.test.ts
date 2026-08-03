@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(147)
+		expect(outcomes).toHaveLength(164)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -137,7 +137,38 @@ describe('runCorpus', () => {
 	 * Core-only $key/%key-as-strings) are documented as known legacy-parser
 	 * gaps in coverage/core.md rather than forced into a case — the legacy
 	 * parser has no onWarning callback and no parseCore distinct from a
-	 * References-resolving parse(), so neither is currently exercisable.
+	 * References-resolving parse(), so neither is currently exercisable) →
+	 * 164/0/0 — Core coverage complete; the References 1.0 matrix begins
+	 * here. First sub-batch: §1-§2 (scope, syntax, active-token contexts,
+	 * pure-vs-interpolation mode), 17 new cases. Found and fixed three real
+	 * deviations from the frozen References spec, all in reference-token
+	 * matching/insertion (js/src/index.ts):
+	 * (1) PURE_REF_RE/INTERP_RE matched "(" + sigil + "any character but )"
+	 * + ")" instead of the precise grammar (References §2.1/§2.2/Appendix
+	 * B) — e.g. a dotted partial path like (%foo.bar) wrongly resolved via
+	 * a literal "foo.bar" partial lookup, though the partial-key grammar
+	 * has no dot at all (partials are flat; dots are document-path-only,
+	 * for traversing between key-segments). Rewrote both regexes with
+	 * separate per-sigil grammars (document path vs. partial key), each
+	 * with its own capture group.
+	 * (2) A "bare %key" shorthand (no parentheses) was still implemented
+	 * and resolving — but References 1.0 Appendix explicitly lists it as
+	 * removed ("(%key) is the only partial syntax"). Deleted the branch
+	 * entirely; two pre-existing unit tests exercised exactly this removed
+	 * behavior and were corrected to assert the token now stays literal.
+	 * (3) A reference resolving to an array, inserted as a sequence item,
+	 * was handled inconsistently and always wrong: block-sequence items
+	 * spread the array's elements into the surrounding sequence (silently
+	 * reintroducing "array spreading of partial values", also explicitly
+	 * removed per the Appendix), while flow-sequence items nested it
+	 * without complaint, producing an array-in-array Core §7.2 forbids.
+	 * Both now throw in both modes (References §3.1/Appendix, R-036/R-143).
+	 * Added a new INVALID_REFERENCE_SHAPE diagnostic code for this last
+	 * one — distinct from INVALID_INTERPOLATION, which covers the
+	 * equivalent string-interpolation-mode rules, not pure-reference mode.
+	 * One coverage point (R-120, "parseReferences extends parseCore") is
+	 * additionally deferred as a known legacy-parser gap for the same
+	 * parseCore-vs-parseReferences reason as Core's C-210.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -146,7 +177,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 147, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 164, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

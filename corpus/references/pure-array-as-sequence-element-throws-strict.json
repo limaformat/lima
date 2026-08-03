@@ -1,0 +1,15 @@
+{
+  "id": "references.pure.array-as-sequence-element.strict",
+  "spec": "references",
+  "section": "3.1",
+  "description": "A reference resolving to an array, used as a block-sequence item, throws in strict mode too.",
+  "input": "a:\n  - x\nitems:\n  - ($a)\n  - y\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 4,
+      "code": "INVALID_REFERENCE_SHAPE"
+    }
+  },
+  "tags": ["strict", "error", "pure-reference"]
+}
