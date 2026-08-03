@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-mapping.empty-and-flat",
+  "spec": "core",
+  "section": "7.5",
+  "description": "An empty flow mapping produces an empty mapping; a flat flow mapping coerces each unquoted value's type.",
+  "input": "a: {}\nb: {x: 1, y: 2}\n",
+  "expect": {
+    "result": { "a": {}, "b": { "x": 1, "y": 2 } }
+  },
+  "tags": ["positive", "flow-mapping"]
+}

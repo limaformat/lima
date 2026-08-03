@@ -1,0 +1,11 @@
+{
+  "id": "core.block-mapping.nested-arbitrary-depth",
+  "spec": "core",
+  "section": "7.3",
+  "description": "Nested block mappings are supported to any depth within the §9 limits.",
+  "input": "params:\n  social:\n    twitter: alice\n    github: alice-dev\n",
+  "expect": {
+    "result": { "params": { "social": { "twitter": "alice", "github": "alice-dev" } } }
+  },
+  "tags": ["positive", "block-mapping"]
+}

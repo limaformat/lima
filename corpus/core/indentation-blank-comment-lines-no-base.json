@@ -1,0 +1,11 @@
+{
+  "id": "core.indentation.blank-comment-lines-no-base",
+  "spec": "core",
+  "section": "7.1",
+  "description": "Empty lines and comment lines do not affect base indentation and are skipped when determining a block's base.",
+  "input": "a:\n\n  # comment\n  x: 1\n  y: 2\n",
+  "expect": {
+    "result": { "a": { "x": 1, "y": 2 } }
+  },
+  "tags": ["positive", "indentation"]
+}

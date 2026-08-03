@@ -1,0 +1,11 @@
+{
+  "id": "core.indentation.direct-children-exact",
+  "spec": "core",
+  "section": "7.1",
+  "description": "All direct children of a block must sit at exactly the block's base indentation.",
+  "input": "a:\n   x: 1\n   y: 2\n",
+  "expect": {
+    "result": { "a": { "x": 1, "y": 2 } }
+  },
+  "tags": ["positive", "indentation"]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "core.indentation.inconsistent.strict",
+  "spec": "core",
+  "section": "7.1",
+  "description": "A line whose indentation does not correspond to any currently open block level throws in strict mode.",
+  "input": "a:\n  x: 1\n   y: 2\nb: 3\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 3,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": ["strict", "error", "indentation"]
+}

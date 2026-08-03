@@ -1,0 +1,14 @@
+{
+  "id": "core.flow-nesting.depth-two-via-mapping.non-strict",
+  "spec": "core",
+  "section": "7.4",
+  "description": "A flow sequence containing a flow mapping whose own value is a flow sequence (SEQ -> MAP -> SEQ, depth 2) is forbidden and throws even in non-strict mode.",
+  "input": "a: [{key: [1,2]}]",
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "tags": ["error", "flow-nesting"]
+}

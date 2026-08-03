@@ -1,0 +1,11 @@
+{
+  "id": "core.indentation.base-set-by-first-line",
+  "spec": "core",
+  "section": "7.1",
+  "description": "A block's base indentation is taken from its first non-empty, non-comment content line — there is no required indentation increment.",
+  "input": "tags:\n   - a\n   - b\n",
+  "expect": {
+    "result": { "tags": ["a", "b"] }
+  },
+  "tags": ["positive", "indentation"]
+}

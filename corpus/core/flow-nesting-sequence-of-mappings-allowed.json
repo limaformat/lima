@@ -1,0 +1,16 @@
+{
+  "id": "core.flow-nesting.sequence-of-mappings-allowed",
+  "spec": "core",
+  "section": "7.4",
+  "description": "A flow sequence may contain flow mappings one level deep.",
+  "input": "menu: [{name: Home, url: /}, {name: About, url: /about}]",
+  "expect": {
+    "result": {
+      "menu": [
+        { "name": "Home", "url": "/" },
+        { "name": "About", "url": "/about" }
+      ]
+    }
+  },
+  "tags": ["positive", "flow-nesting"]
+}

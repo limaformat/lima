@@ -1,0 +1,11 @@
+{
+  "id": "core.block-sequence.scalars-and-bare-dash",
+  "spec": "core",
+  "section": "7.2",
+  "description": "A block sequence lists scalars each on its own dash-prefixed line; a bare dash with no following value produces null.",
+  "input": "values:\n  -\n  - hello\n",
+  "expect": {
+    "result": { "values": [null, "hello"] }
+  },
+  "tags": ["positive", "block-sequence"]
+}

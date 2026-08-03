@@ -1,0 +1,14 @@
+{
+  "id": "core.flow-mapping.nesting-forbidden.non-strict",
+  "spec": "core",
+  "section": "7.5",
+  "description": "A flow mapping may not contain another flow mapping or a flow sequence as a value; invalid nesting throws even in non-strict mode — silent fallback to a broken string is not acceptable.",
+  "input": "a: {b: {c: 1}}",
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "tags": ["error", "flow-mapping"]
+}

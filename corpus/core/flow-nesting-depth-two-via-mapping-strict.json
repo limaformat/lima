@@ -1,0 +1,15 @@
+{
+  "id": "core.flow-nesting.depth-two-via-mapping.strict",
+  "spec": "core",
+  "section": "7.4",
+  "description": "A flow sequence containing a flow mapping whose own value is a flow sequence (depth 2) throws in strict mode too.",
+  "input": "a: [{key: [1,2]}]",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "tags": ["strict", "error", "flow-nesting"]
+}

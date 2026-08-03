@@ -616,6 +616,17 @@ describe('arrays — block sequence (dash-prefixed)', () => {
 			{ name: 'Bob' },
 		])
 	})
+
+	it('a nested block sequence (array-in-array) becomes a single null item, non-strict (Core §7.2)', () => {
+		const result = parse('a:\n  - - 1\n    - 2\n  - 3\n')
+		// The entire inner sequence is consumed and represented by one null;
+		// its own lines are never reinterpreted as siblings of the outer list.
+		expect(result.a).toEqual([null, 3])
+	})
+
+	it('throws on a nested block sequence in strict mode', () => {
+		expect(() => parse('a:\n  - - 1\n    - 2\n  - 3\n', { strict: true })).toThrow('LIMA')
+	})
 })
 
 describe('arrays — flow sequence (inline [...])', () => {
@@ -692,6 +703,40 @@ describe('arrays — flow sequence (inline [...])', () => {
 
 	it('unclosed [ falls back to string — not parsed as flow sequence', () => {
 		expect(parse('tags: [unclosed')).toEqual({ tags: '[unclosed' })
+	})
+
+	it('throws on an unclosed [ in strict mode, at the line of the opening bracket', () => {
+		expect(() => parse('tags: [unclosed', { strict: true })).toThrow('LIMA')
+	})
+
+	it('drops a trailing comma entirely in non-strict mode — not a trailing null item', () => {
+		expect(parse('tags: [a, b,]')).toEqual({ tags: ['a', 'b'] })
+	})
+
+	it('leading/consecutive commas become null items in non-strict mode', () => {
+		expect(parse('tags: [, a,, b]')).toEqual({ tags: [null, 'a', null, 'b'] })
+	})
+
+	it('throws on an empty flow sequence element in strict mode', () => {
+		expect(() => parse('tags: [, a]', { strict: true })).toThrow('LIMA')
+	})
+
+	it('a flow sequence may contain flow mappings one level deep', () => {
+		const result = parse('menu: [{name: Home, url: /}, {name: About, url: /about}]')
+		expect(result.menu).toEqual([
+			{ name: 'Home', url: '/' },
+			{ name: 'About', url: '/about' },
+		])
+	})
+
+	it('throws in both modes on a directly nested flow sequence (Core §7.4)', () => {
+		expect(() => parse('matrix: [[1, 2], [3, 4]]')).toThrow('LIMA')
+		expect(() => parse('matrix: [[1, 2], [3, 4]]', { strict: true })).toThrow('LIMA')
+	})
+
+	it('throws in both modes on a flow sequence nested via an intermediate flow mapping (depth 2)', () => {
+		expect(() => parse('a: [{key: [1,2]}]')).toThrow('LIMA')
+		expect(() => parse('a: [{key: [1,2]}]', { strict: true })).toThrow('LIMA')
 	})
 
 	it('parses a flow sequence as a value inside a block map', () => {
@@ -879,6 +924,32 @@ describe('maps — flow mapping (inline {...})', () => {
 
 	it('unclosed { falls back to string — not parsed as flow mapping', () => {
 		expect(parse('meta: {key: val')).toEqual({ meta: '{key: val' })
+	})
+
+	it('throws on an unclosed { in strict mode, at the line of the opening brace', () => {
+		expect(() => parse('meta: {key: val', { strict: true })).toThrow('LIMA')
+	})
+
+	it('drops a trailing comma entirely in non-strict mode — keeps the preceding entries', () => {
+		expect(parse('meta: {a: 1, b: 2,}')).toEqual({ meta: { a: 1, b: 2 } })
+	})
+
+	it('skips a leading comma in non-strict mode — keeps the following entries', () => {
+		expect(parse('meta: {, a: 1}')).toEqual({ meta: { a: 1 } })
+	})
+
+	it('throws on an empty flow mapping element in strict mode', () => {
+		expect(() => parse('meta: {, a: 1}', { strict: true })).toThrow('LIMA')
+	})
+
+	it('throws in both modes when a flow mapping value is itself a nested flow mapping (Core §7.5)', () => {
+		expect(() => parse('meta: {a: {b: 1}}')).toThrow('LIMA')
+		expect(() => parse('meta: {a: {b: 1}}', { strict: true })).toThrow('LIMA')
+	})
+
+	it('throws in both modes when a flow mapping value is a flow sequence', () => {
+		expect(() => parse('meta: {a: [1, 2]}')).toThrow('LIMA')
+		expect(() => parse('meta: {a: [1, 2]}', { strict: true })).toThrow('LIMA')
 	})
 })
 

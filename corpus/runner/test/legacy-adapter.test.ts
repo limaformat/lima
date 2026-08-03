@@ -47,6 +47,15 @@ describe('adaptLegacyError', () => {
 		if (result.mapped) expect(result.diagnostic.code).toBe('INVALID_INDENTATION')
 	})
 
+	it('maps a nested block sequence to INVALID_INDENTATION', () => {
+		const result = adaptLegacyError(new Error('LIMA: nested block sequence at line 2: "- - 1"'))
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_INDENTATION')
+			expect(result.diagnostic.line).toBe(2)
+		}
+	})
+
 	it('maps indented freetext without a block scalar marker to INVALID_INDENTATION', () => {
 		const result = adaptLegacyError(
 			new Error('LIMA: indented freetext without a block scalar marker at line 2: "x"')
@@ -128,6 +137,44 @@ describe('adaptLegacyError', () => {
 			expect(result.diagnostic.code).toBe('INVALID_FLOW_SYNTAX')
 			expect(result.diagnostic.line).toBe(1)
 		}
+	})
+
+	it('maps an empty flow mapping element to INVALID_FLOW_SYNTAX', () => {
+		const result = adaptLegacyError(new Error('LIMA: empty element in flow mapping at line 1'))
+		expect(result.mapped).toBe(true)
+		if (result.mapped) expect(result.diagnostic.code).toBe('INVALID_FLOW_SYNTAX')
+	})
+
+	it('maps a nested flow sequence to INVALID_FLOW_SYNTAX', () => {
+		const result = adaptLegacyError(
+			new Error('LIMA: nested flow sequence not permitted at line 1: "[1, 2]"')
+		)
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_FLOW_SYNTAX')
+			expect(result.diagnostic.line).toBe(1)
+		}
+	})
+
+	it('maps invalid flow nesting inside a flow mapping to INVALID_FLOW_SYNTAX', () => {
+		const result = adaptLegacyError(new Error('LIMA: invalid flow nesting at line 1: "{c: 1}"'))
+		expect(result.mapped).toBe(true)
+		if (result.mapped) expect(result.diagnostic.code).toBe('INVALID_FLOW_SYNTAX')
+	})
+
+	it('maps an unclosed flow sequence to INVALID_FLOW_SYNTAX', () => {
+		const result = adaptLegacyError(new Error('LIMA: unclosed flow sequence at line 1'))
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_FLOW_SYNTAX')
+			expect(result.diagnostic.line).toBe(1)
+		}
+	})
+
+	it('maps an unclosed flow mapping to INVALID_FLOW_SYNTAX', () => {
+		const result = adaptLegacyError(new Error('LIMA: unclosed flow mapping at line 1'))
+		expect(result.mapped).toBe(true)
+		if (result.mapped) expect(result.diagnostic.code).toBe('INVALID_FLOW_SYNTAX')
 	})
 
 	it('maps a scalar-length limit error to RESOURCE_LIMIT', () => {

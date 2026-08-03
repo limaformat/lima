@@ -643,6 +643,16 @@ const unescapeDQ = (s: string, strict = false, line = 0): string => {
  */
 const resolveValue = (raw: string, metadata: Meta, partials: Meta, strict = false, line = 0): any => {
 	const first = raw.charCodeAt(0)
+	if (strict && (first === 91 /* '[' */ || first === 123 /* '{' */)) {
+		// Both parseFlowSequence and parseFlowMapping already returned null
+		// before this fallback was reached, and — in strict mode — every
+		// other flow-syntax problem throws directly from inside those two
+		// functions. The only way to still land here with a value starting
+		// with `[`/`{` is a missing closing bracket (Core §7.4/§7.5:
+		// "Unclosed [: ... strict — throw" / "An unclosed {: ... strict —
+		// throw"), reported at the line of the opening bracket.
+		throw new Error(`LIMA: unclosed flow ${first === 91 ? 'sequence' : 'mapping'} at line ${line}`)
+	}
 	if (first === 34 /* '"' */ || first === 39 /* "'" */) {
 		if (raw.charCodeAt(raw.length - 1) === first) {
 			const unquoted = raw.slice(1, -1)
@@ -671,18 +681,26 @@ const resolveValue = (raw: string, metadata: Meta, partials: Meta, strict = fals
 }
 
 /**
- * Splits a flow-sequence body on commas that are outside quoted strings.
- * Supports both single and double quotes. Backslash-escaped quotes inside
- * strings (e.g. `\"` inside a double-quoted string) are correctly skipped.
+ * Splits a flow-sequence/flow-mapping body on commas that are outside
+ * quoted strings and outside any nested `[...]`/`{...}` construct. Supports
+ * both single and double quotes. Backslash-escaped quotes inside strings
+ * (e.g. `\"` inside a double-quoted string) are correctly skipped.
+ *
+ * Bracket-depth tracking (Core §7.4/§7.5) keeps a nested flow construct's
+ * own commas from being mistaken for top-level separators — without it,
+ * `[{name: Home, url: /}, {name: About, url: /about}]` would incorrectly
+ * split into four pieces instead of two.
  *
  * Examples:
  *   `a, "b, c", d`              → `['a', '"b, c"', 'd']`
  *   `"He said \"Hi\"", next`    → `['"He said \\"Hi\\"", 'next']`
+ *   `{a: 1, b: 2}, {c: 3}`      → `['{a: 1, b: 2}', '{c: 3}']`
  */
 const splitFlowItems = (inner: string): string[] => {
 	const items: string[] = []
 	let start = 0
 	let quote = 0 // char code of opening quote, 0 = unquoted
+	let depth = 0 // nesting depth of [...] / {...}, tracked outside quotes
 	for (let i = 0; i < inner.length; i++) {
 		const cc = inner.charCodeAt(i)
 		if (quote) {
@@ -690,7 +708,11 @@ const splitFlowItems = (inner: string): string[] => {
 			else if (cc === quote) quote = 0
 		} else if (cc === 34 /* '"' */ || cc === 39 /* "'" */) {
 			quote = cc
-		} else if (cc === 44 /* ',' */) {
+		} else if (cc === 91 /* '[' */ || cc === 123 /* '{' */) {
+			depth++
+		} else if (cc === 93 /* ']' */ || cc === 125 /* '}' */) {
+			depth--
+		} else if (cc === 44 /* ',' */ && depth === 0) {
 			items.push(inner.slice(start, i).trim())
 			start = i + 1
 		}
@@ -698,6 +720,11 @@ const splitFlowItems = (inner: string): string[] => {
 	items.push(inner.slice(start).trim())
 	return items
 }
+
+/** Whether a trimmed flow item is itself a nested `[...]` or `{...}` construct. */
+const isNestedFlowConstruct = (item: string): boolean =>
+	(item.charCodeAt(0) === 91 && item.charCodeAt(item.length - 1) === 93) ||
+	(item.charCodeAt(0) === 123 && item.charCodeAt(item.length - 1) === 125)
 
 /**
  * Parses a YAML flow sequence (also called "flow array") if the value is
@@ -722,12 +749,38 @@ const parseFlowSequence = (val: string, metadata: Meta, partials: Meta, strict =
 	if (val.charCodeAt(0) !== 91 /* '[' */ || val.charCodeAt(val.length - 1) !== 93 /* ']' */) return null
 	const inner = val.slice(1, -1).trim()
 	if (!inner) return []
-	return splitFlowItems(inner).map((item) => {
-		// Empty element (leading/consecutive/trailing comma) — Core §7.4/§10.1:
-		// non-strict falls back to null, strict throws.
-		if (!item.trim()) {
+	const rawItems = splitFlowItems(inner)
+
+	// Trailing comma (Core §7.4): its own rule, distinct from the
+	// leading/consecutive empty-element rule below. Non-strict drops the
+	// resulting trailing empty element entirely rather than turning it into
+	// a null item; strict falls through to the same throw as any other
+	// empty element, since it's still the last element at this point.
+	if (!strict && rawItems.length > 1 && !rawItems[rawItems.length - 1]) rawItems.pop()
+
+	return rawItems.map((item) => {
+		// Empty element (leading/consecutive comma, or a strict-mode
+		// trailing comma) — Core §7.4/§10.1: non-strict falls back to null,
+		// strict throws.
+		if (!item) {
 			if (strict) throw new Error(`LIMA: empty element in flow sequence at line ${line}`)
 			return null
+		}
+		if (item.charCodeAt(0) === 91 /* '[' */ && item.charCodeAt(item.length - 1) === 93 /* ']' */) {
+			// Core §7.4: a flow sequence may never contain another flow
+			// sequence, directly or via an intermediate flow mapping — this
+			// throws in BOTH modes, unlike most flow errors.
+			throw new Error(`LIMA: nested flow sequence not permitted at line ${line}: "${item}"`)
+		}
+		if (item.charCodeAt(0) === 123 /* '{' */ && item.charCodeAt(item.length - 1) === 125 /* '}' */) {
+			// Core §7.4: a flow sequence may contain flow mappings one level
+			// deep. parseFlowMapping itself rejects any further nesting
+			// inside that mapping's own values (§7.5), which also covers
+			// the SEQ → MAP → SEQ (depth 2) case.
+			const nested = parseFlowMapping(item, metadata, partials, strict, line)
+			if (nested !== null) return nested
+			// Malformed nested mapping (e.g. missing ": ") falls through to
+			// the same handling as any other item below.
 		}
 		// Quoted string: strip delimiters, return as string — no type coercion.
 		// Consistent with YAML: `"42"` → '42' (string), not 42 (number).
@@ -765,6 +818,14 @@ const parseFlowMapping = (val: string, metadata: Meta, partials: Meta, strict = 
 	if (!inner) return emptyMapping()
 	const result: Meta = emptyMapping()
 	for (const item of splitFlowItems(inner)) {
+		// Empty element (leading/consecutive/trailing comma) — Core §7.5:
+		// non-strict skips it, strict throws. Distinct from a genuinely
+		// malformed non-empty item (handled below), which falls back the
+		// entire mapping to a string instead.
+		if (!item) {
+			if (strict) throw new Error(`LIMA: empty element in flow mapping at line ${line}`)
+			continue
+		}
 		const colonPos = item.indexOf(': ')
 		if (colonPos === -1) {
 			if (strict) throw new Error(`LIMA: invalid flow mapping item (missing ": ") at line ${line}: "${item}"`)
@@ -774,6 +835,11 @@ const parseFlowMapping = (val: string, metadata: Meta, partials: Meta, strict = 
 		checkKeyLength(key, line)
 		checkDuplicateKey(result, key, line, strict)
 		const rawVal = item.slice(colonPos + 2).trim()
+		if (isNestedFlowConstruct(rawVal)) {
+			// Core §7.5: a flow mapping may never contain another flow
+			// mapping or flow sequence — throws in BOTH modes, no fallback.
+			throw new Error(`LIMA: invalid flow nesting at line ${line}: "${rawVal}"`)
+		}
 		const first  = rawVal.charCodeAt(0)
 		// Quoted string: strip delimiters and unescape, return as string — no type coercion.
 		if ((first === 34 /* '"' */ || first === 39 /* "'" */) && rawVal.charCodeAt(rawVal.length - 1) === first) {
@@ -931,6 +997,21 @@ const parseBlock = (
 				// Flow mapping item: - {key: val, key2: val2}
 				result.push(flowMap)
 				idx++
+			} else if (afterDash === '-' || DASH_PREFIX_RE.test(afterDash)) {
+				// Core §7.2: nested block sequences (array-in-array) are not
+				// supported. Non-strict: the entire nested sequence block is
+				// consumed and represented by a single null item — its
+				// subsequent, more deeply indented lines must not be
+				// reinterpreted as siblings of the outer sequence. Strict: throw.
+				if (strict) throw new Error(`LIMA: nested block sequence at line ${baseLine + idx}: "${trimmed}"`)
+				result.push(null)
+				idx++
+				while (idx < lines.length) {
+					const nextTrimmed = lines[idx].trimStart()
+					if (!nextTrimmed || nextTrimmed.charCodeAt(0) === 35) { idx++; continue }
+					if (lines[idx].length - nextTrimmed.length <= baseIndent) break
+					idx++
+				}
 			} else if (colonPos !== -1) {
 				// Object item with inline value — may accumulate more keys via continuation lines
 				const pendingKey = stripKeyQuotes(afterDash.slice(0, colonPos).trim())

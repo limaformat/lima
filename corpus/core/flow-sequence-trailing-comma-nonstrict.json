@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-sequence.trailing-comma.non-strict",
+  "spec": "core",
+  "section": "7.4",
+  "description": "A trailing comma is ignored in non-strict mode — it does not produce a trailing null item.",
+  "input": "a: [x, y,]",
+  "expect": {
+    "result": { "a": ["x", "y"] }
+  },
+  "tags": ["fallback", "flow-sequence"]
+}

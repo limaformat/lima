@@ -1,0 +1,15 @@
+{
+  "id": "core.flow-mapping.empty-element.strict",
+  "spec": "core",
+  "section": "7.5",
+  "description": "A leading, consecutive, or trailing comma (empty element) throws in strict mode.",
+  "input": "a: {, x: 1}",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "tags": ["strict", "error", "flow-mapping"]
+}

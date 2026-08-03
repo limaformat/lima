@@ -1,0 +1,11 @@
+{
+  "id": "core.indentation.deeper-line-belongs-to-previous-key",
+  "spec": "core",
+  "section": "7.1",
+  "description": "A line indented deeper than the base indentation belongs to the immediately preceding key's value as a nested block.",
+  "input": "a:\n  b:\n    c: 1\n  d: 2\n",
+  "expect": {
+    "result": { "a": { "b": { "c": 1 }, "d": 2 } }
+  },
+  "tags": ["positive", "indentation"]
+}

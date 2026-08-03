@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-mapping.quoted-keys-follow-block-key-rules",
+  "spec": "core",
+  "section": "7.5",
+  "description": "A quoted key inside a flow mapping follows the same rules as a quoted block key (§5.2), including a key containing a space.",
+  "input": "a: {\"my key\": 1}",
+  "expect": {
+    "result": { "a": { "my key": 1 } }
+  },
+  "tags": ["positive", "flow-mapping"]
+}

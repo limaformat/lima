@@ -1,0 +1,15 @@
+{
+  "id": "core.flow-nesting.depth-exceeds-one.strict",
+  "spec": "core",
+  "section": "7.4",
+  "description": "A flow sequence directly containing another flow sequence throws in strict mode too.",
+  "input": "matrix: [[1, 2], [3, 4]]",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "tags": ["strict", "error", "flow-nesting"]
+}

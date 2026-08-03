@@ -1,0 +1,11 @@
+{
+  "id": "core.block-sequence.nested-sequence.non-strict",
+  "spec": "core",
+  "section": "7.2",
+  "description": "Array-in-array (nested block sequences) is not supported. In non-strict mode, the entire nested sequence block is consumed and represented by a single null item — its own lines are not reinterpreted as outer items.",
+  "input": "a:\n  - - 1\n    - 2\n  - 3\n",
+  "expect": {
+    "result": { "a": [null, 3] }
+  },
+  "tags": ["fallback", "block-sequence"]
+}

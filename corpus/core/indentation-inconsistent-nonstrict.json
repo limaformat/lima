@@ -1,0 +1,11 @@
+{
+  "id": "core.indentation.inconsistent.non-strict",
+  "spec": "core",
+  "section": "7.1",
+  "description": "A line whose indentation does not correspond to any currently open block level is silently skipped in non-strict mode.",
+  "input": "a:\n  x: 1\n   y: 2\nb: 3\n",
+  "expect": {
+    "result": { "a": { "x": 1 }, "b": 3 }
+  },
+  "tags": ["fallback", "indentation"]
+}

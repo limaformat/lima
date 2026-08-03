@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-mapping.leading-comma-skipped.non-strict",
+  "spec": "core",
+  "section": "7.5",
+  "description": "A leading or consecutive comma is skipped in non-strict mode — the following entries are still parsed, not discarded as a malformed item.",
+  "input": "a: {, x: 1}",
+  "expect": {
+    "result": { "a": { "x": 1 } }
+  },
+  "tags": ["fallback", "flow-mapping"]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "core.flow-mapping.nesting-forbidden.strict",
+  "spec": "core",
+  "section": "7.5",
+  "description": "Invalid flow nesting inside a flow mapping throws in strict mode too.",
+  "input": "a: {b: [1, 2]}",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "tags": ["strict", "error", "flow-mapping"]
+}

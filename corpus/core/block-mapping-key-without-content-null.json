@@ -1,0 +1,11 @@
+{
+  "id": "core.block-mapping.key-without-content-null",
+  "spec": "core",
+  "section": "7.3",
+  "description": "A key with no inline value and no deeper indented content becomes null.",
+  "input": "params:\n  empty:\n  title: Hello\n",
+  "expect": {
+    "result": { "params": { "empty": null, "title": "Hello" } }
+  },
+  "tags": ["positive", "block-mapping"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-mapping.unclosed.non-strict",
+  "spec": "core",
+  "section": "7.5",
+  "description": "An unclosed { falls back to a string for the entire value in non-strict mode.",
+  "input": "a: {x: 1",
+  "expect": {
+    "result": { "a": "{x: 1" }
+  },
+  "tags": ["fallback", "flow-mapping"]
+}

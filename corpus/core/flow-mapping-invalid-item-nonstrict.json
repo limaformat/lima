@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-mapping.invalid-item.non-strict",
+  "spec": "core",
+  "section": "7.5",
+  "description": "An item lacking a ': ' separator makes the whole flow mapping fall back to a string in non-strict mode.",
+  "input": "a: {x: 1, badnocolonseparator}",
+  "expect": {
+    "result": { "a": "{x: 1, badnocolonseparator}" }
+  },
+  "tags": ["fallback", "flow-mapping"]
+}

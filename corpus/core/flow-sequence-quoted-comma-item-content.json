@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-sequence.quoted-comma-item-content",
+  "spec": "core",
+  "section": "7.4",
+  "description": "A comma inside a quoted flow sequence item is part of the item's content, not a separator.",
+  "input": "a: [\"x, y\", z]",
+  "expect": {
+    "result": { "a": ["x, y", "z"] }
+  },
+  "tags": ["positive", "flow-sequence"]
+}

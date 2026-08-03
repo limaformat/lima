@@ -1,0 +1,16 @@
+{
+  "id": "core.block-sequence.nested-sequence.strict",
+  "spec": "core",
+  "section": "7.2",
+  "description": "A nested block sequence (array-in-array) throws in strict mode.",
+  "input": "a:\n  - - 1\n    - 2\n  - 3\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "notes": "No dedicated diagnostic code fits 'nested block sequence' precisely; INVALID_INDENTATION is the closest existing category and the codes are deliberately kept coarse (docs/corpus-design/error-api.md).",
+  "tags": ["strict", "error", "block-sequence"]
+}

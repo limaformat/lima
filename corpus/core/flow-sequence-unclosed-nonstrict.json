@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-sequence.unclosed.non-strict",
+  "spec": "core",
+  "section": "7.4",
+  "description": "An unclosed [ falls back to a string for the entire value in non-strict mode, including when it contains a nested flow mapping.",
+  "input": "a: [x, y\nb: [{name: Home, url: /}\n",
+  "expect": {
+    "result": { "a": "[x, y", "b": "[{name: Home, url: /}" }
+  },
+  "tags": ["fallback", "flow-sequence"]
+}

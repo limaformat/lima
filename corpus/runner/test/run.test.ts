@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(94)
+		expect(outcomes).toHaveLength(130)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -92,7 +92,34 @@ describe('runCorpus', () => {
 	 * and a single-digit month/day in slash format were both wrongly
 	 * accepted; two pre-existing unit tests exercising exactly that
 	 * leniency were corrected to the spec-conformant `T`-separated /
-	 * two-digit forms).
+	 * two-digit forms) → 130/0/0 (36 new Core §7 collections cases added;
+	 * found and fixed three more real bugs. (1) A nested block sequence
+	 * (array-in-array, e.g. `- - 1`) was never detected: the outer dash's
+	 * value was kept as a literal string instead of becoming `null`, and
+	 * the inner sequence's own lines were silently dropped one at a time by
+	 * the generic "unexpected indentation" skip rather than being
+	 * deliberately consumed as a unit — fixed with an explicit
+	 * nested-sequence check in parseBlock's array branch. (2)
+	 * `splitFlowItems` only tracked quote state, never `[`/`{` nesting
+	 * depth, so a flow sequence containing flow mappings (e.g.
+	 * `[{name: Home, url: /}, {name: About, url: /about}]`) split on every
+	 * comma inside the nested mappings too, and the "flow nesting depth > 1
+	 * throws in both modes" rule was entirely unenforced — fixed by making
+	 * the splitter bracket-depth-aware and adding explicit nesting checks in
+	 * both parseFlowSequence and parseFlowMapping (a flow mapping may never
+	 * contain further nesting at all, which transitively also rejects
+	 * SEQ → MAP → SEQ depth-2 constructs). (3) A trailing or leading comma
+	 * in a flow sequence or flow mapping was handled inconsistently with
+	 * spec: sequences turned a trailing comma into an extra `null` item
+	 * instead of ignoring it, and mappings fell back the *entire* mapping to
+	 * a string for any leading/trailing/consecutive comma instead of just
+	 * skipping the empty element — fixed with comma-position-aware handling
+	 * in both functions. Also added the previously entirely-missing
+	 * "unclosed `[`/`{` throws in strict mode" check (both functions could
+	 * only return `null` for a genuine non-flow value or an unclosed
+	 * bracket, by strict-mode elimination, once every other flow error path
+	 * already threw directly — added as a single shared check in
+	 * resolveValue, the common fallback point for all three call sites).
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -101,7 +128,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 94, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 130, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

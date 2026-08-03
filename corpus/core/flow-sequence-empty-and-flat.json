@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-sequence.empty-and-flat",
+  "spec": "core",
+  "section": "7.4",
+  "description": "An empty flow sequence produces an empty array; a flat flow sequence coerces each item's type.",
+  "input": "a: []\nb: [x, y, z]\n",
+  "expect": {
+    "result": { "a": [], "b": ["x", "y", "z"] }
+  },
+  "tags": ["positive", "flow-sequence"]
+}

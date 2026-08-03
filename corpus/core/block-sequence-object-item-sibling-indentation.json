@@ -1,0 +1,16 @@
+{
+  "id": "core.block-sequence.object-item-sibling-indentation",
+  "spec": "core",
+  "section": "7.2",
+  "description": "For a sequence item that is a mapping, the base indentation for sibling keys is the column of the first key following the dash prefix; all subsequent sibling keys must begin at that same column.",
+  "input": "authors:\n  - name: Alice\n    affiliation: MIT\n  - name: Bob\n    affiliation: Stanford\n",
+  "expect": {
+    "result": {
+      "authors": [
+        { "name": "Alice", "affiliation": "MIT" },
+        { "name": "Bob", "affiliation": "Stanford" }
+      ]
+    }
+  },
+  "tags": ["positive", "block-sequence"]
+}

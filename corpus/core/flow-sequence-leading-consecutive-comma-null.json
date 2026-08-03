@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-sequence.leading-consecutive-comma-null",
+  "spec": "core",
+  "section": "7.4",
+  "description": "Leading or consecutive commas produce empty elements that become null in non-strict mode.",
+  "input": "a: [, x,, y]",
+  "expect": {
+    "result": { "a": [null, "x", null, "y"] }
+  },
+  "tags": ["fallback", "flow-sequence"]
+}

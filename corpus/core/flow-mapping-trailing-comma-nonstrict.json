@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-mapping.trailing-comma.non-strict",
+  "spec": "core",
+  "section": "7.5",
+  "description": "A trailing comma is ignored in non-strict mode — the preceding entries are kept, not discarded as a malformed item.",
+  "input": "a: {x: 1, y: 2,}",
+  "expect": {
+    "result": { "a": { "x": 1, "y": 2 } }
+  },
+  "tags": ["fallback", "flow-mapping"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "core.flow-mapping.first-colon-space-is-separator",
+  "spec": "core",
+  "section": "7.5",
+  "description": "The first ': ' at the current depth is the separator; further colons in the value (not followed by forming a new key) are part of the value.",
+  "input": "a: {url: https://x:y}",
+  "expect": {
+    "result": { "a": { "url": "https://x:y" } }
+  },
+  "tags": ["positive", "flow-mapping"]
+}

@@ -47,6 +47,13 @@ const rules: Rule[] = [
 		code: 'INVALID_INDENTATION',
 	},
 	{
+		// Core §7.2/§10.1: array-in-array — its own strict-error-list row,
+		// grouped with INVALID_INDENTATION for the same reason as the
+		// freetext-without-marker rule below (codes stay deliberately coarse).
+		pattern: /nested block sequence/,
+		code: 'INVALID_INDENTATION',
+	},
+	{
 		// Core §6.1.5/§10.1: indented freetext with no `|` marker and no `:` —
 		// its own strict-error-list row, but not distinct enough from other
 		// block-structure errors to warrant a new code (error-api.md keeps the
@@ -83,7 +90,21 @@ const rules: Rule[] = [
 		code: 'INVALID_QUOTE',
 	},
 	{
-		pattern: /empty element in flow sequence/,
+		pattern: /empty element in flow sequence|empty element in flow mapping/,
+		code: 'INVALID_FLOW_SYNTAX',
+	},
+	{
+		// Core §7.4/§7.5: forbidden flow nesting — a sequence directly
+		// containing another sequence, or a mapping containing any nested
+		// flow construct at all. Throws in BOTH modes (see legacy-adapter's
+		// module doc: this adapter only sees the message, not which mode
+		// produced it, so one rule covers both).
+		pattern: /nested flow sequence not permitted|invalid flow nesting/,
+		code: 'INVALID_FLOW_SYNTAX',
+	},
+	{
+		// Core §7.4/§7.5: a `[`/`{` value with no matching close.
+		pattern: /unclosed flow (sequence|mapping)/,
 		code: 'INVALID_FLOW_SYNTAX',
 	},
 	{

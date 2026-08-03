@@ -1,0 +1,15 @@
+{
+  "id": "core.flow-sequence.unclosed.strict",
+  "spec": "core",
+  "section": "7.4",
+  "description": "An unclosed [ throws at the line of the opening bracket in strict mode.",
+  "input": "a: [x, y\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "tags": ["strict", "error", "flow-sequence"]
+}

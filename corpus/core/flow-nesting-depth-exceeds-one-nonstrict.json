@@ -1,0 +1,15 @@
+{
+  "id": "core.flow-nesting.depth-exceeds-one.non-strict",
+  "spec": "core",
+  "section": "7.4",
+  "description": "A flow sequence directly containing another flow sequence exceeds the maximum permitted flow nesting depth of one level and throws even in non-strict mode — an exception to the usual non-strict-falls-back pattern.",
+  "input": "matrix: [[1, 2], [3, 4]]",
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "notes": "Non-strict is expected to throw here too — Core §7.4 explicitly lists this as an error in both modes, unlike most flow-syntax problems which fall back to a string in non-strict mode.",
+  "tags": ["error", "flow-nesting"]
+}
