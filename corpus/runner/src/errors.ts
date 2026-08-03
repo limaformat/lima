@@ -6,6 +6,7 @@
 
 export type LimaDiagnosticCode =
 	| 'INVALID_ESCAPE'
+	| 'INVALID_QUOTE'
 	| 'INVALID_DATE'
 	| 'INVALID_INDENTATION'
 	| 'INVALID_FLOW_SYNTAX'

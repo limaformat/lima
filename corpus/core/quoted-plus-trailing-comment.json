@@ -1,0 +1,18 @@
+{
+  "id": "core.document.inline-pipeline.quoted-plus-trailing-comment",
+  "spec": "core",
+  "section": "4",
+  "description": "A quoted value followed by an outer comment is valid — the closing quote is the final non-comment character.",
+  "input": "title: \"Hello\" # comment",
+  "expect": {
+    "result": {
+      "title": "Hello"
+    }
+  },
+  "tags": [
+    "positive",
+    "document",
+    "comment",
+    "quoted"
+  ]
+}

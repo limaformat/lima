@@ -1,0 +1,18 @@
+{
+  "id": "core.document.inline-pipeline.hash-in-quotes-literal",
+  "spec": "core",
+  "section": "4",
+  "description": "A hash inside a quoted string is literal, not a comment.",
+  "input": "link: \"https://example.com/page#section\"",
+  "expect": {
+    "result": {
+      "link": "https://example.com/page#section"
+    }
+  },
+  "tags": [
+    "positive",
+    "document",
+    "comment",
+    "quoted"
+  ]
+}

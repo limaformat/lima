@@ -51,6 +51,13 @@ const rules: Rule[] = [
 		code: 'INVALID_ESCAPE',
 	},
 	{
+		// Quote-structure errors (not escape-content errors) — Core §10.1
+		// lists this and "unterminated quoted string" as their own rows,
+		// distinct from the §6.1.2 escape-content error table.
+		pattern: /non-whitespace content after closing quote/,
+		code: 'INVALID_QUOTE',
+	},
+	{
 		pattern: /empty element in flow sequence/,
 		code: 'INVALID_FLOW_SYNTAX',
 	},

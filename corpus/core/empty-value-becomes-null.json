@@ -1,0 +1,17 @@
+{
+  "id": "core.document.inline-pipeline.empty-value-becomes-null",
+  "spec": "core",
+  "section": "4",
+  "description": "An empty value after trimming and comment-stripping becomes null.",
+  "input": "title:   # comment",
+  "expect": {
+    "result": {
+      "title": null
+    }
+  },
+  "tags": [
+    "positive",
+    "document",
+    "null"
+  ]
+}

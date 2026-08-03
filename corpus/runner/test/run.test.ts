@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(23)
+		expect(outcomes).toHaveLength(32)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -33,15 +33,20 @@ describe('runCorpus', () => {
 	 * (5 new Core §3 normalization cases added; found and fixed a real bug
 	 * where the single `\r\n|\t` normalization pass converted every tab in
 	 * the document, not just leading-indentation tabs, and never handled a
-	 * standalone \r). This snapshot is a regression trip-wire: update it
-	 * deliberately (with a written reason) if this ever regresses, never to
-	 * silently "make the test pass".
+	 * standalone \r) → 32/0/0 (9 new Core §4 document-structure cases added;
+	 * found and fixed two more real bugs: an inline (`: `) value with no
+	 * `|`/`>` marker was implicitly merging any indented follow-on lines
+	 * into a multi-line string — not frozen-spec behavior, Core §6.1.5
+	 * requires an explicit `|` marker — and strict mode never threw on
+	 * non-whitespace content after a closing quote). This snapshot is a
+	 * regression trip-wire: update it deliberately (with a written reason)
+	 * if this ever regresses, never to silently "make the test pass".
 	 */
 	it('matches today\'s known Phase-2 baseline classification counts', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 23, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 32, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

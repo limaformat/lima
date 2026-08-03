@@ -1,0 +1,23 @@
+{
+  "id": "core.document.inline-pipeline.trailing-content.strict",
+  "spec": "core",
+  "section": "4",
+  "description": "Non-whitespace content after a closing quote throws in strict mode.",
+  "input": "title: \"Hello\" trailing",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_QUOTE"
+    }
+  },
+  "notes": "INVALID_QUOTE was added to error-api.md specifically for quote-structure errors (Core §10.1: this and 'unterminated quoted string' are their own strict-error-list rows, distinct from the §6.1.2 escape-content error table).",
+  "tags": [
+    "error",
+    "document",
+    "quoted",
+    "strict"
+  ]
+}

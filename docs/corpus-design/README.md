@@ -255,6 +255,7 @@ Lima should use a single error class plus a shared diagnostic core:
 ```ts
 export type LimaDiagnosticCode =
   | "INVALID_ESCAPE"
+  | "INVALID_QUOTE"
   | "INVALID_DATE"
   | "INVALID_INDENTATION"
   | "INVALID_FLOW_SYNTAX"

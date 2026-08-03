@@ -1,0 +1,16 @@
+{
+  "id": "core.document.top-level-key.column-zero",
+  "spec": "core",
+  "section": "4",
+  "description": "A key must start at column 0 — an indented line is not recognized as a top-level key and is silently skipped.",
+  "input": "  bogus: value\nreal: Hello",
+  "expect": {
+    "result": {
+      "real": "Hello"
+    }
+  },
+  "tags": [
+    "positive",
+    "document"
+  ]
+}

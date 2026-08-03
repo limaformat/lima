@@ -57,6 +57,17 @@ describe('adaptLegacyError', () => {
 		}
 	})
 
+	it('maps trailing content after a closing quote to INVALID_QUOTE', () => {
+		const result = adaptLegacyError(
+			new Error('LIMA: non-whitespace content after closing quote at line 1')
+		)
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_QUOTE')
+			expect(result.diagnostic.line).toBe(1)
+		}
+	})
+
 	it('maps an empty flow sequence element to INVALID_FLOW_SYNTAX', () => {
 		const result = adaptLegacyError(new Error('LIMA: empty element in flow sequence at line 1'))
 		expect(result.mapped).toBe(true)

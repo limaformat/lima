@@ -1,0 +1,18 @@
+{
+  "id": "core.document.inline-pipeline.trailing-content.non-strict",
+  "spec": "core",
+  "section": "4",
+  "description": "Non-whitespace content after a closing quote falls back to a string of the entire remaining text.",
+  "input": "title: \"Hello\" trailing",
+  "expect": {
+    "result": {
+      "title": "\"Hello\" trailing"
+    }
+  },
+  "tags": [
+    "fallback",
+    "document",
+    "quoted",
+    "non-strict"
+  ]
+}

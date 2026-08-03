@@ -1,0 +1,14 @@
+{
+  "id": "core.document.empty.yields-empty-mapping",
+  "spec": "core",
+  "section": "4",
+  "description": "An empty document parses to an empty mapping.",
+  "input": "",
+  "expect": {
+    "result": {}
+  },
+  "tags": [
+    "positive",
+    "document"
+  ]
+}

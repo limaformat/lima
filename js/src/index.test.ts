@@ -97,12 +97,18 @@ describe('strings', () => {
 		expect(result.tag).toBe('# not a comment')
 	})
 
-	it('parses an inline multi-line string and trims indentation', () => {
+	it('an inline value never implicitly continues onto the next line (Core §6.1.5)', () => {
+		// Core §6.1.5: "Multi-line strings require an explicit `|` marker on
+		// the first line." An indented line with no key of its own, following
+		// an inline (`: `) value, is not part of that value — it is
+		// unrelated top-level content, silently skipped per §4. The legacy
+		// parser used to implicitly merge such lines into the value; that is
+		// not frozen-spec behavior.
 		const result = parse(`
 			description: First line.
 			  Second line.
 		`)
-		expect(result.description).toBe('First line.\nSecond line.')
+		expect(result.description).toBe('First line.')
 	})
 
 	it('supports | as explicit block scalar — trims all lines equally', () => {
@@ -405,16 +411,18 @@ describe('multi-line edge cases', () => {
 	})
 
 	/**
-	 * Inline multi-line: line 0 is flush with the key (not trimmed).
-	 * Only lines 1+ are trimmed relative to each other.
+	 * Core §6.1.5 requires an explicit `|` marker for a multi-line string.
+	 * An inline value's indented follow-on lines are not part of it (see
+	 * the "an inline value never implicitly continues" test above) — only
+	 * the first line is ever the value.
 	 */
-	it('inline multi-line: line 0 is not trimmed, subsequent lines are', () => {
+	it('an inline value takes only its first line, even with further indented lines', () => {
 		const result = parse(`
 			description: first line
 			  second line
 			  third line
 		`)
-		expect(result.description).toBe('first line\nsecond line\nthird line')
+		expect(result.description).toBe('first line')
 	})
 
 	it('pipe block with uniform indentation: all lines trimmed equally', () => {
@@ -1379,6 +1387,14 @@ describe('strict mode', () => {
 
 	it('throws on invalid flow mapping item', () => {
 		expect(() => parse('note: {just some text}', { strict: true })).toThrow('LIMA')
+	})
+
+	it('throws on non-whitespace content after a closing quote', () => {
+		expect(() => parse('title: "Hello" trailing', { strict: true })).toThrow('LIMA')
+	})
+
+	it('does not throw on non-whitespace content after a closing quote in non-strict mode', () => {
+		expect(parse('title: "Hello" trailing')).toEqual({ title: '"Hello" trailing' })
 	})
 
 	it('error messages include line number', () => {

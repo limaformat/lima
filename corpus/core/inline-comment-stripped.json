@@ -1,0 +1,17 @@
+{
+  "id": "core.document.inline-pipeline.comment-stripped",
+  "spec": "core",
+  "section": "4",
+  "description": "A comment outside quotes is stripped from an inline value.",
+  "input": "title: Hello World # comment",
+  "expect": {
+    "result": {
+      "title": "Hello World"
+    }
+  },
+  "tags": [
+    "positive",
+    "document",
+    "comment"
+  ]
+}

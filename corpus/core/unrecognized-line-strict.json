@@ -1,0 +1,21 @@
+{
+  "id": "core.document.unrecognized-line.skipped-both-modes",
+  "spec": "core",
+  "section": "4",
+  "description": "A top-level line that matches no key pattern is silently skipped even in strict mode — it is not in the strict error list.",
+  "input": "title: Hello\nthis is not a key line at all\ncount: 42",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "title": "Hello",
+      "count": 42
+    }
+  },
+  "tags": [
+    "positive",
+    "document",
+    "strict"
+  ]
+}

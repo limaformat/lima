@@ -8,6 +8,7 @@ core.
 ```ts
 export type LimaDiagnosticCode =
   | "INVALID_ESCAPE"
+  | "INVALID_QUOTE"
   | "INVALID_DATE"
   | "INVALID_INDENTATION"
   | "INVALID_FLOW_SYNTAX"
@@ -52,6 +53,7 @@ export class LimaError extends Error {
 ## Code groups
 
 - `INVALID_ESCAPE`
+- `INVALID_QUOTE`
 - `INVALID_DATE`
 - `INVALID_INDENTATION`
 - `INVALID_FLOW_SYNTAX`
@@ -62,7 +64,11 @@ export class LimaError extends Error {
 - `INVALID_PARTIAL`
 
 The codes stay deliberately coarse. Detail lives in `message` and the
-optional context fields.
+optional context fields. `INVALID_QUOTE` covers quote-structure errors
+that are not about escape-sequence content: non-whitespace content after
+a closing quote, and an unterminated quoted string (Core §10.1) — added
+after the corpus surfaced that neither condition had a clean fit among
+the original nine codes.
 
 ## Non-goals
 

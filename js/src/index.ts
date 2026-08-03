@@ -532,14 +532,27 @@ const unescapeDQ = (s: string, strict = false, line = 0): string => {
  */
 const resolveValue = (raw: string, metadata: Meta, partials: Meta, strict = false, line = 0): any => {
 	const first = raw.charCodeAt(0)
-	if ((first === 34 /* '"' */ || first === 39 /* "'" */) && raw.charCodeAt(raw.length - 1) === first) {
-		const unquoted = raw.slice(1, -1)
-		const value = first === 34 ? unescapeDQ(unquoted, strict, line) : unquoted.replace(/\\'/g, "'")
-		checkScalarLimit(value, line)
-		// §2.3: quoted content is always inactive. Only wrap when it could be
-		// mistaken for a reference later — an ordinary quoted string is
-		// already safe without the extra indirection.
-		return value.includes('($') || value.includes('(%') ? markInactive(value) : value
+	if (first === 34 /* '"' */ || first === 39 /* "'" */) {
+		if (raw.charCodeAt(raw.length - 1) === first) {
+			const unquoted = raw.slice(1, -1)
+			const value = first === 34 ? unescapeDQ(unquoted, strict, line) : unquoted.replace(/\\'/g, "'")
+			checkScalarLimit(value, line)
+			// §2.3: quoted content is always inactive. Only wrap when it could be
+			// mistaken for a reference later — an ordinary quoted string is
+			// already safe without the extra indirection.
+			return value.includes('($') || value.includes('(%') ? markInactive(value) : value
+		}
+		// Core §4 rule 4 / §10.1: a value starting with a quote character is
+		// a quoted value only when the matching closing quote is the final
+		// character. Anything else — trailing content after the closing
+		// quote, or no closing quote at all (unterminated) — falls back to
+		// treating the whole remaining text as a string in non-strict mode
+		// (the toType(resolve(...)) path below already does exactly that,
+		// since neither case matches null/boolean/number/date) and throws
+		// in strict mode.
+		if (strict) {
+			throw new Error(`LIMA: non-whitespace content after closing quote at line ${line}`)
+		}
 	}
 	const value = toType(resolve(raw, metadata, partials, line))
 	checkScalarLimit(value, line)
@@ -1058,9 +1071,16 @@ const parse = <T extends Record<string, unknown> = Meta>(
 				continue
 			}
 
-			if (lines.length === 1) {
-				// Single-line: strip comment only when '#' is present — avoids the
-				// char-by-char scan and trailing replace for the common comment-free case.
+			const line0Trimmed = lines[0].trim()
+			if (lines.length === 1 || (line0Trimmed !== '|' && line0Trimmed !== '>')) {
+				// Single-line inline value (Core §4): only the first captured
+				// line is ever the value. Any further lines here are an
+				// artifact of splitting the whole document on key positions,
+				// not part of this value — they are unrelated top-level
+				// content and must be silently ignored (§4: "Lines that do
+				// not match any key pattern ... are silently skipped"),
+				// never merged in. The one exception is a `|`/`>` block-scalar
+				// marker on the first line, handled by the block below.
 				const line0   = lines[0]
 				const val     = line0.includes('#') ? stripComment(line0) : line0
 				const flowSeq = parseFlowSequence(val, metadata, partials, strict, strict ? keyLine(i) : 0)
