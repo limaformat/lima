@@ -3,7 +3,7 @@ import { loadCorpus, type LoadedCase, type LoadedCorpus } from './loader'
 import { corpusValuesEqual, diffCorpusValues, hasOnlySafeOwnDataProperties } from './normalize'
 import { adaptLegacyError } from './legacy-adapter'
 import { compareDiagnostic } from './errors'
-import { parse } from '../../../js/src/index'
+import { parse, parseCore } from '../../../js/src/index'
 
 export type Classification = 'PASS' | 'FAIL' | 'BLOCKED'
 
@@ -18,12 +18,16 @@ export interface CaseOutcome {
 }
 
 /**
- * Runs the legacy parser (js/src/index.ts) and captures any `console.warn`
- * output instead of letting it reach the terminal — the legacy parser has
- * no `onWarning` callback (a known, expected deviation from the frozen
- * Core API), so this is the only way to observe its warnings at all.
+ * Runs the case's chosen entry point (`c.api`) and captures any
+ * `console.warn` output instead of letting it reach the terminal — the
+ * parser has no `onWarning` callback (a known, expected deviation from the
+ * frozen Core API), so this is the only way to observe its warnings at all.
+ * `api: "core"` calls `parseCore` directly, with no partials option (Core
+ * has none — the schema/loader reject a case that tries to combine the
+ * two), which is how C-210/R-120 (parseCore never resolves references) are
+ * exercised without going through References resolution at all.
  */
-function invokeLegacyParser(c: LoadedCase): {
+function invokeParser(c: LoadedCase): {
 	result: { threw: false; value: unknown } | { threw: true; error: unknown }
 	capturedWarnings: string[]
 } {
@@ -33,7 +37,10 @@ function invokeLegacyParser(c: LoadedCase): {
 		capturedWarnings.push(args.map(String).join(' '))
 	}
 	try {
-		const value = parse(c.input, { partials: c.options.partials, strict: c.options.strict })
+		const value =
+			c.api === 'core'
+				? parseCore(c.input, { strict: c.options.strict })
+				: parse(c.input, { partials: c.options.partials, strict: c.options.strict })
 		return { result: { threw: false, value }, capturedWarnings }
 	} catch (error) {
 		return { result: { threw: true, error }, capturedWarnings }
@@ -43,11 +50,11 @@ function invokeLegacyParser(c: LoadedCase): {
 }
 
 function runCase(c: LoadedCase): CaseOutcome {
-	const { result, capturedWarnings } = invokeLegacyParser(c)
+	const { result, capturedWarnings } = invokeParser(c)
 	const notes =
 		capturedWarnings.length > 0
 			? [
-					`legacy parser emitted console.warn (no onWarning support to compare against expect.warnings): ${capturedWarnings.join(' | ')}`,
+					`parser emitted console.warn (no onWarning support to compare against expect.warnings): ${capturedWarnings.join(' | ')}`,
 				]
 			: []
 

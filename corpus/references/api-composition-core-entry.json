@@ -1,0 +1,16 @@
+{
+  "id": "references.api.composition.core-entry",
+  "spec": "references",
+  "section": "6.1",
+  "api": "core",
+  "description": "parseCore, invoked directly on a reference-free document that exercises ordinary Core behavior (a date, a float, a quoted reference-shaped token), produces the same result parseReferences produces for the identical input — compare with references.api.composition.references-entry. Demonstrates that parseReferences is built on top of parseCore rather than a parallel, independent implementation.",
+  "input": "published: 2024-03-01\nscore: 3.5\nnote: \"literal (%not-a-partial)\"\n",
+  "expect": {
+    "result": {
+      "published": { "$type": "instant", "value": "2024-03-01T00:00:00Z" },
+      "score": 3.5,
+      "note": "literal (%not-a-partial)"
+    }
+  },
+  "tags": ["positive", "api"]
+}

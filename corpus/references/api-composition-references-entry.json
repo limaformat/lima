@@ -1,0 +1,15 @@
+{
+  "id": "references.api.composition.references-entry",
+  "spec": "references",
+  "section": "6.1",
+  "description": "parseReferences (the default entry point) on the same reference-free document as references.api.composition.core-entry — identical result confirms References inherits Core's behavior exactly rather than reimplementing it.",
+  "input": "published: 2024-03-01\nscore: 3.5\nnote: \"literal (%not-a-partial)\"\n",
+  "expect": {
+    "result": {
+      "published": { "$type": "instant", "value": "2024-03-01T00:00:00Z" },
+      "score": 3.5,
+      "note": "literal (%not-a-partial)"
+    }
+  },
+  "tags": ["positive", "api"]
+}

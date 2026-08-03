@@ -22,6 +22,14 @@
         "references"
       ]
     },
+    "api": {
+      "description": "Which entry point to run the case against. Defaults to \"references\" (parseReferences/parse) — set to \"core\" to exercise parseCore directly, e.g. to prove it never resolves references (C-210) or that parseReferences is literally built on top of it (R-120). parseCore has no partials option, so cases with api: \"core\" must not set options.partials.",
+      "enum": [
+        "core",
+        "references"
+      ],
+      "default": "references"
+    },
     "section": {
       "type": "string",
       "minLength": 1

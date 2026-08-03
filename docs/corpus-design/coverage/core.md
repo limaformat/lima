@@ -137,19 +137,19 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 
 **Scope:** 125 substantive check points. A check point can produce multiple concrete cases.
 
-## Known legacy-parser gaps
+## Known implementation gaps
 
-Two check points cannot currently be exercised against `js/src/index.ts`
-(`package/` origin, predates the frozen 1.0 split of Core vs. References)
-and are deliberately left without a corpus case rather than forced into one:
+One check point cannot currently be exercised against `js/src/index.ts`
+and is deliberately left without a corpus case rather than forced into one:
 
-- **C-202** (`onWarning` receives a Diagnostic): the legacy parser has no
+- **C-202** (`onWarning` receives a Diagnostic): the implementation has no
   `onWarning` callback — it emits `console.warn` directly (see
-  `corpus/runner/src/run.ts`'s `invokeLegacyParser` doc comment). Warnings
+  `corpus/runner/src/run.ts`'s `invokeParser` doc comment). Warnings
   are captured and reported as a non-blocking note, never compared against
   `expect.warnings`.
-- **C-210** (Core treats `($key)`/`(%key)` as plain strings): the legacy
-  parser exposes a single `parse()` that always performs References
-  resolution — there is no separate `parseCore()` entry point that skips
-  it, as Appendix B requires of a genuine Core-only parser. Revisit once a
-  `parseCore` distinct from `parseReferences` exists.
+
+**C-210** (Core treats `($key)`/`(%key)` as plain strings) is covered by
+`core.api.parse-core-never-resolves-references`, which calls `parseCore`
+directly (via the case's `api: "core"` field) with strict mode on and two
+unresolvable tokens — no `UNRESOLVED_REFERENCE` is thrown, proving Core
+never even recognizes the syntax, let alone resolves it.

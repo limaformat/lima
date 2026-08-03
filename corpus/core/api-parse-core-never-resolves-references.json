@@ -1,0 +1,13 @@
+{
+  "id": "core.api.parse-core-never-resolves-references",
+  "spec": "core",
+  "section": "Appendix B",
+  "api": "core",
+  "description": "parseCore treats ($key) and (%key) exactly as ordinary strings — it never recognizes or resolves reference syntax, even in strict mode, where parseReferences would throw UNRESOLVED_REFERENCE for these same unresolvable tokens (compare with references.unresolved.strict).",
+  "input": "a: ($missing)\nb: (%alsoMissing)\n",
+  "options": { "strict": true },
+  "expect": {
+    "result": { "a": "($missing)", "b": "(%alsoMissing)" }
+  },
+  "tags": ["positive", "api"]
+}

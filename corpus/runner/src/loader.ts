@@ -11,6 +11,8 @@ export interface LoadedCase {
 	section: string
 	description: string
 	input: string
+	/** Which parser entry point to run against. Defaults to 'references' (parseReferences/parse). */
+	api: 'core' | 'references'
 	options: { strict: boolean; partials: Record<string, unknown> }
 	expectation:
 		| { kind: 'result'; value: unknown; warnings: DiagnosticExpectation[] }
@@ -53,6 +55,7 @@ export function loadCase(jsonPath: string): LoadResult {
 		description: string
 		input?: string
 		inputFile?: string
+		api?: 'core' | 'references'
 		generator?: { name: string; parameters: Record<string, unknown> }
 		options?: { strict?: boolean; partials?: Record<string, unknown> }
 		expect: { result?: unknown; error?: DiagnosticExpectation; warnings?: DiagnosticExpectation[] }
@@ -113,6 +116,7 @@ export function loadCase(jsonPath: string): LoadResult {
 			section: d.section,
 			description: d.description,
 			input,
+			api: d.api ?? 'references',
 			options,
 			expectation,
 			tags: d.tags ?? [],

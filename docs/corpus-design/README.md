@@ -82,9 +82,17 @@ For readability, these defaults apply:
 strict = false
 partials = {}
 warnings = []
+api = "references"
 ```
 
 Default values should not be spelled out in sidecars.
+
+`api` selects the entry point a case runs against: the default
+`"references"` calls `parseReferences`/`parse`; `"core"` calls `parseCore`
+directly, with no partials option (Core has none — a case may not combine
+`api: "core"` with `options.partials`). Only needed to exercise Core-only
+behavior directly, e.g. proving `parseCore` never resolves references even
+though the same input would resolve (or throw) under `parseReferences`.
 
 ## 5. Language-neutral values
 

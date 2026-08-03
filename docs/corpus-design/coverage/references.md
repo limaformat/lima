@@ -103,37 +103,43 @@ This matrix complements the full Core matrix. A References runner must additiona
 
 **Scope:** 91 substantive check points. A check point can produce multiple concrete cases.
 
-## Known legacy-parser gaps
+## Known implementation gaps
 
-Two check points cannot currently be exercised against `js/src/index.ts`:
+One check point cannot currently be exercised against `js/src/index.ts`:
 
-- **R-120** (`parseReferences` extends `parseCore`): the legacy parser
-  exposes a single `parse()` with no separate `parseCore`/`parseReferences`
-  functions, so there is nothing to test this API-composition claim
-  against. Same structural reason as Core's C-210 (see `coverage/core.md`).
-  Revisit once `parseCore` distinct from `parseReferences` exists.
 - **R-112** (a global final-result resource error — nesting depth, nested
   arrays, total node count — is attributed to the lowest source position
   among the *reference tokens whose inserted/copied values participate* in
-  the violation): not yet implemented. §5's error-ordering *collection*
+  the violation): still not implemented. §5's error-ordering *collection*
   mechanism itself is implemented and covered (see
-  `references.error-ordering.*`, added alongside the fix for a real
-  order-dependence bug this surfaced), and all four §6.2 final-result
-  limits it would attribute (scalar length, nesting depth, total node
-  count, nested arrays) are themselves fully implemented and covered (see
+  `references.error-ordering.*`), and all four §6.2 final-result limits it
+  would attribute (scalar length, nesting depth, total node count, nested
+  arrays) are themselves fully implemented and covered (see
   `references.limits.final-*`) — what's missing is specifically *token
-  attribution*, which requires tracking, for every node in the final tree,
-  whether it (or an ancestor) originated from a reference insertion and at
-  which source line. That provenance tracking doesn't exist yet. R-113
-  (the line-1 fallback "when no source token can be identified") is
-  already correctly covered — the existing unconditional "at line 1"
-  resource-limit message satisfies it for the case that never had a
-  candidate token in the first place.
+  attribution* for these four *global* checks. Every node in the current
+  implementation's internal tree (`js/src/core.ts`'s `PositionedValue`)
+  already carries its own source line — the reimplementation described
+  under R-120 below uses this to attribute ordinary reference-resolution
+  errors (unresolved reference, invalid interpolation, invalid reference
+  shape) to the actual offending node rather than a coarser key-level
+  fallback — but the four §6.2 *final-result* resource checks are computed
+  over the whole tree at once and don't yet walk it back down to find
+  which specific inserted node pushed the total over the limit. R-113 (the
+  line-1 fallback "when no source token can be identified") is already
+  correctly covered — the existing unconditional "at line 1" resource-limit
+  message satisfies it for the case that never had a candidate token in the
+  first place.
 
-R-001 ("References parser includes complete Core behavior") is, by
-contrast, directly testable even without a separate `parseCore` — it is a
-behavioral claim, not an API-shape one — and has a corpus case
-(`references.scope.includes-core-behavior`).
+R-001 ("References parser includes complete Core behavior") is directly
+testable even without a separate `parseCore` — it is a behavioral claim,
+not an API-shape one — and has a corpus case
+(`references.scope.includes-core-behavior`). R-120 (`parseReferences`
+extends `parseCore`) needed the actual API split to exist first; now that
+it does (`js/src/core.ts` + `js/src/references.ts`), it's covered by the
+`references.api.composition.core-entry` / `references.api.composition.
+references-entry` pair — the same input run through both entry points
+(via the case's `api` field), same result, following the same
+cross-referenced-case pattern used for R-083's order-independence claim.
 
 ## Coverage points resolved without a dedicated corpus case
 

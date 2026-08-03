@@ -15,6 +15,7 @@ import schemaDoc from '../../schema/case.schema.json'
 type JsonSchemaDoc = typeof schemaDoc
 
 const SPEC_VALUES = schemaDoc.properties.spec.enum as readonly string[]
+const API_VALUES = schemaDoc.properties.api.enum as readonly string[]
 const GENERATOR_NAMES = schemaDoc.$defs.generator.properties.name.enum as readonly string[]
 const DIAGNOSTIC_CODES = schemaDoc.$defs.diagnostic.properties.code.enum as readonly string[]
 const ID_PATTERN = new RegExp(schemaDoc.properties.id.pattern)
@@ -121,6 +122,7 @@ export function validateCase(doc: unknown): ValidationResult {
 		'input',
 		'inputFile',
 		'options',
+		'api',
 		'generator',
 		'expect',
 		'tags',
@@ -139,6 +141,14 @@ export function validateCase(doc: unknown): ValidationResult {
 	}
 	if ('spec' in doc && !SPEC_VALUES.includes(doc.spec as string)) {
 		fail(errors, 'spec', `must be one of ${SPEC_VALUES.join(', ')}`)
+	}
+	if ('api' in doc) {
+		if (!API_VALUES.includes(doc.api as string)) {
+			fail(errors, 'api', `must be one of ${API_VALUES.join(', ')}`)
+		}
+		if (doc.api === 'core' && isPlainObject(doc.options) && 'partials' in doc.options) {
+			fail(errors, 'options.partials', 'parseCore has no partials option — must not be set when api is "core"')
+		}
 	}
 	if ('section' in doc && (typeof doc.section !== 'string' || doc.section.length < 1)) {
 		fail(errors, 'section', 'must be a non-empty string')
@@ -260,5 +270,5 @@ export function validateCase(doc: unknown): ValidationResult {
 }
 
 // Re-exported for callers that want the raw enums (e.g. the generator dispatcher).
-export { SPEC_VALUES, GENERATOR_NAMES, DIAGNOSTIC_CODES }
+export { SPEC_VALUES, API_VALUES, GENERATOR_NAMES, DIAGNOSTIC_CODES }
 export type { JsonSchemaDoc }

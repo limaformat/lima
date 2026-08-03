@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(229)
+		expect(outcomes).toHaveLength(232)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -290,6 +290,24 @@ describe('runCorpus', () => {
 	 * pipeline than array-interpolation ever sees them — so the corpus case
 	 * that previously exercised it via an (until now, incorrectly)
 	 * unvalidated partial was removed as obsolete.
+	 * 232/0/0 — js/src/index.ts was reimplemented from scratch (value.ts +
+	 * core.ts + references.ts, an annotated PositionedValue tree replacing
+	 * the INACTIVE_TOKEN marker, with a real parseCore distinct from
+	 * parseReferences — see docs/corpus-design/coverage/core.md and
+	 * references.md). All 229 existing cases pass unchanged against the new
+	 * implementation. The reimplementation made C-210 and R-120 testable
+	 * for the first time (they previously had no separate parseCore to
+	 * exercise): a new `api` case field ("core" vs the default
+	 * "references") lets a case call parseCore directly. Three new cases —
+	 * core.api.parse-core-never-resolves-references (C-210: parseCore
+	 * leaves ($key)/(%key) untouched even in strict mode, where
+	 * parseReferences would throw UNRESOLVED_REFERENCE) and the
+	 * references.api.composition.core-entry /
+	 * references.api.composition.references-entry pair (R-120: parseCore
+	 * and parseReferences produce identical results for a reference-free
+	 * document, evidence that References is built on Core rather than a
+	 * parallel reimplementation, following the same cross-referenced-case
+	 * pattern already used for R-083's order-independence claim).
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -298,7 +316,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 229, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 232, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {
