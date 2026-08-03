@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(130)
+		expect(outcomes).toHaveLength(147)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -119,7 +119,25 @@ describe('runCorpus', () => {
 	 * only return `null` for a genuine non-flow value or an unclosed
 	 * bracket, by strict-mode elimination, once every other flow error path
 	 * already threw directly — added as a single shared check in
-	 * resolveValue, the common fallback point for all three call sites).
+	 * resolveValue, the common fallback point for all three call sites) →
+	 * 147/0/0 (17 new Core §8-§11/Appendix B cases added, closing out Core
+	 * coverage: comments, resource limits — 9 generator-backed cases plus
+	 * 3 hand-written ones for points no existing generator produces
+	 * (duplicate-count-toward-budget, decoded-quoted-key-length,
+	 * code-points-not-UTF-16-units) — the strict-list-is-closed point, and
+	 * two API-shape cases. Found and fixed one more real bug: an inline
+	 * comment on a value inside a nested block mapping, or on an array-item
+	 * continuation-key value, was never stripped — Core §8 requires comment
+	 * stripping "at all levels: top-level scalars, values inside block
+	 * mappings, and values inside block array items", but only the
+	 * top-level and first-line-of-array-item paths ever called
+	 * stripComment(); fixed by adding the same call to both of parseBlock's
+	 * other itemVal extraction sites (nested map entries and array-item
+	 * continuation keys). Two coverage points (C-202 onWarning, C-210
+	 * Core-only $key/%key-as-strings) are documented as known legacy-parser
+	 * gaps in coverage/core.md rather than forced into a case — the legacy
+	 * parser has no onWarning callback and no parseCore distinct from a
+	 * References-resolving parse(), so neither is currently exercisable.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -128,7 +146,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 130, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 147, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

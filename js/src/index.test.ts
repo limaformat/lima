@@ -1465,6 +1465,16 @@ describe('comments', () => {
 		const result = parse('title: Hello # inline comment')
 		expect(result.title).toBe('Hello')
 	})
+
+	it('strips an inline comment on a value inside a nested block mapping (Core §8)', () => {
+		const result = parse('author:\n  name: Alice   # comment\n  role: editor\n')
+		expect(result.author).toEqual({ name: 'Alice', role: 'editor' })
+	})
+
+	it('strips an inline comment on an array-item continuation key value', () => {
+		const result = parse('authors:\n  - name: Alice\n    role: editor   # comment\n')
+		expect(result.authors).toEqual([{ name: 'Alice', role: 'editor' }])
+	})
 })
 
 // ─── Dates — UTC parsing ───────────────────────────────────────────────────────
@@ -1673,6 +1683,18 @@ describe('strict mode', () => {
 			title: Hello
 			note: {bad}
 		`), { strict: true })).toThrow('at line 2')
+	})
+
+	it('a strict-mode failure is at minimum a plain Error with a message (Core §11.3)', () => {
+		let caught: unknown
+		try {
+			parse('note: {just some text}', { strict: true })
+		} catch (e) {
+			caught = e
+		}
+		expect(caught).toBeInstanceOf(Error)
+		expect(typeof (caught as Error).message).toBe('string')
+		expect((caught as Error).message.length).toBeGreaterThan(0)
 	})
 
 	it('does NOT throw on valid partials when passed via options', () => {

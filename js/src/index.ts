@@ -938,7 +938,9 @@ const parseBlock = (
 				if (colonPos !== -1) {
 					const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim())
 					checkKeyLength(itemKey, baseLine + idx)
-					const itemVal = trimmed.slice(colonPos + 2).trim()
+					// Core §8: comments are stripped from inline values at every level,
+					// including array-item continuation keys — not just top-level scalars.
+					const itemVal = stripComment(trimmed.slice(colonPos + 2).trim())
 					const flowSeq = parseFlowSequence(itemVal, metadata, partials, strict, baseLine + idx)
 					const flowMap = flowSeq === null ? parseFlowMapping(itemVal, metadata, partials, strict, baseLine + idx) : null
 					pendingItem[itemKey] = flowSeq !== null ? flowSeq : (flowMap !== null ? flowMap : resolveValue(itemVal, metadata, partials, strict, baseLine + idx))
@@ -1085,7 +1087,9 @@ const parseBlock = (
 				const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim())
 				checkKeyLength(itemKey, baseLine + idx)
 				checkDuplicateKey(result as Meta, itemKey, baseLine + idx, strict)
-				const itemVal = trimmed.slice(colonPos + 2).trim()
+				// Core §8: comments are stripped from inline values at every level,
+				// including nested block-mapping entries — not just top-level scalars.
+				const itemVal = stripComment(trimmed.slice(colonPos + 2).trim())
 				const flowSeq = parseFlowSequence(itemVal, metadata, partials, strict, baseLine + idx)
 				const flowMap = flowSeq === null ? parseFlowMapping(itemVal, metadata, partials, strict, baseLine + idx) : null
 				;(result as Meta)[itemKey] = flowSeq !== null ? flowSeq : (flowMap !== null ? flowMap : resolveValue(itemVal, metadata, partials, strict, baseLine + idx))

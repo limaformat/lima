@@ -1,0 +1,23 @@
+{
+  "id": "core.limits.nesting-depth.above",
+  "spec": "core",
+  "section": "9",
+  "description": "Nesting depth of 17 throws.",
+  "generator": {
+    "name": "nested-mappings",
+    "parameters": {
+      "depth": 17
+    }
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "RESOURCE_LIMIT"
+    }
+  },
+  "tags": [
+    "limit",
+    "generated",
+    "error"
+  ]
+}

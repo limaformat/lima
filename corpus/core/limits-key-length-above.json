@@ -1,0 +1,17 @@
+{
+  "id": "core.limits.key-length.above",
+  "spec": "core",
+  "section": "9",
+  "description": "A key of 129 Unicode code points throws.",
+  "input": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk: v",
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "RESOURCE_LIMIT"
+    }
+  },
+  "tags": [
+    "limit",
+    "error"
+  ]
+}

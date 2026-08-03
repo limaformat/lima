@@ -1,0 +1,11 @@
+{
+  "id": "core.api.strict-defaults-to-false",
+  "spec": "core",
+  "section": "11.2",
+  "description": "With no options passed at all (not even an explicit strict: false), a strict-only error condition (here, an unknown escape sequence) does not throw — strict defaults to false.",
+  "input": "value: \"a\\qb\"",
+  "expect": {
+    "result": { "value": "a\\qb" }
+  },
+  "tags": ["positive", "api"]
+}

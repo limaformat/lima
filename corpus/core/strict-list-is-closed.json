@@ -1,0 +1,12 @@
+{
+  "id": "core.strict-list.is-closed",
+  "spec": "core",
+  "section": "10",
+  "description": "The strict error list (Core §10.1) is normatively closed. A top-level line matching no key pattern is not on that list, so it remains tolerated (silently skipped) even in strict mode, exactly as in non-strict mode.",
+  "input": "title: Hello\nthis is not a key line at all\ncount: 42",
+  "options": { "strict": true },
+  "expect": {
+    "result": { "title": "Hello", "count": 42 }
+  },
+  "tags": ["negative", "strict"]
+}

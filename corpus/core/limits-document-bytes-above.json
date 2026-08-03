@@ -1,0 +1,23 @@
+{
+  "id": "core.limits.document-bytes.above",
+  "spec": "core",
+  "section": "9",
+  "description": "A document of 65,537 UTF-8 bytes throws.",
+  "generator": {
+    "name": "document-bytes",
+    "parameters": {
+      "length": 65537
+    }
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "RESOURCE_LIMIT"
+    }
+  },
+  "tags": [
+    "limit",
+    "generated",
+    "error"
+  ]
+}

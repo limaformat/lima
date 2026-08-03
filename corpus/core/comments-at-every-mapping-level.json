@@ -1,0 +1,14 @@
+{
+  "id": "core.comments.at-every-mapping-level",
+  "spec": "core",
+  "section": "8",
+  "description": "Inline comments are stripped from values at every level: top-level scalars and values inside nested block mappings.",
+  "input": "title: My Article        # comment stripped\nauthor:\n  name: Alice            # comment stripped here too\n  role: editor\n",
+  "expect": {
+    "result": {
+      "title": "My Article",
+      "author": { "name": "Alice", "role": "editor" }
+    }
+  },
+  "tags": ["positive", "comments"]
+}

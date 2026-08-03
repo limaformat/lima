@@ -1,0 +1,11 @@
+{
+  "id": "core.api.parse-returns-mapping",
+  "spec": "core",
+  "section": "11.1",
+  "description": "parseCore returns a plain Record/mapping keyed by the document's top-level keys, not an array or other collection shape.",
+  "input": "a: 1\nb: 2\n",
+  "expect": {
+    "result": { "a": 1, "b": 2 }
+  },
+  "tags": ["positive", "api"]
+}

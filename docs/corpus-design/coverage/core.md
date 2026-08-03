@@ -136,3 +136,20 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-210 | Appendix B | Core/References | Core treats ($key) and (%key) as strings | positive | both |
 
 **Scope:** 125 substantive check points. A check point can produce multiple concrete cases.
+
+## Known legacy-parser gaps
+
+Two check points cannot currently be exercised against `js/src/index.ts`
+(`package/` origin, predates the frozen 1.0 split of Core vs. References)
+and are deliberately left without a corpus case rather than forced into one:
+
+- **C-202** (`onWarning` receives a Diagnostic): the legacy parser has no
+  `onWarning` callback — it emits `console.warn` directly (see
+  `corpus/runner/src/run.ts`'s `invokeLegacyParser` doc comment). Warnings
+  are captured and reported as a non-blocking note, never compared against
+  `expect.warnings`.
+- **C-210** (Core treats `($key)`/`(%key)` as plain strings): the legacy
+  parser exposes a single `parse()` that always performs References
+  resolution — there is no separate `parseCore()` entry point that skips
+  it, as Appendix B requires of a genuine Core-only parser. Revisit once a
+  `parseCore` distinct from `parseReferences` exists.

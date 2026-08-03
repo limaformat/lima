@@ -1,0 +1,23 @@
+{
+  "id": "core.limits.top-level-count.above",
+  "spec": "core",
+  "section": "9",
+  "description": "129 distinct top-level key entries throws.",
+  "generator": {
+    "name": "repeated-key",
+    "parameters": {
+      "count": 129
+    }
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "RESOURCE_LIMIT"
+    }
+  },
+  "tags": [
+    "limit",
+    "generated",
+    "error"
+  ]
+}

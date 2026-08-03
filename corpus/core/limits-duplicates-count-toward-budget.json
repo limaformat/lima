@@ -1,0 +1,17 @@
+{
+  "id": "core.limits.duplicates-count-toward-budget",
+  "spec": "core",
+  "section": "9",
+  "description": "The same key repeated 129 times still throws the top-level-count limit — duplicates are counted at parse time, before duplicate resolution, not collapsed to one entry first.",
+  "input": "dup: v0\ndup: v1\ndup: v2\ndup: v3\ndup: v4\ndup: v5\ndup: v6\ndup: v7\ndup: v8\ndup: v9\ndup: v10\ndup: v11\ndup: v12\ndup: v13\ndup: v14\ndup: v15\ndup: v16\ndup: v17\ndup: v18\ndup: v19\ndup: v20\ndup: v21\ndup: v22\ndup: v23\ndup: v24\ndup: v25\ndup: v26\ndup: v27\ndup: v28\ndup: v29\ndup: v30\ndup: v31\ndup: v32\ndup: v33\ndup: v34\ndup: v35\ndup: v36\ndup: v37\ndup: v38\ndup: v39\ndup: v40\ndup: v41\ndup: v42\ndup: v43\ndup: v44\ndup: v45\ndup: v46\ndup: v47\ndup: v48\ndup: v49\ndup: v50\ndup: v51\ndup: v52\ndup: v53\ndup: v54\ndup: v55\ndup: v56\ndup: v57\ndup: v58\ndup: v59\ndup: v60\ndup: v61\ndup: v62\ndup: v63\ndup: v64\ndup: v65\ndup: v66\ndup: v67\ndup: v68\ndup: v69\ndup: v70\ndup: v71\ndup: v72\ndup: v73\ndup: v74\ndup: v75\ndup: v76\ndup: v77\ndup: v78\ndup: v79\ndup: v80\ndup: v81\ndup: v82\ndup: v83\ndup: v84\ndup: v85\ndup: v86\ndup: v87\ndup: v88\ndup: v89\ndup: v90\ndup: v91\ndup: v92\ndup: v93\ndup: v94\ndup: v95\ndup: v96\ndup: v97\ndup: v98\ndup: v99\ndup: v100\ndup: v101\ndup: v102\ndup: v103\ndup: v104\ndup: v105\ndup: v106\ndup: v107\ndup: v108\ndup: v109\ndup: v110\ndup: v111\ndup: v112\ndup: v113\ndup: v114\ndup: v115\ndup: v116\ndup: v117\ndup: v118\ndup: v119\ndup: v120\ndup: v121\ndup: v122\ndup: v123\ndup: v124\ndup: v125\ndup: v126\ndup: v127\ndup: v128",
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "RESOURCE_LIMIT"
+    }
+  },
+  "tags": [
+    "limit",
+    "error"
+  ]
+}

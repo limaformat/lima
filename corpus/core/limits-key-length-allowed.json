@@ -1,0 +1,16 @@
+{
+  "id": "core.limits.key-length.allowed",
+  "spec": "core",
+  "section": "9",
+  "description": "A key of exactly 128 Unicode code points (the limit) is allowed.",
+  "input": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk: v",
+  "expect": {
+    "result": {
+      "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "v"
+    }
+  },
+  "tags": [
+    "limit",
+    "boundary"
+  ]
+}

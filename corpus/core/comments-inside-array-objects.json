@@ -1,0 +1,16 @@
+{
+  "id": "core.comments.inside-array-objects",
+  "spec": "core",
+  "section": "8",
+  "description": "Inline comments are stripped from values inside block array object items, including on continuation-line keys.",
+  "input": "authors:\n  - name: Alice   # comment\n    role: editor   # another comment\n  - name: Bob\n",
+  "expect": {
+    "result": {
+      "authors": [
+        { "name": "Alice", "role": "editor" },
+        { "name": "Bob" }
+      ]
+    }
+  },
+  "tags": ["positive", "comments"]
+}

@@ -1,0 +1,54 @@
+{
+  "id": "core.limits.nesting-depth.allowed",
+  "spec": "core",
+  "section": "9",
+  "description": "Nesting depth of exactly 16 (the limit) is allowed.",
+  "generator": {
+    "name": "nested-mappings",
+    "parameters": {
+      "depth": 16
+    }
+  },
+  "expect": {
+    "result": {
+      "k": {
+        "k": {
+          "k": {
+            "k": {
+              "k": {
+                "k": {
+                  "k": {
+                    "k": {
+                      "k": {
+                        "k": {
+                          "k": {
+                            "k": {
+                              "k": {
+                                "k": {
+                                  "k": {
+                                    "k": {
+                                      "k": "v"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    "limit",
+    "generated",
+    "boundary"
+  ]
+}
