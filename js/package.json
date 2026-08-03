@@ -20,7 +20,8 @@
   "files": ["dist", "README.md", "LICENSE"],
   "engines": { "node": ">=18" },
   "scripts": {
-    "test": "bun test"
+    "test": "bun test",
+    "bench": "bun run bench/index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"

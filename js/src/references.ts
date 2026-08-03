@@ -22,12 +22,12 @@
  */
 
 import {
-	type LimaValue, LMapping, countNodes, canonicalString,
+	type LimaValue, countNodes, canonicalString,
 	ingestPartialValue, PARTIAL_COUNT_LIMIT, PARTIAL_NAME_LENGTH_LIMIT, PARTIAL_NODE_LIMIT,
 	RESULT_NODE_LIMIT, SCALAR_LENGTH_LIMIT,
 } from './value'
 import {
-	parseCoreWithPositions, toPlainValue, toNative, NESTING_DEPTH_LIMIT,
+	parseCoreWithPositions, toPlainValue, toNativeFromPositioned, NESTING_DEPTH_LIMIT,
 	type PositionedValue, type Diagnostic, type InsertedAt,
 } from './core'
 
@@ -128,9 +128,18 @@ const partialToPositioned = (v: LimaValue, line: number): PositionedValue => {
 const resolveTree = (
 	node: PositionedValue,
 	lookup: Map<string, PositionedValue>,
-	partials: Map<string, LimaValue>,
+	partials: Map<string, PositionedValue>,
 	ctx: ResolutionContext,
 ): PositionedValue => {
+	// Fast path: a subtree with no active reference-shaped string anywhere
+	// inside it has nothing this function could change — skip rebuilding
+	// it. Matters most for phase 2's redundant re-walk (see the module doc
+	// comment) of a large already-resolved value, e.g. a big partial copied
+	// in by several separate references: without this, every element gets
+	// a fresh resolveTree call and every array/mapping level gets
+	// reconstructed via .map()/a new Map on a pass that can only ever
+	// return its input unchanged.
+	if (node.kind !== 'string' && isReferenceFreeP(node)) return node
 	if (node.kind === 'string') {
 		if (node.quoted) return node
 		const val = node.value
@@ -147,7 +156,7 @@ const resolveTree = (
 				const insertedAt: InsertedAt = { line: node.line, token: val }
 				if (isPartial) {
 					const target = partials.get(key)
-					if (target !== undefined) return { ...partialToPositioned(target, node.line), insertedAt }
+					if (target !== undefined) return { ...target, insertedAt }
 				} else {
 					const target = getNestedValueP(lookup, key)
 					if (target !== undefined && isReferenceFreeP(target)) {
@@ -163,10 +172,7 @@ const resolveTree = (
 			const replaced = val.replace(INTERP_RE, (match, docPath, partialKey) => {
 				const isPartial = partialKey !== undefined
 				const key = isPartial ? partialKey : docPath
-				const rawTarget = isPartial ? partials.get(key) : undefined
-				const target = isPartial
-					? (rawTarget !== undefined ? partialToPositioned(rawTarget, node.line) : undefined)
-					: getNestedValueP(lookup, key)
+				const target = isPartial ? partials.get(key) : getNestedValueP(lookup, key)
 				if (target === undefined || (!isPartial && !isReferenceFreeP(target))) return match
 				if (target.kind === 'mapping') {
 					ctx.diagnostics.push({
@@ -265,6 +271,17 @@ const depthWithProvenance = (v: PositionedValue): DepthResult => {
 const earliestParticipant = (participants: InsertedAt[]): InsertedAt | null =>
 	participants.length === 0 ? null : participants.reduce((a, b) => (b.line < a.line ? b : a))
 
+/** References §6.2 node-count definition, computed directly on the annotated tree — see the call site's doc comment. */
+const countNodesPositioned = (v: PositionedValue): number => {
+	if (v.kind === 'array') return 1 + v.items.reduce((sum, item) => sum + countNodesPositioned(item), 0)
+	if (v.kind === 'mapping') {
+		let sum = 1
+		for (const c of v.entries.values()) sum += countNodesPositioned(c)
+		return sum
+	}
+	return 1
+}
+
 /** Node-count attribution: every reference insertion anywhere in the tree contributes to the total. */
 const collectAllParticipants = (v: PositionedValue, acc: InsertedAt[]): void => {
 	if (v.insertedAt) acc.push(v.insertedAt)
@@ -313,6 +330,19 @@ export const parseReferences = <T extends Record<string, unknown> = Meta>(
 		throw new Error(`LIMA: partials exceed the combined maximum of ${PARTIAL_NODE_LIMIT} value nodes`)
 	}
 
+	// Converted to the annotated representation once per partial, not once
+	// per reference: nothing downstream ever mutates a PositionedValue tree
+	// in place (resolveTree's fast path returns inert subtrees unchanged;
+	// toNativeFromPositioned always allocates fresh native containers for
+	// the public result), so every reference to the same partial can safely
+	// reuse the same body and only needs its own `insertedAt` stamped onto
+	// a shallow copy of the root — no per-reference deep copy required. The
+	// internal `line` on partial-derived nodes is never read downstream
+	// (every diagnostic that could involve one uses the referencing site's
+	// own line instead), so the placeholder `0` here is fine.
+	const partialsPositioned = new Map<string, PositionedValue>()
+	for (const [name, value] of partials) partialsPositioned.set(name, partialToPositioned(value, 0))
+
 	const root = parseCoreWithPositions(frontMatter, { strict, onWarning: options?.onWarning })
 	const ctx: ResolutionContext = { diagnostics: [] }
 
@@ -339,7 +369,7 @@ export const parseReferences = <T extends Record<string, unknown> = Meta>(
 			if (node.kind === 'string' && !node.quoted && PURE_REF_RE.test(node.value)) {
 				originalPureRefText.set(key, node.value)
 			}
-			phase1Live.set(key, resolveTree(node, phase1Live, partials, ctx))
+			phase1Live.set(key, resolveTree(node, phase1Live, partialsPositioned, ctx))
 		}
 
 		// Phase 2 (§4.2): re-resolve every key's phase-1 value — this is
@@ -355,7 +385,7 @@ export const parseReferences = <T extends Record<string, unknown> = Meta>(
 
 		finalMap = new Map<string, PositionedValue>()
 		for (const [key] of root) {
-			finalMap.set(key, resolveTree(phase1Live.get(key)!, phase1Snapshot, partials, ctx))
+			finalMap.set(key, resolveTree(phase1Live.get(key)!, phase1Snapshot, partialsPositioned, ctx))
 		}
 	}
 
@@ -406,10 +436,13 @@ export const parseReferences = <T extends Record<string, unknown> = Meta>(
 
 	// §6.2: total node count of the final result tree, both modes. Same
 	// R-112 attribution — every reference insertion anywhere in the tree
-	// contributes to the total, so the lowest-line one is reported.
-	const finalEntries = new Map<string, LimaValue>()
-	for (const [k, v] of finalMap) finalEntries.set(k, toPlainValue(v))
-	const totalResultNodes = countNodes(LMapping(finalEntries))
+	// contributes to the total, so the lowest-line one is reported. Counted
+	// directly on the annotated tree (see countNodesPositioned) rather than
+	// via a throwaway PositionedValue → LimaValue conversion pass first —
+	// avoids a full extra walk of what can be a large, reference-expanded
+	// result purely to get a number.
+	let totalResultNodes = 1 // the root mapping itself counts as one node
+	for (const v of finalMap.values()) totalResultNodes += countNodesPositioned(v)
 	if (totalResultNodes > RESULT_NODE_LIMIT) {
 		const participants: InsertedAt[] = []
 		for (const v of finalMap.values()) collectAllParticipants(v, participants)
@@ -419,8 +452,10 @@ export const parseReferences = <T extends Record<string, unknown> = Meta>(
 			: `LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line 1`)
 	}
 
+	// toNativeFromPositioned(v) in one pass instead of toNative(toPlainValue(v))
+	// in two — see its doc comment.
 	const out = emptyMapping()
-	for (const [k, v] of finalEntries) out[k] = toNative(v)
+	for (const [k, v] of finalMap) out[k] = toNativeFromPositioned(v)
 	return out as unknown as T
 }
 

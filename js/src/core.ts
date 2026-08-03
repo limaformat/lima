@@ -131,9 +131,17 @@ const checkScalarLimit = (v: LimaValue, line: number): void => {
 	}
 }
 
-const checkKeyLength = (key: string, line: number): void => {
+/**
+ * `line` is a thunk, not a plain number: computing a top-level key's line
+ * can trigger an O(document length) scan (see `keyLine` below) the very
+ * first time it's called, and this check runs for every key in the
+ * document. Evaluating it eagerly would pay that cost on every parse, even
+ * though the overwhelming majority of keys never violate the limit — the
+ * thunk defers it to the one branch that actually needs a line number.
+ */
+const checkKeyLength = (key: string, line: () => number): void => {
 	if ([...key].length > KEY_LENGTH_LIMIT) {
-		throw new Error(`LIMA: key "${key}" exceeds maximum length of ${KEY_LENGTH_LIMIT} code points at line ${line}`)
+		throw new Error(`LIMA: key "${key}" exceeds maximum length of ${KEY_LENGTH_LIMIT} code points at line ${line()}`)
 	}
 }
 
@@ -432,7 +440,7 @@ const parseFlowMapping = (val: string, ctx: ParseContext, line: number): Positio
 			return null
 		}
 		const key = stripKeyQuotes(item.slice(0, colonPos).trim())
-		checkKeyLength(key, line)
+		checkKeyLength(key, () => line)
 		checkDuplicateKeyMap(entries, key, line, ctx)
 		const rawVal = item.slice(colonPos + 2).trim()
 		if (isNestedFlowConstruct(rawVal)) {
@@ -499,7 +507,7 @@ const parseBlock = (
 				const colonPos = findKeySep(trimmed)
 				if (colonPos !== -1) {
 					const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim())
-					checkKeyLength(itemKey, baseLine + idx)
+					checkKeyLength(itemKey, () => baseLine + idx)
 					const itemVal = stripComment(trimmed.slice(colonPos + 2).trim())
 					const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx)
 					const flowMap = flowSeq === null ? parseFlowMapping(itemVal, ctx, baseLine + idx) : null
@@ -510,7 +518,7 @@ const parseBlock = (
 				} else if (trimmed.endsWith(':')) {
 					const itemKey = stripKeyQuotes(trimmed.slice(0, -1).trim())
 					const keyLineNum = baseLine + idx
-					checkKeyLength(itemKey, keyLineNum)
+					checkKeyLength(itemKey, () => keyLineNum)
 					idx++
 					let ni = idx
 					while (ni < lines.length && !lines[ni].trim()) ni++
@@ -569,7 +577,7 @@ const parseBlock = (
 				}
 			} else if (colonPos !== -1) {
 				const pendingKey = stripKeyQuotes(afterDash.slice(0, colonPos).trim())
-				checkKeyLength(pendingKey, baseLine + idx)
+				checkKeyLength(pendingKey, () => baseLine + idx)
 				const pendingRaw = afterDash.slice(colonPos + 2).trim()
 				const pendingFlowSeq = parseFlowSequence(pendingRaw, ctx, baseLine + idx)
 				const pendingFlowMap = pendingFlowSeq === null ? parseFlowMapping(pendingRaw, ctx, baseLine + idx) : null
@@ -581,7 +589,7 @@ const parseBlock = (
 			} else if (afterDash.endsWith(':')) {
 				const itemKey = stripKeyQuotes(afterDash.slice(0, -1).trim())
 				const keyLineNum = baseLine + idx
-				checkKeyLength(itemKey, keyLineNum)
+				checkKeyLength(itemKey, () => keyLineNum)
 				idx++
 				let ni = idx
 				while (ni < lines.length && !lines[ni].trim()) ni++
@@ -620,7 +628,7 @@ const parseBlock = (
 			if (colonPos !== -1) {
 				if (entries === null) entries = new Map()
 				const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim())
-				checkKeyLength(itemKey, baseLine + idx)
+				checkKeyLength(itemKey, () => baseLine + idx)
 				checkDuplicateKeyMap(entries, itemKey, baseLine + idx, ctx)
 				const itemVal = stripComment(trimmed.slice(colonPos + 2).trim())
 				const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx)
@@ -633,7 +641,7 @@ const parseBlock = (
 				if (entries === null) entries = new Map()
 				const itemKey = stripKeyQuotes(trimmed.slice(0, -1).trim())
 				const keyLineNum = baseLine + idx
-				checkKeyLength(itemKey, keyLineNum)
+				checkKeyLength(itemKey, () => keyLineNum)
 				checkDuplicateKeyMap(entries, itemKey, keyLineNum, ctx)
 				idx++
 				let ni = idx
@@ -693,15 +701,33 @@ export const parseCoreWithPositions = (frontMatter: string, ctx: ParseContext): 
 		.replace(/^([ \t]*)/gm, (leading) => (leading.includes('\t') ? leading.replace(/\t/g, '  ') : leading))
 		.replace(/ +(?=\n|$)/gm, '')
 
-	let keyPositions: number[] | null = null
+	// Lazy — the regex scan below only runs the first time any key's line
+	// is actually needed (duplicate-key/warning/strict-mode/resource-limit
+	// messages), never on the happy path otherwise.
+	let keyLineNumbers: number[] | null = null
 	const keyLine = (i: number): number => {
-		if (keyPositions === null) {
-			keyPositions = []
+		if (keyLineNumbers === null) {
+			const keyPositions: number[] = []
 			const re = new RegExp(KEY_RE.source, 'gm')
 			let m: RegExpExecArray | null
 			while ((m = re.exec(frontMatter)) !== null) keyPositions.push(m.index)
+			// Single combined O(document length) sweep instead of one
+			// lineAt() scan-from-start per key — keyPositions is strictly
+			// ascending (regex exec proceeds forward), so every position's
+			// line can be read off one shared pass instead of each
+			// independently re-scanning from character 0.
+			keyLineNumbers = new Array(keyPositions.length)
+			let line = 1
+			let posIdx = 0
+			for (let charIdx = 0; charIdx <= frontMatter.length && posIdx < keyPositions.length; charIdx++) {
+				while (posIdx < keyPositions.length && keyPositions[posIdx] === charIdx) {
+					keyLineNumbers[posIdx] = line
+					posIdx++
+				}
+				if (frontMatter.charCodeAt(charIdx) === 10) line++
+			}
 		}
-		return lineAt(frontMatter, keyPositions[i])
+		return keyLineNumbers[i]
 	}
 
 	if (strict) {
@@ -730,7 +756,7 @@ export const parseCoreWithPositions = (frontMatter: string, ctx: ParseContext): 
 		const rawDQ = parts[i * 5 + 2]
 		const key   = parts[i * 5] ?? parts[i * 5 + 1] ?? (rawDQ !== undefined ? unescapeDQ(rawDQ) : undefined)
 		if (key === undefined) continue
-		checkKeyLength(key, keyLine(i))
+		checkKeyLength(key, () => keyLine(i))
 
 		if (root.has(key)) {
 			const line = keyLine(i)
@@ -848,6 +874,29 @@ export const toNative = (v: LimaValue): any => {
 }
 
 /**
+ * `toNative(toPlainValue(v))` in one pass instead of two full tree walks —
+ * matters most for large, reference-expanded results (many copies of a
+ * sizeable partial), where the position/quoted-stripping pass and the
+ * native-conversion pass would otherwise each independently visit every
+ * node of the same, potentially large, final tree.
+ */
+export const toNativeFromPositioned = (v: PositionedValue): any => {
+	switch (v.kind) {
+		case 'null': return null
+		case 'bool': return v.value
+		case 'int': case 'float': return v.value
+		case 'string': return v.value
+		case 'instant': return v.value
+		case 'array': return v.items.map(toNativeFromPositioned)
+		case 'mapping': {
+			const out = emptyMapping()
+			for (const [k, c] of v.entries) out[k] = toNativeFromPositioned(c)
+			return out
+		}
+	}
+}
+
+/**
  * Public Core 1.0 entry point. Never resolves `($key)`/`(%key)` text — see
  * the module doc comment. Equivalent in observable behavior to calling
  * `parseReferences()` with no partials on a document that happens to
@@ -859,6 +908,6 @@ export const parseCore = <T extends Record<string, unknown> = Meta>(
 ): T => {
 	const root = parseCoreWithPositions(frontMatter, { strict: options?.strict ?? false, onWarning: options?.onWarning })
 	const out = emptyMapping()
-	for (const [k, v] of root) out[k] = toNative(toPlainValue(v))
+	for (const [k, v] of root) out[k] = toNativeFromPositioned(v)
 	return out as unknown as T
 }
