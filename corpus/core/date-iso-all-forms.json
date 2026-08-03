@@ -1,0 +1,18 @@
+{
+  "id": "core.dates.iso.all-forms",
+  "spec": "core",
+  "section": "6.5.1",
+  "description": "All six recognised ISO 8601 forms (date only, date+time, date+time+seconds, +Z, +offset, +seconds+offset) parse as UTC Instants.",
+  "input": "a: 2024-03-01\nb: 2024-03-01T09:00\nc: 2024-03-01T09:00:00\nd: 2024-03-01T09:00:00Z\ne: 2024-03-01T09:00+02:00\nf: 2024-03-01T09:00:00+02:00\n",
+  "expect": {
+    "result": {
+      "a": { "$type": "instant", "value": "2024-03-01T00:00:00Z" },
+      "b": { "$type": "instant", "value": "2024-03-01T09:00:00Z" },
+      "c": { "$type": "instant", "value": "2024-03-01T09:00:00Z" },
+      "d": { "$type": "instant", "value": "2024-03-01T09:00:00Z" },
+      "e": { "$type": "instant", "value": "2024-03-01T07:00:00Z" },
+      "f": { "$type": "instant", "value": "2024-03-01T07:00:00Z" }
+    }
+  },
+  "tags": ["positive", "dates"]
+}

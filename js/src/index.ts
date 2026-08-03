@@ -270,62 +270,89 @@ const lineAt = (s: string, pos: number): number => {
 
 // ─── Core helpers ─────────────────────────────────────────────────────────────
 
+// Core §6.5.1: the three recognised date shapes, matched exactly against
+// the whole value. Month/day are exactly two digits for ISO and slash
+// forms; the German form allows one or two digits. Offset is ISO-only.
+const ISO_DATE_RE    = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?(Z|[+-]\d{2}:\d{2})?)?$/
+const GERMAN_DATE_RE = /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?: (\d{2}):(\d{2})(?::(\d{2}))?)?$/
+const SLASH_DATE_RE  = /^(\d{4})\/(\d{2})\/(\d{2})(?: (\d{2}):(\d{2})(?::(\d{2}))?)?$/
+
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+const isLeapYear = (y: number): boolean => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
+const daysInMonth = (y: number, m: number): number => (m === 2 && isLeapYear(y)) ? 29 : DAYS_IN_MONTH[m - 1]
+
 /**
- * Normalizes a potential date string to UTC ISO 8601 and attempts to parse it.
+ * Parses one of the Core §6.5.1 date forms into a UTC Instant, with full
+ * component validation (§6.5.2) and the UTC-instant range check (§6.5.3).
  *
- * Strategy: when a timezone offset ([+-]HH:MM) is present, it is applied —
- * the datetime is correctly converted to UTC by Date.parse. Without an offset,
- * the time is treated as local time written by the author and stamped as UTC.
+ * Component ranges (year, month, day-of-month via the real calendar, hour,
+ * minute, second, offset) are validated directly against the regex-captured
+ * digits — never delegated to `Date.parse`/the `Date` constructor, which
+ * silently roll invalid calendar dates over into the next valid one (e.g.
+ * `2024-02-30` → March 1) instead of rejecting them.
  *
- * Supported input formats:
- *   ISO 8601:        `2026-04-09`, `2026-04-09T16:00`, `2026-04-09 16:00`
- *   With offset:     `2026-04-09 16:00 +02:00`  →  14:00 UTC
- *   Slash-separated: `2026/5/21 11:00:32`
- *   German:          `10.3.2026 14:33`
- *
- * Date-only strings (no time component) are left without a Z suffix because
- * the ES spec already treats ISO date-only strings as UTC midnight.
+ * Returns `null` when the value is not one of the three recognised date
+ * shapes at all — the ordinary "not a date" case, never an error. Also
+ * returns `null` (non-strict) or throws (strict) when the value *is*
+ * date-shaped but has an invalid component or produces a UTC Instant
+ * outside years 0001–9999 — Core §10.1 lists this as its own strict-error
+ * row, distinct from "not a date at all".
  */
-const parseDateUTC = (str: string): Date | null => {
-	// Fast-path: ISO date-only YYYY-MM-DD — most common format in blog frontmatter.
-	// Saves 4 regex operations; two charCode checks are enough to identify this shape.
-	if (str.length === 10 && str.charCodeAt(4) === 45 /* '-' */ && str.charCodeAt(7) === 45 /* '-' */) {
-		const ts = Date.parse(str)
-		return !isNaN(ts) ? new Date(str) : null
+const parseDateUTC = (str: string, strict = false, line = 0): Date | null => {
+	const invalid = (): null => {
+		if (strict) throw new Error(`LIMA: invalid date "${str}" at line ${line}`)
+		return null
 	}
 
-	// Extract timezone offset ([+-]HH:MM) if present — re-appended after normalization
-	// so Date.parse applies it and converts to UTC correctly.
-	const offsetMatch = str.match(/\s*([+-]\d{2}:\d{2})$/)
-	const offset = offsetMatch ? offsetMatch[1] : null
-	let s = offset ? str.slice(0, str.length - offsetMatch![0].length).trimEnd() : str
+	let y: number, mo: number, d: number, h = 0, mi = 0, s = 0, offsetMin = 0
 
-	// DD.MM.YYYY → YYYY-MM-DD (retains any following time)
-	s = s.replace(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/, (_, d, m, y) =>
-		`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+	const iso = ISO_DATE_RE.exec(str)
+	const german = !iso ? GERMAN_DATE_RE.exec(str) : null
+	const slash = !iso && !german ? SLASH_DATE_RE.exec(str) : null
 
-	// YYYY/MM/DD → YYYY-MM-DD (retains any following time)
-	s = s.replace(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/, (_, y, m, d) =>
-		`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
-
-	// Space between date and time → T separator (required for Date.parse)
-	s = s.replace(/^(\d{4}-\d{2}-\d{2}) /, '$1T')
-
-	if (offset) {
-		// Re-append original offset — Date.parse converts to UTC correctly
-		s += offset
-	} else if (s.includes('T') && !s.endsWith('Z')) {
-		// No offset: stamp as UTC directly
-		s += 'Z'
+	if (iso) {
+		y = +iso[1]; mo = +iso[2]; d = +iso[3]
+		h = iso[4] !== undefined ? +iso[4] : 0
+		mi = iso[5] !== undefined ? +iso[5] : 0
+		s = iso[6] !== undefined ? +iso[6] : 0
+		const offsetStr = iso[7]
+		if (offsetStr && offsetStr !== 'Z') {
+			const sign = offsetStr.charCodeAt(0) === 45 /* '-' */ ? -1 : 1
+			const oh = +offsetStr.slice(1, 3)
+			const om = +offsetStr.slice(4, 6)
+			if (oh > 14 || om > 59 || (oh === 14 && om !== 0)) return invalid()
+			offsetMin = sign * (oh * 60 + om)
+		}
+	} else if (german) {
+		d = +german[1]; mo = +german[2]; y = +german[3]
+		h = german[4] !== undefined ? +german[4] : 0
+		mi = german[5] !== undefined ? +german[5] : 0
+		s = german[6] !== undefined ? +german[6] : 0
+	} else if (slash) {
+		y = +slash[1]; mo = +slash[2]; d = +slash[3]
+		h = slash[4] !== undefined ? +slash[4] : 0
+		mi = slash[5] !== undefined ? +slash[5] : 0
+		s = slash[6] !== undefined ? +slash[6] : 0
+	} else {
+		return null // not one of the three recognised date shapes at all
 	}
 
-	// Guard: only invoke Date.parse for strings that were successfully normalized
-	// to ISO format. Without this, V8 accepts non-standard inputs like '1.2.3'
-	// (→ 2003-01-02) or browser-locale-dependent strings, producing silent surprises.
-	if (!/^\d{4}-\d{2}-\d{2}/.test(s)) return null
+	if (y < 1 || y > 9999 || mo < 1 || mo > 12 || d < 1 || d > daysInMonth(y, mo) ||
+		h > 23 || mi > 59 || s > 59) return invalid()
 
-	const ts = Date.parse(s)
-	return !isNaN(ts) ? new Date(s) : null
+	// setUTCFullYear (unlike the Date constructor / Date.UTC) never maps a
+	// 0-99 year into 1900-1999 — required since valid Lima years start at 0001.
+	const base = new Date(0)
+	base.setUTCFullYear(y, mo - 1, d)
+	base.setUTCHours(h, mi, s, 0)
+	const result = new Date(base.getTime() - offsetMin * 60000)
+
+	// §6.5.3: the UTC Instant after applying the offset must also fall
+	// within years 0001-9999.
+	const utcYear = result.getUTCFullYear()
+	if (utcYear < 1 || utcYear > 9999) return invalid()
+
+	return result
 }
 
 // Core §6.4.1 number grammar, applied directly rather than delegated to
@@ -393,12 +420,10 @@ const toType = (str: string, strict = false, line = 0): string | boolean | numbe
 		// mode (the throws above already fired in strict mode): fall through
 		// to the string fallback below.
 	}
-	try {
-		if (!str.includes('@') && DATE_PRE_RE.test(str)) {
-			const date = parseDateUTC(str)
-			if (date !== null) return date
-		}
-	} catch {}
+	if (!str.includes('@') && DATE_PRE_RE.test(str)) {
+		const date = parseDateUTC(str, strict, line)
+		if (date !== null) return date
+	}
 	return str
 }
 

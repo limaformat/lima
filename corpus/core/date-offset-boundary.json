@@ -1,0 +1,15 @@
+{
+  "id": "core.dates.offset-boundary",
+  "spec": "core",
+  "section": "6.5.2",
+  "description": "Offset ±14:00 is the valid boundary; an offset minute other than 00 at hour 14 (e.g. +14:01) is invalid and falls back to a string.",
+  "input": "a: 2024-03-01T09:00+14:00\nb: 2024-03-01T09:00-14:00\nc: 2024-03-01T09:00+14:01\n",
+  "expect": {
+    "result": {
+      "a": { "$type": "instant", "value": "2024-02-29T19:00:00Z" },
+      "b": { "$type": "instant", "value": "2024-03-01T23:00:00Z" },
+      "c": "2024-03-01T09:00+14:01"
+    }
+  },
+  "tags": ["boundary", "dates"]
+}

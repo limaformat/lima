@@ -1,0 +1,11 @@
+{
+  "id": "core.dates.invalid-component.non-strict",
+  "spec": "core",
+  "section": "6.5.2",
+  "description": "An invalid calendar date (Feb 29 in a non-leap year, Feb 30, a day beyond the month length) falls back to a string unchanged in non-strict mode — not silently normalized to the next valid date.",
+  "input": "a: 2023-02-29\nb: 2024-02-30\nc: 2024-04-31\n",
+  "expect": {
+    "result": { "a": "2023-02-29", "b": "2024-02-30", "c": "2024-04-31" }
+  },
+  "tags": ["fallback", "dates"]
+}

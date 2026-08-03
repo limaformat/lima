@@ -1,0 +1,15 @@
+{
+  "id": "core.dates.leap-year-and-month-lengths",
+  "spec": "core",
+  "section": "6.5.2",
+  "description": "Leap-year Feb 29 (including the divisible-by-400 rule) and month-length boundaries are validated correctly.",
+  "input": "a: 2024-02-29\nb: 2000-02-29\nc: 2024-04-30\n",
+  "expect": {
+    "result": {
+      "a": { "$type": "instant", "value": "2024-02-29T00:00:00Z" },
+      "b": { "$type": "instant", "value": "2000-02-29T00:00:00Z" },
+      "c": { "$type": "instant", "value": "2024-04-30T00:00:00Z" }
+    }
+  },
+  "tags": ["boundary", "dates"]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "core.dates.slash.forms",
+  "spec": "core",
+  "section": "6.5.1",
+  "description": "Slash date format (YYYY/MM/DD, month and day always two digits) with optional time and seconds, always interpreted as UTC.",
+  "input": "a: 2024/03/01\nb: 2024/03/01 14:33\nc: 2024/03/01 14:33:00\n",
+  "expect": {
+    "result": {
+      "a": { "$type": "instant", "value": "2024-03-01T00:00:00Z" },
+      "b": { "$type": "instant", "value": "2024-03-01T14:33:00Z" },
+      "c": { "$type": "instant", "value": "2024-03-01T14:33:00Z" }
+    }
+  },
+  "tags": ["positive", "dates"]
+}

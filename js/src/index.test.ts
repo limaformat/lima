@@ -1400,14 +1400,14 @@ describe('comments', () => {
 
 describe('dates — UTC parsing', () => {
 	it('applies +HH:MM offset and converts to UTC', () => {
-		const result = parse('published: 2026-04-09 16:00 +02:00')
+		const result = parse('published: 2026-04-09T16:00+02:00')
 		expect(result.published).toBeInstanceOf(Date)
 		// 16:00 CET (UTC+2) → 14:00 UTC
 		expect((result.published as Date).toISOString()).toBe('2026-04-09T14:00:00.000Z')
 	})
 
 	it('applies -HH:MM offset and converts to UTC', () => {
-		const result = parse('published: 2026-04-09 16:00 -08:00')
+		const result = parse('published: 2026-04-09T16:00-08:00')
 		expect(result.published).toBeInstanceOf(Date)
 		// 16:00 PST (UTC-8) → next-day 00:00 UTC
 		expect((result.published as Date).toISOString()).toBe('2026-04-10T00:00:00.000Z')
@@ -1419,10 +1419,15 @@ describe('dates — UTC parsing', () => {
 		expect((result.published as Date).toISOString()).toBe('2026-04-09T14:33:00.000Z')
 	})
 
-	it('parses YYYY/MM/DD HH:MM:SS as UTC', () => {
-		const result = parse('published: 2026/5/21 11:00:32')
+	it('parses YYYY/MM/DD HH:MM:SS as UTC (month and day must be two digits)', () => {
+		const result = parse('published: 2026/05/21 11:00:32')
 		expect(result.published).toBeInstanceOf(Date)
 		expect((result.published as Date).toISOString()).toBe('2026-05-21T11:00:32.000Z')
+	})
+
+	it('rejects a single-digit month/day in slash format (Core §6.5.1) — remains a string', () => {
+		// Unlike the German format, slash format requires exactly two digits.
+		expect(parse('published: 2026/5/21').published).toBe('2026/5/21')
 	})
 
 	it('parses DD.MM.YYYY HH:MM as UTC', () => {
@@ -1431,10 +1436,10 @@ describe('dates — UTC parsing', () => {
 		expect((result.published as Date).toISOString()).toBe('2026-03-10T14:33:00.000Z')
 	})
 
-	it('parses space-separated ISO datetime (no T) as UTC', () => {
+	it('rejects a space-separated ISO datetime (Core §6.5.1: T is required) — remains a string', () => {
 		const result = parse('published: 2026-04-09 16:00')
-		expect(result.published).toBeInstanceOf(Date)
-		expect((result.published as Date).toISOString()).toBe('2026-04-09T16:00:00.000Z')
+		expect(result.published).toBe('2026-04-09 16:00')
+		expect(result.published).not.toBeInstanceOf(Date)
 	})
 
 	it('parses pre-epoch dates correctly (before 1970-01-01)', () => {
@@ -1447,6 +1452,46 @@ describe('dates — UTC parsing', () => {
 		const result = parse('date: 2024-99-99')
 		expect(result.date).toBe('2024-99-99')
 		expect(result.date).not.toBeInstanceOf(Date)
+	})
+
+	it('rejects Feb 29 in a non-leap year — remains a string, not silently rolled to March 1 (Core §6.5.2)', () => {
+		const result = parse('date: 2023-02-29')
+		expect(result.date).toBe('2023-02-29')
+		expect(result.date).not.toBeInstanceOf(Date)
+	})
+
+	it('accepts Feb 29 in a leap year, including the divisible-by-400 rule', () => {
+		expect((parse('date: 2024-02-29').date as Date).toISOString()).toBe('2024-02-29T00:00:00.000Z')
+		expect((parse('date: 2000-02-29').date as Date).toISOString()).toBe('2000-02-29T00:00:00.000Z')
+	})
+
+	it('rejects a day beyond the month length — remains a string, not silently rolled forward', () => {
+		expect(parse('date: 2024-02-30').date).toBe('2024-02-30')
+		expect(parse('date: 2024-04-31').date).toBe('2024-04-31')
+	})
+
+	it('throws on an invalid calendar date in strict mode', () => {
+		expect(() => parse('date: 2024-02-30', { strict: true })).toThrow('LIMA')
+	})
+
+	it('rejects an offset minute other than 00 when the offset hour is the ±14:00 boundary', () => {
+		const result = parse('date: 2024-03-01T09:00+14:01')
+		expect(result.date).toBe('2024-03-01T09:00+14:01')
+		expect(result.date).not.toBeInstanceOf(Date)
+	})
+
+	it('accepts the ±14:00 offset boundary itself', () => {
+		expect((parse('date: 2024-03-01T09:00+14:00').date as Date).toISOString()).toBe('2024-02-29T19:00:00.000Z')
+		expect((parse('date: 2024-03-01T09:00-14:00').date as Date).toISOString()).toBe('2024-03-01T23:00:00.000Z')
+	})
+
+	it('rejects a UTC Instant that falls outside years 0001-9999 after applying the offset (Core §6.5.3)', () => {
+		expect(parse('date: 0001-01-01T00:00+14:00').date).toBe('0001-01-01T00:00+14:00')
+		expect(parse('date: 9999-12-31T23:59-14:00').date).toBe('9999-12-31T23:59-14:00')
+	})
+
+	it('throws when the UTC Instant falls outside years 0001-9999 in strict mode', () => {
+		expect(() => parse('date: 0001-01-01T00:00+14:00', { strict: true })).toThrow('LIMA')
 	})
 })
 

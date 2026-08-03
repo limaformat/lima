@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(83)
+		expect(outcomes).toHaveLength(94)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -72,7 +72,27 @@ describe('runCorpus', () => {
 	 * detected at all — non-strict mode returned Infinity/0 instead of a
 	 * string fallback, and strict mode never threw. Added the INVALID_NUMBER
 	 * diagnostic code for the two strict-mode number errors, since neither
-	 * fit an existing code (docs/corpus-design/error-api.md)).
+	 * fit an existing code (docs/corpus-design/error-api.md)) → 94/0/0 (11
+	 * new Core §6.5 date cases added; found and fixed a serious deviation:
+	 * `parseDateUTC` delegated component validation entirely to
+	 * `Date.parse`/the `Date` constructor, which silently roll invalid
+	 * calendar dates over into the next valid one instead of rejecting them
+	 * (e.g. `2024-02-30` parsed as March 1, `2023-02-29` as March 1) — Core
+	 * §6.5.2 explicitly forbids this ("not silently normalised"). Offset
+	 * validation (hour 00-14, minute 00 required at hour 14) and the
+	 * post-offset UTC-instant range check (years 0001-9999, §6.5.3) were
+	 * both entirely missing, and strict mode never threw for any invalid
+	 * date at all. Rewrote `parseDateUTC` to extract date/time/offset
+	 * components via format-specific regexes (ISO/German/slash) and
+	 * validate every component (including calendar-aware day-of-month via
+	 * a real leap-year check) before ever constructing a `Date`, instead of
+	 * relying on `Date.parse`'s lenient, silently-normalising behavior.
+	 * Also fixed two related over-permissive matches inherited from the old
+	 * `Date.parse`-based approach: a space-separated ISO datetime (no `T`)
+	 * and a single-digit month/day in slash format were both wrongly
+	 * accepted; two pre-existing unit tests exercising exactly that
+	 * leniency were corrected to the spec-conformant `T`-separated /
+	 * two-digit forms).
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -81,7 +101,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 83, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 94, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

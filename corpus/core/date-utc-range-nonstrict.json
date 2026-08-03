@@ -1,0 +1,14 @@
+{
+  "id": "core.dates.utc-range.non-strict",
+  "spec": "core",
+  "section": "6.5.3",
+  "description": "A UTC Instant that falls outside years 0001-9999 after applying the offset falls back to a string in non-strict mode.",
+  "input": "a: 0001-01-01T00:00+14:00\nb: 9999-12-31T23:59-14:00\n",
+  "expect": {
+    "result": {
+      "a": "0001-01-01T00:00+14:00",
+      "b": "9999-12-31T23:59-14:00"
+    }
+  },
+  "tags": ["fallback", "dates"]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "core.dates.excluded-forms",
+  "spec": "core",
+  "section": "6.5.4",
+  "description": "Date-like forms explicitly not recognised (Core §6.5.4): space-separated ISO datetime, milliseconds, year+month, American/British MM/DD/DD-MM formats, and an offset attached to German/slash format. None become a Date. ('Year only' is omitted here since it is unambiguously a number under §6.4's coercion order, not a string.)",
+  "input": "a: 2024-03-01 09:00\nb: 2024-03-01T09:00:00.000Z\nc: 2024-03\nd: 03/01/2024\ne: 01/03/2024\nf: 01.03.2024+02:00\ng: 2024/03/01+02:00\n",
+  "expect": {
+    "result": {
+      "a": "2024-03-01 09:00",
+      "b": "2024-03-01T09:00:00.000Z",
+      "c": "2024-03",
+      "d": "03/01/2024",
+      "e": "01/03/2024",
+      "f": "01.03.2024+02:00",
+      "g": "2024/03/01+02:00"
+    }
+  },
+  "tags": ["fallback", "dates"]
+}

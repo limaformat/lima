@@ -58,6 +58,15 @@ describe('adaptLegacyError', () => {
 		}
 	})
 
+	it('maps an invalid date component to INVALID_DATE', () => {
+		const result = adaptLegacyError(new Error('LIMA: invalid date "2024-02-30" at line 1'))
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_DATE')
+			expect(result.diagnostic.line).toBe(1)
+		}
+	})
+
 	it('maps float overflow to INVALID_NUMBER', () => {
 		const result = adaptLegacyError(
 			new Error('LIMA: float value overflows to a non-finite value at line 1: "1e400"')

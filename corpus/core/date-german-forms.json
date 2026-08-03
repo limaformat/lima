@@ -1,0 +1,16 @@
+{
+  "id": "core.dates.german.forms",
+  "spec": "core",
+  "section": "6.5.1",
+  "description": "German date format (DD.MM.YYYY or D.M.YYYY, one or two digits) with optional time and seconds, always interpreted as UTC.",
+  "input": "a: 01.03.2024\nb: 1.3.2024\nc: 01.03.2024 14:33\nd: 01.03.2024 14:33:00\n",
+  "expect": {
+    "result": {
+      "a": { "$type": "instant", "value": "2024-03-01T00:00:00Z" },
+      "b": { "$type": "instant", "value": "2024-03-01T00:00:00Z" },
+      "c": { "$type": "instant", "value": "2024-03-01T14:33:00Z" },
+      "d": { "$type": "instant", "value": "2024-03-01T14:33:00Z" }
+    }
+  },
+  "tags": ["positive", "dates"]
+}
