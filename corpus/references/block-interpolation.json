@@ -1,0 +1,18 @@
+{
+  "id": "references.interpolation.block-scalar.basic",
+  "spec": "references",
+  "section": "2.5",
+  "description": "Active tokens interpolate inside block scalars.",
+  "expect": {
+    "result": {
+      "author": "Alice",
+      "description": "Written by Alice."
+    }
+  },
+  "tags": [
+    "positive",
+    "interpolation",
+    "block-scalar"
+  ],
+  "inputFile": "block-interpolation.lima"
+}

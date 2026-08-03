@@ -1,0 +1,16 @@
+{
+  "id": "core.strings.unknown-escape.non-strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "Preserves an unknown escape sequence in non-strict mode.",
+  "expect": {
+    "result": {
+      "value": "hello\\qworld"
+    }
+  },
+  "tags": [
+    "fallback",
+    "string"
+  ],
+  "inputFile": "unknown-escape-nonstrict.lima"
+}

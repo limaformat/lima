@@ -1,0 +1,27 @@
+{
+  "id": "references.partials.invalid-number.nan",
+  "spec": "references",
+  "section": "6.2",
+  "description": "Rejects NaN during partial validation before document parsing.",
+  "input": "value: (%bad)",
+  "options": {
+    "partials": {
+      "bad": {
+        "$type": "host-number",
+        "value": "nan"
+      }
+    }
+  },
+  "expect": {
+    "error": {
+      "partial": "bad",
+      "path": "bad",
+      "code": "INVALID_PARTIAL"
+    }
+  },
+  "tags": [
+    "partial",
+    "validation",
+    "error"
+  ]
+}

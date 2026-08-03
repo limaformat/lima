@@ -1,0 +1,25 @@
+{
+  "id": "core.limits.scalar.above",
+  "spec": "core",
+  "section": "9",
+  "description": "Rejects a scalar containing 16,385 Unicode code points.",
+  "generator": {
+    "name": "repeated-scalar",
+    "parameters": {
+      "key": "value",
+      "codePoint": "x",
+      "length": 16385
+    }
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "RESOURCE_LIMIT"
+    }
+  },
+  "tags": [
+    "limit",
+    "generated",
+    "error"
+  ]
+}

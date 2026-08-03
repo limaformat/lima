@@ -1,0 +1,18 @@
+{
+  "id": "references.interpolation.mapping.error",
+  "spec": "references",
+  "section": "3.5",
+  "description": "Rejects mapping interpolation in both modes.",
+  "expect": {
+    "error": {
+      "line": 3,
+      "token": "($person)",
+      "code": "INVALID_INTERPOLATION"
+    }
+  },
+  "tags": [
+    "error",
+    "interpolation"
+  ],
+  "inputFile": "mapping-interpolation-error.lima"
+}

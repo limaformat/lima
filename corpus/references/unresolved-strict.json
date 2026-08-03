@@ -1,0 +1,21 @@
+{
+  "id": "references.unresolved.document.strict",
+  "spec": "references",
+  "section": "7",
+  "description": "Reports an unresolved reference after phase 2 in strict mode.",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "($missing)",
+      "code": "UNRESOLVED_REFERENCE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error"
+  ],
+  "inputFile": "unresolved-strict.lima"
+}

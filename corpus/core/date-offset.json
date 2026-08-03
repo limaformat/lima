@@ -1,0 +1,19 @@
+{
+  "id": "core.dates.iso-offset.utc-conversion",
+  "spec": "core",
+  "section": "6.5.3",
+  "description": "Converts an ISO datetime with offset to a UTC Instant.",
+  "expect": {
+    "result": {
+      "published": {
+        "$type": "instant",
+        "value": "2024-03-01T07:00:00Z"
+      }
+    }
+  },
+  "tags": [
+    "positive",
+    "date"
+  ],
+  "inputFile": "date-offset.lima"
+}

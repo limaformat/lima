@@ -1,0 +1,21 @@
+{
+  "id": "core.strings.unknown-escape.strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "Rejects an unknown escape sequence in strict mode.",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "contains": "\\q",
+      "code": "INVALID_ESCAPE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error"
+  ],
+  "inputFile": "unknown-escape-strict.lima"
+}

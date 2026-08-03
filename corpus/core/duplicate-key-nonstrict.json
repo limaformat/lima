@@ -1,0 +1,23 @@
+{
+  "id": "core.keys.duplicate.non-strict",
+  "spec": "core",
+  "section": "5.3",
+  "description": "Emits one warning and lets the last duplicate value win.",
+  "expect": {
+    "result": {
+      "title": "Second"
+    },
+    "warnings": [
+      {
+        "line": 2,
+        "key": "title",
+        "code": "DUPLICATE_KEY"
+      }
+    ]
+  },
+  "tags": [
+    "warning",
+    "duplicate"
+  ],
+  "inputFile": "duplicate-key-nonstrict.lima"
+}

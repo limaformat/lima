@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lima.dev/schema/conformance-case.schema.json",
+  "title": "Lima conformance corpus case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "spec",
+    "section",
+    "description",
+    "expect"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(core|references)(\\.[a-z0-9][a-z0-9-]*){2,}$"
+    },
+    "spec": {
+      "enum": [
+        "core",
+        "references"
+      ]
+    },
+    "section": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input": {
+      "type": "string"
+    },
+    "inputFile": {
+      "type": "string",
+      "pattern": "^[^/]+\\.(lima|bin)$"
+    },
+    "options": {
+      "$ref": "#/$defs/options"
+    },
+    "generator": {
+      "$ref": "#/$defs/generator"
+    },
+    "expect": {
+      "$ref": "#/$defs/expectation"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
+      },
+      "uniqueItems": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "required": [
+            "inputFile"
+          ]
+        },
+        {
+          "required": [
+            "input"
+          ]
+        },
+        {
+          "required": [
+            "generator"
+          ]
+        }
+      ]
+    },
+    {
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "input",
+              "inputFile"
+            ]
+          },
+          {
+            "required": [
+              "input",
+              "generator"
+            ]
+          },
+          {
+            "required": [
+              "inputFile",
+              "generator"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "strict": {
+          "type": "boolean",
+          "default": false
+        },
+        "partials": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/corpusValue"
+          }
+        }
+      }
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "parameters"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "document-bytes",
+            "repeated-key",
+            "repeated-scalar",
+            "nested-mappings",
+            "partial-count",
+            "partial-node-tree",
+            "result-node-expansion"
+          ]
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "result": {
+          "$ref": "#/$defs/corpusValue"
+        },
+        "error": {
+          "$ref": "#/$defs/diagnostic"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagnostic"
+          },
+          "default": []
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "result"
+          ]
+        },
+        {
+          "required": [
+            "error"
+          ]
+        }
+      ]
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code"
+      ],
+      "properties": {
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "token": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "partial": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "contains": {
+          "type": "string"
+        },
+        "code": {
+          "enum": [
+            "INVALID_ESCAPE",
+            "INVALID_DATE",
+            "INVALID_INDENTATION",
+            "INVALID_FLOW_SYNTAX",
+            "DUPLICATE_KEY",
+            "RESOURCE_LIMIT",
+            "UNRESOLVED_REFERENCE",
+            "INVALID_INTERPOLATION",
+            "INVALID_PARTIAL"
+          ]
+        }
+      }
+    },
+    "corpusValue": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/corpusValue"
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "$type",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "$type": {
+              "const": "instant"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "$type",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "$type": {
+              "const": "host-number"
+            },
+            "value": {
+              "enum": [
+                "nan",
+                "infinity",
+                "-infinity",
+                "-0"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "$type",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "$type": {
+              "const": "host-date"
+            },
+            "value": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "not": {
+              "const": "$type"
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/corpusValue"
+          }
+        }
+      ]
+    }
+  }
+}

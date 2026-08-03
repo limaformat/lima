@@ -1,0 +1,9 @@
+# JavaScript
+node_modules/
+
+# Rust
+rust/target/
+
+# OS / editor
+.DS_Store
+*.log

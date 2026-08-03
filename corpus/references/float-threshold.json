@@ -1,0 +1,21 @@
+{
+  "id": "references.interpolation.float.thresholds",
+  "spec": "references",
+  "section": "3.5.1",
+  "description": "Uses ECMAScript fixed/exponential thresholds for document floats.",
+  "expect": {
+    "result": {
+      "small": 1e-06,
+      "tiny": 1e-07,
+      "large": 1e+20,
+      "huge": 1e+21,
+      "label": "0.000001|1e-7|100000000000000000000|1e21"
+    }
+  },
+  "tags": [
+    "float",
+    "boundary",
+    "interpolation"
+  ],
+  "inputFile": "float-threshold.lima"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "references.phases.forward-reference.phase-2",
+  "spec": "references",
+  "section": "4.2",
+  "description": "A direct forward reference resolves from the phase-2 snapshot.",
+  "expect": {
+    "result": {
+      "copy": true,
+      "source": true
+    }
+  },
+  "tags": [
+    "positive",
+    "phase-2"
+  ],
+  "inputFile": "forward-reference.lima"
+}

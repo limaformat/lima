@@ -1,0 +1,26 @@
+{
+  "id": "references.partials.slash-key.literal",
+  "spec": "references",
+  "section": "3.4",
+  "description": "A slash in a partial name is a literal key character.",
+  "options": {
+    "partials": {
+      "persons/alice": {
+        "name": "Alice"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "author": {
+        "name": "Alice"
+      }
+    }
+  },
+  "tags": [
+    "positive",
+    "partial",
+    "deep-copy"
+  ],
+  "inputFile": "partial-slash.lima"
+}

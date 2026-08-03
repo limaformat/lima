@@ -1,0 +1,20 @@
+{
+  "id": "references.one-hop.chain.non-strict",
+  "spec": "references",
+  "section": "3.7",
+  "description": "Only b resolves in a three-key chain; a remains an unresolved token.",
+  "expect": {
+    "result": {
+      "a": "($b)",
+      "b": 42,
+      "c": 42
+    }
+  },
+  "tags": [
+    "one-hop",
+    "snapshot",
+    "non-strict"
+  ],
+  "notes": "Trace: phase 1 resolves neither a nor b. Phase 2 resolves b from c; a cannot use b from the same snapshot.",
+  "inputFile": "one-hop-chain.lima"
+}

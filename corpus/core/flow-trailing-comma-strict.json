@@ -1,0 +1,21 @@
+{
+  "id": "core.flow-sequence.trailing-comma.strict",
+  "spec": "core",
+  "section": "7.4",
+  "description": "Rejects a trailing comma in strict mode.",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "tags": [
+    "strict",
+    "flow",
+    "error"
+  ],
+  "inputFile": "flow-trailing-comma-strict.lima"
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@limaformat/lima",
+  "version": "0.1.0",
+  "description": "Lima frontmatter parser — LIMA Is Metadata Annotation",
+  "keywords": ["frontmatter", "parser", "yaml", "markdown", "metadata"],
+  "homepage": "https://limaformat.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/limaformat/lima",
+    "directory": "js"
+  },
+  "license": "ISC",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "references.activity.quoted-token.inactive",
+  "spec": "references",
+  "section": "2.3",
+  "description": "A token inside a double-quoted value remains literal.",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "source": 42,
+      "value": "($source)"
+    }
+  },
+  "tags": [
+    "negative",
+    "quoted"
+  ],
+  "inputFile": "quoted-token-inactive.lima"
+}

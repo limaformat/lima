@@ -1,0 +1,3 @@
+person:
+  name: Alice
+label: Person: ($person)

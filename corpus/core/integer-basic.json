@@ -1,0 +1,16 @@
+{
+  "id": "core.numbers.integer.basic",
+  "spec": "core",
+  "section": "6.4.1",
+  "description": "Parses a positive decimal integer.",
+  "expect": {
+    "result": {
+      "count": 42
+    }
+  },
+  "tags": [
+    "positive",
+    "number"
+  ],
+  "inputFile": "integer-basic.lima"
+}

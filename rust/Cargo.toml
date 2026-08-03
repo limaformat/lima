@@ -1,0 +1,12 @@
+[package]
+name = "lima"
+version = "0.1.0"
+edition = "2021"
+description = "Lima frontmatter parser — LIMA Is Metadata Annotation"
+license = "ISC"
+repository = "https://github.com/limaformat/lima"
+homepage = "https://limaformat.dev"
+documentation = "https://docs.rs/lima"
+keywords = ["frontmatter", "parser", "yaml", "markdown"]
+categories = ["parser-implementations", "text-processing"]
+readme = "README.md"

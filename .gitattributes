@@ -1,0 +1,6 @@
+* text=auto eol=lf
+
+# Conformance corpus fixtures are byte-exact parser input (CRLF, tabs, and
+# other raw bytes are normative test dimensions). Never let Git normalize
+# their line endings — that would silently corrupt CRLF-sensitive cases.
+corpus/**/*.lima -text
