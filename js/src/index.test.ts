@@ -117,20 +117,25 @@ describe('strings', () => {
 		expect(folded.desc).toBe(pipe.desc)
 	})
 
-	it('attaches a line ending with ^^ to the preceding line', () => {
+	it('attaches a line beginning with ^^ to the preceding line (Core §6.1.6)', () => {
+		// The continuation marker leads the line it attaches, not trails the
+		// line it attaches to — Core 1.0 changed this from the older
+		// trailing-^^ convention.
 		const result = parse(`
 			description: |
-			  This is a long sentence
-			  that continues here. ^^
+			  This is a very long sentence that
+			  ^^continues on the next line as one.
 			  And this is a new line.
 		`)
-		expect(result.description).toBe('This is a long sentence that continues here.\nAnd this is a new line.')
+		expect(result.description).toBe(
+			'This is a very long sentence that continues on the next line as one.\nAnd this is a new line.'
+		)
 	})
 
 	it('^^ on the first line is ignored — content is kept, marker stripped', () => {
 		const result = parse(`
 			description: |
-			  First line. ^^
+			  ^^First line.
 			  Second line.
 		`)
 		// ^^ on line 0 has nothing to append to — marker stripped, content kept
@@ -146,6 +151,15 @@ describe('strings', () => {
 		`)
 		// bare ^^ has no content to contribute — previous line must not gain a trailing space
 		expect(result.description).toBe('First line.\nSecond line.')
+	})
+
+	it('^^ has no special meaning outside a | block', () => {
+		const result = parse(`
+			description: >
+			  This line ends with ^^
+			  and this is the next one.
+		`)
+		expect(result.description).toBe('This line ends with ^^ and this is the next one.')
 	})
 
 	it('# in an unquoted URL is treated as a comment', () => {

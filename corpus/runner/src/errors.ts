@@ -67,6 +67,14 @@ export function compareDiagnostic(
 	for (const field of Object.keys(expected) as (keyof DiagnosticExpectation)[]) {
 		if (field === 'message') continue // full message text is never asserted (see error-api.md)
 		const expectedValue = expected[field]
+		if (field === 'contains') {
+			// `contains` is a message excerpt check, not a field to match
+			// exactly (error-api.md: "optional message excerpt").
+			if (typeof expectedValue !== 'string' || !actual.message.includes(expectedValue)) {
+				mismatches.push({ field, expected: expectedValue, actual: actual.message })
+			}
+			continue
+		}
 		const actualValue = actual[field]
 		if (expectedValue !== actualValue) {
 			mismatches.push({ field, expected: expectedValue, actual: actualValue })

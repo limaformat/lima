@@ -47,6 +47,49 @@ describe('adaptLegacyError', () => {
 		if (result.mapped) expect(result.diagnostic.code).toBe('INVALID_INDENTATION')
 	})
 
+	it('maps an unknown escape sequence to INVALID_ESCAPE', () => {
+		const result = adaptLegacyError(new Error('LIMA: unknown escape sequence "\\q" at line 1'))
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_ESCAPE')
+			expect(result.diagnostic.line).toBe(1)
+			expect(result.diagnostic.message).toContain('\\q')
+		}
+	})
+
+	it('maps an empty flow sequence element to INVALID_FLOW_SYNTAX', () => {
+		const result = adaptLegacyError(new Error('LIMA: empty element in flow sequence at line 1'))
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_FLOW_SYNTAX')
+			expect(result.diagnostic.line).toBe(1)
+		}
+	})
+
+	it('maps a scalar-length limit error to RESOURCE_LIMIT', () => {
+		const result = adaptLegacyError(
+			new Error('LIMA: scalar exceeds maximum length of 16384 code points at line 1')
+		)
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('RESOURCE_LIMIT')
+			expect(result.diagnostic.line).toBe(1)
+		}
+	})
+
+	it('maps an invalid partial error with partial name and path', () => {
+		const result = adaptLegacyError(
+			new Error('LIMA: invalid partial "bad" at path "bad": non-finite number')
+		)
+		expect(result.mapped).toBe(true)
+		if (result.mapped) {
+			expect(result.diagnostic.code).toBe('INVALID_PARTIAL')
+			expect(result.diagnostic.partial).toBe('bad')
+			expect(result.diagnostic.path).toBe('bad')
+			expect(result.diagnostic.line).toBeUndefined()
+		}
+	})
+
 	it('reports unmapped rather than guessing for an unrecognised message', () => {
 		const result = adaptLegacyError(
 			new Error('LIMA: mixed array and map entries for the same key at line 9')

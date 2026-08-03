@@ -22,20 +22,23 @@ describe('runCorpus', () => {
 	})
 
 	/**
-	 * Phase-2 baseline (docs/corpus-design/README.md §11), updated 2026-08-03
-	 * after js/src/index.ts was fixed to return prototype-free results
-	 * (Core §11.1) and to deep-copy pure-reference values instead of
-	 * aliasing them (References §3.1/§6.2) — see "Nachtrag" in this repo's
-	 * history for the reasoning. Originally 0 PASS / 18 FAIL / 0 BLOCKED.
-	 * This snapshot is a regression trip-wire: update it deliberately (with
-	 * a written reason) as further Phase-2 fixes land, never to silently
-	 * "make the test pass".
+	 * Phase-2 baseline (docs/corpus-design/README.md §11), progressively
+	 * updated as confirmed deviations are fixed in js/src/index.ts. History:
+	 * 0/18/0 (initial run) → 8/9/1 (prototype-free + deep-copy fix) →
+	 * 11/6/1 (^^ leading marker, strict trailing-comma, strict unknown-escape)
+	 * → 17/0/1 (float exponent, partial NaN validation, one-hop snapshot fix,
+	 * quoted-token inactivity, unresolved-reference line number, scalar
+	 * resource limit). Every originally-failing case now passes; the one
+	 * remaining BLOCKED case is a distinct, deliberately unfixed crash (see
+	 * the test below). This snapshot is a regression trip-wire: update it
+	 * deliberately (with a written reason) if this ever regresses, never to
+	 * silently "make the test pass".
 	 */
 	it('matches today\'s known Phase-2 baseline classification counts', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 8, FAIL: 9, BLOCKED: 1 })
+		expect(counts).toEqual({ PASS: 17, FAIL: 0, BLOCKED: 1 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

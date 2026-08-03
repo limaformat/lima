@@ -46,6 +46,23 @@ const rules: Rule[] = [
 		pattern: /unexpected indentation/,
 		code: 'INVALID_INDENTATION',
 	},
+	{
+		pattern: /unknown escape sequence/,
+		code: 'INVALID_ESCAPE',
+	},
+	{
+		pattern: /empty element in flow sequence/,
+		code: 'INVALID_FLOW_SYNTAX',
+	},
+	{
+		pattern: /invalid partial "([^"]+)" at path "([^"]+)"/,
+		code: 'INVALID_PARTIAL',
+		extract: (m) => ({ partial: m[1], path: m[2] }),
+	},
+	{
+		pattern: /exceeds maximum length/,
+		code: 'RESOURCE_LIMIT',
+	},
 ]
 
 /**

@@ -54,4 +54,20 @@ describe('compareDiagnostic', () => {
 		const mismatches = compareDiagnostic(actual, { code: 'DUPLICATE_KEY' })
 		expect(mismatches).toEqual([])
 	})
+
+	it('treats "contains" as a substring check against the message, not an exact field match', () => {
+		const actual: LimaDiagnostic = {
+			code: 'INVALID_ESCAPE',
+			message: 'LIMA: unknown escape sequence "\\q" at line 1',
+		}
+		expect(compareDiagnostic(actual, { code: 'INVALID_ESCAPE', contains: '\\q' })).toEqual([])
+	})
+
+	it('reports a mismatch when "contains" is not found in the message', () => {
+		const actual: LimaDiagnostic = { code: 'INVALID_ESCAPE', message: 'no matching substring here' }
+		const mismatches = compareDiagnostic(actual, { code: 'INVALID_ESCAPE', contains: '\\q' })
+		expect(mismatches).toEqual([
+			{ field: 'contains', expected: '\\q', actual: 'no matching substring here' },
+		])
+	})
 })
