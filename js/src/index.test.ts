@@ -1177,6 +1177,22 @@ describe('quoted keys', () => {
 		expect(parse('"back\\\\slash": value')).toEqual({ 'back\\slash': 'value' })
 		expect(parse('"tab\\there": x')).toEqual({ 'tab\there': 'x' })
 	})
+
+	it('double-quoted key containing an escaped quote is still recognized as a key', () => {
+		// A naive [^"]* key regex stops at the first *escaped* quote too,
+		// failing to recognize the key at all (empty result). The key
+		// content decodes \" the same as a double-quoted string value.
+		expect(parse('"say \\"hi\\"": value')).toEqual({ 'say "hi"': 'value' })
+	})
+
+	it('non-strict: a space between a quoted key\'s closing quote and the colon is skipped as an unrecognized line', () => {
+		expect(parse('"first name" : Alice')).toEqual({})
+	})
+
+	it('strict: a space between a quoted key\'s closing quote and the colon throws', () => {
+		expect(() => parse('"first name" : Alice', { strict: true })).toThrow('LIMA')
+		expect(() => parse("'first name' : Alice", { strict: true })).toThrow('LIMA')
+	})
 })
 
 // ─── Null type ─────────────────────────────────────────────────────────────────
@@ -1369,6 +1385,41 @@ describe('duplicate keys', () => {
 			b: 2
 			a: 3
 		`), { strict: true })).toThrow('at line 3')
+	})
+
+	it('warns and last-value-wins for a duplicate key in a nested block mapping', () => {
+		const warnings: string[] = []
+		const orig = console.warn
+		console.warn = (msg: string) => warnings.push(msg)
+		const result = parse('author:\n  name: Alice\n  name: Bob')
+		console.warn = orig
+		expect(result.author).toEqual({ name: 'Bob' })
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0]).toContain('duplicate key "name"')
+		expect(warnings[0]).toContain('at line 3')
+	})
+
+	it('throws on a duplicate key in a nested block mapping in strict mode', () => {
+		expect(() => parse('author:\n  name: Alice\n  name: Bob', { strict: true })).toThrow(
+			'at line 3'
+		)
+	})
+
+	it('warns and last-value-wins for a duplicate key in a flow mapping', () => {
+		const warnings: string[] = []
+		const orig = console.warn
+		console.warn = (msg: string) => warnings.push(msg)
+		const result = parse('author: {name: Alice, name: Bob}')
+		console.warn = orig
+		expect(result.author).toEqual({ name: 'Bob' })
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0]).toContain('duplicate key "name"')
+	})
+
+	it('throws on a duplicate key in a flow mapping in strict mode', () => {
+		expect(() => parse('author: {name: Alice, name: Bob}', { strict: true })).toThrow(
+			'duplicate key "name"'
+		)
 	})
 })
 

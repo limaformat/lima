@@ -1,0 +1,27 @@
+{
+  "id": "core.keys.duplicate.flow-mapping-warning",
+  "spec": "core",
+  "section": "5.3",
+  "description": "A duplicate key in a flow mapping emits a warning; the last value wins.",
+  "input": "author: {name: Alice, name: Bob}",
+  "expect": {
+    "result": {
+      "author": {
+        "name": "Bob"
+      }
+    },
+    "warnings": [
+      {
+        "code": "DUPLICATE_KEY",
+        "line": 1,
+        "key": "name"
+      }
+    ]
+  },
+  "tags": [
+    "warning",
+    "keys",
+    "duplicate",
+    "non-strict"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "core.keys.duplicate.strict-throws-with-key-and-line",
+  "spec": "core",
+  "section": "5.3",
+  "description": "A duplicate key throws in strict mode; the error includes the key name and line.",
+  "input": "title: First\ntitle: Second",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "key": "title",
+      "code": "DUPLICATE_KEY"
+    }
+  },
+  "tags": [
+    "error",
+    "keys",
+    "duplicate",
+    "strict"
+  ]
+}

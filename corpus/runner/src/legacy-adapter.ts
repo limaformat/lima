@@ -58,6 +58,12 @@ const rules: Rule[] = [
 		code: 'INVALID_QUOTE',
 	},
 	{
+		// Core §5.2: space between a quoted key's closing quote and the
+		// colon. Same INVALID_QUOTE category as the rule above.
+		pattern: /space between closing quote and colon/,
+		code: 'INVALID_QUOTE',
+	},
+	{
 		pattern: /empty element in flow sequence/,
 		code: 'INVALID_FLOW_SYNTAX',
 	},

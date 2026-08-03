@@ -1,0 +1,17 @@
+{
+  "id": "core.keys.quoted.double-quoted-decodes-escapes",
+  "spec": "core",
+  "section": "5.2",
+  "description": "A double-quoted key decodes backslash escape sequences, including an escaped quote.",
+  "input": "\"say \\\"hi\\\"\": value",
+  "expect": {
+    "result": {
+      "say \"hi\"": "value"
+    }
+  },
+  "tags": [
+    "positive",
+    "keys",
+    "quoted"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "core.keys.separator.first-colon-space-outside-quotes",
+  "spec": "core",
+  "section": "5.1",
+  "description": "The key-value separator is the first ': ' outside quotes — a colon inside an unquoted key does not end the key early.",
+  "input": "og:title: Hello\na:b:c: value",
+  "expect": {
+    "result": {
+      "og:title": "Hello",
+      "a:b:c": "value"
+    }
+  },
+  "tags": [
+    "positive",
+    "keys"
+  ]
+}

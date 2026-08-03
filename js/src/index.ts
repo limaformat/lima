@@ -142,8 +142,20 @@ type ParseOptions = {
  *   i*3+1 → separator
  *   i*3+2 → raw value string
  */
-const KEY_RE = /^(?:([a-zA-Z\d_][a-zA-Z\d_:-]*)|'([^']*)'|"([^"]*)"):( *\n| )/gm
+// Double-quoted key group allows escaped characters (including `\"`) inside
+// the key — Core §5.2: "Double-quoted keys decode the same backslash escape
+// sequences as double-quoted string values." A naive `[^"]*` stops at the
+// first *escaped* quote too, silently failing to recognise the key at all.
+const KEY_RE = /^(?:([a-zA-Z\d_][a-zA-Z\d_:-]*)|'([^']*)'|"((?:[^"\\]|\\.)*)"):( *\n| )/gm
 
+/**
+ * Matches a would-be quoted key followed by whitespace before the colon —
+ * Core §5.2: valid only when the separator follows the closing quote
+ * immediately; a space in between throws in strict mode. A line matching
+ * this can never also match KEY_RE (which requires zero space here), so
+ * there is no risk of double-counting a line as both a valid key and this.
+ */
+const SPACE_BEFORE_COLON_RE = /^(?:'[^']*'|"(?:[^"\\]|\\.)*")[ \t]+:/
 /** Used to unescape `\#` → `#` after stripping comments. */
 const ESCAPED_HASH_RE = /\\#/g
 /** Pure reference: entire value is exactly one ($key) or (%key). */
@@ -188,6 +200,19 @@ const checkKeyLength = (key: string, line: number): void => {
 	if ([...key].length > KEY_LENGTH_LIMIT) {
 		throw new Error(`LIMA: key "${key}" exceeds maximum length of ${KEY_LENGTH_LIMIT} code points at line ${line}`)
 	}
+}
+
+/**
+ * Core §5.3: duplicate keys are invalid at every mapping level — top-level,
+ * nested block mappings, and flow mappings alike. Non-strict: warn and let
+ * the later assignment overwrite (last value wins). Strict: throw with the
+ * key name and line.
+ */
+const checkDuplicateKey = (mapping: Meta, key: string, line: number, strict: boolean): void => {
+	if (!(key in mapping)) return
+	const msg = `LIMA: duplicate key "${key}" at line ${line} — last value wins`
+	if (strict) throw new Error(msg)
+	console.warn(msg)
 }
 
 /**
@@ -661,6 +686,7 @@ const parseFlowMapping = (val: string, metadata: Meta, partials: Meta, strict = 
 		}
 		const key    = stripKeyQuotes(item.slice(0, colonPos).trim())
 		checkKeyLength(key, line)
+		checkDuplicateKey(result, key, line, strict)
 		const rawVal = item.slice(colonPos + 2).trim()
 		const first  = rawVal.charCodeAt(0)
 		// Quoted string: strip delimiters and unescape, return as string — no type coercion.
@@ -885,6 +911,7 @@ const parseBlock = (
 			if (colonPos !== -1) {
 				const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim())
 				checkKeyLength(itemKey, baseLine + idx)
+				checkDuplicateKey(result as Meta, itemKey, baseLine + idx, strict)
 				const itemVal = trimmed.slice(colonPos + 2).trim()
 				const flowSeq = parseFlowSequence(itemVal, metadata, partials, strict, baseLine + idx)
 				const flowMap = flowSeq === null ? parseFlowMapping(itemVal, metadata, partials, strict, baseLine + idx) : null
@@ -894,6 +921,7 @@ const parseBlock = (
 				// Key with no inline value → check for a nested block on the next lines
 				const itemKey = stripKeyQuotes(trimmed.slice(0, -1).trim())
 				checkKeyLength(itemKey, baseLine + idx)
+				checkDuplicateKey(result as Meta, itemKey, baseLine + idx, strict)
 				idx++
 				let ni = idx
 				while (ni < lines.length && !lines[ni].trim()) ni++
@@ -1004,6 +1032,24 @@ const parse = <T extends Record<string, unknown> = Meta>(
 	// Quick scan for reference syntax — if absent we can skip the entire second pass.
 	const hasRefs = frontMatter.includes('($') || frontMatter.includes('(%')
 
+	// Core §5.2: a space between a quoted key's closing quote and the colon
+	// throws in strict mode. Such a line never matches KEY_RE, so without
+	// this check it would silently fall through as an "unrecognized line"
+	// (correct for non-strict — §4 — but not for strict here). Gated behind
+	// `strict` to keep the non-strict happy path free of this scan.
+	if (strict) {
+		let searchFrom = 0
+		while (searchFrom <= frontMatter.length) {
+			const lineEnd = frontMatter.indexOf('\n', searchFrom)
+			const line = lineEnd === -1 ? frontMatter.slice(searchFrom) : frontMatter.slice(searchFrom, lineEnd)
+			if (SPACE_BEFORE_COLON_RE.test(line)) {
+				throw new Error(`LIMA: space between closing quote and colon at line ${lineAt(frontMatter, searchFrom)}`)
+			}
+			if (lineEnd === -1) break
+			searchFrom = lineEnd + 1
+		}
+	}
+
 	// Split on keys. KEY_RE has 4 capture groups:
 	//   g1: unquoted key  g2: single-quoted key  g3: double-quoted key  g4: separator
 	// After slice(1) the parts array repeats every 5 elements:
@@ -1036,6 +1082,10 @@ const parse = <T extends Record<string, unknown> = Meta>(
 		keyIndexByName[key] = i
 		checkKeyLength(key, keyLine(i))
 
+		// Not routed through checkDuplicateKey: keyLine(i) triggers a full
+		// document scan (lazily memoized) on its first call, so it must stay
+		// inside the `if` — evaluating it unconditionally on every key would
+		// defeat that laziness on the common (no-duplicate) happy path.
 		if (key in metadata) {
 			const msg = `LIMA: duplicate key "${key}" at line ${keyLine(i)} — last value wins`
 			if (strict) throw new Error(msg)
@@ -1062,7 +1112,10 @@ const parse = <T extends Record<string, unknown> = Meta>(
 			let firstNonEmpty = 0
 			while (firstNonEmpty < lines.length && !lines[firstNonEmpty].trim()) firstNonEmpty++
 			const baseIndent = firstNonEmpty < lines.length ? leadingSpaces(lines[firstNonEmpty]) : 0
-			metadata[key] = parseBlock(lines, 0, baseIndent, metadata, partials, strict, strict ? keyLine(i) + 1 : 0).value
+			// keyLine(i) is needed unconditionally now (not just in strict
+			// mode): non-strict duplicate-key warnings inside a block value
+			// need an accurate line number too, not just strict-mode throws.
+			metadata[key] = parseBlock(lines, 0, baseIndent, metadata, partials, strict, keyLine(i) + 1).value
 
 		} else {
 			// ── Inline value: String (single- or multi-line) ──────────────────
@@ -1083,11 +1136,14 @@ const parse = <T extends Record<string, unknown> = Meta>(
 				// marker on the first line, handled by the block below.
 				const line0   = lines[0]
 				const val     = line0.includes('#') ? stripComment(line0) : line0
-				const flowSeq = parseFlowSequence(val, metadata, partials, strict, strict ? keyLine(i) : 0)
+				// Line is needed unconditionally (not just in strict mode):
+				// resource-limit checks and flow-mapping duplicate-key
+				// warnings apply in both modes, not only strict.
+				const flowSeq = parseFlowSequence(val, metadata, partials, strict, keyLine(i))
 				if (flowSeq !== null) {
 					metadata[key] = flowSeq
 				} else {
-					const flowMap = parseFlowMapping(val, metadata, partials, strict, strict ? keyLine(i) : 0)
+					const flowMap = parseFlowMapping(val, metadata, partials, strict, keyLine(i))
 					if (flowMap !== null) {
 						metadata[key] = flowMap
 					} else {

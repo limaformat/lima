@@ -1,0 +1,22 @@
+{
+  "id": "core.keys.quoted.space-before-colon.strict",
+  "spec": "core",
+  "section": "5.2",
+  "description": "A space between a quoted key's closing quote and the colon throws in strict mode.",
+  "input": "\"first name\" : Alice",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_QUOTE"
+    }
+  },
+  "tags": [
+    "error",
+    "keys",
+    "quoted",
+    "strict"
+  ]
+}

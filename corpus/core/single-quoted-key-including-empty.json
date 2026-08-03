@@ -1,0 +1,18 @@
+{
+  "id": "core.keys.quoted.single-quoted-including-empty",
+  "spec": "core",
+  "section": "5.2",
+  "description": "A single-quoted key strips its delimiters, including an empty key.",
+  "input": "'first name': Alice\n'': empty string key",
+  "expect": {
+    "result": {
+      "first name": "Alice",
+      "": "empty string key"
+    }
+  },
+  "tags": [
+    "positive",
+    "keys",
+    "quoted"
+  ]
+}

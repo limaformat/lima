@@ -1,0 +1,16 @@
+{
+  "id": "core.keys.quoted.space-before-colon.non-strict",
+  "spec": "core",
+  "section": "5.2",
+  "description": "A space between a quoted key's closing quote and the colon is skipped as an unrecognized line in non-strict mode.",
+  "input": "\"first name\" : Alice",
+  "expect": {
+    "result": {}
+  },
+  "tags": [
+    "fallback",
+    "keys",
+    "quoted",
+    "non-strict"
+  ]
+}

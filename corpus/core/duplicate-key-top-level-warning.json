@@ -1,0 +1,25 @@
+{
+  "id": "core.keys.duplicate.top-level-warning",
+  "spec": "core",
+  "section": "5.3",
+  "description": "A duplicate top-level key emits a warning; the last value wins.",
+  "input": "title: First\ntitle: Second",
+  "expect": {
+    "result": {
+      "title": "Second"
+    },
+    "warnings": [
+      {
+        "code": "DUPLICATE_KEY",
+        "line": 2,
+        "key": "title"
+      }
+    ]
+  },
+  "tags": [
+    "warning",
+    "keys",
+    "duplicate",
+    "non-strict"
+  ]
+}

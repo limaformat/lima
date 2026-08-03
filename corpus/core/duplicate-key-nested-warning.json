@@ -1,0 +1,27 @@
+{
+  "id": "core.keys.duplicate.nested-mapping-warning",
+  "spec": "core",
+  "section": "5.3",
+  "description": "A duplicate key in a nested block mapping emits a warning; the last value wins.",
+  "input": "author:\n  name: Alice\n  name: Bob",
+  "expect": {
+    "result": {
+      "author": {
+        "name": "Bob"
+      }
+    },
+    "warnings": [
+      {
+        "code": "DUPLICATE_KEY",
+        "line": 3,
+        "key": "name"
+      }
+    ]
+  },
+  "tags": [
+    "warning",
+    "keys",
+    "duplicate",
+    "non-strict"
+  ]
+}

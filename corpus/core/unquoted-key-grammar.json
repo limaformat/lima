@@ -1,0 +1,23 @@
+{
+  "id": "core.keys.unquoted-grammar.accepts-letters-digits-underscore-colon-dash",
+  "spec": "core",
+  "section": "5.1",
+  "description": "Unquoted key grammar accepts letters, digits, underscore, colon, and dash.",
+  "input": "title: a\nfirstName: b\nh1: c\n_draft: d\nsnake_case: e\nkebab-case: f\n1st: g\n42: h",
+  "expect": {
+    "result": {
+      "title": "a",
+      "firstName": "b",
+      "h1": "c",
+      "_draft": "d",
+      "snake_case": "e",
+      "kebab-case": "f",
+      "1st": "g",
+      "42": "h"
+    }
+  },
+  "tags": [
+    "positive",
+    "keys"
+  ]
+}
