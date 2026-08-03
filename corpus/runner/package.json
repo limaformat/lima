@@ -1,0 +1,14 @@
+{
+  "name": "@limaformat/corpus-runner",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Loader and runner for the Lima conformance corpus — not published.",
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "run": "bun src/run.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

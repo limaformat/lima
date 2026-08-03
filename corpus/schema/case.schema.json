@@ -291,7 +291,11 @@
               "const": "host-date"
             },
             "value": {
-              "type": "string"
+              "enum": [
+                "invalid",
+                "year-underflow",
+                "year-overflow"
+              ]
             }
           }
         },

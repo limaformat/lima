@@ -106,7 +106,20 @@ Special host values for partial validation:
 { "$type": "host-number", "value": "infinity" }
 { "$type": "host-number", "value": "-0" }
 { "$type": "host-date", "value": "invalid" }
+{ "$type": "host-date", "value": "year-underflow" }
+{ "$type": "host-date", "value": "year-overflow" }
 ```
+
+`host-date` uses a fixed sentinel set — not an arbitrary date string —
+deliberately, for the same reason as `host-number`: an arbitrary string
+handed to each runner's native date parser (e.g. JavaScript `Date`, a Rust
+date crate) is not guaranteed to parse identically across runners, so it
+cannot serve as a reproducible cross-language test input. `invalid`
+materializes to an invalid date (`NaN` timestamp in JS); `year-underflow`
+and `year-overflow` materialize to a valid date one year outside the
+References §6.2 UTC year range (0001–9999) — UTC year `0000` and `10000`
+respectively, constructed numerically rather than via string parsing to
+sidestep host-language date quirks (e.g. JS's two-digit-year mapping).
 
 These markers are corpus representations, not Lima values. Each runner
 materializes the matching host representation from them.
@@ -183,6 +196,30 @@ Boundary values are preferably generated:
 
 Every generator must be deterministic, documented, and reproducible across
 runners. Generator semantics are part of the corpus contract.
+
+### 9.1 First-stage generator parameter contracts
+
+Implemented in `corpus/runner/src/generators/`, confirmed as the authoritative
+parameter contract:
+
+- **`repeated-scalar`** — `key` (string), `codePoint` (string, repeated
+  as-is), `length` (positive integer). Produces `${key}: ${codePoint.repeat(length)}`.
+  Tests the scalar-length boundary (Core §9).
+- **`document-bytes`** — `length` (positive integer, total UTF-8 bytes
+  including line separators), optional `fillCodePoint` (default `"x"`).
+  Produces as many `kN: ...` top-level keys as needed to hit `length`
+  exactly, keeping every individual scalar far under the scalar-length
+  limit — a single giant scalar would trip that limit before reaching the
+  document-size boundary this generator exists to test (Core §9).
+- **`nested-mappings`** — `depth` (non-negative integer, matches Core §9's
+  own recursive `depth()` definition exactly), optional `key` (default
+  `"k"`), optional `leafValue` (default `"v"`). `depth: 0` produces a flat
+  `k: v`; `depth: 16` produces the maximum permitted nesting.
+- **`repeated-key`** — `count` (positive integer), optional `keyPrefix`
+  (default `"k"`), optional `value` (default `"v"`). Produces `count`
+  *distinct* top-level keys (`k0`, `k1`, ...) — not a duplicated key;
+  duplicate-key handling has its own dedicated hand-written cases. Tests
+  the top-level-entry-count boundary (Core §9).
 
 ## 10. Small public error API
 

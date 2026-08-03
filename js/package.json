@@ -18,5 +18,11 @@
     }
   },
   "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=18" }
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
 }
