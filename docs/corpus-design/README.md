@@ -221,6 +221,33 @@ parameter contract:
   duplicate-key handling has its own dedicated hand-written cases. Tests
   the top-level-entry-count boundary (Core §9).
 
+These four only ever produce the `.lima` input text. The three generators
+below also produce a `partials` map — a partial-limit boundary (e.g. a
+4,096-node partial) is exactly the kind of value a generator exists to
+avoid writing out by hand. A generator's return value is therefore either
+a plain string (input only, the four above) or `{ input, partials }`.
+
+- **`partial-count`** — `count` (positive integer), optional `namePrefix`
+  (default `"p"`). Produces `count` distinct partial names (`p0`, `p1`,
+  ...), each a trivial scalar value, and an empty document (partial
+  validation happens before document parsing — References §6.2 — so the
+  document itself does not need to reference them). Tests the
+  partial-name-count boundary (References §6.2, max 128).
+- **`partial-node-tree`** — `totalNodes` (positive integer), optional
+  `partialName` (default `"big"`). Produces one partial whose node count
+  (the References §6.2 `nodeCount` formula) is exactly `totalNodes`, as an
+  array of `totalNodes - 1` scalar elements. Tests the total-partial-node
+  boundary (References §6.2, max 4,096 across all partials).
+- **`result-node-expansion`** — `topLevelKeys` (positive integer),
+  `partialNodes` (positive integer), optional `keyPrefix` (default `"k"`),
+  optional `partialName` (default `"big"`). Produces `topLevelKeys`
+  top-level keys, each a pure reference to the same `partialNodes`-node
+  partial. Since a pure reference is a structural deep copy (References
+  §3.1), each reference multiplies the final result's node count
+  independently — this is the "128 top-level keys each referencing the
+  same 4,096-node partial" scenario from §6. Tests the total-result-node
+  boundary (References §6.2, max 65,536).
+
 ## 10. Small public error API
 
 Lima should use a single error class plus a shared diagnostic core:

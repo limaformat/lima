@@ -1,0 +1,18 @@
+{
+  "id": "core.normalization.tabs.leading-indentation",
+  "spec": "core",
+  "section": "3",
+  "description": "Normalizes a leading tab in indentation to two spaces before parsing.",
+  "expect": {
+    "result": {
+      "parent": {
+        "child": "value"
+      }
+    }
+  },
+  "tags": [
+    "positive",
+    "normalization"
+  ],
+  "inputFile": "leading-tabs.lima"
+}

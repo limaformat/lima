@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(18)
+		expect(outcomes).toHaveLength(23)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -23,22 +23,25 @@ describe('runCorpus', () => {
 
 	/**
 	 * Phase-2 baseline (docs/corpus-design/README.md §11), progressively
-	 * updated as confirmed deviations are fixed in js/src/index.ts. History:
-	 * 0/18/0 (initial run) → 8/9/1 (prototype-free + deep-copy fix) →
-	 * 11/6/1 (^^ leading marker, strict trailing-comma, strict unknown-escape)
-	 * → 17/0/1 (float exponent, partial NaN validation, one-hop snapshot fix,
-	 * quoted-token inactivity, unresolved-reference line number, scalar
-	 * resource limit) → 18/0/0 (mapping-interpolation now rejected with
-	 * INVALID_INTERPOLATION instead of crashing). Every corpus case passes.
-	 * This snapshot is a regression trip-wire: update it deliberately (with
-	 * a written reason) if this ever regresses, never to silently "make the
-	 * test pass".
+	 * updated as confirmed deviations are fixed in js/src/index.ts and as
+	 * corpus coverage expands. History: 0/18/0 (initial run) → 8/9/1
+	 * (prototype-free + deep-copy fix) → 11/6/1 (^^ leading marker, strict
+	 * trailing-comma, strict unknown-escape) → 17/0/1 (float exponent,
+	 * partial NaN validation, one-hop snapshot fix, quoted-token inactivity,
+	 * unresolved-reference line number, scalar resource limit) → 18/0/0
+	 * (mapping-interpolation rejected with INVALID_INTERPOLATION) → 23/0/0
+	 * (5 new Core §3 normalization cases added; found and fixed a real bug
+	 * where the single `\r\n|\t` normalization pass converted every tab in
+	 * the document, not just leading-indentation tabs, and never handled a
+	 * standalone \r). This snapshot is a regression trip-wire: update it
+	 * deliberately (with a written reason) if this ever regresses, never to
+	 * silently "make the test pass".
 	 */
 	it('matches today\'s known Phase-2 baseline classification counts', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 18, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 23, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {
@@ -52,6 +55,19 @@ describe('runCorpus', () => {
 				o.reasons[0].includes('prototype-free')
 		)
 		expect(onlyBindingIssue).toEqual([])
+	})
+
+	it('normalizes a standalone CR and preserves tabs inside scalar content', () => {
+		// Both were broken by the same bug: a single combined `\r\n|\t`
+		// normalization pass never matched a lone \r, and converted every
+		// tab in the document (not just leading-indentation ones).
+		const { outcomes } = runCorpus(corpusRoot)
+		for (const id of [
+			'core.normalization.line-endings.standalone-cr',
+			'core.normalization.tabs.preserved-in-scalar',
+		]) {
+			expect(outcomes.find((o) => o.id === id)?.classification).toBe('PASS')
+		}
 	})
 
 	it('rejects mapping interpolation with INVALID_INTERPOLATION instead of crashing', () => {

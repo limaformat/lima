@@ -61,13 +61,20 @@ export function loadCase(jsonPath: string): LoadResult {
 	}
 
 	let input: string
+	let generatorPartials: Record<string, unknown> | undefined
 	try {
 		if (d.input !== undefined) {
 			input = d.input
 		} else if (d.inputFile !== undefined) {
 			input = readFileSync(join(dirname(jsonPath), d.inputFile), 'utf-8')
 		} else {
-			input = runGenerator(d.generator!.name, d.generator!.parameters)
+			// Some generators (partial-count, partial-node-tree,
+			// result-node-expansion) also produce the partials map a
+			// partial-limit case needs — writing a 4,096-node partial by hand
+			// would defeat the point of generating it.
+			const generated = runGenerator(d.generator!.name, d.generator!.parameters)
+			input = generated.input
+			generatorPartials = generated.partials
 		}
 	} catch (err) {
 		return { ok: false, sourceFile: jsonPath, errors: [`cannot resolve input: ${(err as Error).message}`] }
@@ -92,9 +99,10 @@ export function loadCase(jsonPath: string): LoadResult {
 		}
 	}
 
+	const rawPartials = { ...(d.options?.partials ?? {}), ...(generatorPartials ?? {}) }
 	const options = {
 		strict: d.options?.strict ?? false,
-		partials: (materialize((d.options?.partials ?? {}) as any) as Record<string, unknown>) ?? {},
+		partials: (materialize(rawPartials as any) as Record<string, unknown>) ?? {},
 	}
 
 	return {

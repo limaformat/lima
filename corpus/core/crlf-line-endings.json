@@ -1,0 +1,17 @@
+{
+  "id": "core.normalization.line-endings.crlf",
+  "spec": "core",
+  "section": "3",
+  "description": "Normalizes CRLF line endings to LF before parsing.",
+  "expect": {
+    "result": {
+      "title": "Hello",
+      "count": 42
+    }
+  },
+  "tags": [
+    "positive",
+    "normalization"
+  ],
+  "inputFile": "crlf-line-endings.lima"
+}

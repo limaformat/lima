@@ -53,6 +53,18 @@ describe('input normalization', () => {
 	it('normalizes tabs to 2 spaces (block map)', () => {
 		expect(limaParser('author:\n\tname: Alice')).toEqual({ author: { name: 'Alice' } })
 	})
+
+	it('normalizes a standalone CR (not part of CRLF) to LF', () => {
+		expect(limaParser('title: Hello\rauthor: Alice')).toEqual({ title: 'Hello', author: 'Alice' })
+	})
+
+	it('preserves a tab inside scalar content — only leading indentation tabs are normalized', () => {
+		expect(limaParser('value: a\tb')).toEqual({ value: 'a\tb' })
+	})
+
+	it('normalizes a tab mixed with leading spaces in indentation', () => {
+		expect(limaParser('author:\n  \tname: Alice')).toEqual({ author: { name: 'Alice' } })
+	})
 })
 
 // ─── Strings ───────────────────────────────────────────────────────────────────

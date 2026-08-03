@@ -963,9 +963,16 @@ const parse = <T extends Record<string, unknown> = Meta>(
 
 	if (!frontMatter) return emptyMapping() as unknown as T
 
-	// Normalize: CRLF → LF, tabs → 2 spaces, trailing spaces stripped per line
+	// Normalize (Core §3), in order:
+	//   1. \r\n → \n, then any remaining standalone \r → \n.
+	//   2. Tabs in *leading* indentation only → two spaces each; tabs
+	//      elsewhere (inside scalar content) are left unchanged. A single
+	//      combined `\r\n|\t` pass here previously converted every tab in
+	//      the document, including ones inside scalar values — wrong.
+	//   3. Trailing spaces stripped per line.
 	frontMatter = frontMatter
-		.replace(/\r\n|\t/g, (m) => (m === '\t' ? '  ' : '\n'))
+		.replace(/\r\n|\r/g, '\n')
+		.replace(/^([ \t]*)/gm, (leading) => (leading.includes('\t') ? leading.replace(/\t/g, '  ') : leading))
 		.replace(/ +(?=\n|$)/gm, '')
 
 	// Lazy key-position map — populated only when a line number is actually needed

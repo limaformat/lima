@@ -1,0 +1,16 @@
+{
+  "id": "core.normalization.trailing-spaces.stripped",
+  "spec": "core",
+  "section": "3",
+  "description": "Strips trailing spaces from each line before parsing.",
+  "expect": {
+    "result": {
+      "title": "Hello"
+    }
+  },
+  "tags": [
+    "positive",
+    "normalization"
+  ],
+  "inputFile": "trailing-spaces.lima"
+}
