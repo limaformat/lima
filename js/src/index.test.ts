@@ -1150,6 +1150,35 @@ describe('dotted-path references', () => {
 		`)
 		expect(result.ref).toBe('hello')
 	})
+
+	it('leaves a dotted path unresolved when an intermediate segment is null', () => {
+		const result = parse('site:\n  default: null\na: ($site.default.claim)\n')
+		expect(result.a).toBe('($site.default.claim)')
+	})
+
+	it('leaves a dotted path unresolved when an intermediate segment is not a mapping', () => {
+		const result = parse('site:\n  default: hello\na: ($site.default.claim)\n')
+		expect(result.a).toBe('($site.default.claim)')
+	})
+
+	it('throws in strict mode when a dotted-path intermediate segment is not a mapping', () => {
+		expect(() => parse('site:\n  default: hello\na: ($site.default.claim)\n', { strict: true })).toThrow('LIMA')
+	})
+
+	it('a pure array/mapping reference is a structural deep copy, never aliasing the original (References §3.1)', () => {
+		const result = parse('tags: [a, b]\ncopy: ($tags)\n')
+		expect(result.copy).toEqual(result.tags)
+		expect(result.copy).not.toBe(result.tags)
+		;(result.copy as unknown[]).push('mutated')
+		expect(result.tags).toEqual(['a', 'b'])
+	})
+
+	it('preserves numeric kind through a multi-hop deep-copy chain until final serialization', () => {
+		// A float that looks like an integer (1000.0) must still serialize as
+		// "1000" (canonical float rule), even after being deep-copied twice.
+		const result = parse('a:\n  x: 1000.0\ncopy1: ($a)\ncopy2: ($copy1)\nlabel: Value is ($copy2.x).\n')
+		expect(result.label).toBe('Value is 1000.')
+	})
 })
 
 // ─── Quoted reference tokens stay inactive (References §2.3) ──────────────────

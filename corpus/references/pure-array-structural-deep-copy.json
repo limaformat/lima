@@ -1,0 +1,11 @@
+{
+  "id": "references.pure.array-structural-deep-copy",
+  "spec": "references",
+  "section": "3.1",
+  "description": "A pure reference to an array produces a structurally equal deep copy. (Object-identity/no-aliasing is a JS-binding check, verified separately in index.test.ts — not expressible via value-only corpus comparison.)",
+  "input": "tags: [a, b]\ncopy: ($tags)\n",
+  "expect": {
+    "result": { "tags": ["a", "b"], "copy": ["a", "b"] }
+  },
+  "tags": ["positive", "pure-reference", "copy"]
+}

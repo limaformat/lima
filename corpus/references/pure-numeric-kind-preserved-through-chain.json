@@ -1,0 +1,16 @@
+{
+  "id": "references.pure.numeric-kind-preserved-through-chain",
+  "spec": "references",
+  "section": "3.1",
+  "description": "Structural deep copies preserve internal resolution metadata, including syntactic numeric kind (integer vs. float), until resolution and final validation are complete: a float that looks like an integer (1000.0) still serializes via the canonical float rule ('1000') after being deep-copied twice and then interpolated.",
+  "input": "a:\n  x: 1000.0\ncopy1: ($a)\ncopy2: ($copy1)\nlabel: Value is ($copy2.x).\n",
+  "expect": {
+    "result": {
+      "a": { "x": 1000.0 },
+      "copy1": { "x": 1000.0 },
+      "copy2": { "x": 1000.0 },
+      "label": "Value is 1000."
+    }
+  },
+  "tags": ["positive", "pure-reference", "numeric-kind"]
+}

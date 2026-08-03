@@ -1,0 +1,24 @@
+{
+  "id": "references.pure.preserves-all-types",
+  "spec": "references",
+  "section": "3.1",
+  "description": "A pure reference returns the referenced value as-is, preserving its original type: string, boolean, null, integer, float, and date.",
+  "input": "s: hello\nb: true\nn: null\ni: 42\nf: 3.14\nd: 2024-03-01\ncs: ($s)\ncb: ($b)\ncn: ($n)\nci: ($i)\ncf: ($f)\ncd: ($d)\n",
+  "expect": {
+    "result": {
+      "s": "hello",
+      "b": true,
+      "n": null,
+      "i": 42,
+      "f": 3.14,
+      "d": { "$type": "instant", "value": "2024-03-01T00:00:00Z" },
+      "cs": "hello",
+      "cb": true,
+      "cn": null,
+      "ci": 42,
+      "cf": 3.14,
+      "cd": { "$type": "instant", "value": "2024-03-01T00:00:00Z" }
+    }
+  },
+  "tags": ["positive", "pure-reference"]
+}

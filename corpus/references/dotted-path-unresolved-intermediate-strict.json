@@ -1,0 +1,16 @@
+{
+  "id": "references.dotted-path.unresolved-intermediate.strict",
+  "spec": "references",
+  "section": "3.3",
+  "description": "A dotted path with a non-mapping intermediate segment throws in strict mode after the second resolution phase.",
+  "input": "site:\n  other: hello\nc: ($site.other.claim)\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 3,
+      "token": "($site.other.claim)",
+      "code": "UNRESOLVED_REFERENCE"
+    }
+  },
+  "tags": ["strict", "error", "dotted-path"]
+}

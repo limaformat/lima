@@ -1,0 +1,16 @@
+{
+  "id": "references.partials.missing.strict",
+  "spec": "references",
+  "section": "3.4",
+  "description": "A partial key not found in the validated partials map throws in strict mode after the second resolution phase.",
+  "input": "a: (%missing)\n",
+  "options": { "strict": true, "partials": {} },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "(%missing)",
+      "code": "UNRESOLVED_REFERENCE"
+    }
+  },
+  "tags": ["strict", "error", "partial"]
+}

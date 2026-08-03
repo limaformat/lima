@@ -1,0 +1,16 @@
+{
+  "id": "references.interpolation.unresolved.strict",
+  "spec": "references",
+  "section": "3.2",
+  "description": "An unresolvable reference token in interpolation mode throws in strict mode after the second resolution phase.",
+  "input": "b: Hello ($missing)!\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "($missing)",
+      "code": "UNRESOLVED_REFERENCE"
+    }
+  },
+  "tags": ["strict", "error", "interpolation"]
+}

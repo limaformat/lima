@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(164)
+		expect(outcomes).toHaveLength(175)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -171,13 +171,23 @@ describe('runCorpus', () => {
 	 * parseCore-vs-parseReferences reason as Core's C-210.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
+	 * test pass") → 175/0/0 (11 new References §3.1-3.4 cases added: pure-
+	 * reference type preservation/deep-copy/unresolved fallback, numeric-
+	 * kind preservation through a multi-hop deep-copy chain, interpolation
+	 * unresolved-token handling, dotted-path traversal and its three
+	 * unresolved-intermediate conditions (missing/null/non-mapping), and
+	 * missing-partial fallback/throw. No new deviations found — this batch
+	 * built entirely on resolution machinery already fixed during earlier
+	 * §1-§2 and Phase-2 work).
+	 * This snapshot is a regression trip-wire: update it deliberately (with
+	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
 	 */
 	it('matches today\'s known Phase-2 baseline classification counts', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 164, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 175, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

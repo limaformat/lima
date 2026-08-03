@@ -1,0 +1,12 @@
+{
+  "id": "references.partials.missing.non-strict",
+  "spec": "references",
+  "section": "3.4",
+  "description": "A partial key not found in the validated partials map leaves the token unchanged in non-strict mode.",
+  "input": "a: (%missing)\n",
+  "options": { "partials": {} },
+  "expect": {
+    "result": { "a": "(%missing)" }
+  },
+  "tags": ["fallback", "partial"]
+}

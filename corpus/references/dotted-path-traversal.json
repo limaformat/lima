@@ -1,0 +1,14 @@
+{
+  "id": "references.dotted-path.traversal",
+  "spec": "references",
+  "section": "3.3",
+  "description": "A dotted path traverses nested mappings, resolving each segment against the previous segment's mapping value.",
+  "input": "site:\n  default:\n    claim: Software, Tools, AI\ntagline: A blog about ($site.default.claim).\n",
+  "expect": {
+    "result": {
+      "site": { "default": { "claim": "Software, Tools, AI" } },
+      "tagline": "A blog about Software, Tools, AI."
+    }
+  },
+  "tags": ["positive", "dotted-path"]
+}
