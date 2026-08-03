@@ -1,0 +1,16 @@
+{
+  "id": "references.error-ordering.lowest-line-wins",
+  "spec": "references",
+  "section": "5",
+  "description": "Of two reference-resolution errors of DIFFERENT types (an unresolved reference on line 1, a mapping-in-interpolation error on line 4), the one at the lowest source position is thrown — not whichever the parser's internal traversal happens to reach first. Mapping-in-interpolation is checked inline during resolution while unresolved-reference is only checked in a final pass, so a naive implementation reports line 4 here instead of line 1.",
+  "input": "a: ($missing)\nb:\n  x: 1\nc: Value ($b)\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "($missing)",
+      "code": "UNRESOLVED_REFERENCE"
+    }
+  },
+  "tags": ["error-order", "error"]
+}

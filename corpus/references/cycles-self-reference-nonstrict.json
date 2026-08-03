@@ -1,0 +1,11 @@
+{
+  "id": "references.cycles.self-reference.non-strict",
+  "spec": "references",
+  "section": "4.3",
+  "description": "A self-reference (a: ($a)) is unresolvable — at the start of both phases, the key's own value is itself an active token. It remains the token string in non-strict mode.",
+  "input": "a: ($a)",
+  "expect": {
+    "result": { "a": "($a)" }
+  },
+  "tags": ["fallback", "cycle"]
+}

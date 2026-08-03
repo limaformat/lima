@@ -1,0 +1,18 @@
+{
+  "id": "references.error-ordering.line1-fallback-without-token",
+  "spec": "references",
+  "section": "5",
+  "description": "A global final-result resource error (nesting depth exceeding the limit) not caused by any reference token — a purely hand-authored, reference-free document — reports line 1, since no source token can be identified as a participant.",
+  "generator": {
+    "name": "nested-mappings",
+    "parameters": { "depth": 17 }
+  },
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "RESOURCE_LIMIT"
+    }
+  },
+  "tags": ["error-order", "error"]
+}

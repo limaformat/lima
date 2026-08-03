@@ -1,0 +1,11 @@
+{
+  "id": "references.cycles.two-key-cycle.non-strict",
+  "spec": "references",
+  "section": "4.3",
+  "description": "A two-key cycle (a: ($b), b: ($a)) is handled by the snapshot rule: at the start of phase 2, both values are still active tokens, so neither can serve as a resolution target for the other. Both remain token strings in non-strict mode.",
+  "input": "a: ($b)\nb: ($a)\n",
+  "expect": {
+    "result": { "a": "($b)", "b": "($a)" }
+  },
+  "tags": ["fallback", "cycle"]
+}

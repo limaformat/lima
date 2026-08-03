@@ -1,0 +1,15 @@
+{
+  "id": "references.phase1.dotted-path-defining-key",
+  "spec": "references",
+  "section": "4.1",
+  "description": "For a dotted path, the defining key whose source position matters is the key of the final path segment, not the top-level root key — resolution succeeds whether the reference is written before or after the nested key that actually holds the target value.",
+  "input": "x:\n  a: hello\nref: ($x.a)\nref2:\n  y: ($x.a)\n",
+  "expect": {
+    "result": {
+      "x": { "a": "hello" },
+      "ref": "hello",
+      "ref2": { "y": "hello" }
+    }
+  },
+  "tags": ["trace", "phase-1", "dotted-path"]
+}

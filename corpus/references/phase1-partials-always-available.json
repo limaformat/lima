@@ -1,0 +1,12 @@
+{
+  "id": "references.phase1.partials-always-available",
+  "spec": "references",
+  "section": "4.1",
+  "description": "Validated partial values have no document source position and are always considered available and reference-free before every document position — a partial reference on the very first line resolves in phase 1, unlike a document reference to a not-yet-defined key.",
+  "input": "a: (%p)",
+  "options": { "partials": { "p": "available" } },
+  "expect": {
+    "result": { "a": "available" }
+  },
+  "tags": ["trace", "phase-1", "partial"]
+}

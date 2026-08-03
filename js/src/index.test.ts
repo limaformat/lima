@@ -1255,6 +1255,33 @@ describe('one-hop limit order independence', () => {
 	})
 })
 
+// ─── Error ordering by source position (References §5) ────────────────────────
+// All reference-resolution errors are collected and sorted by line; the
+// earliest is thrown — not whichever the parser's internal traversal
+// happens to reach first, which previously let a later mapping-in-
+// interpolation error (checked inline) preempt an earlier unresolved
+// reference (only checked in a final pass).
+
+describe('error ordering by source position', () => {
+	it('reports the earlier unresolved reference over a later mapping-interpolation error', () => {
+		expect(() => parse('a: ($missing)\nb:\n  x: 1\nc: Value ($b)\n', { strict: true }))
+			.toThrow('($missing)')
+	})
+
+	it('reports the earlier mapping-interpolation error over a later unresolved reference', () => {
+		expect(() => parse('c: Value ($b)\nb:\n  x: 1\na: ($missing)\n', { strict: true }))
+			.toThrow('mapping cannot be interpolated')
+	})
+
+	it('reports a correct, non-zero line for a mapping-interpolation error resolved in phase 2 in non-strict mode', () => {
+		// Both modes always throw for this error type — regression guard for a
+		// bug where phase 2's line number was only computed in strict mode,
+		// so this specific error (which can first surface in phase 2) reported
+		// "at line 0" in non-strict mode.
+		expect(() => parse('c: ($b) text\nb:\n  x: 1\n')).toThrow('at line 1')
+	})
+})
+
 // ─── Quoted reference tokens stay inactive (References §2.3) ──────────────────
 // A reference-like token inside a quoted string is always literal — never
 // resolved, at any nesting depth, in either mode.

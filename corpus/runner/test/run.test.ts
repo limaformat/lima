@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(192)
+		expect(outcomes).toHaveLength(204)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -225,7 +225,33 @@ describe('runCorpus', () => {
 	 * `isReferenceFree()` and `resolveForward()` treat it as opaque without
 	 * inspecting its text — with a new non-mutating unwrap at the
 	 * interpolation consumption point, so the shared sanitized partials map
-	 * stays protected for any other reference to the same partial.
+	 * stays protected for any other reference to the same partial) → 204/0/0
+	 * (12 new References §4-§5 cases added: phase-1 backward-reference
+	 * position rules incl. dotted-path defining-key and partial availability,
+	 * phase-2 recursion into document arrays/mappings, self-reference and
+	 * two-key-cycle handling, and — most significantly — error ordering by
+	 * source position). Found and fixed a serious, confirmed violation of §5
+	 * ("the error at the lowest source position is thrown ... applies to all
+	 * error types"): mapping-in-interpolation/nested-array-in-interpolation/
+	 * array-as-sequence-item errors were thrown immediately, inline, the
+	 * instant the parser's traversal reached them, while unresolved-
+	 * reference errors were only checked in a separate final pass — so any
+	 * inline-thrown error always preempted an earlier-positioned unresolved
+	 * reference, regardless of actual line order. Fixed by converting all
+	 * four throw sites plus the final unresolved-reference scan to collect
+	 * `{line, message}` descriptors into a module-level array instead of
+	 * throwing immediately, sorting by line once resolution completes, and
+	 * throwing only the earliest. While fixing this, also found and fixed a
+	 * related bug the new collection surfaced: phase 2's per-key line number
+	 * was only computed accurately in strict mode (`strict ? keyLine(...) :
+	 * 0`), so a "both modes always throw" error first surfacing during phase
+	 * 2 in non-strict mode collected with line 0 and could wrongly sort
+	 * ahead of a correctly-positioned duplicate from phase 1 — made
+	 * unconditional, matching every other "needed in both modes" keyLine()
+	 * call in this file. R-112 (attributing a global resource-limit error to
+	 * the lowest participating reference token) remains a documented gap in
+	 * coverage/references.md — needs final-tree provenance tracking not yet
+	 * implemented, deferred alongside the related §6.2 Final Limits work.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -234,7 +260,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 192, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 204, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

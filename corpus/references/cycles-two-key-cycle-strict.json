@@ -1,0 +1,16 @@
+{
+  "id": "references.cycles.two-key-cycle.strict",
+  "spec": "references",
+  "section": "4.3",
+  "description": "A two-key cycle reports the first unresolved token by source position in strict mode.",
+  "input": "a: ($b)\nb: ($a)\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "($b)",
+      "code": "UNRESOLVED_REFERENCE"
+    }
+  },
+  "tags": ["strict", "error", "cycle"]
+}

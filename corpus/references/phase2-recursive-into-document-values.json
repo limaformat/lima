@@ -1,0 +1,15 @@
+{
+  "id": "references.phase2.recursive-into-document-values",
+  "spec": "references",
+  "section": "4.2",
+  "description": "Phase 2 recurses into arrays and nested mappings of document values, resolving a forward reference nested inside them.",
+  "input": "items:\n  - ($later)\nwrapper:\n  inner: ($later)\nlater: 42\n",
+  "expect": {
+    "result": {
+      "items": [42],
+      "wrapper": { "inner": 42 },
+      "later": 42
+    }
+  },
+  "tags": ["positive", "phase-2"]
+}

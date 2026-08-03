@@ -23,6 +23,29 @@ type Meta = Record<string, any>
 const emptyMapping = (): Meta => Object.create(null)
 
 /**
+ * References §5 (Error Ordering): "All reference-resolution errors
+ * associated with source tokens are collected and ordered by source
+ * position ... The error at the lowest source position is thrown." This
+ * applies across error types (unresolved references, mapping-in-
+ * interpolation, invalid array elements) — a mapping-interpolation error
+ * on line 4 must not preempt an unresolved reference on line 1 just
+ * because the parser's traversal happens to reach line 4's value first.
+ *
+ * Sites that would otherwise throw immediately for one of these error
+ * types push a descriptor here instead and return a harmless fallback so
+ * traversal can continue collecting any other errors; `parse()` sorts by
+ * line (this parser tracks line-level position only — column-level
+ * ordering, §5's tie-breaker, is not currently retained past the key
+ * level) and throws the earliest once resolution is complete.
+ *
+ * Module-level rather than threaded through every resolution function's
+ * parameters: `parse()` is synchronous and never reentrant within a
+ * single call, so a reset at the top of every call is sufficient and far
+ * less invasive than adding a parameter to a dozen call sites.
+ */
+let collectedRefErrors: { line: number; message: string }[] = []
+
+/**
  * References §2.3: a reference token inside a quoted string is inactive —
  * literal text, never resolved. Once a quoted value's delimiters are
  * stripped, its text can look identical to an active token, and later
@@ -606,13 +629,18 @@ const resolve = (val: string, metadata: Meta, partials: Meta, line = 0): any => 
 			const plain = unwrapInactiveReadonly(resolved)
 			// References §3.5/§3.6: mappings can never be interpolated into a
 			// string, and arrays containing a nested array or mapping element
-			// throw too — both are hard errors in both modes, not a fallback.
+			// throw too — both are hard errors in both modes. Collected rather
+			// than thrown immediately (§5: error ordering by source position;
+			// see collectedRefErrors) — `match` is a safe placeholder since a
+			// collected error always aborts the parse once resolution ends.
 			if (isPlainMapping(plain)) {
-				throw new Error(`LIMA: invalid interpolation of "${match}" at line ${line}: mapping cannot be interpolated into a string`)
+				collectedRefErrors.push({ line, message: `LIMA: invalid interpolation of "${match}" at line ${line}: mapping cannot be interpolated into a string` })
+				return match
 			}
 			if (Array.isArray(plain)) {
 				if (plain.some((item) => Array.isArray(item) || isPlainMapping(item))) {
-					throw new Error(`LIMA: invalid interpolation of "${match}" at line ${line}: array contains a nested array or mapping`)
+					collectedRefErrors.push({ line, message: `LIMA: invalid interpolation of "${match}" at line ${line}: array contains a nested array or mapping` })
+					return match
 				}
 				return plain.map(canonicalString).join(', ')
 			}
@@ -871,9 +899,12 @@ const parseFlowSequence = (val: string, metadata: Meta, partials: Meta, strict =
 		if (Array.isArray(resolved)) {
 			// References Appendix: array spreading was removed, and a nested
 			// array produced by reference insertion violates Core §7.2
-			// ("sequences contain scalars or mappings only") — throws in
-			// BOTH modes (R-036/R-143), not just a fallback.
-			throw new Error(`LIMA: reference "${item}" resolves to an array, which cannot be inserted as a sequence item at line ${line}`)
+			// ("sequences contain scalars or mappings only") — throws in BOTH
+			// modes (R-036/R-143). Collected rather than thrown immediately
+			// (§5 error ordering — see collectedRefErrors); `item` (the raw
+			// token text) is a safe placeholder either way.
+			collectedRefErrors.push({ line, message: `LIMA: reference "${item}" resolves to an array, which cannot be inserted as a sequence item at line ${line}` })
+			return item
 		}
 		const value = toType(resolved, strict, line)
 		checkScalarLimit(value, line)
@@ -1142,8 +1173,11 @@ const parseBlock = (
 						// References Appendix: array spreading was removed, and a
 						// nested array produced by reference insertion violates
 						// Core §7.2 ("sequences contain scalars or mappings
-						// only") — throws in BOTH modes (R-036/R-143).
-						throw new Error(`LIMA: reference "${afterDash}" resolves to an array, which cannot be inserted as a sequence item at line ${baseLine + idx}`)
+						// only") — throws in BOTH modes (R-036/R-143). Collected
+						// rather than thrown immediately (§5 error ordering —
+						// see collectedRefErrors).
+						collectedRefErrors.push({ line: baseLine + idx, message: `LIMA: reference "${afterDash}" resolves to an array, which cannot be inserted as a sequence item at line ${baseLine + idx}` })
+						;(result as any[]).push(afterDash)
 					} else {
 						const value = toType(resolvedVal, strict, baseLine + idx)
 						checkScalarLimit(value, baseLine + idx)
@@ -1257,6 +1291,9 @@ const parse = <T extends Record<string, unknown> = Meta>(
 	frontMatter: string,
 	options?: ParseOptions
 ): T => {
+	// References §5: fresh collection for this call — see collectedRefErrors's
+	// declaration for why this is module-level state rather than a parameter.
+	collectedRefErrors = []
 	const rawPartials = options?.partials ?? {}
 	const strict      = options?.strict   ?? false
 
@@ -1542,27 +1579,33 @@ const parse = <T extends Record<string, unknown> = Meta>(
 			phase1Snapshot[key] = key in originalPureRefText ? originalPureRefText[key] : metadata[key]
 		}
 		for (const key of Object.keys(metadata)) {
-			// keyLine(...) is only computed in strict mode — see the laziness
-			// note at the top-level duplicate-key check above.
+			// keyLine(...) is needed unconditionally (not just in strict mode):
+			// the "always throw" reference-shape errors (mapping/nested-array
+			// in interpolation, array-as-sequence-item) can first surface here,
+			// in phase 2, in non-strict mode too, and §5's error-ordering
+			// collection (collectedRefErrors) needs an accurate line to sort
+			// by regardless of mode — line 0 would wrongly sort first.
 			metadata[key] = resolveForward(
-				metadata[key], phase1Snapshot, partials, strict,
-				strict ? keyLine(keyIndexByName[key]) : 0
+				metadata[key], phase1Snapshot, partials, strict, keyLine(keyIndexByName[key])
 			)
 		}
 	}
 
-	// Strict mode: throw if any reference is still unresolved after both passes.
+	// Strict mode: collect every reference still unresolved after both passes.
 	// This catches genuinely missing keys without penalising forward references.
 	if (strict) {
 		// Line is the defining top-level key's line — the best granularity
 		// available without full per-node source-position tracking (References
 		// §5 asks for the token's source line; this parser does not retain
 		// positions past the key level for values nested in blocks/arrays).
+		// Collected rather than thrown on the first match (§5 error ordering —
+		// see collectedRefErrors): every unresolved token across the whole
+		// document must be a candidate before the earliest one is picked.
 		const scanUnresolved = (val: any, line: number): void => {
 			if (isInactiveValue(val)) return // quoted at parse time — literal, not unresolved (§2.3)
 			if (typeof val === 'string' && (val.includes('($') || val.includes('(%'))) {
 				const m = val.match(/\(([%$])([^)]+)\)/)
-				if (m) throw new Error(`LIMA: unresolved reference "(${m[1]}${m[2]})" at line ${line}`)
+				if (m) collectedRefErrors.push({ line, message: `LIMA: unresolved reference "(${m[1]}${m[2]})" at line ${line}` })
 			} else if (Array.isArray(val)) {
 				for (const v of val) scanUnresolved(v, line)
 			} else if (val !== null && typeof val === 'object' && !(val instanceof Date)) {
@@ -1572,6 +1615,17 @@ const parse = <T extends Record<string, unknown> = Meta>(
 		for (const key of Object.keys(metadata)) {
 			scanUnresolved(metadata[key], keyLine(keyIndexByName[key]))
 		}
+	}
+
+	// References §5: of every reference-resolution error collected above
+	// (mapping-in-interpolation, invalid array elements, and — strict mode
+	// only — unresolved references), the one at the lowest source line is
+	// thrown; the rest are discarded. Ties (same line) keep collection order,
+	// since Array#sort is stable and this parser tracks line-level position
+	// only (§5's character-offset tie-breaker is not currently retained).
+	if (collectedRefErrors.length > 0) {
+		collectedRefErrors.sort((a, b) => a.line - b.line)
+		throw new Error(collectedRefErrors[0].message)
 	}
 
 	// Core §9: nesting depth of the final tree, both modes. The document

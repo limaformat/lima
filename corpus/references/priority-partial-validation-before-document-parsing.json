@@ -1,0 +1,16 @@
+{
+  "id": "references.priority.partial-validation-before-document-parsing",
+  "spec": "references",
+  "section": "5",
+  "description": "Partial-validation errors occur before document parsing and take precedence over all source-position-ordered errors — an invalid partial throws even though the document itself is entirely unremarkable and would parse without any error on its own.",
+  "input": "value: a perfectly ordinary document",
+  "options": { "partials": { "bad": { "$type": "host-number", "value": "nan" } } },
+  "expect": {
+    "error": {
+      "partial": "bad",
+      "path": "bad",
+      "code": "INVALID_PARTIAL"
+    }
+  },
+  "tags": ["priority", "error", "partial"]
+}

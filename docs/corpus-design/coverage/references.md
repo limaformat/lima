@@ -105,13 +105,32 @@ This matrix complements the full Core matrix. A References runner must additiona
 
 ## Known legacy-parser gaps
 
-One check point cannot currently be exercised against `js/src/index.ts`,
-for the same structural reason as Core's C-210 (see `coverage/core.md`):
+Two check points cannot currently be exercised against `js/src/index.ts`:
 
 - **R-120** (`parseReferences` extends `parseCore`): the legacy parser
   exposes a single `parse()` with no separate `parseCore`/`parseReferences`
   functions, so there is nothing to test this API-composition claim
-  against. Revisit once `parseCore` distinct from `parseReferences` exists.
+  against. Same structural reason as Core's C-210 (see `coverage/core.md`).
+  Revisit once `parseCore` distinct from `parseReferences` exists.
+- **R-112** (a global final-result resource error — nesting depth, nested
+  arrays, total node count — is attributed to the lowest source position
+  among the *reference tokens whose inserted/copied values participate* in
+  the violation): not yet implemented. §5's error-ordering *collection*
+  mechanism itself is implemented and covered (see
+  `references.error-ordering.*`, added alongside the fix for a real
+  order-dependence bug this surfaced) — what's missing is specifically
+  *token attribution* for resource-limit violations, which requires
+  tracking, for every node in the final tree, whether it (or an ancestor)
+  originated from a reference insertion and at which source line. That
+  provenance tracking doesn't exist yet. R-113 (the line-1 fallback "when
+  no source token can be identified") is already correctly covered — the
+  existing unconditional "at line 1" resource-limit message satisfies it
+  for the case that never had a candidate token in the first place. R-112
+  is deferred to land together with the broader §6.2 Final Limits work
+  (R-140-143, particularly total node count, which isn't implemented at
+  all yet either) — both need the same kind of final-tree provenance
+  tracking, so implementing them separately would mean doing the tracking
+  twice.
 
 R-001 ("References parser includes complete Core behavior") is, by
 contrast, directly testable even without a separate `parseCore` — it is a

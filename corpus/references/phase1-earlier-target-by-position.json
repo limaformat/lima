@@ -1,0 +1,11 @@
+{
+  "id": "references.phase1.earlier-target-by-position",
+  "spec": "references",
+  "section": "4.1",
+  "description": "A target is eligible for phase-1 (backward) resolution only when its defining key begins at a lower source position than the reference. The identical reference graph resolves in phase 1 when the target precedes the reference, and only in phase 2 (still successfully, from the phase-1 snapshot) when it follows.",
+  "input": "a: 1\nb: ($a)\nc: ($d)\nd: 1\n",
+  "expect": {
+    "result": { "a": 1, "b": 1, "c": 1, "d": 1 }
+  },
+  "tags": ["trace", "phase-1"]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "references.error-ordering.mixed-types-sorted-together",
+  "spec": "references",
+  "section": "5",
+  "description": "All source-related reference-resolution error types are collected into one ordered set, not sorted separately per type: with the mapping-in-interpolation error moved to the earliest line instead, it now correctly wins over the later unresolved reference — proving the ordering is a genuine unified sort, not a fixed type-based priority.",
+  "input": "c: Value ($b)\nb:\n  x: 1\na: ($missing)\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_INTERPOLATION"
+    }
+  },
+  "tags": ["error-order", "error"]
+}
