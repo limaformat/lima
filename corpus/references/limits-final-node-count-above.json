@@ -2,7 +2,7 @@
   "id": "references.limits.final-node-count.above",
   "spec": "references",
   "section": "6.2",
-  "description": "16 top-level keys each referencing the same 4,096-node partial (1 + 16*4,096 = 65,537 total nodes) exceeds the 65,536 final-result node-count limit — this prevents unbounded growth through repeated deep copies of a large partial.",
+  "description": "16 top-level keys each referencing the same 4,096-node partial (1 + 16*4,096 = 65,537 total nodes) exceeds the 65,536 final-result node-count limit \u2014 this prevents unbounded growth through repeated deep copies of a large partial. References \u00a75/R-112: attributed to the earliest (lowest-line) of the sixteen participating reference tokens \u2014 k0, line 1 \u2014 and the message includes that token text, not just the line-1 fallback.",
   "input": "k0: (%big)\nk1: (%big)\nk2: (%big)\nk3: (%big)\nk4: (%big)\nk5: (%big)\nk6: (%big)\nk7: (%big)\nk8: (%big)\nk9: (%big)\nk10: (%big)\nk11: (%big)\nk12: (%big)\nk13: (%big)\nk14: (%big)\nk15: (%big)",
   "options": {
     "partials": {
@@ -4108,7 +4108,8 @@
   "expect": {
     "error": {
       "line": 1,
-      "code": "RESOURCE_LIMIT"
+      "code": "RESOURCE_LIMIT",
+      "token": "(%big)"
     }
   },
   "tags": [

@@ -318,6 +318,28 @@ describe('runCorpus', () => {
 	 * previously loaded but never actually checked. No case count changed;
 	 * the four pre-existing duplicate-key-warning cases already declared
 	 * the `expect.warnings` this enables verifying.
+	 * Still 232/0/0 after closing R-112: `PositionedValue` gained an
+	 * optional `insertedAt: {line, token}`, stamped on the root of any
+	 * value a successful pure-reference resolution copies in, preserved
+	 * through further deep copies and phase 2's redundant re-walk (a real
+	 * bug found and fixed here — the array/mapping reconstruction branches
+	 * of `resolveTree` were dropping it on every second-phase pass). The
+	 * two final-result resource checks (nesting depth, total node count)
+	 * now walk back through `insertedAt` to attribute the error to the
+	 * earliest participating reference token, with its text in the
+	 * message, instead of always reporting line 1. Found and fixed a
+	 * latent bug this surfaced: `references.limits.final-nesting-depth.above`'s
+	 * original input made `a` alone already exceed Core's own §9 depth
+	 * limit, so Core's unconditional pre-resolution check fired first — the
+	 * case never actually exercised reference-caused attribution at all,
+	 * indistinguishable before now because both paths produced the same
+	 * "at line 1" message. Rebuilt so `a` alone sits exactly at the limit
+	 * and only the reference insertion pushes it over; both this case and
+	 * `references.limits.final-node-count.above` now assert `token` too.
+	 * R-113's line-1-fallback path (no participant found) is structurally
+	 * unreachable through either check — documented in
+	 * coverage/references.md rather than forced into a case, the same
+	 * reasoning as R-073.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".

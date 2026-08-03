@@ -28,7 +28,7 @@ import {
 } from './value'
 import {
 	parseCoreWithPositions, toPlainValue, toNative, NESTING_DEPTH_LIMIT,
-	type PositionedValue, type Diagnostic,
+	type PositionedValue, type Diagnostic, type InsertedAt,
 } from './core'
 
 type Meta = Record<string, any>
@@ -71,16 +71,23 @@ const isReferenceFreeP = (v: PositionedValue): boolean => {
 	return true
 }
 
-/** Structural deep copy for document-derived targets — preserves each leaf's own line/quoted (§4.2/R-104: still eligible for further resolution). */
+/**
+ * Structural deep copy for document-derived targets — preserves each leaf's
+ * own line/quoted (§4.2/R-104: still eligible for further resolution) and
+ * any existing `insertedAt` provenance from an earlier, nested resolution
+ * (R-112: a reference copied wholesale into a new position can itself
+ * already contain the result of an inner reference that resolved first —
+ * both insertion sites remain identifiable participants after the copy).
+ */
 const deepCopyPositioned = (v: PositionedValue): PositionedValue => {
 	switch (v.kind) {
-		case 'array': return { kind: 'array', items: v.items.map(deepCopyPositioned), line: v.line }
+		case 'array': return { kind: 'array', items: v.items.map(deepCopyPositioned), line: v.line, insertedAt: v.insertedAt }
 		case 'mapping': {
 			const entries = new Map<string, PositionedValue>()
 			for (const [k, c] of v.entries) entries.set(k, deepCopyPositioned(c))
-			return { kind: 'mapping', entries, line: v.line }
+			return { kind: 'mapping', entries, line: v.line, insertedAt: v.insertedAt }
 		}
-		case 'instant': return { kind: 'instant', value: new Date(v.value.getTime()), line: v.line }
+		case 'instant': return { kind: 'instant', value: new Date(v.value.getTime()), line: v.line, insertedAt: v.insertedAt }
 		default: return v
 	}
 }
@@ -134,12 +141,18 @@ const resolveTree = (
 			if (m) {
 				const isPartial = m[2] !== undefined
 				const key = (isPartial ? m[2] : m[1])!
+				// R-112: stamped on the copy's root only — descendants keep
+				// whatever insertedAt they already carried from an earlier,
+				// more deeply nested resolution (see deepCopyPositioned).
+				const insertedAt: InsertedAt = { line: node.line, token: val }
 				if (isPartial) {
 					const target = partials.get(key)
-					if (target !== undefined) return partialToPositioned(target, node.line)
+					if (target !== undefined) return { ...partialToPositioned(target, node.line), insertedAt }
 				} else {
 					const target = getNestedValueP(lookup, key)
-					if (target !== undefined && isReferenceFreeP(target)) return deepCopyPositioned(target)
+					if (target !== undefined && isReferenceFreeP(target)) {
+						return { ...deepCopyPositioned(target), insertedAt }
+					}
 				}
 				// Unresolved (or target not yet reference-free) — leave unchanged.
 			}
@@ -192,6 +205,12 @@ const resolveTree = (
 		return {
 			kind: 'array',
 			line: node.line,
+			// Phase 2 redundantly re-walks values phase 1 already resolved
+			// (harmless — see the module doc comment) — including, sometimes,
+			// a node that phase 1 already stamped with insertedAt. Must be
+			// carried over here, not just at the point of insertion, or a
+			// reference's provenance silently disappears on the second pass.
+			insertedAt: node.insertedAt,
 			items: node.items.map((item) => {
 				const resolved = resolveTree(item, lookup, partials, ctx)
 				if (item.kind === 'string' && resolved.kind === 'array') {
@@ -213,19 +232,44 @@ const resolveTree = (
 	if (node.kind === 'mapping') {
 		const entries = new Map<string, PositionedValue>()
 		for (const [k, c] of node.entries) entries.set(k, resolveTree(c, lookup, partials, ctx))
-		return { kind: 'mapping', entries, line: node.line }
+		return { kind: 'mapping', entries, line: node.line, insertedAt: node.insertedAt }
 	}
 
 	return node // null/bool/int/float/instant — nothing to resolve
 }
 
-const depthOfPositioned = (v: PositionedValue): number => {
-	if (v.kind === 'array') return v.items.length === 0 ? 1 : 1 + Math.max(...v.items.map(depthOfPositioned))
-	if (v.kind === 'mapping') {
-		const children = [...v.entries.values()]
-		return children.length === 0 ? 1 : 1 + Math.max(...children.map(depthOfPositioned))
+/**
+ * References §5/R-112: nesting-depth attribution needs more than a depth
+ * number — it needs to know which reference insertions lie on the actual
+ * deepest path, so the earliest of those (by line) can be blamed. Ties for
+ * "deepest child" all count: a violation can be reached via more than one
+ * maximal-depth branch, and every reference insertion along any of them is
+ * a genuine participant.
+ */
+type DepthResult = { depth: number; participants: InsertedAt[] }
+
+const depthWithProvenance = (v: PositionedValue): DepthResult => {
+	const own = v.insertedAt ? [v.insertedAt] : []
+	if (v.kind === 'array' || v.kind === 'mapping') {
+		const children = v.kind === 'array' ? v.items : [...v.entries.values()]
+		if (children.length === 0) return { depth: 1, participants: own }
+		const results = children.map(depthWithProvenance)
+		const maxDepth = Math.max(...results.map((r) => r.depth))
+		const deepestParticipants = results.filter((r) => r.depth === maxDepth).flatMap((r) => r.participants)
+		return { depth: 1 + maxDepth, participants: [...own, ...deepestParticipants] }
 	}
-	return 0
+	return { depth: 0, participants: own }
+}
+
+/** Earliest (lowest-line) participant, or null when none exist — R-113's "line 1" fallback applies then. */
+const earliestParticipant = (participants: InsertedAt[]): InsertedAt | null =>
+	participants.length === 0 ? null : participants.reduce((a, b) => (b.line < a.line ? b : a))
+
+/** Node-count attribution: every reference insertion anywhere in the tree contributes to the total. */
+const collectAllParticipants = (v: PositionedValue, acc: InsertedAt[]): void => {
+	if (v.insertedAt) acc.push(v.insertedAt)
+	if (v.kind === 'array') for (const item of v.items) collectAllParticipants(item, acc)
+	if (v.kind === 'mapping') for (const c of v.entries.values()) collectAllParticipants(c, acc)
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
@@ -345,19 +389,34 @@ export const parseReferences = <T extends Record<string, unknown> = Meta>(
 
 	// Core §9 nesting depth, re-checked on the final POST-substitution tree
 	// — inserted values can add depth Core's own pre-resolution check
-	// (inside parseCoreWithPositions) could not see yet.
+	// (inside parseCoreWithPositions) could not see yet. References §5/
+	// R-112: attributed to the lowest-line reference token among the
+	// insertions on the actual deepest path, or line 1 (R-113) when the
+	// excess depth came entirely from literal, non-reference content.
 	const finalValues = [...finalMap.values()]
-	const depth = finalValues.length === 0 ? 0 : Math.max(...finalValues.map(depthOfPositioned))
+	const depthResults = finalValues.map(depthWithProvenance)
+	const depth = depthResults.length === 0 ? 0 : Math.max(...depthResults.map((r) => r.depth))
 	if (depth > NESTING_DEPTH_LIMIT) {
-		throw new Error(`LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line 1`)
+		const participants = depthResults.filter((r) => r.depth === depth).flatMap((r) => r.participants)
+		const winner = earliestParticipant(participants)
+		throw new Error(winner
+			? `LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line ${winner.line}: "${winner.token}"`
+			: `LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line 1`)
 	}
 
-	// §6.2: total node count of the final result tree, both modes.
+	// §6.2: total node count of the final result tree, both modes. Same
+	// R-112 attribution — every reference insertion anywhere in the tree
+	// contributes to the total, so the lowest-line one is reported.
 	const finalEntries = new Map<string, LimaValue>()
 	for (const [k, v] of finalMap) finalEntries.set(k, toPlainValue(v))
 	const totalResultNodes = countNodes(LMapping(finalEntries))
 	if (totalResultNodes > RESULT_NODE_LIMIT) {
-		throw new Error(`LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line 1`)
+		const participants: InsertedAt[] = []
+		for (const v of finalMap.values()) collectAllParticipants(v, participants)
+		const winner = earliestParticipant(participants)
+		throw new Error(winner
+			? `LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line ${winner.line}: "${winner.token}"`
+			: `LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line 1`)
 	}
 
 	const out = emptyMapping()

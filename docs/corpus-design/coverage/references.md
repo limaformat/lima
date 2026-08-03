@@ -105,30 +105,56 @@ This matrix complements the full Core matrix. A References runner must additiona
 
 ## Known implementation gaps
 
-One check point cannot currently be exercised against `js/src/index.ts`:
+None currently. The previous entry, **R-112** (a global final-result
+resource error — nesting depth, total node count — is attributed to the
+lowest source position among the *reference tokens whose inserted/copied
+values participate* in the violation), is now implemented: `PositionedValue`
+(`js/src/core.ts`) carries an optional `insertedAt: { line, token }`,
+stamped on the root of any value copied in by a successful pure-reference
+resolution (`js/src/references.ts`'s `resolveTree`) and preserved through
+further deep copies and the redundant phase-2 re-walk. When a final-result
+limit is violated, the implementation walks back to find every
+`insertedAt` that participates — for nesting depth, those along the
+actual deepest path; for node count, anywhere in the tree — and reports
+the earliest by line, with the token text in the message.
+`references.limits.final-nesting-depth.above` and
+`references.limits.final-node-count.above` now assert `token` as well as
+`line`; the nesting-depth case's input had to be rebuilt (see below).
 
-- **R-112** (a global final-result resource error — nesting depth, nested
-  arrays, total node count — is attributed to the lowest source position
-  among the *reference tokens whose inserted/copied values participate* in
-  the violation): still not implemented. §5's error-ordering *collection*
-  mechanism itself is implemented and covered (see
-  `references.error-ordering.*`), and all four §6.2 final-result limits it
-  would attribute (scalar length, nesting depth, total node count, nested
-  arrays) are themselves fully implemented and covered (see
-  `references.limits.final-*`) — what's missing is specifically *token
-  attribution* for these four *global* checks. Every node in the current
-  implementation's internal tree (`js/src/core.ts`'s `PositionedValue`)
-  already carries its own source line — the reimplementation described
-  under R-120 below uses this to attribute ordinary reference-resolution
-  errors (unresolved reference, invalid interpolation, invalid reference
-  shape) to the actual offending node rather than a coarser key-level
-  fallback — but the four §6.2 *final-result* resource checks are computed
-  over the whole tree at once and don't yet walk it back down to find
-  which specific inserted node pushed the total over the limit. R-113 (the
-  line-1 fallback "when no source token can be identified") is already
-  correctly covered — the existing unconditional "at line 1" resource-limit
-  message satisfies it for the case that never had a candidate token in the
-  first place.
+Note on scope: §5's "nested arrays" is also listed among the global
+resource-error categories, but a nested array can only ever arise from a
+single, already-locally-identifiable pure-reference site (a reference
+resolving to an array, inserted as a sequence item — `INVALID_REFERENCE_SHAPE`,
+covered separately by `references.pure.array-as-sequence-element.*` and
+`references.unsupported.array-spreading`) — there is no multi-participant
+case to search for, so this category needed no new mechanism.
+
+**A pre-existing bug in `references.limits.final-nesting-depth.above`
+surfaced while implementing this**: its original input made `a` alone
+already exceed Core's own §9 depth limit (17, not ≤16), so Core's
+unconditional pre-resolution check threw before References resolution —
+and reference-caused `RESOURCE_LIMIT` line-1 fallback and a
+Core-triggered line-1 error produce byte-identical messages, so nothing
+before this distinguished them. The case has been rebuilt so `a` alone
+sits exactly at the limit (depth 16, Core accepts it) and only the
+reference insertion under `wrapper` pushes the total over.
+
+**R-113's line-1-fallback path (no participant identified) is not
+reachable through either final-result check, and is deliberately left
+without a corpus case rather than forced into one:** for nesting depth,
+any literal (non-reference) structure that alone reaches depth > 16 is
+already rejected by Core's own pre-resolution check before References
+resolution even begins — so a depth violation can only reach the final
+check with at least one reference insertion contributing to the deepest
+path. For node count, reaching 65,537+ nodes through literal content alone
+would require significantly more raw document text than Core's own §9
+document-size limit (65,536 UTF-8 bytes) permits — reference expansion is
+structurally the only way to grow the final tree far beyond what the
+source document itself can express, which is the entire reason the limit
+exists. Both final-result checks' own logic still branches correctly to
+the line-1, no-token message when no participant is found; that branch
+just has no legitimate input to exercise it, the same reason R-073 (see
+below) has no dedicated case.
 
 R-001 ("References parser includes complete Core behavior") is directly
 testable even without a separate `parseCore` — it is a behavioral claim,

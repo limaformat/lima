@@ -21,15 +21,27 @@ type Meta = Record<string, any>
 /** Every Lima mapping result must be a prototype-free object (Core §11.1). */
 const emptyMapping = (): Meta => Object.create(null)
 
+/**
+ * `insertedAt` is never set by Core — it's a References-only annotation
+ * (see references.ts's `resolveTree`), stamped on the root of a value
+ * copied in by a successful pure-reference resolution, with the source
+ * token and line that caused the insertion. It powers References §5's
+ * global-error attribution (R-112): when a final-result limit (nesting
+ * depth, total node count) is violated, the lowest-line `insertedAt` among
+ * the participating nodes identifies which reference token to blame — the
+ * spec requires the error message to include both the token and the line.
+ */
+export type InsertedAt = { line: number; token: string }
+
 export type PositionedValue =
-	| { kind: 'null'; line: number }
-	| { kind: 'bool'; value: boolean; line: number }
-	| { kind: 'int'; value: number; line: number }
-	| { kind: 'float'; value: number; line: number }
-	| { kind: 'string'; value: string; line: number; quoted: boolean }
-	| { kind: 'instant'; value: Date; line: number }
-	| { kind: 'array'; items: PositionedValue[]; line: number }
-	| { kind: 'mapping'; entries: Map<string, PositionedValue>; line: number }
+	| { kind: 'null'; line: number; insertedAt?: InsertedAt }
+	| { kind: 'bool'; value: boolean; line: number; insertedAt?: InsertedAt }
+	| { kind: 'int'; value: number; line: number; insertedAt?: InsertedAt }
+	| { kind: 'float'; value: number; line: number; insertedAt?: InsertedAt }
+	| { kind: 'string'; value: string; line: number; quoted: boolean; insertedAt?: InsertedAt }
+	| { kind: 'instant'; value: Date; line: number; insertedAt?: InsertedAt }
+	| { kind: 'array'; items: PositionedValue[]; line: number; insertedAt?: InsertedAt }
+	| { kind: 'mapping'; entries: Map<string, PositionedValue>; line: number; insertedAt?: InsertedAt }
 
 const withPos = (v: LimaValue, line: number): PositionedValue => {
 	switch (v.kind) {

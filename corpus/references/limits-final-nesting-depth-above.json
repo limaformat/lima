@@ -2,11 +2,12 @@
   "id": "references.limits.final-nesting-depth.above",
   "spec": "references",
   "section": "6.2",
-  "description": "A nesting depth of 17 reached via reference insertion throws in both modes.",
-  "input": "a:\n  k:\n    k:\n      k:\n        k:\n          k:\n            k:\n              k:\n                k:\n                  k:\n                    k:\n                      k:\n                        k:\n                          k:\n                            k:\n                              k:\n                                k:\n                                  k: v\nwrapper:\n  inner: ($a.k)\n",
+  "description": "`a` alone has depth exactly 16 (allowed by Core on its own — see §9). `a.k`, one level in, has depth 15. Copying it three wrapping levels deep under `wrapper` pushes the total to 18, exceeding the limit only once the reference is inserted — Core's own pre-resolution check on `a` never fires. References §5/R-112: the error is attributed to the `($a.k)` token's own line and includes the token text, not the line-1 fallback (R-113 applies only when no reference token can be identified as a participant, which does not hold here).",
+  "input": "a:\n  k:\n    k:\n      k:\n        k:\n          k:\n            k:\n              k:\n                k:\n                  k:\n                    k:\n                      k:\n                        k:\n                          k:\n                            k:\n                              k:\n                                leaf: v\nwrapper:\n  x1:\n    x2:\n      inner: ($a.k)\n",
   "expect": {
     "error": {
-      "line": 1,
+      "line": 21,
+      "token": "($a.k)",
       "code": "RESOURCE_LIMIT"
     }
   },

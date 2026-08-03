@@ -131,8 +131,18 @@ const rules: Rule[] = [
 		code: 'INVALID_FLOW_SYNTAX',
 	},
 	{
+		// References §5/R-112: a global final-result limit (nesting depth,
+		// total node count) optionally carries the attributed reference
+		// token as a trailing `: "(...)"` — present when a participating
+		// reference insertion was identified, absent for the R-113 "line 1,
+		// no identifiable token" fallback (a limit exceeded by literal
+		// content alone).
 		pattern: /exceeds maximum (length|size)|too many top-level key entries|nesting depth exceeds maximum/,
 		code: 'RESOURCE_LIMIT',
+		extract: (m) => {
+			const token = m.input?.match(/: "(\([%$][^)]+\))"\s*$/)
+			return token ? { token: token[1] } : {}
+		},
 	},
 	{
 		pattern: /invalid interpolation of "([^"]+)"/,
