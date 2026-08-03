@@ -1,16 +1,15 @@
 /**
- * Temporary adapter for the legacy hadley parser (js/src/index.ts).
+ * Adapter for js/src/index.ts's thrown errors.
  *
- * startauftrag.md explicitly allows a temporary adapter for legacy errors
- * while the corpus foundation is built. The legacy parser predates the
- * frozen 1.0 specs and throws plain `Error` objects with free-text messages
- * — it has no structured `code`/`line` fields. This adapter maps those
+ * The parser throws plain `Error` objects with free-text messages — it has
+ * no structured `code`/`line` fields of its own. This adapter maps those
  * messages to the small public LimaDiagnostic shape (docs/corpus-design/
- * error-api.md) on a best-effort basis.
+ * error-api.md) on a best-effort basis, independent of which internal
+ * module (core.ts / references.ts) actually threw.
  *
  * This is intentionally imprecise: a message the adapter cannot confidently
  * classify is reported as unmapped rather than guessing a code, so that an
- * unmapped legacy error can never be silently miscounted as a PASS.
+ * unmapped error can never be silently miscounted as a PASS.
  */
 
 import type { LimaDiagnostic, LimaDiagnosticCode } from './errors'
