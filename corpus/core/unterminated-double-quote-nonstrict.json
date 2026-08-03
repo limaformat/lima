@@ -1,0 +1,11 @@
+{
+  "id": "core.strings.double-quote.unterminated.non-strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "A double-quoted value with no closing quote falls back to a plain string from the opening quote to end of line in non-strict mode.",
+  "input": "v: \"hello world",
+  "expect": {
+    "result": { "v": "\"hello world" }
+  },
+  "tags": ["fallback", "strings", "quoted"]
+}

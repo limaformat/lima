@@ -1,0 +1,11 @@
+{
+  "id": "core.strings.unquoted.hash-escape.basic",
+  "spec": "core",
+  "section": "6.1.4",
+  "description": "In an unquoted value, \\# is an escaped hash: the backslash is removed and # is kept as a literal character, not a comment.",
+  "input": "value: text\\#rest",
+  "expect": {
+    "result": { "value": "text#rest" }
+  },
+  "tags": ["positive", "strings", "comments"]
+}

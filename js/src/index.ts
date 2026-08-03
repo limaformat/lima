@@ -169,8 +169,30 @@ const DASH_PREFIX_RE = /^-\s+/
 /** Matches any backslash escape sequence, valid or not — used to find unknown
  *  escapes in strict mode (Core §6.1.2, §10.1). */
 const ANY_ESCAPE_RE = /\\(u[0-9a-fA-F]{0,4}|U[0-9a-fA-F]{0,8}|x[0-9a-fA-F]{0,2}|.)/gs
-/** Matches exactly one recognised double-quote escape sequence. */
-const SINGLE_KNOWN_ESCAPE_RE = /^\\(["\\/bfnrt0]|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|x[0-9a-fA-F]{2})$/
+const SINGLE_CHAR_ESCAPES = '"\\/bfnrt' // deliberately excludes '0' — Core Appendix A treats a backslash-zero escape as unknown, not a null-character shorthand.
+const U_ESCAPE_RE = /^u([0-9a-fA-F]{4})$/
+const CAP_U_ESCAPE_RE = /^U([0-9a-fA-F]{8})$/
+const X_ESCAPE_RE = /^x([0-9a-fA-F]{2})$/
+
+/**
+ * Validates one escape's content (the text after the backslash, e.g. `n`,
+ * `u00e9`, `U0001F600`) against Core §6.1.2 — structurally *and*
+ * semantically: a `\uXXXX` in the UTF-16 surrogate range (U+D800–U+DFFF)
+ * or a `\UXXXXXXXX` beyond U+10FFFF matches the 4-or-8-hex-digit shape but
+ * is still invalid, and must not reach `String.fromCodePoint` (which
+ * throws a raw RangeError for out-of-range values, not a LIMA error).
+ */
+const isValidEscape = (escape: string): boolean => {
+	if (escape.length === 1) return SINGLE_CHAR_ESCAPES.includes(escape)
+	const u = escape.match(U_ESCAPE_RE)
+	if (u) {
+		const cp = parseInt(u[1], 16)
+		return cp < 0xd800 || cp > 0xdfff
+	}
+	const bigU = escape.match(CAP_U_ESCAPE_RE)
+	if (bigU) return parseInt(bigU[1], 16) <= 0x10ffff
+	return X_ESCAPE_RE.test(escape)
+}
 
 // Core §9 resource limits. All are hard errors in both modes — never gated
 // on `strict`; limits are security boundaries, not style preferences.
@@ -513,32 +535,34 @@ const stripComment = (val: string): string => {
 const unescapeDQ = (s: string, strict = false, line = 0): string => {
 	if (!s.includes('\\')) return s
 	if (strict) {
-		// Core §10.1: an unknown escape sequence throws in strict mode
-		// (non-strict already leaves it intact via the replace below).
+		// Core §10.1: an unknown or semantically invalid escape sequence
+		// (unknown char, incomplete/invalid hex, out-of-range \U, or a
+		// surrogate \u) throws in strict mode — non-strict already leaves
+		// it intact via the replace below.
 		for (const m of s.matchAll(ANY_ESCAPE_RE)) {
-			if (!SINGLE_KNOWN_ESCAPE_RE.test(m[0])) {
+			if (!isValidEscape(m[0].slice(1))) {
 				throw new Error(`LIMA: unknown escape sequence "${m[0]}" at line ${line}`)
 			}
 		}
 	}
-	return s.replace(/\\(["\\\/bfnrt0]|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|x[0-9a-fA-F]{2})/g,
-		(full, e) => {
-			switch (e[0]) {
-				case '"':  return '"'
-				case '\\': return '\\'
-				case '/':  return '/'
-				case 'b':  return '\b'
-				case 'f':  return '\f'
-				case 'n':  return '\n'
-				case 'r':  return '\r'
-				case 't':  return '\t'
-				case '0':  return '\0'
-				case 'u':  return String.fromCharCode(parseInt(e.slice(1), 16))
-				case 'U':  return String.fromCodePoint(parseInt(e.slice(1), 16))
-				case 'x':  return String.fromCharCode(parseInt(e.slice(1), 16))
-				default:   return full
-			}
-		})
+	return s.replace(ANY_ESCAPE_RE, (full) => {
+		const e = full.slice(1)
+		if (!isValidEscape(e)) return full // leave intact — invalid or unknown
+		switch (e[0]) {
+			case '"':  return '"'
+			case '\\': return '\\'
+			case '/':  return '/'
+			case 'b':  return '\b'
+			case 'f':  return '\f'
+			case 'n':  return '\n'
+			case 'r':  return '\r'
+			case 't':  return '\t'
+			case 'u':  return String.fromCharCode(parseInt(e.slice(1), 16))
+			case 'U':  return String.fromCodePoint(parseInt(e.slice(1), 16))
+			case 'x':  return String.fromCharCode(parseInt(e.slice(1), 16))
+			default:   return full
+		}
+	})
 }
 
 /**

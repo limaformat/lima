@@ -1,0 +1,16 @@
+{
+  "id": "core.strings.unquoted.fallback",
+  "spec": "core",
+  "section": "6.1.1",
+  "description": "A value matching none of null/boolean/number/date is an unquoted fallback string.",
+  "input": "value: hello world",
+  "expect": {
+    "result": {
+      "value": "hello world"
+    }
+  },
+  "tags": [
+    "positive",
+    "strings"
+  ]
+}

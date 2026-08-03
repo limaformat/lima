@@ -1,0 +1,11 @@
+{
+  "id": "core.strings.single-quote.apostrophe-escape",
+  "spec": "core",
+  "section": "6.1.3",
+  "description": "In a single-quoted string, \\' is the only special sequence and produces a single quote character.",
+  "input": "v: 'it\\'s'",
+  "expect": {
+    "result": { "v": "it's" }
+  },
+  "tags": ["positive", "strings", "escapes"]
+}

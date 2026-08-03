@@ -1,0 +1,11 @@
+{
+  "id": "core.strings.double-quote.utf16-surrogate.non-strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "A UTF-16 surrogate in a \\uXXXX escape (U+D800-U+DFFF) is left intact in non-strict mode.",
+  "input": "v: \"a\\ud800b\"",
+  "expect": {
+    "result": { "v": "a\\ud800b" }
+  },
+  "tags": ["fallback", "strings", "escapes"]
+}

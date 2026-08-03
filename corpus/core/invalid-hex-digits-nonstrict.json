@@ -1,0 +1,11 @@
+{
+  "id": "core.strings.double-quote.invalid-hex.non-strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "Invalid hex digits in a \\uXXXX escape are left intact in non-strict mode.",
+  "input": "v: \"a\\uZZZZb\"",
+  "expect": {
+    "result": { "v": "a\\uZZZZb" }
+  },
+  "tags": ["fallback", "strings", "escapes"]
+}

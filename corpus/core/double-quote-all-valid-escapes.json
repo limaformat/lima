@@ -1,0 +1,13 @@
+{
+  "id": "core.strings.double-quote.all-valid-escapes",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "All valid double-quoted escape sequences decode correctly: backslash, quote, slash, control characters, \\uXXXX, \\UXXXXXXXX, and \\xXX.",
+  "inputFile": "double-quote-all-valid-escapes.lima",
+  "expect": {
+    "result": {
+      "v": "\\ \" / \n \r \t \b \f é 😀 A"
+    }
+  },
+  "tags": ["positive", "strings", "escapes"]
+}

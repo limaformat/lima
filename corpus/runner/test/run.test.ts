@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(42)
+		expect(outcomes).toHaveLength(60)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -44,7 +44,15 @@ describe('runCorpus', () => {
 	 * key at all — KEY_RE's `"([^"]*)"` stopped at the escaped quote too —
 	 * strict mode never threw on a space between a quoted key's closing
 	 * quote and the colon, and duplicate-key detection only ever existed at
-	 * the top level, never for nested block mappings or flow mappings).
+	 * the top level, never for nested block mappings or flow mappings) →
+	 * 60/0/0 (18 new Core §6.1 Strings cases added; found and fixed three
+	 * more real bugs in double-quoted escape handling: `\0` was decoded as
+	 * a null character instead of being treated as an unknown escape per
+	 * Core Appendix A, an out-of-range `\U00110000` codepoint crashed with
+	 * a raw uncaught RangeError instead of falling back/throwing through
+	 * the normal escape-error path, and a UTF-16 surrogate in `\uXXXX`
+	 * (U+D800-U+DFFF) decoded to an invalid unpaired surrogate character
+	 * instead of being rejected).
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -53,7 +61,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 42, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 60, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

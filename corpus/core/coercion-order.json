@@ -1,0 +1,20 @@
+{
+  "id": "core.values.coercion-order",
+  "spec": "core",
+  "section": "6",
+  "description": "Scalar values are coerced in order: null, boolean, number, date, then string fallback.",
+  "input": "a: null\nb: true\nc: 42\nd: 2024-03-01\ne: hello",
+  "expect": {
+    "result": {
+      "a": null,
+      "b": true,
+      "c": 42,
+      "d": { "$type": "instant", "value": "2024-03-01T00:00:00Z" },
+      "e": "hello"
+    }
+  },
+  "tags": [
+    "positive",
+    "coercion"
+  ]
+}

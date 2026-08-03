@@ -1,0 +1,15 @@
+{
+  "id": "core.strings.double-quote.incomplete-unicode.strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "An incomplete \\uXXXX escape (fewer than 4 hex digits) throws in strict mode.",
+  "input": "v: \"a\\u12b\"",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_ESCAPE"
+    }
+  },
+  "tags": ["strict", "error", "strings", "escapes"]
+}

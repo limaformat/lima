@@ -1,0 +1,16 @@
+{
+  "id": "core.strings.double-quote.unterminated.strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "A double-quoted value with no closing quote throws in strict mode.",
+  "input": "v: \"hello world",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_QUOTE"
+    }
+  },
+  "notes": "Shares the same strict-error handling as trailing content after a closing quote (Core §10.1) — both are quote-structure errors under INVALID_QUOTE.",
+  "tags": ["strict", "error", "strings", "quoted"]
+}

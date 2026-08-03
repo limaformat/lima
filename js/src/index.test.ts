@@ -279,6 +279,28 @@ describe('quoted strings', () => {
 		expect(parse('sym: "\\x41"')).toEqual({ sym: 'A' })
 	})
 
+	it('decodes \\UXXXXXXXX (8-hex supplementary codepoint) in double-quoted string', () => {
+		expect(parse('emoji: "\\U0001F600"')).toEqual({ emoji: '😀' })
+	})
+
+	it('treats \\0 as an unknown escape, not a null character (Core Appendix A)', () => {
+		expect(parse('v: "a\\0b"')).toEqual({ v: 'a\\0b' })
+		expect(() => parse('v: "a\\0b"', { strict: true })).toThrow('LIMA')
+	})
+
+	it('leaves an out-of-range \\U codepoint intact instead of throwing a raw RangeError', () => {
+		// String.fromCodePoint throws natively for values beyond U+10FFFF —
+		// this must surface as the normal invalid-escape fallback/throw, not
+		// an uncaught native error.
+		expect(parse('v: "a\\U00110000b"')).toEqual({ v: 'a\\U00110000b' })
+		expect(() => parse('v: "a\\U00110000b"', { strict: true })).toThrow('LIMA')
+	})
+
+	it('leaves a \\uXXXX UTF-16 surrogate (U+D800–U+DFFF) intact instead of decoding it', () => {
+		expect(parse('v: "a\\ud800b"')).toEqual({ v: 'a\\ud800b' })
+		expect(() => parse('v: "a\\ud800b"', { strict: true })).toThrow('LIMA')
+	})
+
 	it('does NOT decode \\n in single-quoted string — backslash is literal', () => {
 		expect(parse("desc: 'line 1\\nline 2'")).toEqual({ desc: 'line 1\\nline 2' })
 	})

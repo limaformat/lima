@@ -1,0 +1,15 @@
+{
+  "id": "core.strings.double-quote.codepoint-out-of-range.strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "A \\UXXXXXXXX escape outside the Unicode range (> U+10FFFF) throws in strict mode.",
+  "input": "v: \"a\\U00110000b\"",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_ESCAPE"
+    }
+  },
+  "tags": ["strict", "error", "strings", "escapes"]
+}

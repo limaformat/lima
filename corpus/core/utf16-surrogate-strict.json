@@ -1,0 +1,15 @@
+{
+  "id": "core.strings.double-quote.utf16-surrogate.strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "A UTF-16 surrogate in a \\uXXXX escape (U+D800-U+DFFF) throws in strict mode.",
+  "input": "v: \"a\\ud800b\"",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_ESCAPE"
+    }
+  },
+  "tags": ["strict", "error", "strings", "escapes"]
+}

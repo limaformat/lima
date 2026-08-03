@@ -1,0 +1,11 @@
+{
+  "id": "core.strings.double-quote.codepoint-out-of-range.non-strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "A \\UXXXXXXXX escape outside the Unicode range (> U+10FFFF) is left intact in non-strict mode.",
+  "input": "v: \"a\\U00110000b\"",
+  "expect": {
+    "result": { "v": "a\\U00110000b" }
+  },
+  "tags": ["fallback", "strings", "escapes"]
+}

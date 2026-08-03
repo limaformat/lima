@@ -1,0 +1,15 @@
+{
+  "id": "core.strings.double-quote.invalid-hex.strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "Invalid hex digits in a \\uXXXX escape throw in strict mode.",
+  "input": "v: \"a\\uZZZZb\"",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_ESCAPE"
+    }
+  },
+  "tags": ["strict", "error", "strings", "escapes"]
+}

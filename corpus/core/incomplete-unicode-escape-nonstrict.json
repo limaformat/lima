@@ -1,0 +1,11 @@
+{
+  "id": "core.strings.double-quote.incomplete-unicode.non-strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "An incomplete \\uXXXX escape (fewer than 4 hex digits) is left intact in non-strict mode.",
+  "input": "v: \"a\\u12b\"",
+  "expect": {
+    "result": { "v": "a\\u12b" }
+  },
+  "tags": ["fallback", "strings", "escapes"]
+}

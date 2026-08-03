@@ -1,0 +1,11 @@
+{
+  "id": "core.strings.unquoted.hash-escape.multiple-backslashes",
+  "spec": "core",
+  "section": "6.1.4",
+  "description": "Only the immediately preceding backslash is considered when escaping #; earlier backslashes are not counted and remain literal.",
+  "input": "value: text\\\\\\#rest",
+  "expect": {
+    "result": { "value": "text\\\\#rest" }
+  },
+  "tags": ["positive", "strings", "comments"]
+}
