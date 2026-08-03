@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.continuation.bare-dropped",
+  "spec": "core",
+  "section": "6.1.6",
+  "description": "A ^^ line with no further content is silently dropped; no trailing space is added to the previous line.",
+  "input": "description: |\n  Line one.\n  ^^\n  Line two.\n",
+  "expect": {
+    "result": { "description": "Line one.\nLine two." }
+  },
+  "tags": ["positive", "block-scalar", "continuation"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.dedent-ends-scalar",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "A line dedented to the introducing key's indentation or less ends the block scalar and is parsed as the next top-level entry.",
+  "input": "description: |\n  Text\ntitle: Hello\n",
+  "expect": {
+    "result": { "description": "Text", "title": "Hello" }
+  },
+  "tags": ["positive", "block-scalar"]
+}

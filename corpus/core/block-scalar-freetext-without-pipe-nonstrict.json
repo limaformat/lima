@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.freetext-without-pipe.non-strict",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "Indented freetext without a | marker is not a valid multi-line string; the key's value is null in non-strict mode.",
+  "input": "value:\n  freetext\n",
+  "expect": {
+    "result": { "value": null }
+  },
+  "tags": ["fallback", "block-scalar"]
+}

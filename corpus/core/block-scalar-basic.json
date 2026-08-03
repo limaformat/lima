@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.basic",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "A | marker alone on the first line introduces a multiline string; lines are joined with a single newline.",
+  "input": "description: |\n  Line one.\n  Line two.\n",
+  "expect": {
+    "result": { "description": "Line one.\nLine two." }
+  },
+  "tags": ["positive", "block-scalar"]
+}

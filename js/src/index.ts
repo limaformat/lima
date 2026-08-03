@@ -925,7 +925,12 @@ const parseBlock = (
 			}
 		} else {
 			// ── Map entry ───────────────────────────────────────────────────────
-			if (!result) result = emptyMapping()
+			// `result` is only created once a line is confirmed to actually
+			// contribute a map entry (below) — not eagerly here. Core §6.1.5 /
+			// §10.1: indented freetext with no `:` and no `|` marker is not a
+			// valid multi-line string; the key's value must stay `null` in
+			// non-strict mode, which requires `result` to still be `null` when
+			// every line at this level turns out to be unrecognized.
 			if (Array.isArray(result)) {
 				if (strict) throw new Error(`LIMA: mixed map and array entries for the same key at line ${baseLine + idx}`)
 				idx++; continue
@@ -933,6 +938,7 @@ const parseBlock = (
 
 			const colonPos = findKeySep(trimmed)
 			if (colonPos !== -1) {
+				if (!result) result = emptyMapping()
 				const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim())
 				checkKeyLength(itemKey, baseLine + idx)
 				checkDuplicateKey(result as Meta, itemKey, baseLine + idx, strict)
@@ -942,6 +948,7 @@ const parseBlock = (
 				;(result as Meta)[itemKey] = flowSeq !== null ? flowSeq : (flowMap !== null ? flowMap : resolveValue(itemVal, metadata, partials, strict, baseLine + idx))
 				idx++
 			} else if (trimmed.endsWith(':')) {
+				if (!result) result = emptyMapping()
 				// Key with no inline value → check for a nested block on the next lines
 				const itemKey = stripKeyQuotes(trimmed.slice(0, -1).trim())
 				checkKeyLength(itemKey, baseLine + idx)
@@ -960,7 +967,13 @@ const parseBlock = (
 				}
 				;(result as Meta)[itemKey] = null
 			} else {
-				if (strict) throw new Error(`LIMA: unrecognized line at line ${baseLine + idx}: "${trimmed}"`)
+				// Core §6.1.5: indented freetext without a `|` marker. Non-strict:
+				// leave `result` as-is (stays `null` unless a real entry already
+				// exists at this level). Strict: throw — Core §10.1 lists this as
+				// its own strict-error row, distinct from other block-structure
+				// errors, but closest in kind to INVALID_INDENTATION (the codes
+				// stay deliberately coarse, per docs/corpus-design/error-api.md).
+				if (strict) throw new Error(`LIMA: indented freetext without a block scalar marker at line ${baseLine + idx}: "${trimmed}"`)
 				idx++ // unrecognized line — skip
 			}
 		}
@@ -1188,30 +1201,22 @@ const parse = <T extends Record<string, unknown> = Meta>(
 			// ^^ at the end of a line merges it with the next (LIMA-specific sugar).
 			const isPipeBlock   = lines[0].trim() === '|'
 			const isFoldedBlock = !isPipeBlock && lines[0].trim() === '>'
-			const isBlockScalar = isPipeBlock || isFoldedBlock
-			if (isBlockScalar) lines.shift()
 
-			// Strip comment-only lines from continuation lines (not in block scalars
-			// where '#' is literal content). Comment lines can appear between top-level
-			// keys and end up as trailing lines of the preceding key's raw value after
-			// KEY_RE splitting.
-			if (!isBlockScalar) {
-				let wi = 0
-				for (let li = 0; li < lines.length; li++) {
-					if (lines[li].trimStart().charCodeAt(0) !== 35) lines[wi++] = lines[li]
-				}
-				lines.length = wi
-			}
+			// Content lines are re-split directly from `raw` rather than reused
+			// from the `lines` array above: that array was built by skipping
+			// every blank raw line, which is correct for map/array block bodies
+			// but would silently drop internal blank lines that §6.1.5 requires
+			// to be preserved as empty strings in the joined block-scalar result.
+			const bodyLines = raw.slice(raw.indexOf('\n') + 1).split('\n')
 
-			// Pass 1: find the minimum indentation across relevant lines.
-			// For block scalars all lines count; for inline multi-line, line 0 is
-			// flush against the key and not representative, so start from line 1.
-			// The result (minIndent) is capped at key.length + 2 (key + ": ") to
-			// avoid over-trimming when content is aligned past the key column.
+			// Pass 1: find the minimum indentation across non-empty content
+			// lines. Empty lines do not participate (§6.1.5). The result
+			// (minIndent) is capped at key.length + 2 (key + ": ") to avoid
+			// over-trimming when content is aligned past the key column.
 			let minIndent = Infinity
-			for (let li = isBlockScalar ? 0 : 1; li < lines.length; li++) {
-				const line   = lines[li]
-				const indent = line.length - line.trimStart().length
+			for (const bodyLine of bodyLines) {
+				if (!bodyLine.trim()) continue
+				const indent = bodyLine.length - bodyLine.trimStart().length
 				if (indent < minIndent) minIndent = indent
 			}
 			minIndent = Math.min(minIndent, key.length + 2)
@@ -1226,10 +1231,8 @@ const parse = <T extends Record<string, unknown> = Meta>(
 			// If ^^ appears on the very first line (mergedLines is empty), the
 			// marker is stripped and the content is kept to avoid data loss.
 			const mergedLines: string[] = []
-			for (let li = 0; li < lines.length; li++) {
-				const dedented = trimAmt > 0 && (isBlockScalar || li > 0)
-					? lines[li].slice(trimAmt)
-					: lines[li]
+			for (const bodyLine of bodyLines) {
+				const dedented = trimAmt > 0 ? bodyLine.slice(trimAmt) : bodyLine
 				const isContinuation = isPipeBlock && dedented.startsWith('^^')
 				const content = (isContinuation ? dedented.slice(2) : dedented).trimEnd()
 				if (isContinuation) {
@@ -1244,6 +1247,10 @@ const parse = <T extends Record<string, unknown> = Meta>(
 					mergedLines.push(content)
 				}
 			}
+
+			// §6.1.5: trailing empty lines/newlines at the end of the scalar are
+			// removed; internal blanks (preserved above) are left untouched.
+			while (mergedLines.length > 0 && mergedLines[mergedLines.length - 1] === '') mergedLines.pop()
 
 			if (isFoldedBlock) {
 				// Fold: all lines joined with a single space

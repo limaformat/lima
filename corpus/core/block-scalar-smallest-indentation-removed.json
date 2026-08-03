@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.smallest-indentation-removed",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "The content indentation is the smallest number of leading spaces among all non-empty content lines; only that uniform amount is removed from every line.",
+  "input": "description: |\n    Line one.\n      Line two indented more.\n",
+  "expect": {
+    "result": { "description": "Line one.\n  Line two indented more." }
+  },
+  "tags": ["positive", "block-scalar"]
+}

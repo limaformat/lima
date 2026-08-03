@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.continuation.first-line-strips-marker",
+  "spec": "core",
+  "section": "6.1.6",
+  "description": "^^ on the first content line of a block has no previous line to append to; the marker is stripped and the content is kept as-is.",
+  "input": "description: |\n  ^^First line is actually first.\n  Second line.\n",
+  "expect": {
+    "result": { "description": "First line is actually first.\nSecond line." }
+  },
+  "tags": ["positive", "block-scalar", "continuation"]
+}

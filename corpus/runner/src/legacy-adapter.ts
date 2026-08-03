@@ -47,6 +47,14 @@ const rules: Rule[] = [
 		code: 'INVALID_INDENTATION',
 	},
 	{
+		// Core §6.1.5/§10.1: indented freetext with no `|` marker and no `:` —
+		// its own strict-error-list row, but not distinct enough from other
+		// block-structure errors to warrant a new code (error-api.md keeps the
+		// codes deliberately coarse).
+		pattern: /indented freetext without a block scalar marker/,
+		code: 'INVALID_INDENTATION',
+	},
+	{
 		pattern: /unknown escape sequence/,
 		code: 'INVALID_ESCAPE',
 	},

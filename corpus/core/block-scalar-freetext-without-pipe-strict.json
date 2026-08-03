@@ -1,0 +1,16 @@
+{
+  "id": "core.block-scalar.freetext-without-pipe.strict",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "Indented freetext without a | marker throws in strict mode (Core §10.1: its own strict-error-list row).",
+  "input": "value:\n  freetext\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "notes": "No dedicated diagnostic code fits this condition precisely; INVALID_INDENTATION is the closest existing category and the codes are deliberately kept coarse (docs/corpus-design/error-api.md).",
+  "tags": ["strict", "error", "block-scalar"]
+}

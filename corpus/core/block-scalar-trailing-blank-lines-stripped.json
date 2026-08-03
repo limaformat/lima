@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.trailing-blank-lines-stripped",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "All trailing empty lines and newlines at the end of a block scalar are removed; the parsed value ends with the final non-empty content line.",
+  "input": "description: |\n  Line one.\n\n\nnext: value\n",
+  "expect": {
+    "result": { "description": "Line one.", "next": "value" }
+  },
+  "tags": ["positive", "block-scalar"]
+}

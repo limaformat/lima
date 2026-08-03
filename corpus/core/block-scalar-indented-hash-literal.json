@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.indented-hash-literal",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "A # line more deeply indented than the introducing key is literal scalar content, not a comment.",
+  "input": "description: |\n  Text\n  # indented comment\n  More text\n",
+  "expect": {
+    "result": { "description": "Text\n# indented comment\nMore text" }
+  },
+  "tags": ["positive", "block-scalar"]
+}

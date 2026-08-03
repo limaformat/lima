@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.internal-blank-line-preserved",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "An empty line between scalar content lines belongs to the scalar and is preserved as an empty string in the joined result.",
+  "input": "description: |\n  Line one.\n\n  Line two.\n",
+  "expect": {
+    "result": { "description": "Line one.\n\nLine two." }
+  },
+  "tags": ["positive", "block-scalar"]
+}

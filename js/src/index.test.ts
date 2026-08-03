@@ -180,6 +180,25 @@ describe('strings', () => {
 		expect(result.description).toBe('This line ends with ^^ and this is the next one.')
 	})
 
+	it('preserves an internal blank line inside a | block scalar as an empty string (Core §6.1.5)', () => {
+		const result = parse('description: |\n  Line one.\n\n  Line two.\n')
+		expect(result.description).toBe('Line one.\n\nLine two.')
+	})
+
+	it('strips trailing blank lines at the end of a | block scalar but keeps internal ones', () => {
+		const result = parse('description: |\n  Line one.\n\n\nnext: value\n')
+		expect(result.description).toBe('Line one.')
+		expect(result.next).toBe('value')
+	})
+
+	it('indented freetext with no | marker and no colon yields null in non-strict mode (Core §6.1.5/§10.1)', () => {
+		expect(parse('value:\n  freetext\n')).toEqual({ value: null })
+	})
+
+	it('indented freetext with no | marker and no colon throws in strict mode', () => {
+		expect(() => parse('value:\n  freetext\n', { strict: true })).toThrow('LIMA')
+	})
+
 	it('# in an unquoted URL is treated as a comment', () => {
 		expect(parse('link: https://example.com/page#section')).toEqual({ link: 'https://example.com/page' })
 	})

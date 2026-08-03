@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(60)
+		expect(outcomes).toHaveLength(70)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -52,7 +52,16 @@ describe('runCorpus', () => {
 	 * a raw uncaught RangeError instead of falling back/throwing through
 	 * the normal escape-error path, and a UTF-16 surrogate in `\uXXXX`
 	 * (U+D800-U+DFFF) decoded to an invalid unpaired surrogate character
-	 * instead of being rejected).
+	 * instead of being rejected) → 70/0/0 (10 new Core §6.1.5/§6.1.6 block-
+	 * scalar/continuation cases added; found and fixed two more real bugs:
+	 * an internal blank line inside a `|` block scalar was silently dropped
+	 * instead of being preserved as an empty string in the joined result
+	 * (the per-key line split filtered out every blank raw line before the
+	 * block-scalar logic ever saw them), and indented freetext with no `|`
+	 * marker and no `:` produced an empty mapping `{}` instead of `null` in
+	 * non-strict mode, because `parseBlock`'s map-entry branch eagerly
+	 * created the result mapping before confirming the line was a valid
+	 * entry).
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -61,7 +70,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 60, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 70, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {
