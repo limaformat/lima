@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import { loadCorpus, type LoadedCase, type LoadedCorpus } from './loader'
 import { corpusValuesEqual, diffCorpusValues, hasOnlySafeOwnDataProperties } from './normalize'
 import { adaptLegacyError } from './legacy-adapter'
-import { compareDiagnostic } from './errors'
+import { compareDiagnostic, type LimaDiagnostic } from './errors'
 import { parse, parseCore } from '../../../js/src/index'
 
 export type Classification = 'PASS' | 'FAIL' | 'BLOCKED'
@@ -13,15 +13,15 @@ export interface CaseOutcome {
 	classification: Classification
 	/** Why the case failed or was blocked. Empty when classification is PASS. */
 	reasons: string[]
-	/** Non-blocking observations (e.g. legacy console.warn output). */
+	/** Non-blocking observations (e.g. a warning the adapter could not classify). */
 	notes: string[]
 }
 
 /**
- * Runs the case's chosen entry point (`c.api`) and captures any
- * `console.warn` output instead of letting it reach the terminal — the
- * parser has no `onWarning` callback (a known, expected deviation from the
- * frozen Core API), so this is the only way to observe its warnings at all.
+ * Runs the case's chosen entry point (`c.api`) via the real `onWarning`
+ * callback (Core §11.2) — each raw `{message, line}` diagnostic is run
+ * through the same message-classifying adapter used for thrown errors, so
+ * `expect.warnings` can finally be compared for real instead of only noted.
  * `api: "core"` calls `parseCore` directly, with no partials option (Core
  * has none — the schema/loader reject a case that tries to combine the
  * two), which is how C-210/R-120 (parseCore never resolves references) are
@@ -29,33 +29,32 @@ export interface CaseOutcome {
  */
 function invokeParser(c: LoadedCase): {
 	result: { threw: false; value: unknown } | { threw: true; error: unknown }
-	capturedWarnings: string[]
+	warnings: LimaDiagnostic[]
+	unmappedWarnings: string[]
 } {
-	const capturedWarnings: string[] = []
-	const originalWarn = console.warn
-	console.warn = (...args: unknown[]) => {
-		capturedWarnings.push(args.map(String).join(' '))
+	const warnings: LimaDiagnostic[] = []
+	const unmappedWarnings: string[] = []
+	const onWarning = (d: { message: string; line: number }) => {
+		const adapted = adaptLegacyError(d.message)
+		if (adapted.mapped) warnings.push(adapted.diagnostic)
+		else unmappedWarnings.push(d.message)
 	}
 	try {
 		const value =
 			c.api === 'core'
-				? parseCore(c.input, { strict: c.options.strict })
-				: parse(c.input, { partials: c.options.partials, strict: c.options.strict })
-		return { result: { threw: false, value }, capturedWarnings }
+				? parseCore(c.input, { strict: c.options.strict, onWarning })
+				: parse(c.input, { partials: c.options.partials, strict: c.options.strict, onWarning })
+		return { result: { threw: false, value }, warnings, unmappedWarnings }
 	} catch (error) {
-		return { result: { threw: true, error }, capturedWarnings }
-	} finally {
-		console.warn = originalWarn
+		return { result: { threw: true, error }, warnings, unmappedWarnings }
 	}
 }
 
 function runCase(c: LoadedCase): CaseOutcome {
-	const { result, capturedWarnings } = invokeParser(c)
+	const { result, warnings, unmappedWarnings } = invokeParser(c)
 	const notes =
-		capturedWarnings.length > 0
-			? [
-					`parser emitted console.warn (no onWarning support to compare against expect.warnings): ${capturedWarnings.join(' | ')}`,
-				]
+		unmappedWarnings.length > 0
+			? [`parser emitted a warning the adapter could not classify: ${unmappedWarnings.join(' | ')}`]
 			: []
 
 	if (c.expectation.kind === 'result') {
@@ -71,6 +70,18 @@ function runCase(c: LoadedCase): CaseOutcome {
 		if (!hasOnlySafeOwnDataProperties(result.value)) {
 			reasons.push('result is not a prototype-free object with only own data properties (binding check)')
 		}
+
+		const expectedWarnings = c.expectation.warnings
+		if (warnings.length !== expectedWarnings.length) {
+			reasons.push(`expected ${expectedWarnings.length} warning(s), got ${warnings.length}`)
+		} else {
+			expectedWarnings.forEach((expected, i) => {
+				for (const m of compareDiagnostic(warnings[i], expected)) {
+					reasons.push(`warnings[${i}].${m.field}: expected ${JSON.stringify(m.expected)}, got ${JSON.stringify(m.actual)}`)
+				}
+			})
+		}
+
 		return {
 			id: c.id,
 			sourceFile: c.sourceFile,

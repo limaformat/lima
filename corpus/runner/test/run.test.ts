@@ -308,6 +308,16 @@ describe('runCorpus', () => {
 	 * document, evidence that References is built on Core rather than a
 	 * parallel reimplementation, following the same cross-referenced-case
 	 * pattern already used for R-083's order-independence claim).
+	 * Still 232/0/0 after closing C-202: parseCore/parseReferences gained a
+	 * real `onWarning` option (Core §11.2's exact `{message, line}` shape),
+	 * and every `console.warn` call was removed (the spec explicitly
+	 * forbids emitting warnings to an implicit output channel once
+	 * `onWarning` exists). `invokeParser` here now wires `onWarning` through
+	 * the same message-classifying adapter used for thrown errors, and
+	 * `runCase` compares the result against `expect.warnings` for real —
+	 * previously loaded but never actually checked. No case count changed;
+	 * the four pre-existing duplicate-key-warning cases already declared
+	 * the `expect.warnings` this enables verifying.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".

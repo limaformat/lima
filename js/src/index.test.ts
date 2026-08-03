@@ -1780,18 +1780,27 @@ describe('duplicate keys', () => {
 		expect(result.title).toBe('Second')
 	})
 
-	it('emits console.warn for duplicate key', () => {
-		const warnings: string[] = []
+	it('emits a duplicate-key warning via onWarning, with message and line', () => {
+		const warnings: { message: string; line: number }[] = []
+		parse(dedent(`
+			title: First
+			title: Second
+		`), { onWarning: (d) => warnings.push(d) })
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0].message).toContain('duplicate key "title"')
+		expect(warnings[0].line).toBe(2)
+	})
+
+	it('never emits warnings to console.warn (Core §11.2: only via onWarning)', () => {
 		const orig = console.warn
-		console.warn = (msg: string) => warnings.push(msg)
+		let called = false
+		console.warn = () => { called = true }
 		parse(dedent(`
 			title: First
 			title: Second
 		`))
 		console.warn = orig
-		expect(warnings).toHaveLength(1)
-		expect(warnings[0]).toContain('duplicate key "title"')
-		expect(warnings[0]).toContain('at line 2')
+		expect(called).toBe(false)
 	})
 
 	it('throws on duplicate key in strict mode', () => {
@@ -1810,15 +1819,12 @@ describe('duplicate keys', () => {
 	})
 
 	it('warns and last-value-wins for a duplicate key in a nested block mapping', () => {
-		const warnings: string[] = []
-		const orig = console.warn
-		console.warn = (msg: string) => warnings.push(msg)
-		const result = parse('author:\n  name: Alice\n  name: Bob')
-		console.warn = orig
+		const warnings: { message: string; line: number }[] = []
+		const result = parse('author:\n  name: Alice\n  name: Bob', { onWarning: (d) => warnings.push(d) })
 		expect(result.author).toEqual({ name: 'Bob' })
 		expect(warnings).toHaveLength(1)
-		expect(warnings[0]).toContain('duplicate key "name"')
-		expect(warnings[0]).toContain('at line 3')
+		expect(warnings[0].message).toContain('duplicate key "name"')
+		expect(warnings[0].line).toBe(3)
 	})
 
 	it('throws on a duplicate key in a nested block mapping in strict mode', () => {
@@ -1828,14 +1834,11 @@ describe('duplicate keys', () => {
 	})
 
 	it('warns and last-value-wins for a duplicate key in a flow mapping', () => {
-		const warnings: string[] = []
-		const orig = console.warn
-		console.warn = (msg: string) => warnings.push(msg)
-		const result = parse('author: {name: Alice, name: Bob}')
-		console.warn = orig
+		const warnings: { message: string; line: number }[] = []
+		const result = parse('author: {name: Alice, name: Bob}', { onWarning: (d) => warnings.push(d) })
 		expect(result.author).toEqual({ name: 'Bob' })
 		expect(warnings).toHaveLength(1)
-		expect(warnings[0]).toContain('duplicate key "name"')
+		expect(warnings[0].message).toContain('duplicate key "name"')
 	})
 
 	it('throws on a duplicate key in a flow mapping in strict mode', () => {

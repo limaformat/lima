@@ -139,14 +139,16 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 
 ## Known implementation gaps
 
-One check point cannot currently be exercised against `js/src/index.ts`
-and is deliberately left without a corpus case rather than forced into one:
-
-- **C-202** (`onWarning` receives a Diagnostic): the implementation has no
-  `onWarning` callback — it emits `console.warn` directly (see
-  `corpus/runner/src/run.ts`'s `invokeParser` doc comment). Warnings
-  are captured and reported as a non-blocking note, never compared against
-  `expect.warnings`.
+None currently. The previous entry, **C-202** (`onWarning` receives a
+Diagnostic with message and line), is now covered: `parseCore`/
+`parseReferences` both accept an `onWarning?: (diagnostic: { message:
+string; line: number }) => void` option (Core §11.2's exact shape) and
+never emit to `console.warn` — the four existing duplicate-key-warning
+cases (`core.keys.duplicate.*-warning`) are compared against
+`expect.warnings` for real now (the corpus runner's `invokeParser` wires
+`onWarning` through the same message-classifying adapter used for thrown
+errors — see `corpus/runner/src/run.ts` — instead of capturing
+`console.warn` output, which no longer happens at all).
 
 **C-210** (Core treats `($key)`/`(%key)` as plain strings) is covered by
 `core.api.parse-core-never-resolves-references`, which calls `parseCore`

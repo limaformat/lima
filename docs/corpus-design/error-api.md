@@ -50,7 +50,14 @@ export class LimaError extends Error {
 
 ## Warnings
 
-`onWarning` receives a `LimaDiagnostic` directly.
+The frozen Core spec (§11.2) defines `onWarning`'s own parameter as the
+minimal `{ message: string; line: number }` — not the richer
+`LimaDiagnostic` above, which is a corpus-internal comparison concept, the
+same as it is for thrown errors. The corpus runner classifies a captured
+warning message through the same adapter used for thrown errors
+(`corpus/runner/src/legacy-adapter.ts`), producing a `LimaDiagnostic` to
+compare against `expect.warnings` — the public `js/` API itself only ever
+exposes the two-field shape the spec requires.
 
 ## Code groups
 

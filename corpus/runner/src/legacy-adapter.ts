@@ -1,15 +1,17 @@
 /**
- * Adapter for js/src/index.ts's thrown errors.
+ * Adapter for js/src/index.ts's thrown errors and onWarning messages.
  *
- * The parser throws plain `Error` objects with free-text messages — it has
- * no structured `code`/`line` fields of its own. This adapter maps those
- * messages to the small public LimaDiagnostic shape (docs/corpus-design/
- * error-api.md) on a best-effort basis, independent of which internal
- * module (core.ts / references.ts) actually threw.
+ * The parser throws plain `Error` objects with free-text messages, and its
+ * `onWarning` callback delivers only `{message, line}` (Core §11.2's exact
+ * shape) — neither carries a structured `code` field of its own. This
+ * adapter maps both kinds of message to the small public LimaDiagnostic
+ * shape (docs/corpus-design/error-api.md) on a best-effort basis,
+ * independent of which internal module (core.ts / references.ts) actually
+ * threw or warned.
  *
  * This is intentionally imprecise: a message the adapter cannot confidently
  * classify is reported as unmapped rather than guessing a code, so that an
- * unmapped error can never be silently miscounted as a PASS.
+ * unmapped error or warning can never be silently miscounted as a PASS.
  */
 
 import type { LimaDiagnostic, LimaDiagnosticCode } from './errors'
@@ -140,8 +142,9 @@ const rules: Rule[] = [
 ]
 
 /**
- * Adapts a legacy error (thrown `Error`, or a captured `console.warn`
- * message string) to the small public diagnostic shape.
+ * Adapts a thrown `Error` or a raw warning message string (from
+ * `onWarning`'s `{message, line}`) to the small public diagnostic shape —
+ * both are free-text messages in the same style, classified the same way.
  */
 export function adaptLegacyError(error: unknown): AdaptedDiagnostic {
 	const message = error instanceof Error ? error.message : String(error)

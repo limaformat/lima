@@ -125,11 +125,25 @@ const checkKeyLength = (key: string, line: number): void => {
 	}
 }
 
-const checkDuplicateKeyMap = (entries: Map<string, unknown>, key: string, line: number, strict: boolean): void => {
+/** Core §11.2: the minimal `onWarning` diagnostic shape — message and line only. */
+export type Diagnostic = { message: string; line: number }
+
+/**
+ * Threaded through the whole recursive descent instead of a bare `strict`
+ * boolean, so `onWarning` reaches every call site that can emit a warning
+ * (currently just duplicate-key detection) without growing every
+ * function's parameter list further as new warning types are added.
+ */
+export type ParseContext = { strict: boolean; onWarning?: (diagnostic: Diagnostic) => void }
+
+const checkDuplicateKeyMap = (entries: Map<string, unknown>, key: string, line: number, ctx: ParseContext): void => {
 	if (!entries.has(key)) return
-	const msg = `LIMA: duplicate key "${key}" at line ${line} — last value wins`
-	if (strict) throw new Error(msg)
-	console.warn(msg)
+	const message = `LIMA: duplicate key "${key}" at line ${line} — last value wins`
+	if (ctx.strict) throw new Error(message)
+	// Core §11.2: "Implementations MUST NOT emit warnings to any implicit
+	// output channel (e.g. console.warn)." Silently discarded when no
+	// onWarning callback is provided — never a fallback to console.warn.
+	ctx.onWarning?.({ message, line })
 }
 
 const leadingSpaces = (line: string): number => {
@@ -309,30 +323,30 @@ const stripComment = (val: string): string => {
  * items here, to keep this a faithful behavioral port: the "unclosed flow
  * bracket" throw and the "non-whitespace after closing quote" strict throw.
  */
-const parseQuotedOrTyped = (raw: string, strict: boolean, line: number, topLevel: boolean): PositionedValue => {
+const parseQuotedOrTyped = (raw: string, ctx: ParseContext, line: number, topLevel: boolean): PositionedValue => {
 	const first = raw.charCodeAt(0)
 	if (first === 34 || first === 39) {
 		if (raw.charCodeAt(raw.length - 1) === first) {
 			const unquoted = raw.slice(1, -1)
-			const value = first === 34 ? unescapeDQ(unquoted, strict, line) : unquoted.replace(/\\'/g, "'")
+			const value = first === 34 ? unescapeDQ(unquoted, ctx.strict, line) : unquoted.replace(/\\'/g, "'")
 			checkScalarLimit(LString(value), line)
 			return { kind: 'string', value, line, quoted: true }
 		}
-		if (topLevel && strict) {
+		if (topLevel && ctx.strict) {
 			throw new Error(`LIMA: non-whitespace content after closing quote at line ${line}`)
 		}
 	}
-	const typed = toType(raw, strict, line)
+	const typed = toType(raw, ctx.strict, line)
 	checkScalarLimit(typed, line)
 	return withPos(typed, line)
 }
 
-const parseScalarValue = (raw: string, strict: boolean, line: number): PositionedValue => {
+const parseScalarValue = (raw: string, ctx: ParseContext, line: number): PositionedValue => {
 	const first = raw.charCodeAt(0)
-	if (strict && (first === 91 || first === 123)) {
+	if (ctx.strict && (first === 91 || first === 123)) {
 		throw new Error(`LIMA: unclosed flow ${first === 91 ? 'sequence' : 'mapping'} at line ${line}`)
 	}
-	return parseQuotedOrTyped(raw, strict, line, true)
+	return parseQuotedOrTyped(raw, ctx, line, true)
 }
 
 // ─── Flow sequence / mapping ────────────────────────────────────────────────
@@ -366,53 +380,53 @@ const isNestedFlowConstruct = (item: string): boolean =>
 	(item.charCodeAt(0) === 91 && item.charCodeAt(item.length - 1) === 93) ||
 	(item.charCodeAt(0) === 123 && item.charCodeAt(item.length - 1) === 125)
 
-const parseFlowSequence = (val: string, strict: boolean, line: number): PositionedValue[] | null => {
+const parseFlowSequence = (val: string, ctx: ParseContext, line: number): PositionedValue[] | null => {
 	if (val.charCodeAt(0) !== 91 || val.charCodeAt(val.length - 1) !== 93) return null
 	const inner = val.slice(1, -1).trim()
 	if (!inner) return []
 	const rawItems = splitFlowItems(inner)
 
-	if (!strict && rawItems.length > 1 && !rawItems[rawItems.length - 1]) rawItems.pop()
+	if (!ctx.strict && rawItems.length > 1 && !rawItems[rawItems.length - 1]) rawItems.pop()
 
 	return rawItems.map((item): PositionedValue => {
 		if (!item) {
-			if (strict) throw new Error(`LIMA: empty element in flow sequence at line ${line}`)
+			if (ctx.strict) throw new Error(`LIMA: empty element in flow sequence at line ${line}`)
 			return { kind: 'null', line }
 		}
 		if (item.charCodeAt(0) === 91 && item.charCodeAt(item.length - 1) === 93) {
 			throw new Error(`LIMA: nested flow sequence not permitted at line ${line}: "${item}"`)
 		}
 		if (item.charCodeAt(0) === 123 && item.charCodeAt(item.length - 1) === 125) {
-			const nested = parseFlowMapping(item, strict, line)
+			const nested = parseFlowMapping(item, ctx, line)
 			if (nested !== null) return nested
 		}
-		return parseQuotedOrTyped(item, strict, line, false)
+		return parseQuotedOrTyped(item, ctx, line, false)
 	})
 }
 
-const parseFlowMapping = (val: string, strict: boolean, line: number): PositionedValue | null => {
+const parseFlowMapping = (val: string, ctx: ParseContext, line: number): PositionedValue | null => {
 	if (val.charCodeAt(0) !== 123 || val.charCodeAt(val.length - 1) !== 125) return null
 	const inner = val.slice(1, -1).trim()
 	const entries = new Map<string, PositionedValue>()
 	if (!inner) return { kind: 'mapping', entries, line }
 	for (const item of splitFlowItems(inner)) {
 		if (!item) {
-			if (strict) throw new Error(`LIMA: empty element in flow mapping at line ${line}`)
+			if (ctx.strict) throw new Error(`LIMA: empty element in flow mapping at line ${line}`)
 			continue
 		}
 		const colonPos = item.indexOf(': ')
 		if (colonPos === -1) {
-			if (strict) throw new Error(`LIMA: invalid flow mapping item (missing ": ") at line ${line}: "${item}"`)
+			if (ctx.strict) throw new Error(`LIMA: invalid flow mapping item (missing ": ") at line ${line}: "${item}"`)
 			return null
 		}
 		const key = stripKeyQuotes(item.slice(0, colonPos).trim())
 		checkKeyLength(key, line)
-		checkDuplicateKeyMap(entries, key, line, strict)
+		checkDuplicateKeyMap(entries, key, line, ctx)
 		const rawVal = item.slice(colonPos + 2).trim()
 		if (isNestedFlowConstruct(rawVal)) {
 			throw new Error(`LIMA: invalid flow nesting at line ${line}: "${rawVal}"`)
 		}
-		entries.set(key, parseQuotedOrTyped(rawVal, strict, line, false))
+		entries.set(key, parseQuotedOrTyped(rawVal, ctx, line, false))
 	}
 	return { kind: 'mapping', entries, line }
 }
@@ -450,7 +464,7 @@ const parseBlock = (
 	lines: string[],
 	startIdx: number,
 	baseIndent: number,
-	strict: boolean,
+	ctx: ParseContext,
 	baseLine: number,
 ): { value: PositionedValue | null; nextIdx: number } => {
 	let items: PositionedValue[] | null = null
@@ -475,11 +489,11 @@ const parseBlock = (
 					const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim())
 					checkKeyLength(itemKey, baseLine + idx)
 					const itemVal = stripComment(trimmed.slice(colonPos + 2).trim())
-					const flowSeq = parseFlowSequence(itemVal, strict, baseLine + idx)
-					const flowMap = flowSeq === null ? parseFlowMapping(itemVal, strict, baseLine + idx) : null
+					const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx)
+					const flowMap = flowSeq === null ? parseFlowMapping(itemVal, ctx, baseLine + idx) : null
 					pendingItem.set(itemKey, flowSeq !== null
 						? { kind: 'array', items: flowSeq, line: baseLine + idx }
-						: (flowMap !== null ? flowMap : parseScalarValue(itemVal, strict, baseLine + idx)))
+						: (flowMap !== null ? flowMap : parseScalarValue(itemVal, ctx, baseLine + idx)))
 					idx++
 				} else if (trimmed.endsWith(':')) {
 					const itemKey = stripKeyQuotes(trimmed.slice(0, -1).trim())
@@ -491,7 +505,7 @@ const parseBlock = (
 					if (ni < lines.length) {
 						const nextIndent = lines[ni].length - lines[ni].trimStart().length
 						if (nextIndent > indent) {
-							const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, strict, baseLine)
+							const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine)
 							pendingItem.set(itemKey, nested ?? { kind: 'null', line: keyLineNum })
 							idx = after
 							continue
@@ -499,11 +513,11 @@ const parseBlock = (
 					}
 					pendingItem.set(itemKey, { kind: 'null', line: keyLineNum })
 				} else {
-					if (strict) throw new Error(`LIMA: unexpected syntax in array item continuation at line ${baseLine + idx}: "${trimmed}"`)
+					if (ctx.strict) throw new Error(`LIMA: unexpected syntax in array item continuation at line ${baseLine + idx}: "${trimmed}"`)
 					idx++
 				}
 			} else {
-				if (strict) throw new Error(`LIMA: unexpected indentation at line ${baseLine + idx}: "${trimmed}"`)
+				if (ctx.strict) throw new Error(`LIMA: unexpected indentation at line ${baseLine + idx}: "${trimmed}"`)
 				idx++
 			}
 			continue
@@ -520,19 +534,19 @@ const parseBlock = (
 
 			if (items === null) items = []
 			if (entries !== null) {
-				if (strict) throw new Error(`LIMA: mixed array and map entries for the same key at line ${baseLine + idx}`)
+				if (ctx.strict) throw new Error(`LIMA: mixed array and map entries for the same key at line ${baseLine + idx}`)
 				idx++; continue
 			}
 
 			const afterDash = trimmed === '-' ? '' : stripComment(trimmed.replace(DASH_PREFIX_RE, ''))
-			const flowMap   = parseFlowMapping(afterDash, strict, baseLine + idx)
+			const flowMap   = parseFlowMapping(afterDash, ctx, baseLine + idx)
 			const colonPos  = findKeySep(afterDash)
 
 			if (flowMap !== null) {
 				items.push(flowMap)
 				idx++
 			} else if (afterDash === '-' || DASH_PREFIX_RE.test(afterDash)) {
-				if (strict) throw new Error(`LIMA: nested block sequence at line ${baseLine + idx}: "${trimmed}"`)
+				if (ctx.strict) throw new Error(`LIMA: nested block sequence at line ${baseLine + idx}: "${trimmed}"`)
 				items.push({ kind: 'null', line: baseLine + idx })
 				idx++
 				while (idx < lines.length) {
@@ -545,12 +559,12 @@ const parseBlock = (
 				const pendingKey = stripKeyQuotes(afterDash.slice(0, colonPos).trim())
 				checkKeyLength(pendingKey, baseLine + idx)
 				const pendingRaw = afterDash.slice(colonPos + 2).trim()
-				const pendingFlowSeq = parseFlowSequence(pendingRaw, strict, baseLine + idx)
-				const pendingFlowMap = pendingFlowSeq === null ? parseFlowMapping(pendingRaw, strict, baseLine + idx) : null
+				const pendingFlowSeq = parseFlowSequence(pendingRaw, ctx, baseLine + idx)
+				const pendingFlowMap = pendingFlowSeq === null ? parseFlowMapping(pendingRaw, ctx, baseLine + idx) : null
 				pendingItem = new Map()
 				pendingItem.set(pendingKey, pendingFlowSeq !== null
 					? { kind: 'array', items: pendingFlowSeq, line: baseLine + idx }
-					: (pendingFlowMap !== null ? pendingFlowMap : parseScalarValue(pendingRaw, strict, baseLine + idx)))
+					: (pendingFlowMap !== null ? pendingFlowMap : parseScalarValue(pendingRaw, ctx, baseLine + idx)))
 				idx++
 			} else if (afterDash.endsWith(':')) {
 				const itemKey = stripKeyQuotes(afterDash.slice(0, -1).trim())
@@ -562,7 +576,7 @@ const parseBlock = (
 				if (ni < lines.length) {
 					const nextIndent = lines[ni].length - lines[ni].trimStart().length
 					if (nextIndent > baseIndent) {
-						const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, strict, baseLine)
+						const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine)
 						pendingItem = new Map()
 						pendingItem.set(itemKey, nested ?? { kind: 'null', line: keyLineNum })
 						idx = after
@@ -575,18 +589,18 @@ const parseBlock = (
 				const qFirst = afterDash.charCodeAt(0)
 				if ((qFirst === 34 || qFirst === 39) && afterDash.charCodeAt(afterDash.length - 1) === qFirst) {
 					const inner = afterDash.slice(1, -1)
-					const value = qFirst === 34 ? unescapeDQ(inner, strict, baseLine + idx) : inner.replace(/\\'/g, "'")
+					const value = qFirst === 34 ? unescapeDQ(inner, ctx.strict, baseLine + idx) : inner.replace(/\\'/g, "'")
 					checkScalarLimit(LString(value), baseLine + idx)
 					items.push({ kind: 'string', value, line: baseLine + idx, quoted: true })
 				} else {
-					items.push(parseQuotedOrTyped(afterDash, strict, baseLine + idx, false))
+					items.push(parseQuotedOrTyped(afterDash, ctx, baseLine + idx, false))
 				}
 				idx++
 			}
 		} else {
 			// ── Map entry ────────────────────────────────────────────────────
 			if (items !== null) {
-				if (strict) throw new Error(`LIMA: mixed map and array entries for the same key at line ${baseLine + idx}`)
+				if (ctx.strict) throw new Error(`LIMA: mixed map and array entries for the same key at line ${baseLine + idx}`)
 				idx++; continue
 			}
 
@@ -595,27 +609,27 @@ const parseBlock = (
 				if (entries === null) entries = new Map()
 				const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim())
 				checkKeyLength(itemKey, baseLine + idx)
-				checkDuplicateKeyMap(entries, itemKey, baseLine + idx, strict)
+				checkDuplicateKeyMap(entries, itemKey, baseLine + idx, ctx)
 				const itemVal = stripComment(trimmed.slice(colonPos + 2).trim())
-				const flowSeq = parseFlowSequence(itemVal, strict, baseLine + idx)
-				const flowMap = flowSeq === null ? parseFlowMapping(itemVal, strict, baseLine + idx) : null
+				const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx)
+				const flowMap = flowSeq === null ? parseFlowMapping(itemVal, ctx, baseLine + idx) : null
 				entries.set(itemKey, flowSeq !== null
 					? { kind: 'array', items: flowSeq, line: baseLine + idx }
-					: (flowMap !== null ? flowMap : parseScalarValue(itemVal, strict, baseLine + idx)))
+					: (flowMap !== null ? flowMap : parseScalarValue(itemVal, ctx, baseLine + idx)))
 				idx++
 			} else if (trimmed.endsWith(':')) {
 				if (entries === null) entries = new Map()
 				const itemKey = stripKeyQuotes(trimmed.slice(0, -1).trim())
 				const keyLineNum = baseLine + idx
 				checkKeyLength(itemKey, keyLineNum)
-				checkDuplicateKeyMap(entries, itemKey, keyLineNum, strict)
+				checkDuplicateKeyMap(entries, itemKey, keyLineNum, ctx)
 				idx++
 				let ni = idx
 				while (ni < lines.length && !lines[ni].trim()) ni++
 				if (ni < lines.length) {
 					const nextIndent = lines[ni].length - lines[ni].trimStart().length
 					if (nextIndent > baseIndent) {
-						const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, strict, baseLine)
+						const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine)
 						entries.set(itemKey, nested ?? { kind: 'null', line: keyLineNum })
 						idx = after
 						continue
@@ -623,7 +637,7 @@ const parseBlock = (
 				}
 				entries.set(itemKey, { kind: 'null', line: keyLineNum })
 			} else {
-				if (strict) throw new Error(`LIMA: indented freetext without a block scalar marker at line ${baseLine + idx}: "${trimmed}"`)
+				if (ctx.strict) throw new Error(`LIMA: indented freetext without a block scalar marker at line ${baseLine + idx}: "${trimmed}"`)
 				idx++
 			}
 		}
@@ -641,7 +655,11 @@ const parseBlock = (
 
 // ─── Main parser ──────────────────────────────────────────────────────────────
 
-export type CoreOptions = { strict?: boolean }
+export type CoreOptions = {
+	strict?: boolean
+	/** Core §11.2: callback for non-strict warnings (e.g. duplicate keys). Discarded if omitted. */
+	onWarning?: (diagnostic: Diagnostic) => void
+}
 
 /**
  * Parses LIMA Core 1.0 syntax into the internal annotated value tree —
@@ -649,7 +667,8 @@ export type CoreOptions = { strict?: boolean }
  * whether they came from quoted syntax. `($key)`/`(%key)` text is left
  * exactly as written; nothing here ever inspects or resolves it.
  */
-export const parseCoreWithPositions = (frontMatter: string, strict = false): Map<string, PositionedValue> => {
+export const parseCoreWithPositions = (frontMatter: string, ctx: ParseContext): Map<string, PositionedValue> => {
+	const { strict } = ctx
 	if (byteLength(frontMatter) > DOCUMENT_SIZE_LIMIT) {
 		throw new Error(`LIMA: document exceeds maximum size of ${DOCUMENT_SIZE_LIMIT} bytes at line 1`)
 	}
@@ -702,9 +721,10 @@ export const parseCoreWithPositions = (frontMatter: string, strict = false): Map
 		checkKeyLength(key, keyLine(i))
 
 		if (root.has(key)) {
-			const msg = `LIMA: duplicate key "${key}" at line ${keyLine(i)} — last value wins`
-			if (strict) throw new Error(msg)
-			console.warn(msg)
+			const line = keyLine(i)
+			const message = `LIMA: duplicate key "${key}" at line ${line} — last value wins`
+			if (strict) throw new Error(message)
+			ctx.onWarning?.({ message, line })
 		}
 
 		const sep     = parts[i * 5 + 3]
@@ -724,7 +744,7 @@ export const parseCoreWithPositions = (frontMatter: string, strict = false): Map
 			let firstNonEmpty = 0
 			while (firstNonEmpty < lines.length && !lines[firstNonEmpty].trim()) firstNonEmpty++
 			const baseIndent = firstNonEmpty < lines.length ? leadingSpaces(lines[firstNonEmpty]) : 0
-			const parsed = parseBlock(lines, 0, baseIndent, strict, keyLine(i) + 1).value
+			const parsed = parseBlock(lines, 0, baseIndent, ctx, keyLine(i) + 1).value
 			root.set(key, parsed ?? { kind: 'null', line: keyLine(i) })
 		} else {
 			if (lines.length === 0) {
@@ -736,12 +756,12 @@ export const parseCoreWithPositions = (frontMatter: string, strict = false): Map
 			if (lines.length === 1 || (line0Trimmed !== '|' && line0Trimmed !== '>')) {
 				const line0 = lines[0]
 				const val   = line0.includes('#') ? stripComment(line0) : line0
-				const flowSeq = parseFlowSequence(val, strict, keyLine(i))
+				const flowSeq = parseFlowSequence(val, ctx, keyLine(i))
 				if (flowSeq !== null) {
 					root.set(key, { kind: 'array', items: flowSeq, line: keyLine(i) })
 				} else {
-					const flowMap = parseFlowMapping(val, strict, keyLine(i))
-					root.set(key, flowMap !== null ? flowMap : parseScalarValue(val, strict, keyLine(i)))
+					const flowMap = parseFlowMapping(val, ctx, keyLine(i))
+					root.set(key, flowMap !== null ? flowMap : parseScalarValue(val, ctx, keyLine(i)))
 				}
 				continue
 			}
@@ -825,7 +845,7 @@ export const toNative = (v: LimaValue): any => {
 export const parseCore = <T extends Record<string, unknown> = Meta>(
 	frontMatter: string, options?: CoreOptions
 ): T => {
-	const root = parseCoreWithPositions(frontMatter, options?.strict ?? false)
+	const root = parseCoreWithPositions(frontMatter, { strict: options?.strict ?? false, onWarning: options?.onWarning })
 	const out = emptyMapping()
 	for (const [k, v] of root) out[k] = toNative(toPlainValue(v))
 	return out as unknown as T

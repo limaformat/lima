@@ -26,7 +26,10 @@ import {
 	ingestPartialValue, PARTIAL_COUNT_LIMIT, PARTIAL_NAME_LENGTH_LIMIT, PARTIAL_NODE_LIMIT,
 	RESULT_NODE_LIMIT, SCALAR_LENGTH_LIMIT,
 } from './value'
-import { parseCoreWithPositions, toPlainValue, toNative, NESTING_DEPTH_LIMIT, type PositionedValue } from './core'
+import {
+	parseCoreWithPositions, toPlainValue, toNative, NESTING_DEPTH_LIMIT,
+	type PositionedValue, type Diagnostic,
+} from './core'
 
 type Meta = Record<string, any>
 const emptyMapping = (): Meta => Object.create(null)
@@ -231,6 +234,8 @@ export type ReferencesOptions = {
 	/** Named values available via `(%key)` references. */
 	partials?: Meta
 	strict?: boolean
+	/** Core §11.2 (inherited): callback for non-strict warnings (e.g. duplicate keys). Discarded if omitted. */
+	onWarning?: (diagnostic: Diagnostic) => void
 }
 
 export const parseReferences = <T extends Record<string, unknown> = Meta>(
@@ -264,7 +269,7 @@ export const parseReferences = <T extends Record<string, unknown> = Meta>(
 		throw new Error(`LIMA: partials exceed the combined maximum of ${PARTIAL_NODE_LIMIT} value nodes`)
 	}
 
-	const root = parseCoreWithPositions(frontMatter, strict)
+	const root = parseCoreWithPositions(frontMatter, { strict, onWarning: options?.onWarning })
 	const ctx: ResolutionContext = { diagnostics: [] }
 
 	const hasRefs = frontMatter.includes('($') || frontMatter.includes('(%')
