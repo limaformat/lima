@@ -22,25 +22,25 @@ describe('runCorpus', () => {
 	})
 
 	/**
-	 * Phase-1 baseline (docs/corpus-design/README.md §11): the legacy parser
-	 * (js/src/index.ts) predates the frozen 1.0 specs, so a majority of
-	 * cases are expected to FAIL for now — that is the whole point of this
-	 * measuring instrument. This snapshot is a regression trip-wire: update
-	 * it deliberately (with a written reason) once Phase 2 fixes land, never
-	 * to silently "make the test pass".
+	 * Phase-2 baseline (docs/corpus-design/README.md §11), updated 2026-08-03
+	 * after js/src/index.ts was fixed to return prototype-free results
+	 * (Core §11.1) and to deep-copy pure-reference values instead of
+	 * aliasing them (References §3.1/§6.2) — see "Nachtrag" in this repo's
+	 * history for the reasoning. Originally 0 PASS / 18 FAIL / 0 BLOCKED.
+	 * This snapshot is a regression trip-wire: update it deliberately (with
+	 * a written reason) as further Phase-2 fixes land, never to silently
+	 * "make the test pass".
 	 */
-	it('matches today\'s known Phase-1 baseline classification counts', () => {
+	it('matches today\'s known Phase-2 baseline classification counts', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 0, FAIL: 18, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 8, FAIL: 9, BLOCKED: 1 })
 	})
 
-	it('flags every FAIL caused only by the missing prototype-free binding as otherwise-passing', () => {
-		// Cross-check: cases whose only reason is the binding check would be
-		// PASS once js/src/index.ts returns Object.create(null) results —
-		// documented here so Phase 2 has a concrete, mechanically-verifiable
-		// starting point instead of re-deriving it from console output.
+	it('no longer has any case failing solely on the prototype-free binding check', () => {
+		// Regression guard for the fix above: the eight cases that used to
+		// fail only on this check are now expected to PASS outright.
 		const { outcomes } = runCorpus(corpusRoot)
 		const onlyBindingIssue = outcomes.filter(
 			(o) =>
@@ -48,17 +48,19 @@ describe('runCorpus', () => {
 				o.reasons.length === 1 &&
 				o.reasons[0].includes('prototype-free')
 		)
-		expect(onlyBindingIssue.map((o) => o.id).sort()).toEqual(
-			[
-				'core.dates.iso-offset.utc-conversion',
-				'core.keys.duplicate.non-strict',
-				'core.numbers.integer.basic',
-				'core.strings.unknown-escape.non-strict',
-				'references.interpolation.block-scalar.basic',
-				'references.partials.slash-key.literal',
-				'references.phases.forward-reference.phase-2',
-				'references.pure.document-number.backward',
-			].sort()
-		)
+		expect(onlyBindingIssue).toEqual([])
+	})
+
+	it('classifies the one known remaining crash as BLOCKED, not a false PASS', () => {
+		// references.interpolation.mapping.error: the legacy parser calls
+		// String() on a mapping during interpolation instead of rejecting it
+		// (References §3.5 requires INVALID_INTERPOLATION). Since results are
+		// now prototype-free, String() on the nested mapping throws a raw
+		// TypeError ("No default value") instead of silently producing
+		// "[object Object]" — same underlying bug, now impossible to miss.
+		// The legacy adapter correctly refuses to guess a code for it.
+		const { outcomes } = runCorpus(corpusRoot)
+		const outcome = outcomes.find((o) => o.id === 'references.interpolation.mapping.error')
+		expect(outcome?.classification).toBe('BLOCKED')
 	})
 })

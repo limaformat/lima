@@ -15,6 +15,31 @@
 
 type Meta = Record<string, any>
 
+/**
+ * Every Lima mapping result must be a prototype-free object (Core spec
+ * §11.1) — `Object.create(null)`, not `{}`. Consumers must not encounter
+ * inherited `Object.prototype` members on a parsed mapping.
+ */
+const emptyMapping = (): Meta => Object.create(null)
+
+/**
+ * Structural deep copy into a Lima-owned, prototype-free value. Pure
+ * references must not alias their target — References §3.1: "The result
+ * is a structural deep copy — object identity and aliasing are not part
+ * of Lima semantics." Applies equally to `($key)` document references and
+ * `(%key)` partial references (References §6.2: partials are deep-copied
+ * into Lima-owned values, the original host objects are never used
+ * directly in a result).
+ */
+const deepCopyLimaValue = (value: any): any => {
+	if (value === null || typeof value !== 'object') return value
+	if (value instanceof Date) return new Date(value.getTime())
+	if (Array.isArray(value)) return value.map(deepCopyLimaValue)
+	const copy = emptyMapping()
+	for (const key of Object.keys(value)) copy[key] = deepCopyLimaValue(value[key])
+	return copy
+}
+
 type ParseOptions = {
 	/** Named values available via `(%key)` references. */
 	partials?: Meta
@@ -223,7 +248,7 @@ const resolve = (val: string, metadata: Meta, partials: Meta): any => {
 	// CharCode 37 = '%'. No spaces allowed — avoids false positives on values like "100% done".
 	if (val.charCodeAt(0) === 37 /* '%' */ && val.length > 1 && !val.includes(' ')) {
 		const resolved = partials[val.slice(1)]
-		if (resolved !== undefined) return resolved
+		if (resolved !== undefined) return deepCopyLimaValue(resolved)
 	}
 
 	// Pure reference: entire value is exactly one ($key) or (%key).
@@ -235,7 +260,7 @@ const resolve = (val: string, metadata: Meta, partials: Meta): any => {
 			: null
 	if (pureMatch) {
 		const resolved = pureMatch[1] === '%' ? partials[pureMatch[2]] : getNestedValue(metadata, pureMatch[2])
-		if (resolved !== undefined) return resolved
+		if (resolved !== undefined) return deepCopyLimaValue(resolved)
 		// Unresolved — leave unchanged; strict check happens after the second pass
 	}
 
@@ -426,8 +451,8 @@ const parseFlowSequence = (val: string, metadata: Meta, partials: Meta): any[] |
 const parseFlowMapping = (val: string, metadata: Meta, partials: Meta, strict = false, line = 0): Meta | null => {
 	if (val.charCodeAt(0) !== 123 /* '{' */ || val.charCodeAt(val.length - 1) !== 125 /* '}' */) return null
 	const inner = val.slice(1, -1).trim()
-	if (!inner) return {}
-	const result: Meta = {}
+	if (!inner) return emptyMapping()
+	const result: Meta = emptyMapping()
 	for (const item of splitFlowItems(inner)) {
 		const colonPos = item.indexOf(': ')
 		if (colonPos === -1) {
@@ -593,9 +618,8 @@ const parseBlock = (
 				const pendingRaw = afterDash.slice(colonPos + 2).trim()
 				const pendingFlowSeq = parseFlowSequence(pendingRaw, metadata, partials)
 				const pendingFlowMap = pendingFlowSeq === null ? parseFlowMapping(pendingRaw, metadata, partials, strict, baseLine + idx) : null
-				pendingItem = {
-					[pendingKey]: pendingFlowSeq !== null ? pendingFlowSeq : (pendingFlowMap !== null ? pendingFlowMap : resolveValue(pendingRaw, metadata, partials)),
-				}
+				pendingItem = emptyMapping()
+				pendingItem[pendingKey] = pendingFlowSeq !== null ? pendingFlowSeq : (pendingFlowMap !== null ? pendingFlowMap : resolveValue(pendingRaw, metadata, partials))
 				idx++
 			} else if (afterDash.endsWith(':')) {
 				// Object item whose value is a nested block
@@ -607,12 +631,14 @@ const parseBlock = (
 					const nextIndent = lines[ni].length - lines[ni].trimStart().length
 					if (nextIndent > baseIndent) {
 						const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, metadata, partials, strict, baseLine)
-						pendingItem = { [itemKey]: nested }
+						pendingItem = emptyMapping()
+						pendingItem[itemKey] = nested
 						idx = after
 						continue
 					}
 				}
-				pendingItem = { [itemKey]: null }
+				pendingItem = emptyMapping()
+				pendingItem[itemKey] = null
 			} else {
 				// Plain scalar item — push immediately (cannot accumulate further keys)
 				const qFirst = afterDash.charCodeAt(0)
@@ -632,7 +658,7 @@ const parseBlock = (
 			}
 		} else {
 			// ── Map entry ───────────────────────────────────────────────────────
-			if (!result) result = {}
+			if (!result) result = emptyMapping()
 			if (Array.isArray(result)) {
 				if (strict) throw new Error(`LIMA: mixed map and array entries for the same key at line ${baseLine + idx}`)
 				idx++; continue
@@ -715,7 +741,7 @@ const parse = <T extends Record<string, unknown> = Meta>(
 	frontMatter: string,
 	options?: ParseOptions
 ): T => {
-	if (!frontMatter) return {} as unknown as T
+	if (!frontMatter) return emptyMapping() as unknown as T
 
 	const partials = options?.partials ?? {}
 	const strict   = options?.strict   ?? false
@@ -752,9 +778,9 @@ const parse = <T extends Record<string, unknown> = Meta>(
 	const parts    = frontMatter.split(KEY_RE).slice(1)
 	const keyCount = parts.length / 5 | 0
 
-	if (keyCount === 0) return {} as unknown as T
+	if (keyCount === 0) return emptyMapping() as unknown as T
 
-	const metadata: Meta = {}
+	const metadata: Meta = emptyMapping()
 
 	for (let i = 0; i < keyCount; i++) {
 		const rawDQ = parts[i * 5 + 2]

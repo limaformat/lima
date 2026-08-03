@@ -763,12 +763,15 @@ describe('references', () => {
 		expect(result.author).toBe('Alice')
 	})
 
-	it('resolves bare %key shorthand to a provided partial', () => {
+	it('resolves bare %key shorthand to a provided partial, as a structural deep copy', () => {
+		// References §3.1/§6.2: pure references (including partials) never
+		// alias the original value — the result is a Lima-owned deep copy.
 		const person = { name: 'Alice', url: 'https://alice.example' }
 		const result = parse('author: %persons/alice', {
 			partials: { 'persons/alice': person },
 		})
-		expect(result.author).toBe(person)
+		expect(result.author).toEqual(person)
+		expect(result.author).not.toBe(person)
 	})
 
 	it('does not treat %key with spaces as a partial reference', () => {
