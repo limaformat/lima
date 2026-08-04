@@ -422,6 +422,19 @@ describe('runCorpus', () => {
 	 * fix — this row was simply untested, not incorrect. Still open: the
 	 * `partials` option on `parseCore` and the References Appendix
 	 * "host-language types in partials" row.
+	 * (no case count change) — third step: `partials` on `parseCore`.
+	 * Also not a live defect once checked: `CoreOptions` has no `partials`
+	 * field and `parseCore` never reads one even from an untyped caller —
+	 * verified directly, byte-identical output with or without it, in both
+	 * modes. No corpus case added: the schema already forbids
+	 * `api: "core"` cases from setting `options.partials`, and the
+	 * runner's core-api branch never forwards `partials` to `parseCore`
+	 * regardless — a corpus case could only prove the runner doesn't
+	 * forward it, not that `parseCore` itself tolerates the option.
+	 * Covered instead by two unit tests in `js/src/misc.test.ts` (317→319)
+	 * that import `parseCore` directly and bypass the type constraint —
+	 * see `coverage/core.md`'s C-217 entry for the full reasoning. Still
+	 * open: the References Appendix "host-language types in partials" row.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".

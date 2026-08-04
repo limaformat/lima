@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'bun:test'
 import { forEachParser } from './test-helpers.js'
+import { parseCore } from './core.js'
 
 forEachParser((parse, limaParser) => {
 
@@ -73,4 +74,27 @@ describe('real-world document', () => {
 	})
 })
 
+})
+
+// Outside forEachParser — CoreOptions has no `partials` field (Appendix A:
+// "partials option in Core API — References Extension only"), so this
+// exercises parseCore directly with an options object that bypasses that
+// type constraint, the same way an untyped JS caller could. Not
+// expressible as a corpus case: the schema's own `api: "core"` cases must
+// not set `options.partials` (parseCore has no such option), and the
+// runner's core-api branch never forwards `partials` to parseCore at all
+// — so a corpus case could only ever prove the runner doesn't forward it,
+// not that parseCore itself tolerates an untyped caller passing it. Same
+// reasoning as R-032/R-137 in coverage/references.md.
+describe('parseCore ignores an unsupported partials option', () => {
+	it('produces the identical result with or without it, reference tokens still unresolved', () => {
+		const withPartials = parseCore('a: (%p)\n', { partials: { p: 'Alice' } } as never)
+		const withoutPartials = parseCore('a: (%p)\n')
+		expect(withPartials).toEqual(withoutPartials)
+		expect(withPartials.a).toBe('(%p)')
+	})
+
+	it('does not throw for it even in strict mode', () => {
+		expect(() => parseCore('a: (%p)\n', { strict: true, partials: { p: 'Alice' } } as never)).not.toThrow()
+	})
 })

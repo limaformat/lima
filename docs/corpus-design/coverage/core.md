@@ -140,8 +140,9 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-214 | Appendix A | Unsupported | Year 0000 is date-shaped but fails component validation | pair | both |
 | C-215 | Appendix A | Unsupported | Negative year never matches the date grammar | fallback | both |
 | C-216 | Appendix A | Unsupported | `\0` is an unknown escape, not a null shorthand | pair | both |
+| C-217 | Appendix A | Unsupported | `parseCore` ignores an unsupported `partials` option entirely | api | both |
 
-**Scope:** 131 substantive check points. A check point can produce multiple concrete cases.
+**Scope:** 132 substantive check points. A check point can produce multiple concrete cases.
 
 ## Known implementation gaps
 
@@ -205,9 +206,28 @@ live defect (unlike the References-side Date-aliasing bug) — the fix
 for this specific row predates this audit, see the `run.test.ts`
 baseline history's 60/0/0 entry.
 
-Still open from the same appendix, deferred because each needs its own
-behavioral/design check before a test can be written, not just a missing
-test: the `partials` option passed to `parseCore` (unclear whether
-"silently ignored" or "throws" is the intended contract — a design
-question, not a test gap) and the References Appendix "host-language
-types in partials" row.
+## Maintainability audit: Appendix A constructs (third step — `partials` on `parseCore`)
+
+C-217 closes the last Core Appendix A row from this audit. This turned
+out not to be an open design question after checking the code: `CoreOptions`
+(`js/src/core.ts`) only has `strict` and `onWarning` — there is no
+`partials` field, and `parseCore` never reads one even if an untyped
+caller supplies it. Verified directly: calling `parseCore` with a
+`partials` option (via a type-bypassing cast, the same way an untyped JS
+caller could) produces byte-identical output to calling it without one,
+in both modes, with `(%key)` staying an unresolved literal string either
+way — confirmed against actual output before writing anything.
+
+**Resolved without a dedicated corpus case:** the schema's own `api`
+field documentation already states that `api: "core"` cases must not set
+`options.partials` (`parseCore` has no such option), and the runner's
+core-api branch (`corpus/runner/src/run.ts`) never forwards `partials`
+to `parseCore` regardless of what a case sets — so a corpus case could
+only ever prove the *runner* doesn't forward it, not that `parseCore`
+itself tolerates an untyped caller passing it. Covered instead by two
+unit tests in `js/src/misc.test.ts` that import `parseCore` directly and
+bypass the type constraint, the same reasoning as R-032/R-137 in
+`coverage/references.md`.
+
+Still open: the References Appendix "host-language types in partials"
+row.
