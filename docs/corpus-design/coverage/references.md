@@ -204,8 +204,20 @@ existing reasoning below — it is unreachable, not merely untested.
   incorrect error code.
 - **R-135** (cyclic partial values are invalid) and **R-137** (host types
   with no Lima equivalent — functions, symbols, class instances, accessor
-  properties — are invalid): covered by unit tests in `index.test.ts`
-  instead of corpus cases. A cyclic object graph cannot be represented in
-  JSON at all, and the corpus schema's `CorpusValue` type has no way to
-  express a function, symbol, class instance, or accessor property — the
-  same reason R-032 (pure-reference no-aliasing) is unit-test-only.
+  properties — are invalid): covered by unit tests in
+  `js/src/references.test.ts` (describe block `partial value model —
+  host-type validation`; five cases, one per host type) instead of corpus
+  cases. A cyclic object graph cannot be represented in JSON at all, and
+  the corpus schema's `CorpusValue` type has no way to express a
+  function, symbol, class instance, or accessor property — the same
+  reason R-032 (pure-reference no-aliasing) is unit-test-only.
+
+**2026-08-04 maintainability audit note:** the References Appendix row
+"Host-language types in partials" (§8) was suspected to be an untested
+gap, matching the pattern found elsewhere in this audit. Checking found
+the opposite: it is already fully covered by the five R-137/R-135 cases
+above (class instance, function, symbol, accessor property, cycle) —
+this entry previously pointed at `index.test.ts`, a filename that no
+longer exists after the Core module split; the actual home
+(`references.test.ts`) is now corrected above. No new test was needed,
+only this stale reference.

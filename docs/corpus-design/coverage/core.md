@@ -229,5 +229,8 @@ unit tests in `js/src/misc.test.ts` that import `parseCore` directly and
 bypass the type constraint, the same reasoning as R-032/R-137 in
 `coverage/references.md`.
 
-Still open: the References Appendix "host-language types in partials"
-row.
+This closes the Core Appendix A portion of the audit. The last item —
+the References Appendix "host-language types in partials" row — turned
+out to already be fully covered (`references.test.ts`'s R-137/R-135
+cases); see `coverage/references.md` for that finding, which was a stale
+doc reference rather than a coverage gap.
