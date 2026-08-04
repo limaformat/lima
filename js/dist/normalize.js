@@ -39,8 +39,8 @@ export const checkKeyLength = (key, line) => {
         });
     }
 };
-export const checkDuplicateKeyMap = (entries, key, line, ctx) => {
-    if (!entries.has(key))
+export const checkDuplicateKey = (exists, key, line, ctx) => {
+    if (!exists)
         return;
     const diagnostic = {
         code: 'DUPLICATE_KEY', line, key,
@@ -58,3 +58,4 @@ export const checkDuplicateKeyMap = (entries, key, line, ctx) => {
     // `.code` without parsing the message.
     ctx.onWarning?.(diagnostic);
 };
+export const checkDuplicateKeyMap = (entries, key, line, ctx) => checkDuplicateKey(entries.has(key), key, line, ctx);

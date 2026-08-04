@@ -36,4 +36,5 @@ export declare const checkScalarLimit: (v: LimaValue, line: number) => void;
  * thunk defers it to the one branch that actually needs a line number.
  */
 export declare const checkKeyLength: (key: string, line: () => number) => void;
+export declare const checkDuplicateKey: (exists: boolean, key: string, line: number, ctx: ParseContext) => void;
 export declare const checkDuplicateKeyMap: (entries: Map<string, unknown>, key: string, line: number, ctx: ParseContext) => void;

@@ -19,14 +19,56 @@
 
 import { parseCore } from '../src/index'
 import { load } from 'js-yaml'
-import { createBench, log, JSON_OUTPUT, type BenchResult } from './helpers'
+import { log, JSON_OUTPUT, type BenchResult } from './helpers'
 
 const results: BenchResult[] = []
-const bench = createBench(results)
+const SAMPLES = 9
+
+function time(fn: () => void, iterations: number): number {
+	const start = performance.now()
+	for (let i = 0; i < iterations; i++) fn()
+	return ((performance.now() - start) / iterations) * 1000
+}
+
+function result(name: string, samples: number[], iterations: number): BenchResult {
+	samples.sort((a, b) => a - b)
+	const medianUs = samples[Math.floor(samples.length / 2)]
+	const p95Us = samples[Math.min(samples.length - 1, Math.ceil(samples.length * 0.95) - 1)]
+	return {
+		name, iterations, samples: samples.length, medianUs, p95Us,
+		minUs: samples[0], maxUs: samples[samples.length - 1], opsPerSec: 1_000_000 / medianUs,
+	}
+}
+
+function print(r: BenchResult): void {
+	log(
+		`${r.name.padEnd(60)} median ${r.medianUs.toFixed(2).padStart(9)} us/op  ` +
+		`p95 ${r.p95Us.toFixed(2).padStart(9)} us/op  ${r.opsPerSec.toFixed(0).padStart(9)} ops/sec`
+	)
+}
 
 function compare(name: string, doc: string, iterations: number): void {
-	const lima = bench(`${name} — Lima (parseCore)`, () => parseCore(doc), iterations)
-	const yaml = bench(`${name} — js-yaml (load)`, () => load(doc), iterations)
+	const parseLima = (): void => { parseCore(doc) }
+	const parseYaml = (): void => { load(doc) }
+	for (let i = 0; i < Math.min(iterations, 1000); i++) { parseLima(); parseYaml() }
+	const limaSamples: number[] = []
+	const yamlSamples: number[] = []
+	for (let sample = 0; sample < SAMPLES; sample++) {
+		// Alternating which parser runs first prevents systematic order bias
+		// from JIT state, CPU frequency changes, and background load.
+		if (sample % 2 === 0) {
+			limaSamples.push(time(parseLima, iterations))
+			yamlSamples.push(time(parseYaml, iterations))
+		} else {
+			yamlSamples.push(time(parseYaml, iterations))
+			limaSamples.push(time(parseLima, iterations))
+		}
+	}
+	const lima = result(`${name} — Lima (parseCore)`, limaSamples, iterations)
+	const yaml = result(`${name} — js-yaml (load)`, yamlSamples, iterations)
+	results.push(lima, yaml)
+	print(lima)
+	print(yaml)
 	log(`  → Lima is ${(yaml.medianUs / lima.medianUs).toFixed(2)}x the speed of js-yaml (median)\n`)
 }
 

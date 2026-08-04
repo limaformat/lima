@@ -78,5 +78,5 @@ export declare const stripKeyQuotes: (s: string) => string;
  * items here, to keep this a faithful behavioral port: the "unclosed flow
  * bracket" throw and the "non-whitespace after closing quote" strict throw.
  */
-export declare const parseQuotedOrTyped: <V>(raw: string, ctx: ParseContext, line: number, topLevel: boolean, builder: ValueBuilder<V>) => V;
-export declare const parseScalarValue: <V>(raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V>) => V;
+export declare const parseQuotedOrTyped: <V, M>(raw: string, ctx: ParseContext, line: number, topLevel: boolean, builder: ValueBuilder<V, M>) => V;
+export declare const parseScalarValue: <V, M>(raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>) => V;

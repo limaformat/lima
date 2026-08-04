@@ -1,5 +1,5 @@
 /** Core §15.8 flow collections: `[...]` sequences and `{...}` mappings. */
-import { checkKeyLength, checkDuplicateKeyMap } from './normalize.js';
+import { checkKeyLength, checkDuplicateKey } from './normalize.js';
 import { parseQuotedOrTyped, stripKeyQuotes } from './scalars.js';
 import { LimaError } from './errors.js';
 const splitFlowItems = (inner) => {
@@ -68,7 +68,7 @@ export const parseFlowMapping = (val, ctx, line, builder) => {
     if (val.charCodeAt(0) !== 123 || val.charCodeAt(val.length - 1) !== 125)
         return null;
     const inner = val.slice(1, -1).trim();
-    const entries = new Map();
+    const entries = builder.createMapping();
     if (!inner)
         return builder.mapping(entries, line);
     for (const item of splitFlowItems(inner)) {
@@ -88,12 +88,12 @@ export const parseFlowMapping = (val, ctx, line, builder) => {
         }
         const key = stripKeyQuotes(item.slice(0, colonPos).trim());
         checkKeyLength(key, () => line);
-        checkDuplicateKeyMap(entries, key, line, ctx);
+        checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx);
         const rawVal = item.slice(colonPos + 2).trim();
         if (isNestedFlowConstruct(rawVal)) {
             throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `LIMA: invalid flow nesting at line ${line}: "${rawVal}"` });
         }
-        entries.set(key, parseQuotedOrTyped(rawVal, ctx, line, false, builder));
+        builder.setMapping(entries, key, parseQuotedOrTyped(rawVal, ctx, line, false, builder));
     }
     return builder.mapping(entries, line);
 };

@@ -15,7 +15,7 @@ export declare const findKeySep: (s: string) => number;
  * Recursively parses a block value (array or mapping) from an array of
  * lines.
  */
-export declare const parseBlock: <V>(lines: string[], startIdx: number, baseIndent: number, ctx: ParseContext, baseLine: number, builder: ValueBuilder<V>) => {
+export declare const parseBlock: <V, M>(lines: string[], startIdx: number, baseIndent: number, ctx: ParseContext, baseLine: number, builder: ValueBuilder<V, M>) => {
     value: V | null;
     nextIdx: number;
 };

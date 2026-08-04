@@ -25,9 +25,9 @@ const wrap = (v, line, builder) => {
         case 'instant': return builder.instant(v.value, line);
         case 'array': return builder.array(v.items.map((i) => wrap(i, line, builder)), line);
         case 'mapping': {
-            const entries = new Map();
+            const entries = builder.createMapping();
             for (const [k, c] of v.entries)
-                entries.set(k, wrap(c, line, builder));
+                builder.setMapping(entries, k, wrap(c, line, builder));
             return builder.mapping(entries, line);
         }
     }
@@ -41,6 +41,10 @@ export const positionedBuilder = {
     string: (value, line, quoted) => ({ kind: 'string', value, line, quoted }),
     instant: (value, line) => ({ kind: 'instant', value, line }),
     array: (items, line) => ({ kind: 'array', items, line }),
+    createMapping: () => new Map(),
+    hasMappingKey: (entries, key) => entries.has(key),
+    setMapping: (entries, key, value) => { entries.set(key, value); },
+    mappingValues: (entries) => entries.values(),
     mapping: (entries, line) => ({ kind: 'mapping', entries, line }),
 };
 /** Strips position/quoted-origin annotations, recursively — the public parseCore() projection. */
@@ -145,6 +149,13 @@ const toType = (str, strict = false, line = 0) => {
         return LBool(true);
     if (str === 'false')
         return LBool(false);
+    const first = str.charCodeAt(0);
+    // Every number and every supported date form starts with a digit, '-'
+    // or '.'. Once the null/boolean literals above are excluded, any other
+    // leading character is unconditionally a string; avoid both regexes and
+    // the email/date prechecks for ordinary words, URLs and identifiers.
+    if (!((first >= 48 && first <= 57) || first === 45 || first === 46))
+        return LString(str);
     // Hex (0x/0X), octal (0o/0O), binary (0b/0B) — kept as strings (YAML 1.2 compatible).
     if (str.length > 2 && str.charCodeAt(0) === 48 &&
         (str.charCodeAt(1) === 120 || str.charCodeAt(1) === 88 ||

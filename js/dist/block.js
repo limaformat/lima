@@ -9,11 +9,45 @@
  * never resolves a reference in the first place).
  */
 import { LString } from './value.js';
-import { checkKeyLength, checkDuplicateKeyMap, checkScalarLimit } from './normalize.js';
+import { checkKeyLength, checkDuplicateKey, checkScalarLimit } from './normalize.js';
 import { stripKeyQuotes, unescapeDQ, stripComment, parseQuotedOrTyped, parseScalarValue, } from './scalars.js';
 import { parseFlowSequence, parseFlowMapping } from './flow.js';
 import { LimaError } from './errors.js';
 const DASH_PREFIX_RE = /^-\s+/;
+/**
+ * The exact ECMAScript WhiteSpace + LineTerminator code-point set consumed
+ * by String.prototype.trimStart(). Keeping the set explicit avoids the
+ * substring allocation in the block parser's hottest operation without
+ * narrowing behavior to ASCII space (notably, U+00A0 indentation must keep
+ * working). All members are single UTF-16 code units, so the returned index
+ * is identical to `line.length - line.trimStart().length`.
+ *
+ * Claude Code review fix (round 2): the range below used to start at
+ * 0x000b, omitting U+000A (LINE FEED) from the set — confirmed by
+ * exhaustively comparing every BMP code point's actual `trimStart()`
+ * behavior against this predicate. Currently unreachable in practice (every
+ * `line` this function sees comes from splitting on `\n` upstream, so no
+ * individual line can ever contain one), but the doc comment above claims
+ * "the exact" set, which was false, and this function has no other
+ * enforced guarantee tying it to that invariant — a future caller outside
+ * `parseBlock`'s current pre-split usage could reintroduce the gap as a
+ * real bug. One code point, no behavioral or performance change today.
+ */
+const isTrimWhitespace = (c) => c === 0x0009 || (c >= 0x000a && c <= 0x000d) || c === 0x0020 || c === 0x00a0 ||
+    c === 0x1680 || (c >= 0x2000 && c <= 0x200a) || c === 0x2028 || c === 0x2029 ||
+    c === 0x202f || c === 0x205f || c === 0x3000 || c === 0xfeff;
+const lineIndent = (line) => {
+    let i = 0;
+    // Plain spaces dominate normalized frontmatter indentation. Keep that
+    // path to one cheap comparison per character, then fall back to the full
+    // trimStart set for mixed or non-ASCII whitespace.
+    while (i < line.length && line.charCodeAt(i) === 0x0020)
+        i++;
+    while (i < line.length && isTrimWhitespace(line.charCodeAt(i)))
+        i++;
+    return i;
+};
+const isBlankLine = (line) => lineIndent(line) === line.length;
 export const findKeySep = (s) => {
     const first = s.charCodeAt(0);
     if (first === 39 || first === 34) {
@@ -37,16 +71,16 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
     let idx = startIdx;
     while (idx < lines.length) {
         const line = lines[idx];
-        const trimmed = line.trimStart();
-        if (!trimmed) {
+        const indent = lineIndent(line);
+        if (indent === line.length) {
             idx++;
             continue;
         }
+        const trimmed = indent === 0 ? line : line.slice(indent);
         if (trimmed.charCodeAt(0) === 35) {
             idx++;
             continue;
         }
-        const indent = line.length - trimmed.length;
         if (indent < baseIndent)
             break;
         if (indent > baseIndent) {
@@ -55,10 +89,12 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
                 if (colonPos !== -1) {
                     const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim());
                     checkKeyLength(itemKey, () => baseLine + idx);
-                    const itemVal = stripComment(trimmed.slice(colonPos + 2).trim());
+                    let itemVal = trimmed.slice(colonPos + 2).trim();
+                    if (itemVal.includes('#'))
+                        itemVal = stripComment(itemVal);
                     const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx, builder);
                     const flowMap = flowSeq === null ? parseFlowMapping(itemVal, ctx, baseLine + idx, builder) : null;
-                    pendingItem.set(itemKey, flowSeq !== null
+                    builder.setMapping(pendingItem, itemKey, flowSeq !== null
                         ? builder.array(flowSeq, baseLine + idx)
                         : (flowMap !== null ? flowMap : parseScalarValue(itemVal, ctx, baseLine + idx, builder)));
                     idx++;
@@ -69,18 +105,18 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
                     checkKeyLength(itemKey, () => keyLineNum);
                     idx++;
                     let ni = idx;
-                    while (ni < lines.length && !lines[ni].trim())
+                    while (ni < lines.length && isBlankLine(lines[ni]))
                         ni++;
                     if (ni < lines.length) {
-                        const nextIndent = lines[ni].length - lines[ni].trimStart().length;
+                        const nextIndent = lineIndent(lines[ni]);
                         if (nextIndent > indent) {
                             const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder);
-                            pendingItem.set(itemKey, nested ?? builder.null(keyLineNum));
+                            builder.setMapping(pendingItem, itemKey, nested ?? builder.null(keyLineNum));
                             idx = after;
                             continue;
                         }
                     }
-                    pendingItem.set(itemKey, builder.null(keyLineNum));
+                    builder.setMapping(pendingItem, itemKey, builder.null(keyLineNum));
                 }
                 else {
                     if (ctx.strict)
@@ -119,7 +155,20 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
                 idx++;
                 continue;
             }
-            const afterDash = trimmed === '-' ? '' : stripComment(trimmed.replace(DASH_PREFIX_RE, ''));
+            // Claude Code review fix: the fast path only ever inspected the
+            // single character right after the dash, so it stripped exactly
+            // one whitespace character even when DASH_PREFIX_RE's `\s+` would
+            // have consumed a longer run (e.g. two spaces, or a space then a
+            // tab) — confirmed via differential testing: `-  value` (two
+            // spaces) produced `" value"` (leading space preserved) instead
+            // of `"value"`, and for a flow-shaped item the stray leading
+            // space broke the `[`/`{`/quote first-character check entirely —
+            // `-  {a: 1}` produced a mangled `{"{a":"1}"}` instead of the
+            // parsed mapping `{a:1}`. Reverted to the regex, which correctly
+            // consumes the whole whitespace run regardless of length or kind.
+            let afterDash = trimmed === '-' ? '' : trimmed.replace(DASH_PREFIX_RE, '');
+            if (afterDash.includes('#'))
+                afterDash = stripComment(afterDash);
             const flowMap = parseFlowMapping(afterDash, ctx, baseLine + idx, builder);
             const colonPos = findKeySep(afterDash);
             if (flowMap !== null) {
@@ -135,12 +184,12 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
                 items.push(builder.null(baseLine + idx));
                 idx++;
                 while (idx < lines.length) {
-                    const nextTrimmed = lines[idx].trimStart();
-                    if (!nextTrimmed || nextTrimmed.charCodeAt(0) === 35) {
+                    const nextIndent = lineIndent(lines[idx]);
+                    if (nextIndent === lines[idx].length || lines[idx].charCodeAt(nextIndent) === 35) {
                         idx++;
                         continue;
                     }
-                    if (lines[idx].length - nextTrimmed.length <= baseIndent)
+                    if (nextIndent <= baseIndent)
                         break;
                     idx++;
                 }
@@ -151,8 +200,8 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
                 const pendingRaw = afterDash.slice(colonPos + 2).trim();
                 const pendingFlowSeq = parseFlowSequence(pendingRaw, ctx, baseLine + idx, builder);
                 const pendingFlowMap = pendingFlowSeq === null ? parseFlowMapping(pendingRaw, ctx, baseLine + idx, builder) : null;
-                pendingItem = new Map();
-                pendingItem.set(pendingKey, pendingFlowSeq !== null
+                pendingItem = builder.createMapping();
+                builder.setMapping(pendingItem, pendingKey, pendingFlowSeq !== null
                     ? builder.array(pendingFlowSeq, baseLine + idx)
                     : (pendingFlowMap !== null ? pendingFlowMap : parseScalarValue(pendingRaw, ctx, baseLine + idx, builder)));
                 idx++;
@@ -163,20 +212,20 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
                 checkKeyLength(itemKey, () => keyLineNum);
                 idx++;
                 let ni = idx;
-                while (ni < lines.length && !lines[ni].trim())
+                while (ni < lines.length && isBlankLine(lines[ni]))
                     ni++;
                 if (ni < lines.length) {
-                    const nextIndent = lines[ni].length - lines[ni].trimStart().length;
+                    const nextIndent = lineIndent(lines[ni]);
                     if (nextIndent > baseIndent) {
                         const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder);
-                        pendingItem = new Map();
-                        pendingItem.set(itemKey, nested ?? builder.null(keyLineNum));
+                        pendingItem = builder.createMapping();
+                        builder.setMapping(pendingItem, itemKey, nested ?? builder.null(keyLineNum));
                         idx = after;
                         continue;
                     }
                 }
-                pendingItem = new Map();
-                pendingItem.set(itemKey, builder.null(keyLineNum));
+                pendingItem = builder.createMapping();
+                builder.setMapping(pendingItem, itemKey, builder.null(keyLineNum));
             }
             else {
                 const qFirst = afterDash.charCodeAt(0);
@@ -206,39 +255,41 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
             const colonPos = findKeySep(trimmed);
             if (colonPos !== -1) {
                 if (entries === null)
-                    entries = new Map();
+                    entries = builder.createMapping();
                 const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim());
                 checkKeyLength(itemKey, () => baseLine + idx);
-                checkDuplicateKeyMap(entries, itemKey, baseLine + idx, ctx);
-                const itemVal = stripComment(trimmed.slice(colonPos + 2).trim());
+                checkDuplicateKey(builder.hasMappingKey(entries, itemKey), itemKey, baseLine + idx, ctx);
+                let itemVal = trimmed.slice(colonPos + 2).trim();
+                if (itemVal.includes('#'))
+                    itemVal = stripComment(itemVal);
                 const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx, builder);
                 const flowMap = flowSeq === null ? parseFlowMapping(itemVal, ctx, baseLine + idx, builder) : null;
-                entries.set(itemKey, flowSeq !== null
+                builder.setMapping(entries, itemKey, flowSeq !== null
                     ? builder.array(flowSeq, baseLine + idx)
                     : (flowMap !== null ? flowMap : parseScalarValue(itemVal, ctx, baseLine + idx, builder)));
                 idx++;
             }
             else if (trimmed.endsWith(':')) {
                 if (entries === null)
-                    entries = new Map();
+                    entries = builder.createMapping();
                 const itemKey = stripKeyQuotes(trimmed.slice(0, -1).trim());
                 const keyLineNum = baseLine + idx;
                 checkKeyLength(itemKey, () => keyLineNum);
-                checkDuplicateKeyMap(entries, itemKey, keyLineNum, ctx);
+                checkDuplicateKey(builder.hasMappingKey(entries, itemKey), itemKey, keyLineNum, ctx);
                 idx++;
                 let ni = idx;
-                while (ni < lines.length && !lines[ni].trim())
+                while (ni < lines.length && isBlankLine(lines[ni]))
                     ni++;
                 if (ni < lines.length) {
-                    const nextIndent = lines[ni].length - lines[ni].trimStart().length;
+                    const nextIndent = lineIndent(lines[ni]);
                     if (nextIndent > baseIndent) {
                         const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder);
-                        entries.set(itemKey, nested ?? builder.null(keyLineNum));
+                        builder.setMapping(entries, itemKey, nested ?? builder.null(keyLineNum));
                         idx = after;
                         continue;
                     }
                 }
-                entries.set(itemKey, builder.null(keyLineNum));
+                builder.setMapping(entries, itemKey, builder.null(keyLineNum));
             }
             else {
                 if (ctx.strict)

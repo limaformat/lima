@@ -38,6 +38,8 @@
  *     so this fails the match entirely rather than consuming the pair.
  */
 export interface KeyMatch {
+    /** One-based source line of the key. */
+    line: number;
     /** Start of the whole match (a line-start position). */
     matchStart: number;
     /** Position right after the mandatory `:` — start of the separator. */

@@ -52,7 +52,7 @@ export type NativeValue = null | boolean | number | string | Date | NativeValue[
  * prototype-free object per Core §11.1), so `parseCore` never needs a
  * separate conversion pass over an intermediate tree afterward.
  */
-export declare const nativeBuilder: ValueBuilder<NativeValue>;
+export declare const nativeBuilder: ValueBuilder<NativeValue, Record<string, NativeValue>>;
 /** Converts a Lima value to a plain, native JS value (the public result shape). */
 export declare const toNative: (v: LimaValue) => NativeValue;
 /**

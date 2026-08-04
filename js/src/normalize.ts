@@ -57,8 +57,8 @@ export const checkKeyLength = (key: string, line: () => number): void => {
 	}
 }
 
-export const checkDuplicateKeyMap = (entries: Map<string, unknown>, key: string, line: number, ctx: ParseContext): void => {
-	if (!entries.has(key)) return
+export const checkDuplicateKey = (exists: boolean, key: string, line: number, ctx: ParseContext): void => {
+	if (!exists) return
 	const diagnostic = {
 		code: 'DUPLICATE_KEY', line, key,
 		message: `LIMA: duplicate key "${key}" at line ${line} — last value wins`,
@@ -74,3 +74,6 @@ export const checkDuplicateKeyMap = (entries: Map<string, unknown>, key: string,
 	// `.code` without parsing the message.
 	ctx.onWarning?.(diagnostic)
 }
+
+export const checkDuplicateKeyMap = (entries: Map<string, unknown>, key: string, line: number, ctx: ParseContext): void =>
+	checkDuplicateKey(entries.has(key), key, line, ctx)

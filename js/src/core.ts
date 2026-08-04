@@ -109,9 +109,9 @@ export type CoreOptions = {
  * `depthOfPositioned` inspects a tagged union's `.kind`; `depthOfNative`
  * inspects the untagged native shape structurally instead.
  */
-const parseCoreGeneric = <V>(
-	frontMatter: string, ctx: ParseContext, builder: ValueBuilder<V>, computeDepth: (v: V) => number,
-): Map<string, V> => {
+const parseCoreGeneric = <V, M>(
+	frontMatter: string, ctx: ParseContext, builder: ValueBuilder<V, M>, computeDepth: (v: V) => number,
+): M => {
 	const { strict } = ctx
 	if (byteLength(frontMatter) > DOCUMENT_SIZE_LIMIT) {
 		throw new LimaError({
@@ -120,7 +120,7 @@ const parseCoreGeneric = <V>(
 		})
 	}
 
-	const root = new Map<string, V>()
+	const root = builder.createMapping()
 	if (!frontMatter) return root
 
 	// Each of these three passes is skipped outright when a cheap upfront
@@ -150,33 +150,7 @@ const parseCoreGeneric = <V>(
 	const matches  = scanKeys(frontMatter)
 	const keyCount = matches.length
 
-	// Lazy — the line-number sweep below only runs the first time any key's
-	// line is actually needed. Match positions themselves are already known
-	// (`matches` above, needed eagerly for tokenization regardless), so
-	// this is purely a lazy position→line sweep now, not a lazy re-scan for
-	// positions too — `scanKeys` replaced what used to be two independent
-	// full-document regex scans (the split below, and this one) with one.
-	let keyLineNumbers: number[] | null = null
-	const keyLine = (i: number): number => {
-		if (keyLineNumbers === null) {
-			// Single combined O(document length) sweep instead of one
-			// lineAt() scan-from-start per key — match positions are
-			// strictly ascending (document order), so every position's
-			// line can be read off one shared pass instead of each
-			// independently re-scanning from character 0.
-			keyLineNumbers = new Array(matches.length)
-			let line = 1
-			let posIdx = 0
-			for (let charIdx = 0; charIdx <= frontMatter.length && posIdx < matches.length; charIdx++) {
-				while (posIdx < matches.length && matches[posIdx].matchStart === charIdx) {
-					keyLineNumbers[posIdx] = line
-					posIdx++
-				}
-				if (frontMatter.charCodeAt(charIdx) === 10) line++
-			}
-		}
-		return keyLineNumbers[i]
-	}
+	const keyLine = (i: number): number => matches[i].line
 
 	if (strict) {
 		let searchFrom = 0
@@ -210,7 +184,7 @@ const parseCoreGeneric = <V>(
 		if (key === undefined) continue
 		checkKeyLength(key, () => keyLine(i))
 
-		if (root.has(key)) {
+		if (builder.hasMappingKey(root, key)) {
 			const line = keyLine(i)
 			const diagnostic = {
 				code: 'DUPLICATE_KEY', line, key,
@@ -226,6 +200,25 @@ const parseCoreGeneric = <V>(
 		const nextStart = i + 1 < matches.length ? matches[i + 1].matchStart : frontMatter.length
 		const raw       = frontMatter.slice(m.rawStart, nextStart)
 		const isBlock   = m.isBlock
+		const firstNewline = raw.indexOf('\n')
+
+		// Typical frontmatter uses one inline scalar per key. Avoid building
+		// and filling a temporary lines array for that overwhelmingly common
+		// case; the scanner-delimited raw slice contains at most its terminal
+		// newline here.
+		if (!isBlock && (firstNewline === -1 || firstNewline === raw.length - 1)) {
+			const val = firstNewline === -1 ? raw : raw.slice(0, -1)
+			const line = m.line
+			const uncommented = val.includes('#') ? stripComment(val) : val
+			const flowSeq = parseFlowSequence(uncommented, ctx, line, builder)
+			if (flowSeq !== null) {
+				builder.setMapping(root, key, builder.array(flowSeq, line))
+			} else {
+				const flowMap = parseFlowMapping(uncommented, ctx, line, builder)
+				builder.setMapping(root, key, flowMap !== null ? flowMap : parseScalarValue(uncommented, ctx, line, builder))
+			}
+			continue
+		}
 
 		const lines: string[] = []
 		let lineStart = 0
@@ -241,10 +234,10 @@ const parseCoreGeneric = <V>(
 			while (firstNonEmpty < lines.length && !lines[firstNonEmpty].trim()) firstNonEmpty++
 			const baseIndent = firstNonEmpty < lines.length ? leadingSpaces(lines[firstNonEmpty]) : 0
 			const parsed = parseBlock(lines, 0, baseIndent, ctx, keyLine(i) + 1, builder).value
-			root.set(key, parsed ?? builder.null(keyLine(i)))
+			builder.setMapping(root, key, parsed ?? builder.null(keyLine(i)))
 		} else {
 			if (lines.length === 0) {
-				root.set(key, builder.null(keyLine(i)))
+				builder.setMapping(root, key, builder.null(keyLine(i)))
 				continue
 			}
 
@@ -254,10 +247,10 @@ const parseCoreGeneric = <V>(
 				const val   = line0.includes('#') ? stripComment(line0) : line0
 				const flowSeq = parseFlowSequence(val, ctx, keyLine(i), builder)
 				if (flowSeq !== null) {
-					root.set(key, builder.array(flowSeq, keyLine(i)))
+					builder.setMapping(root, key, builder.array(flowSeq, keyLine(i)))
 				} else {
 					const flowMap = parseFlowMapping(val, ctx, keyLine(i), builder)
-					root.set(key, flowMap !== null ? flowMap : parseScalarValue(val, ctx, keyLine(i), builder))
+					builder.setMapping(root, key, flowMap !== null ? flowMap : parseScalarValue(val, ctx, keyLine(i), builder))
 				}
 				continue
 			}
@@ -303,7 +296,7 @@ const parseCoreGeneric = <V>(
 
 			const joined = mergedLines.join('\n')
 			checkScalarLimit(LString(joined), keyLine(i))
-			root.set(key, builder.string(joined, keyLine(i), false))
+			builder.setMapping(root, key, builder.string(joined, keyLine(i), false))
 		}
 	}
 
@@ -311,7 +304,7 @@ const parseCoreGeneric = <V>(
 	// References is layered on top, it re-checks depth on the final,
 	// post-substitution tree separately — substituted values can add depth
 	// this check cannot see yet.
-	const rootValues = [...root.values()]
+	const rootValues = [...builder.mappingValues(root)]
 	const depth = rootValues.length === 0 ? 0 : Math.max(...rootValues.map(computeDepth))
 	if (depth > NESTING_DEPTH_LIMIT) {
 		throw new LimaError({
@@ -347,7 +340,7 @@ export type NativeValue =
  * prototype-free object per Core §11.1), so `parseCore` never needs a
  * separate conversion pass over an intermediate tree afterward.
  */
-export const nativeBuilder: ValueBuilder<NativeValue> = {
+export const nativeBuilder: ValueBuilder<NativeValue, Record<string, NativeValue>> = {
 	null: () => null,
 	bool: (value) => value,
 	int: (value) => value,
@@ -355,11 +348,15 @@ export const nativeBuilder: ValueBuilder<NativeValue> = {
 	string: (value) => value,
 	instant: (value) => value,
 	array: (items) => items,
-	mapping: (entries) => {
-		const out = emptyMapping()
-		for (const [k, v] of entries) out[k] = v
-		return out as NativeValue
-	},
+	// A fresh, still-empty prototype-free object trivially satisfies any
+	// record type — the one honest, narrow cast this builder needs, versus
+	// the unwrap-an-opaque-`unknown`-and-hope casts the `unknown`-typed
+	// interface required at every method below.
+	createMapping: () => emptyMapping() as Record<string, NativeValue>,
+	hasMappingKey: (entries, key) => Object.prototype.hasOwnProperty.call(entries, key),
+	setMapping: (entries, key, value) => { entries[key] = value },
+	mappingValues: (entries) => Object.values(entries),
+	mapping: (entries) => entries,
 }
 
 /** Converts a Lima value to a plain, native JS value (the public result shape). */
@@ -413,8 +410,5 @@ export const parseCore = <T extends Record<string, unknown> = Meta>(
 	frontMatter: string, options?: CoreOptions
 ): T => {
 	const ctx: ParseContext = { strict: options?.strict ?? false, onWarning: options?.onWarning }
-	const root = parseCoreGeneric(frontMatter, ctx, nativeBuilder, depthOfNative)
-	const out = emptyMapping()
-	for (const [k, v] of root) out[k] = v
-	return out as unknown as T
+	return parseCoreGeneric(frontMatter, ctx, nativeBuilder, depthOfNative) as T
 }

@@ -23,6 +23,16 @@ describe('arrays — block sequence (dash-prefixed)', () => {
 		expect(result.values).toEqual([42, true, 'hello'])
 	})
 
+	it('consumes the complete whitespace run after a dash', () => {
+		const result = parse("values:\n  -  value\n  -   'quoted'\n  -  [1, 2]\n  -  {a: 1}\n")
+		expect(result.values).toEqual(['value', 'quoted', '[1, 2]', { a: 1 }])
+	})
+
+	it('consumes non-ASCII whitespace after a dash like /^-\\s+/', () => {
+		const result = parse('values:\n  -\u00a0\u00a0[1, 2]\n')
+		expect(result.values).toEqual(['[1, 2]'])
+	})
+
 	it('parses an array of single-key objects', () => {
 		const result = parse(`
 			authors:
@@ -92,6 +102,32 @@ describe('arrays — block sequence (dash-prefixed)', () => {
 })
 
 describe('maps', () => {
+	it('uses the full trimStart whitespace set for indentation', () => {
+		const result = parse('a:\n  b: 1\n\u00a0\u00a0c: 2\n')
+		expect(result.a).toEqual({ b: 1, c: 2 })
+	})
+
+	it('matches trimStart indentation for every ECMAScript whitespace code point', () => {
+		const whitespace = [
+			// TAB and CR are intentionally absent: Core normalization rewrites
+			// them before block indentation is measured.
+			0x000b, 0x000c, 0x0020, 0x00a0, 0x1680,
+			0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006,
+			0x2007, 0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x202f,
+			0x205f, 0x3000, 0xfeff,
+		]
+		for (const codePoint of whitespace) {
+			const ws = String.fromCodePoint(codePoint)
+			const result = parse(`a:\n  b: 1\n${ws}${ws}c: 2\n`)
+			expect(result.a).toEqual({ b: 1, c: 2 })
+		}
+	})
+
+	it('does not silently drop a mapping after Unicode-indented blank lines', () => {
+		const result = parse('a:\n  b: 1\n\u00a0\u00a0\n  c: 2\n')
+		expect(result.a).toEqual({ b: 1, c: 2 })
+	})
+
 	it('parses a key-value map', () => {
 		const result = parse(`
 			author:

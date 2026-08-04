@@ -45,6 +45,8 @@ const isKeyContinueChar = (c: number): boolean =>
 	isKeyStartChar(c) || c === 58 || c === 45 // + : -
 
 export interface KeyMatch {
+	/** One-based source line of the key. */
+	line: number
 	/** Start of the whole match (a line-start position). */
 	matchStart: number
 	/** Position right after the mandatory `:` — start of the separator. */
@@ -73,7 +75,7 @@ const matchSeparator = (s: string, pos: number): { end: number; isBlock: boolean
 	return null
 }
 
-const matchAt = (s: string, pos: number): KeyMatch | null => {
+const matchAt = (s: string, pos: number, line: number): KeyMatch | null => {
 	const c = s.charCodeAt(pos)
 
 	if (c === 39) { // '
@@ -82,7 +84,7 @@ const matchAt = (s: string, pos: number): KeyMatch | null => {
 		if (s.charCodeAt(end + 1) !== 58) return null // mandatory ':'
 		const sep = matchSeparator(s, end + 2)
 		if (sep === null) return null
-		return { matchStart: pos, sepStart: end + 2, rawStart: sep.end, isBlock: sep.isBlock, singleQuoted: s.slice(pos + 1, end) }
+		return { line, matchStart: pos, sepStart: end + 2, rawStart: sep.end, isBlock: sep.isBlock, singleQuoted: s.slice(pos + 1, end) }
 	}
 
 	if (c === 34) { // "
@@ -105,7 +107,7 @@ const matchAt = (s: string, pos: number): KeyMatch | null => {
 		if (s.charCodeAt(end + 1) !== 58) return null
 		const sep = matchSeparator(s, end + 2)
 		if (sep === null) return null
-		return { matchStart: pos, sepStart: end + 2, rawStart: sep.end, isBlock: sep.isBlock, doubleQuotedRaw: s.slice(pos + 1, end) }
+		return { line, matchStart: pos, sepStart: end + 2, rawStart: sep.end, isBlock: sep.isBlock, doubleQuotedRaw: s.slice(pos + 1, end) }
 	}
 
 	if (!isKeyStartChar(c)) return null
@@ -119,7 +121,7 @@ const matchAt = (s: string, pos: number): KeyMatch | null => {
 		if (s.charCodeAt(k) !== 58) continue // must be the mandatory ':'
 		const sep = matchSeparator(s, k + 1)
 		if (sep !== null) {
-			return { matchStart: pos, sepStart: k + 1, rawStart: sep.end, isBlock: sep.isBlock, unquoted: s.slice(pos, k) }
+			return { line, matchStart: pos, sepStart: k + 1, rawStart: sep.end, isBlock: sep.isBlock, unquoted: s.slice(pos, k) }
 		}
 	}
 	return null
@@ -136,10 +138,14 @@ const matchAt = (s: string, pos: number): KeyMatch | null => {
 export const scanKeys = (frontMatter: string): KeyMatch[] => {
 	const matches: KeyMatch[] = []
 	let pos = 0
+	let line = 1
 	while (pos <= frontMatter.length) {
-		const m = matchAt(frontMatter, pos)
+		const m = matchAt(frontMatter, pos, line)
 		if (m !== null) {
 			matches.push(m)
+			for (let i = pos; i < m.rawStart; i++) {
+				if (frontMatter.charCodeAt(i) === 10) line++
+			}
 			pos = m.rawStart
 			if (m.isBlock) {
 				// rawStart already sits right after the separator's own `\n`,
@@ -147,12 +153,14 @@ export const scanKeys = (frontMatter: string): KeyMatch[] => {
 				continue
 			}
 			const nextNl = frontMatter.indexOf('\n', pos)
-			pos = nextNl === -1 ? frontMatter.length + 1 : nextNl + 1
+			if (nextNl === -1) pos = frontMatter.length + 1
+			else { pos = nextNl + 1; line++ }
 			continue
 		}
 		const nextNl = frontMatter.indexOf('\n', pos)
 		if (nextNl === -1) break
 		pos = nextNl + 1
+		line++
 	}
 	return matches
 }
