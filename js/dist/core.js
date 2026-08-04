@@ -24,6 +24,7 @@ import { unescapeDQ, stripComment, parseScalarValue, } from './scalars.js';
 import { parseFlowSequence, parseFlowMapping } from './flow.js';
 import { parseBlock } from './block.js';
 import { LimaError } from './errors.js';
+import { scanKeys } from './scanner.js';
 export { NESTING_DEPTH_LIMIT, SCALAR_LENGTH_LIMIT } from './normalize.js';
 export { toPlainValue } from './scalars.js';
 /** Every Lima mapping result must be a prototype-free object (Core §11.1). */
@@ -37,10 +38,6 @@ const depthOfPositioned = (v) => {
     }
     return 0;
 };
-// See the historical implementation notes carried over from the legacy
-// parser: ASCII-only key grammar (frontmatter keys are always ASCII),
-// \r/\t excluded from the separator group because parse() normalizes first.
-const KEY_RE = /^(?:([a-zA-Z\d_][a-zA-Z\d_:-]*)|'([^']*)'|"((?:[^"\\]|\\.)*)"):( *\n| )/gm;
 const SPACE_BEFORE_COLON_RE = /^(?:'[^']*'|"(?:[^"\\]|\\.)*")[ \t]+:/;
 const leadingSpaces = (line) => {
     let i = 0;
@@ -89,29 +86,34 @@ export const parseCoreWithPositions = (frontMatter, ctx) => {
         frontMatter = frontMatter.replace(/^([ \t]*)/gm, (leading) => (leading.includes('\t') ? leading.replace(/\t/g, '  ') : leading));
     }
     if (frontMatter.includes(' \n') || frontMatter.endsWith(' ')) {
-        frontMatter = frontMatter.replace(/ +(?=\n|$)/gm, '');
+        // Capture-and-reinsert instead of a lookahead: `( +)(\n|$)` replaced
+        // with just group 2 removes the spaces and puts back whatever
+        // followed them (a newline, or nothing at end of string) — same
+        // result as ` +(?=\n|$)` → '', without relying on a construct RE2
+        // (and RE2-family engines like Rust's `regex` crate) don't support.
+        frontMatter = frontMatter.replace(/( +)(\n|$)/gm, '$2');
     }
-    // Lazy — the regex scan below only runs the first time any key's line
-    // is actually needed (duplicate-key/warning/strict-mode/resource-limit
-    // messages), never on the happy path otherwise.
+    const matches = scanKeys(frontMatter);
+    const keyCount = matches.length;
+    // Lazy — the line-number sweep below only runs the first time any key's
+    // line is actually needed. Match positions themselves are already known
+    // (`matches` above, needed eagerly for tokenization regardless), so
+    // this is purely a lazy position→line sweep now, not a lazy re-scan for
+    // positions too — `scanKeys` replaced what used to be two independent
+    // full-document regex scans (the split below, and this one) with one.
     let keyLineNumbers = null;
     const keyLine = (i) => {
         if (keyLineNumbers === null) {
-            const keyPositions = [];
-            const re = new RegExp(KEY_RE.source, 'gm');
-            let m;
-            while ((m = re.exec(frontMatter)) !== null)
-                keyPositions.push(m.index);
             // Single combined O(document length) sweep instead of one
-            // lineAt() scan-from-start per key — keyPositions is strictly
-            // ascending (regex exec proceeds forward), so every position's
+            // lineAt() scan-from-start per key — match positions are
+            // strictly ascending (document order), so every position's
             // line can be read off one shared pass instead of each
             // independently re-scanning from character 0.
-            keyLineNumbers = new Array(keyPositions.length);
+            keyLineNumbers = new Array(matches.length);
             let line = 1;
             let posIdx = 0;
-            for (let charIdx = 0; charIdx <= frontMatter.length && posIdx < keyPositions.length; charIdx++) {
-                while (posIdx < keyPositions.length && keyPositions[posIdx] === charIdx) {
+            for (let charIdx = 0; charIdx <= frontMatter.length && posIdx < matches.length; charIdx++) {
+                while (posIdx < matches.length && matches[posIdx].matchStart === charIdx) {
                     keyLineNumbers[posIdx] = line;
                     posIdx++;
                 }
@@ -137,8 +139,6 @@ export const parseCoreWithPositions = (frontMatter, ctx) => {
             searchFrom = lineEnd + 1;
         }
     }
-    const parts = frontMatter.split(KEY_RE).slice(1);
-    const keyCount = parts.length / 5 | 0;
     if (keyCount === 0)
         return root;
     if (keyCount > TOP_LEVEL_KEY_LIMIT) {
@@ -148,8 +148,9 @@ export const parseCoreWithPositions = (frontMatter, ctx) => {
         });
     }
     for (let i = 0; i < keyCount; i++) {
-        const rawDQ = parts[i * 5 + 2];
-        const key = parts[i * 5] ?? parts[i * 5 + 1] ?? (rawDQ !== undefined ? unescapeDQ(rawDQ) : undefined);
+        const m = matches[i];
+        const rawDQ = m.doubleQuotedRaw;
+        const key = m.unquoted ?? m.singleQuoted ?? (rawDQ !== undefined ? unescapeDQ(rawDQ) : undefined);
         if (key === undefined)
             continue;
         checkKeyLength(key, () => keyLine(i));
@@ -166,9 +167,9 @@ export const parseCoreWithPositions = (frontMatter, ctx) => {
             // object is delivered anyway.
             ctx.onWarning?.(diagnostic);
         }
-        const sep = parts[i * 5 + 3];
-        const raw = parts[i * 5 + 4] ?? '';
-        const isBlock = sep.charCodeAt(sep.length - 1) === 10;
+        const nextStart = i + 1 < matches.length ? matches[i + 1].matchStart : frontMatter.length;
+        const raw = frontMatter.slice(m.rawStart, nextStart);
+        const isBlock = m.isBlock;
         const lines = [];
         let lineStart = 0;
         for (let j = 0; j <= raw.length; j++) {

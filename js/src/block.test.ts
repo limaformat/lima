@@ -247,6 +247,39 @@ describe('quoted keys', () => {
 		expect(parse('"key: with colon": value')).toEqual({ 'key: with colon': 'value' })
 	})
 
+	it('single-quoted key spanning a literal newline', () => {
+		expect(parse("'a\nb': value")).toEqual({ 'a\nb': 'value' })
+	})
+
+	it('double-quoted key with an escaped quote', () => {
+		expect(parse('"a\\"b": value')).toEqual({ 'a"b': 'value' })
+	})
+
+	it('a backslash directly followed by a real newline inside a double-quoted key is not a valid escape — the key does not match at all', () => {
+		// No `s` flag on the underlying grammar means `.` (as in `\.`) never
+		// matches a line terminator — a literal `\` + newline inside a
+		// double-quoted key breaks the match entirely rather than being
+		// treated as an escaped newline.
+		expect(parse('"a\\\nb": value')).toEqual({})
+	})
+})
+
+describe('key with embedded colon, backtracking-dependent cases', () => {
+	it('picks the rightmost colon that still allows a valid separator to follow', () => {
+		expect(parse('a:b: value')).toEqual({ 'a:b': 'value' })
+		expect(parse('a:b:c:d: value')).toEqual({ 'a:b:c:d': 'value' })
+	})
+
+	it('a bare key with no separator at all (no trailing space or newline) is not recognized', () => {
+		expect(parse('key:')).toEqual({})
+	})
+
+	it('two spaces after the colon: separator consumes exactly one, the rest is part of the value', () => {
+		expect(parse('key:  value')).toEqual({ key: ' value' })
+	})
+})
+
+describe('quoted keys, continued', () => {
 	it('quoted key with block value (array)', () => {
 		const result = parse(`
 			'my tags':
