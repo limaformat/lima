@@ -45,6 +45,24 @@ const blockAfterDash = (lines, index, indent) => {
         content++;
     return lines.source.slice(content, end);
 };
+/** `source.slice(start, end).trim()` with no temporary untrimmed substring. */
+const trimSlice = (source, start, end) => {
+    if (start < end) {
+        const first = source.charCodeAt(start);
+        const last = source.charCodeAt(end - 1);
+        // Printable ASCII cannot be consumed by trim(), except U+0020 SPACE.
+        // Canonical frontmatter keys/values overwhelmingly have printable,
+        // non-space ASCII boundaries, so avoid both Unicode predicate calls.
+        if (first > 0x20 && first < 0x7f && last > 0x20 && last < 0x7f) {
+            return source.slice(start, end);
+        }
+    }
+    while (start < end && isTrimWhitespace(source.charCodeAt(start)))
+        start++;
+    while (end > start && isTrimWhitespace(source.charCodeAt(end - 1)))
+        end--;
+    return source.slice(start, end);
+};
 const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) => {
     let items = null;
     let entries = null;
@@ -68,16 +86,16 @@ const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) => {
             if (items !== null && pendingItem !== null) {
                 const colonPos = findKeySep(trimmed);
                 if (colonPos !== -1) {
-                    const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim());
+                    const itemKey = stripKeyQuotes(trimSlice(trimmed, 0, colonPos));
                     checkKeyLength(itemKey, () => baseLine + idx);
-                    let itemVal = trimmed.slice(colonPos + 2).trim();
+                    let itemVal = trimSlice(trimmed, colonPos + 2, trimmed.length);
                     if (itemVal.includes('#'))
                         itemVal = stripComment(itemVal);
                     builder.setMapping(pendingItem, itemKey, parseFlowOrScalarValue(itemVal, ctx, baseLine + idx, builder));
                     idx++;
                 }
                 else if (trimmed.endsWith(':')) {
-                    const itemKey = stripKeyQuotes(trimmed.slice(0, -1).trim());
+                    const itemKey = stripKeyQuotes(trimSlice(trimmed, 0, trimmed.length - 1));
                     const keyLineNum = baseLine + idx;
                     checkKeyLength(itemKey, () => keyLineNum);
                     idx++;
@@ -194,11 +212,10 @@ const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) => {
                 }
             }
             else if (colonPos !== -1) {
-                const pendingKey = stripKeyQuotes(afterDash.slice(0, colonPos).trim());
+                const pendingKey = stripKeyQuotes(trimSlice(afterDash, 0, colonPos));
                 checkKeyLength(pendingKey, () => baseLine + idx);
-                const pendingRaw = afterDash.slice(colonPos + 2).trim();
-                pendingItem = builder.createMapping();
-                builder.setMapping(pendingItem, pendingKey, parseFlowOrScalarValue(pendingRaw, ctx, baseLine + idx, builder));
+                const pendingRaw = trimSlice(afterDash, colonPos + 2, afterDash.length);
+                pendingItem = builder.createMappingWith(pendingKey, parseFlowOrScalarValue(pendingRaw, ctx, baseLine + idx, builder));
                 idx++;
                 // Canonical multi-key object items dominate frontmatter object
                 // lists. Consume only unquoted `key: value` continuation lines
@@ -216,11 +233,11 @@ const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) => {
                     const continuationColon = lines.source.indexOf(': ', continuationStart);
                     if (continuationColon === -1 || continuationColon >= continuationEnd)
                         break;
-                    const continuationKey = lines.source.slice(continuationStart, continuationColon).trim();
+                    const continuationKey = trimSlice(lines.source, continuationStart, continuationColon);
                     if (!continuationKey)
                         break;
                     checkKeyLength(continuationKey, () => baseLine + idx);
-                    let continuationValue = lines.source.slice(continuationColon + 2, continuationEnd).trim();
+                    let continuationValue = trimSlice(lines.source, continuationColon + 2, continuationEnd);
                     if (continuationValue.includes('#'))
                         continuationValue = stripComment(continuationValue);
                     builder.setMapping(pendingItem, continuationKey, parseFlowOrScalarValue(continuationValue, ctx, baseLine + idx, builder));
@@ -228,7 +245,7 @@ const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) => {
                 }
             }
             else if (afterDash.endsWith(':')) {
-                const itemKey = stripKeyQuotes(afterDash.slice(0, -1).trim());
+                const itemKey = stripKeyQuotes(trimSlice(afterDash, 0, afterDash.length - 1));
                 const keyLineNum = baseLine + idx;
                 checkKeyLength(itemKey, () => keyLineNum);
                 idx++;
@@ -239,14 +256,12 @@ const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) => {
                     const nextIndent = lines.indents[ni];
                     if (nextIndent > baseIndent) {
                         const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder);
-                        pendingItem = builder.createMapping();
-                        builder.setMapping(pendingItem, itemKey, nested ?? builder.null(keyLineNum));
+                        pendingItem = builder.createMappingWith(itemKey, nested ?? builder.null(keyLineNum));
                         idx = after;
                         continue;
                     }
                 }
-                pendingItem = builder.createMapping();
-                builder.setMapping(pendingItem, itemKey, builder.null(keyLineNum));
+                pendingItem = builder.createMappingWith(itemKey, builder.null(keyLineNum));
             }
             else {
                 const qFirst = afterDash.charCodeAt(0);
@@ -278,10 +293,12 @@ const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) => {
             if (colonPos !== -1) {
                 if (entries === null)
                     entries = builder.createMapping();
-                const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim());
+                const itemKey = stripKeyQuotes(trimSlice(trimmed, 0, colonPos));
                 checkKeyLength(itemKey, () => baseLine + idx);
-                checkDuplicateKey(builder.hasMappingKey(entries, itemKey), itemKey, baseLine + idx, ctx);
-                let itemVal = trimmed.slice(colonPos + 2).trim();
+                if (ctx.strict || ctx.onWarning !== undefined) {
+                    checkDuplicateKey(builder.hasMappingKey(entries, itemKey), itemKey, baseLine + idx, ctx);
+                }
+                let itemVal = trimSlice(trimmed, colonPos + 2, trimmed.length);
                 if (itemVal.includes('#'))
                     itemVal = stripComment(itemVal);
                 builder.setMapping(entries, itemKey, parseFlowOrScalarValue(itemVal, ctx, baseLine + idx, builder));
@@ -290,10 +307,12 @@ const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) => {
             else if (trimmed.endsWith(':')) {
                 if (entries === null)
                     entries = builder.createMapping();
-                const itemKey = stripKeyQuotes(trimmed.slice(0, -1).trim());
+                const itemKey = stripKeyQuotes(trimSlice(trimmed, 0, trimmed.length - 1));
                 const keyLineNum = baseLine + idx;
                 checkKeyLength(itemKey, () => keyLineNum);
-                checkDuplicateKey(builder.hasMappingKey(entries, itemKey), itemKey, keyLineNum, ctx);
+                if (ctx.strict || ctx.onWarning !== undefined) {
+                    checkDuplicateKey(builder.hasMappingKey(entries, itemKey), itemKey, keyLineNum, ctx);
+                }
                 idx++;
                 let ni = idx;
                 while (ni < lines.starts.length && lines.indents[ni] === blockLineLength(lines, ni))

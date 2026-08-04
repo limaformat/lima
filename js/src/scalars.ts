@@ -6,7 +6,7 @@
  */
 
 import { type LimaValue, LNull, LBool, LFloat, LInt, LString, LInstant } from './value.js'
-import { type ParseContext, checkScalarLimit, checkStringLimit } from './normalize.js'
+import { type ParseContext, checkStringLimit } from './normalize.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
 
@@ -32,31 +32,6 @@ export type PositionedValue =
 	| { kind: 'array'; items: PositionedValue[]; line: number; insertedAt?: InsertedAt }
 	| { kind: 'mapping'; entries: Map<string, PositionedValue>; line: number; insertedAt?: InsertedAt }
 
-/**
- * `toType`'s classification result is always a plain `LimaValue` — the
- * number/date grammar in `toType` itself doesn't need to know or care what
- * final representation the caller wants. This is the one place that
- * decides: wrap it into the annotated `PositionedValue` tree (References'
- * `positionedBuilder`), or unwrap it straight into the public native shape
- * (Core's `nativeBuilder`, defined in core.ts) — see `builder.ts`.
- */
-const wrap = <V, M>(v: LimaValue, line: number, builder: ValueBuilder<V, M>): V => {
-	switch (v.kind) {
-		case 'null': return builder.null(line)
-		case 'bool': return builder.bool(v.value, line)
-		case 'int': return builder.int(v.value, line)
-		case 'float': return builder.float(v.value, line)
-		case 'string': return builder.string(v.value, line, false)
-		case 'instant': return builder.instant(v.value, line)
-		case 'array': return builder.array(v.items.map((i) => wrap(i, line, builder)), line)
-		case 'mapping': {
-			const entries = builder.createMapping()
-			for (const [k, c] of v.entries) builder.setMapping(entries, k, wrap(c, line, builder))
-			return builder.mapping(entries, line)
-		}
-	}
-}
-
 /** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */
 export const positionedBuilder: ValueBuilder<PositionedValue> = {
 	null: (line) => ({ kind: 'null', line }),
@@ -67,6 +42,7 @@ export const positionedBuilder: ValueBuilder<PositionedValue> = {
 	instant: (value, line) => ({ kind: 'instant', value, line }),
 	array: (items, line) => ({ kind: 'array', items, line }),
 	createMapping: () => new Map<string, PositionedValue>(),
+	createMappingWith: (key, value) => new Map([[key, value]]),
 	hasMappingKey: (entries, key) => entries.has(key),
 	setMapping: (entries, key, value) => { entries.set(key, value) },
 	mappingMaxDepth: (entries, depthOf) => {
@@ -186,27 +162,38 @@ const isFloatForm = (str: string): boolean => str.includes('.') || str.includes(
 const isZeroLiteral = (str: string): boolean => /^0+(\.0+)?$/.test(str.replace(/^-/, '').split(/[eE]/)[0])
 
 /**
- * Converts a raw token to its Lima value, per Core §6.4.1's explicit number
+ * Classifies a raw token and constructs its final builder value directly,
+ * per Core §6.4.1's explicit number
  * grammar (never `Number()`/`parseFloat()`, which accept far more than Lima
  * does) and the three §6.5.1 date shapes. Reference-shaped text (`($key)`,
  * `(%key)`) matches none of these and falls through to a plain string,
- * unrecognised and unresolved — Core has no concept of it at all.
+ * unrecognised and unresolved — Core has no concept of it at all. Avoiding
+ * an intermediate tagged `LimaValue` keeps both builders on one grammar while
+ * eliminating an allocate-then-switch conversion for every scalar.
  */
-const toType = (str: string, strict = false, line = 0): LimaValue => {
-	if (str === '' || str === 'null' || str === '~') return LNull
-	if (str === 'true') return LBool(true)
-	if (str === 'false') return LBool(false)
+const buildTyped = <V, M>(
+	str: string, strict: boolean, line: number, builder: ValueBuilder<V, M>,
+): V => {
+	if (str === '' || str === 'null' || str === '~') return builder.null(line)
+	if (str === 'true') return builder.bool(true, line)
+	if (str === 'false') return builder.bool(false, line)
 	const first = str.charCodeAt(0)
 	// Every number and every supported date form starts with a digit, '-'
 	// or '.'. Once the null/boolean literals above are excluded, any other
 	// leading character is unconditionally a string; avoid both regexes and
 	// the email/date prechecks for ordinary words, URLs and identifiers.
-	if (!((first >= 48 && first <= 57) || first === 45 || first === 46)) return LString(str)
+	if (!((first >= 48 && first <= 57) || first === 45 || first === 46)) {
+		checkStringLimit(str, line)
+		return builder.string(str, line, false)
+	}
 	// Hex (0x/0X), octal (0o/0O), binary (0b/0B) — kept as strings (YAML 1.2 compatible).
 	if (str.length > 2 && str.charCodeAt(0) === 48 &&
 		(str.charCodeAt(1) === 120 || str.charCodeAt(1) === 88 ||
 		 str.charCodeAt(1) === 111 || str.charCodeAt(1) === 79 ||
-		 str.charCodeAt(1) === 98  || str.charCodeAt(1) === 66)) return LString(str)
+		 str.charCodeAt(1) === 98  || str.charCodeAt(1) === 66)) {
+		checkStringLimit(str, line)
+		return builder.string(str, line, false)
+	}
 	if (NUMBER_RE.test(str)) {
 		const n = Number(str)
 		if (isFloatForm(str)) {
@@ -221,19 +208,20 @@ const toType = (str: string, strict = false, line = 0): LimaValue => {
 					message: `LIMA: non-zero float value underflows to zero at line ${line}: "${str}"`,
 				})
 			} else {
-				return LFloat(n)
+				return builder.float(n === 0 ? 0 : n, line)
 			}
 		} else if (Math.abs(n) <= Number.MAX_SAFE_INTEGER) {
-			return LInt(n)
+			return builder.int(n === 0 ? 0 : n, line)
 		}
 		// Outside the safe integer range, or overflow/underflow already
 		// handled above in non-strict mode: fall through to string.
 	}
 	if (!str.includes('@') && DATE_PRE_RE.test(str)) {
 		const date = parseDateUTC(str, strict, line)
-		if (date !== null) return LInstant(date)
+		if (date !== null) return builder.instant(date, line)
 	}
-	return LString(str)
+	checkStringLimit(str, line)
+	return builder.string(str, line, false)
 }
 
 // ─── Scalar / quoting ──────────────────────────────────────────────────────
@@ -340,9 +328,7 @@ export const parseQuotedOrTyped = <V, M>(
 		checkStringLimit(raw, line)
 		return builder.string(raw, line, false)
 	}
-	const typed = toType(raw, ctx.strict, line)
-	checkScalarLimit(typed, line)
-	return wrap(typed, line, builder)
+	return buildTyped(raw, ctx.strict, line, builder)
 }
 
 export const parseScalarValue = <V, M>(raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>): V => {

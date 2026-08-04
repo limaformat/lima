@@ -88,7 +88,9 @@ export const parseFlowMapping = (val, ctx, line, builder) => {
         }
         const key = stripKeyQuotes(item.slice(0, colonPos).trim());
         checkKeyLength(key, () => line);
-        checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx);
+        if (ctx.strict || ctx.onWarning !== undefined) {
+            checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx);
+        }
         const rawVal = item.slice(colonPos + 2).trim();
         if (isNestedFlowConstruct(rawVal)) {
             throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `LIMA: invalid flow nesting at line ${line}: "${rawVal}"` });
@@ -104,11 +106,13 @@ export const parseFlowOrScalarValue = (raw, ctx, line, builder) => {
         const sequence = parseFlowSequence(raw, ctx, line, builder);
         if (sequence !== null)
             return builder.array(sequence, line);
+        return parseScalarValue(raw, ctx, line, builder);
     }
     else if (first === 123) {
         const mapping = parseFlowMapping(raw, ctx, line, builder);
         if (mapping !== null)
             return mapping;
+        return parseScalarValue(raw, ctx, line, builder);
     }
-    return parseScalarValue(raw, ctx, line, builder);
+    return parseQuotedOrTyped(raw, ctx, line, true, builder);
 };

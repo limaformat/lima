@@ -5,33 +5,8 @@
  * array/map items) builds on.
  */
 import { LNull, LBool, LFloat, LInt, LString, LInstant } from './value.js';
-import { checkScalarLimit, checkStringLimit } from './normalize.js';
+import { checkStringLimit } from './normalize.js';
 import { LimaError } from './errors.js';
-/**
- * `toType`'s classification result is always a plain `LimaValue` — the
- * number/date grammar in `toType` itself doesn't need to know or care what
- * final representation the caller wants. This is the one place that
- * decides: wrap it into the annotated `PositionedValue` tree (References'
- * `positionedBuilder`), or unwrap it straight into the public native shape
- * (Core's `nativeBuilder`, defined in core.ts) — see `builder.ts`.
- */
-const wrap = (v, line, builder) => {
-    switch (v.kind) {
-        case 'null': return builder.null(line);
-        case 'bool': return builder.bool(v.value, line);
-        case 'int': return builder.int(v.value, line);
-        case 'float': return builder.float(v.value, line);
-        case 'string': return builder.string(v.value, line, false);
-        case 'instant': return builder.instant(v.value, line);
-        case 'array': return builder.array(v.items.map((i) => wrap(i, line, builder)), line);
-        case 'mapping': {
-            const entries = builder.createMapping();
-            for (const [k, c] of v.entries)
-                builder.setMapping(entries, k, wrap(c, line, builder));
-            return builder.mapping(entries, line);
-        }
-    }
-};
 /** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */
 export const positionedBuilder = {
     null: (line) => ({ kind: 'null', line }),
@@ -42,6 +17,7 @@ export const positionedBuilder = {
     instant: (value, line) => ({ kind: 'instant', value, line }),
     array: (items, line) => ({ kind: 'array', items, line }),
     createMapping: () => new Map(),
+    createMappingWith: (key, value) => new Map([[key, value]]),
     hasMappingKey: (entries, key) => entries.has(key),
     setMapping: (entries, key, value) => { entries.set(key, value); },
     mappingMaxDepth: (entries, depthOf) => {
@@ -161,32 +137,39 @@ const DATE_PRE_RE = /\d[\d\-:.\/a-zA-Z]{4,}/;
 const isFloatForm = (str) => str.includes('.') || str.includes('e') || str.includes('E');
 const isZeroLiteral = (str) => /^0+(\.0+)?$/.test(str.replace(/^-/, '').split(/[eE]/)[0]);
 /**
- * Converts a raw token to its Lima value, per Core §6.4.1's explicit number
+ * Classifies a raw token and constructs its final builder value directly,
+ * per Core §6.4.1's explicit number
  * grammar (never `Number()`/`parseFloat()`, which accept far more than Lima
  * does) and the three §6.5.1 date shapes. Reference-shaped text (`($key)`,
  * `(%key)`) matches none of these and falls through to a plain string,
- * unrecognised and unresolved — Core has no concept of it at all.
+ * unrecognised and unresolved — Core has no concept of it at all. Avoiding
+ * an intermediate tagged `LimaValue` keeps both builders on one grammar while
+ * eliminating an allocate-then-switch conversion for every scalar.
  */
-const toType = (str, strict = false, line = 0) => {
+const buildTyped = (str, strict, line, builder) => {
     if (str === '' || str === 'null' || str === '~')
-        return LNull;
+        return builder.null(line);
     if (str === 'true')
-        return LBool(true);
+        return builder.bool(true, line);
     if (str === 'false')
-        return LBool(false);
+        return builder.bool(false, line);
     const first = str.charCodeAt(0);
     // Every number and every supported date form starts with a digit, '-'
     // or '.'. Once the null/boolean literals above are excluded, any other
     // leading character is unconditionally a string; avoid both regexes and
     // the email/date prechecks for ordinary words, URLs and identifiers.
-    if (!((first >= 48 && first <= 57) || first === 45 || first === 46))
-        return LString(str);
+    if (!((first >= 48 && first <= 57) || first === 45 || first === 46)) {
+        checkStringLimit(str, line);
+        return builder.string(str, line, false);
+    }
     // Hex (0x/0X), octal (0o/0O), binary (0b/0B) — kept as strings (YAML 1.2 compatible).
     if (str.length > 2 && str.charCodeAt(0) === 48 &&
         (str.charCodeAt(1) === 120 || str.charCodeAt(1) === 88 ||
             str.charCodeAt(1) === 111 || str.charCodeAt(1) === 79 ||
-            str.charCodeAt(1) === 98 || str.charCodeAt(1) === 66))
-        return LString(str);
+            str.charCodeAt(1) === 98 || str.charCodeAt(1) === 66)) {
+        checkStringLimit(str, line);
+        return builder.string(str, line, false);
+    }
     if (NUMBER_RE.test(str)) {
         const n = Number(str);
         if (isFloatForm(str)) {
@@ -205,11 +188,11 @@ const toType = (str, strict = false, line = 0) => {
                     });
             }
             else {
-                return LFloat(n);
+                return builder.float(n === 0 ? 0 : n, line);
             }
         }
         else if (Math.abs(n) <= Number.MAX_SAFE_INTEGER) {
-            return LInt(n);
+            return builder.int(n === 0 ? 0 : n, line);
         }
         // Outside the safe integer range, or overflow/underflow already
         // handled above in non-strict mode: fall through to string.
@@ -217,9 +200,10 @@ const toType = (str, strict = false, line = 0) => {
     if (!str.includes('@') && DATE_PRE_RE.test(str)) {
         const date = parseDateUTC(str, strict, line);
         if (date !== null)
-            return LInstant(date);
+            return builder.instant(date, line);
     }
-    return LString(str);
+    checkStringLimit(str, line);
+    return builder.string(str, line, false);
 };
 // ─── Scalar / quoting ──────────────────────────────────────────────────────
 const ESCAPED_HASH_RE = /\\#/g;
@@ -328,9 +312,7 @@ export const parseQuotedOrTyped = (raw, ctx, line, topLevel, builder) => {
         checkStringLimit(raw, line);
         return builder.string(raw, line, false);
     }
-    const typed = toType(raw, ctx.strict, line);
-    checkScalarLimit(typed, line);
-    return wrap(typed, line, builder);
+    return buildTyped(raw, ctx.strict, line, builder);
 };
 export const parseScalarValue = (raw, ctx, line, builder) => {
     const first = raw.charCodeAt(0);

@@ -199,7 +199,7 @@ const parseCoreGeneric = <V, M>(
 		if (key === undefined) continue
 		checkKeyLength(key, () => keyLine(i))
 
-		if (builder.hasMappingKey(root, key)) {
+		if ((strict || ctx.onWarning !== undefined) && builder.hasMappingKey(root, key)) {
 			const line = keyLine(i)
 			const diagnostic = {
 				code: 'DUPLICATE_KEY', line, key,
@@ -356,6 +356,11 @@ export const nativeBuilder: ValueBuilder<NativeValue, Record<string, NativeValue
 	// the unwrap-an-opaque-`unknown`-and-hope casts the `unknown`-typed
 	// interface required at every method below.
 	createMapping: () => emptyMapping() as Record<string, NativeValue>,
+	createMappingWith: (key, value) => {
+		const entries = emptyMapping() as Record<string, NativeValue>
+		entries[key] = value
+		return entries
+	},
 	// Lima values can never be `undefined`, and every native mapping has a
 	// null prototype. A direct lookup therefore distinguishes absent from
 	// present keys without the considerably more expensive generic own-key

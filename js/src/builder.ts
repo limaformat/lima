@@ -33,6 +33,7 @@ export interface ValueBuilder<V, M = Map<string, V>> {
 	instant(value: Date, line: number): V
 	array(items: V[], line: number): V
 	createMapping(): M
+	createMappingWith(key: string, value: V): M
 	hasMappingKey(entries: M, key: string): boolean
 	setMapping(entries: M, key: string, value: V): void
 	mappingMaxDepth(entries: M, depthOf: (value: V) => number): number
