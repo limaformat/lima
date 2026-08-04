@@ -1,0 +1,9 @@
+title: Why I Switched to Eleventy
+date: 2023-09-12
+layout: layouts/post.njk
+permalink: /blog/why-i-switched-to-eleventy/
+tags:
+  - post
+  - eleventy
+  - opinion
+eleventyExcludeFromCollections: false

@@ -20,7 +20,7 @@
  * There is no module-level mutable state: diagnostics are collected in a
  * `ResolutionContext` created fresh per call and threaded explicitly.
  */
-import { countNodes, canonicalString, ingestPartialValue, PARTIAL_COUNT_LIMIT, PARTIAL_NAME_LENGTH_LIMIT, PARTIAL_NODE_LIMIT, RESULT_NODE_LIMIT, SCALAR_LENGTH_LIMIT, } from './value.js';
+import { countNodes, canonicalString, codepointLength, ingestPartialValue, PARTIAL_COUNT_LIMIT, PARTIAL_NAME_LENGTH_LIMIT, PARTIAL_NODE_LIMIT, RESULT_NODE_LIMIT, SCALAR_LENGTH_LIMIT, } from './value.js';
 import { parseCoreWithPositions, toPlainValue, toNativeFromPositioned, NESTING_DEPTH_LIMIT, } from './core.js';
 import { LimaError } from './errors.js';
 const emptyMapping = () => Object.create(null);
@@ -227,7 +227,7 @@ const resolveTree = (node, lookup, partials, ctx) => {
             // interpolated target individually violated it — a hard error in
             // both modes, thrown immediately like the other resource limits
             // (never part of the ordered diagnostics set below).
-            if ([...replaced].length > SCALAR_LENGTH_LIMIT) {
+            if (codepointLength(replaced) > SCALAR_LENGTH_LIMIT) {
                 throw new LimaError({
                     code: 'RESOURCE_LIMIT', line: node.line,
                     message: `LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${node.line}`,
@@ -323,7 +323,7 @@ export const parseReferences = (frontMatter, options) => {
         throw new LimaError({ code: 'INVALID_PARTIAL', message: `LIMA: too many partials (max ${PARTIAL_COUNT_LIMIT})` });
     }
     for (const name of partialNames) {
-        if ([...name].length > PARTIAL_NAME_LENGTH_LIMIT) {
+        if (codepointLength(name) > PARTIAL_NAME_LENGTH_LIMIT) {
             throw new LimaError({
                 code: 'INVALID_PARTIAL', partial: name, path: name,
                 message: `LIMA: invalid partial "${name}" at path "${name}": name exceeds maximum length of ${PARTIAL_NAME_LENGTH_LIMIT} code points`,

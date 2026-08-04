@@ -1,0 +1,13 @@
+title: The Ultimate Guide to Core Web Vitals
+description: Everything you need to know about measuring and improving Largest Contentful Paint, Interaction to Next Paint, and Cumulative Layout Shift.
+canonicalUrl: https://example.com/blog/core-web-vitals-guide
+openGraph:
+  title: The Ultimate Guide to Core Web Vitals
+  type: article
+  image: /og/core-web-vitals.png
+  siteName: Example Engineering Blog
+twitter:
+  card: summary_large_image
+  site: "@exampleeng"
+  creator: "@janedev"
+robots: index, follow

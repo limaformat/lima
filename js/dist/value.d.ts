@@ -70,6 +70,21 @@ export declare const PARTIAL_NODE_LIMIT = 4096;
 export declare const RESULT_NODE_LIMIT = 65536;
 export declare const SCALAR_LENGTH_LIMIT = 16384;
 /**
+ * Counts Unicode code points (what every length-limit check in this
+ * codebase means by "code points", never UTF-16 code units) without
+ * `[...s].length`'s unconditional cost: spreading a string allocates an
+ * array of every character just to read its length, ~15x slower than
+ * `.length` for a typical short ASCII/BMP string (measured). A surrogate
+ * pair (the only case where `.length` and code-point count differ) can
+ * only occur for code points above U+FFFF — astral-plane characters like
+ * emoji, vanishingly rare in real frontmatter — so scanning for one first
+ * and falling back to the exact spread-based count only then keeps the
+ * common case (ASCII titles, but also accented Latin/Cyrillic/CJK BMP
+ * text, none of which need surrogate pairs) on the fast, allocation-free
+ * path.
+ */
+export declare const codepointLength: (s: string) => number;
+/**
  * Converts and validates a single host value against the Lima Value Model
  * (References §6.2), recursively. `seen` tracks the current recursion path
  * (not every visited object) to detect genuine cycles without rejecting

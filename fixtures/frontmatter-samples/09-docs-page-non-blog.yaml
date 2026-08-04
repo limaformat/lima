@@ -1,0 +1,10 @@
+title: Authentication API Reference
+description: Endpoints and parameters for the authentication service.
+order: 3
+category: API Reference
+related:
+  - authorization
+  - session-management
+  - api-keys
+deprecated: false
+since: "2.4.0"

@@ -22,7 +22,7 @@
  */
 
 import {
-	type LimaValue, countNodes, canonicalString,
+	type LimaValue, countNodes, canonicalString, codepointLength,
 	ingestPartialValue, PARTIAL_COUNT_LIMIT, PARTIAL_NAME_LENGTH_LIMIT, PARTIAL_NODE_LIMIT,
 	RESULT_NODE_LIMIT, SCALAR_LENGTH_LIMIT,
 } from './value.js'
@@ -241,7 +241,7 @@ const resolveTree = (
 			// interpolated target individually violated it — a hard error in
 			// both modes, thrown immediately like the other resource limits
 			// (never part of the ordered diagnostics set below).
-			if ([...replaced].length > SCALAR_LENGTH_LIMIT) {
+			if (codepointLength(replaced) > SCALAR_LENGTH_LIMIT) {
 				throw new LimaError({
 					code: 'RESOURCE_LIMIT', line: node.line,
 					message: `LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${node.line}`,
@@ -362,7 +362,7 @@ export const parseReferences = <T extends Record<string, unknown> = Meta>(
 		throw new LimaError({ code: 'INVALID_PARTIAL', message: `LIMA: too many partials (max ${PARTIAL_COUNT_LIMIT})` })
 	}
 	for (const name of partialNames) {
-		if ([...name].length > PARTIAL_NAME_LENGTH_LIMIT) {
+		if (codepointLength(name) > PARTIAL_NAME_LENGTH_LIMIT) {
 			throw new LimaError({
 				code: 'INVALID_PARTIAL', partial: name, path: name,
 				message: `LIMA: invalid partial "${name}" at path "${name}": name exceeds maximum length of ${PARTIAL_NAME_LENGTH_LIMIT} code points`,

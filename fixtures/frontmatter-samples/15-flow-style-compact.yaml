@@ -1,0 +1,5 @@
+title: Compact Frontmatter Style
+tags: [react, hooks, state-management]
+author: {name: Sam Okafor, url: https://example.com/sam}
+meta: {views: 1024, likes: 87, shares: 12}
+related: [intro-to-hooks, custom-hooks-guide]

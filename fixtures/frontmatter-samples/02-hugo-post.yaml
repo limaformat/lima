@@ -1,0 +1,11 @@
+title: "Building Fast Websites with Hugo"
+date: 2024-01-15T08:30:00Z
+draft: false
+weight: 10
+tags:
+  - hugo
+  - performance
+  - static-site-generator
+categories:
+  - Engineering
+summary: A practical look at what makes Hugo one of the fastest static site generators available today.

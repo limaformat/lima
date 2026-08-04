@@ -5,7 +5,7 @@
  * `block.ts`, `core.ts`) sits above this one.
  */
 
-import { type LimaValue, SCALAR_LENGTH_LIMIT } from './value.js'
+import { type LimaValue, SCALAR_LENGTH_LIMIT, codepointLength } from './value.js'
 import { LimaError, type LimaDiagnostic } from './errors.js'
 
 export { SCALAR_LENGTH_LIMIT }
@@ -31,7 +31,7 @@ const utf8Encoder = new TextEncoder()
 export const byteLength = (s: string): number => utf8Encoder.encode(s).length
 
 export const checkScalarLimit = (v: LimaValue, line: number): void => {
-	if (v.kind === 'string' && [...v.value].length > SCALAR_LENGTH_LIMIT) {
+	if (v.kind === 'string' && codepointLength(v.value) > SCALAR_LENGTH_LIMIT) {
 		throw new LimaError({
 			code: 'RESOURCE_LIMIT', line,
 			message: `LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${line}`,
@@ -48,7 +48,7 @@ export const checkScalarLimit = (v: LimaValue, line: number): void => {
  * thunk defers it to the one branch that actually needs a line number.
  */
 export const checkKeyLength = (key: string, line: () => number): void => {
-	if ([...key].length > KEY_LENGTH_LIMIT) {
+	if (codepointLength(key) > KEY_LENGTH_LIMIT) {
 		const l = line()
 		throw new LimaError({
 			code: 'RESOURCE_LIMIT', line: l,

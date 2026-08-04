@@ -17,51 +17,10 @@
  */
 
 import { parseCore, parseReferences } from '../src/index'
-
-const JSON_OUTPUT = Bun.argv.includes('--json')
-const SAMPLES = 7
-
-interface BenchResult {
-	name: string
-	iterations: number
-	samples: number
-	medianUs: number
-	p95Us: number
-	minUs: number
-	maxUs: number
-	opsPerSec: number
-}
+import { createBench, log, JSON_OUTPUT, type BenchResult } from './helpers'
 
 const results: BenchResult[] = []
-
-/** No-ops under `--json` so the only stdout output is the final JSON array. */
-function log(line: string): void {
-	if (!JSON_OUTPUT) console.log(line)
-}
-
-function bench(name: string, fn: () => void, iterations: number): void {
-	for (let i = 0; i < Math.min(iterations, 50); i++) fn() // warmup
-
-	const perOpUs: number[] = []
-	for (let s = 0; s < SAMPLES; s++) {
-		const start = performance.now()
-		for (let i = 0; i < iterations; i++) fn()
-		perOpUs.push(((performance.now() - start) / iterations) * 1000)
-	}
-	perOpUs.sort((a, b) => a - b)
-
-	const median = perOpUs[Math.floor(perOpUs.length / 2)]
-	const p95 = perOpUs[Math.min(perOpUs.length - 1, Math.ceil(perOpUs.length * 0.95) - 1)]
-	const min = perOpUs[0]
-	const max = perOpUs[perOpUs.length - 1]
-	const opsPerSec = 1_000_000 / median // median is in microseconds/op
-
-	results.push({ name, iterations, samples: SAMPLES, medianUs: median, p95Us: p95, minUs: min, maxUs: max, opsPerSec })
-	log(
-		`${name.padEnd(60)} median ${median.toFixed(2).padStart(9)} us/op  ` +
-			`p95 ${p95.toFixed(2).padStart(9)} us/op  ${opsPerSec.toFixed(0).padStart(9)} ops/sec`
-	)
-}
+const bench = createBench(results)
 
 // ── Typical documents ────────────────────────────────────────────────────
 

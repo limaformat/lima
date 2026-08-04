@@ -24,10 +24,13 @@
     "pretest": "bun run build",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "bench": "bun run bench/index.ts"
+    "bench": "bun run bench/index.ts",
+    "bench:vs-yaml": "bun run bench/vs-yaml.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/js-yaml": "latest",
+    "js-yaml": "latest",
     "typescript": "latest"
   }
 }

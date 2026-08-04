@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@limaformat/lima",
+      "name": "@limaformat/yaml-compat",
       "devDependencies": {
         "@types/bun": "latest",
         "@types/js-yaml": "latest",

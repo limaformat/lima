@@ -1,0 +1,16 @@
+title: The Complete Guide to MDX in Next.js
+date: 2024-04-02
+excerpt: MDX combines the simplicity of Markdown with the power of JSX components, and Next.js makes it easy to use both together.
+author:
+  name: Priya Natarajan
+  avatar: /authors/priya.jpg
+  twitter: "@priyabuilds"
+coverImage: /posts/mdx-nextjs/cover.jpg
+ogImage:
+  url: /posts/mdx-nextjs/og.jpg
+  width: 1200
+  height: 630
+tags:
+  - nextjs
+  - mdx
+  - react

@@ -1,0 +1,6 @@
+title: "Understanding YAML: A Deep Dive Into Ambiguity"
+subtitle: 'It''s more complicated than you think'
+description: "Frontmatter parsing looks simple — until you hit the edge cases."
+author: "O'Brien, Kate"
+quote: "\"Simplicity is the ultimate sophistication.\""
+tags: ["deep-dive", "yaml", "parsing"]

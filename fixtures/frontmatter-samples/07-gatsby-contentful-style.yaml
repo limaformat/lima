@@ -1,0 +1,11 @@
+title: Headless CMS Patterns for Modern Frontends
+slug: headless-cms-patterns
+publishedAt: 2024-05-10T14:00:00Z
+updatedAt: 2024-05-18T09:15:00Z
+author: Marcus Webb
+seo:
+  title: Headless CMS Patterns for Modern Frontends | Engineering Blog
+  description: A survey of common integration patterns between headless CMSs and static site generators.
+  image: /seo/headless-cms-patterns.png
+featured: true
+readingTimeMinutes: 7

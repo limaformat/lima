@@ -1,0 +1,18 @@
+{
+  "name": "@limaformat/yaml-compat",
+  "private": true,
+  "version": "0.0.0",
+  "description": "YAML/Lima divergence report on realistic frontmatter — not a conformance check, not published.",
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "run": "bun src/run.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/js-yaml": "latest",
+    "js-yaml": "latest",
+    "typescript": "latest"
+  }
+}

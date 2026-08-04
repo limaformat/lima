@@ -4,7 +4,7 @@
  * checks built on them. Every other Core module (`scalars.ts`, `flow.ts`,
  * `block.ts`, `core.ts`) sits above this one.
  */
-import { SCALAR_LENGTH_LIMIT } from './value.js';
+import { SCALAR_LENGTH_LIMIT, codepointLength } from './value.js';
 import { LimaError } from './errors.js';
 export { SCALAR_LENGTH_LIMIT };
 // Core §9 resource limits. All are hard errors in both modes.
@@ -15,7 +15,7 @@ export const NESTING_DEPTH_LIMIT = 16;
 const utf8Encoder = new TextEncoder();
 export const byteLength = (s) => utf8Encoder.encode(s).length;
 export const checkScalarLimit = (v, line) => {
-    if (v.kind === 'string' && [...v.value].length > SCALAR_LENGTH_LIMIT) {
+    if (v.kind === 'string' && codepointLength(v.value) > SCALAR_LENGTH_LIMIT) {
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line,
             message: `LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${line}`,
@@ -31,7 +31,7 @@ export const checkScalarLimit = (v, line) => {
  * thunk defers it to the one branch that actually needs a line number.
  */
 export const checkKeyLength = (key, line) => {
-    if ([...key].length > KEY_LENGTH_LIMIT) {
+    if (codepointLength(key) > KEY_LENGTH_LIMIT) {
         const l = line();
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line: l,

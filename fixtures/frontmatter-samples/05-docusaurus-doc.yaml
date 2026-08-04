@@ -1,0 +1,9 @@
+id: getting-started
+title: Getting Started
+sidebar_label: Getting Started
+sidebar_position: 1
+description: Learn how to install and configure the framework in under five minutes.
+keywords: [installation, setup, quickstart]
+tags:
+  - beginner
+  - setup
