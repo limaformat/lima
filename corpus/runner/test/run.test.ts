@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(235)
+		expect(outcomes).toHaveLength(241)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -362,6 +362,24 @@ describe('runCorpus', () => {
 	 * references.partial.date-structural-deep-copy asserts the resulting
 	 * values; the identity/mutation check itself (not expressible in this
 	 * value-only corpus format) lives in `references.test.ts`.
+	 * 241/0/0 — maintainability audit of the References §7 strict-error-
+	 * list additions (prompted by the same review) found that six of the
+	 * eight rows had no dedicated `strict: true` case at all — only the
+	 * non-strict side was ever exercised, even though every one of these
+	 * rows throws unconditionally in both modes. Added explicit strict
+	 * siblings for: mapping value in interpolation
+	 * (references.interpolation.mapping.error.strict), a mapping element in
+	 * an interpolated array (references.array-interpolation.mapping-
+	 * element-throws.strict), the final scalar-length, nesting-depth, and
+	 * node-count limits (references.limits.final-{scalar-length,nesting-
+	 * depth,node-count}.above.strict), and invalid-partial validation
+	 * (references.partials.invalid-number.nan.strict). The seventh row —
+	 * a nested array as an interpolated array's element — was deliberately
+	 * left uncovered: it is already documented in
+	 * docs/corpus-design/coverage/references.md (R-073) as structurally
+	 * unreachable, since a nested array can no longer survive far enough
+	 * (rejected earlier, either by Core's own flow-nesting/sequence-item
+	 * checks or by partial validation) to reach that particular check.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -370,7 +388,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 235, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 241, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

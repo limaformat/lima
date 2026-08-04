@@ -167,6 +167,27 @@ references-entry` pair — the same input run through both entry points
 (via the case's `api` field), same result, following the same
 cross-referenced-case pattern used for R-083's order-independence claim.
 
+## Maintainability audit: dedicated strict-mode cases for §7 additions
+
+A 2026-08-04 audit (prompted by a Codex CLI review recommendation) found
+that of the eight rows References §7 adds to Core's strict error list,
+only two (unresolved reference — R-034; nested array as a sequence
+element — R-036) had a dedicated `strict: true` case. The other six —
+R-055 (mapping in interpolation), R-072 (mapping element in an
+interpolated array), and the three R-140/R-141/R-142 final-limit rows,
+plus invalid-partial validation — were only ever exercised non-strict,
+even though every one of them throws unconditionally in both modes
+(`resolveTree` and `ingestPartialValue` never branch on `strict` for any
+of these checks — only the unresolved-reference scan does). Relying on
+the non-strict case as an implicit stand-in for "also true under strict"
+is exactly the kind of silent coverage gap that let the Date-aliasing
+bug (see the `run.test.ts` 235/0/0 baseline entry) go undetected: a
+future change that accidentally gated one of these checks on `strict`
+would pass every existing case. Added explicit strict siblings for all
+six (`*-strict.json` alongside each non-strict case); R-073 (nested array
+as an *interpolated array's* element) remains without one, per the
+existing reasoning below — it is unreachable, not merely untested.
+
 ## Coverage points resolved without a dedicated corpus case
 
 - **R-073** (array interpolation rejects an array containing a nested array

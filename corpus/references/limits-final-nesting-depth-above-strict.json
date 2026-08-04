@@ -1,0 +1,23 @@
+{
+  "id": "references.limits.final-nesting-depth.above.strict",
+  "spec": "references",
+  "section": "6.2",
+  "description": "Same boundary as references.limits.final-nesting-depth.above (a reference insertion pushes final nesting depth to 17, one past the limit), with strict mode explicitly enabled — References §7 lists this as throwing in both modes; this case pins strict mode as its own explicit regression check rather than relying on the non-strict case as an implicit stand-in.",
+  "input": "a:\n  k:\n    k:\n      k:\n        k:\n          k:\n            k:\n              k:\n                k:\n                  k:\n                    k:\n                      k:\n                        k:\n                          k:\n                            k:\n                              k:\n                                leaf: v\nwrapper:\n  x1:\n    x2:\n      inner: ($a.k)\n",
+  "expect": {
+    "error": {
+      "line": 21,
+      "token": "($a.k)",
+      "code": "RESOURCE_LIMIT"
+    }
+  },
+  "tags": [
+    "boundary",
+    "error",
+    "final-limit",
+    "strict"
+  ],
+  "options": {
+    "strict": true
+  }
+}

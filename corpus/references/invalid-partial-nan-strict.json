@@ -1,0 +1,29 @@
+{
+  "id": "references.partials.invalid-number.nan.strict",
+  "spec": "references",
+  "section": "6.2",
+  "description": "Same case as references.partials.invalid-number.nan (NaN rejected during partial validation), with strict mode explicitly enabled — partial validation (js/src/value.ts) never consults the strict flag at all, so this is a structural regression guard: it would only ever fail if a future change made validation conditional on strict by mistake.",
+  "input": "value: (%bad)",
+  "options": {
+    "partials": {
+      "bad": {
+        "$type": "host-number",
+        "value": "nan"
+      }
+    },
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "partial": "bad",
+      "path": "bad",
+      "code": "INVALID_PARTIAL"
+    }
+  },
+  "tags": [
+    "partial",
+    "validation",
+    "error",
+    "strict"
+  ]
+}

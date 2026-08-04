@@ -1,0 +1,22 @@
+{
+  "id": "references.array-interpolation.mapping-element-throws.strict",
+  "spec": "references",
+  "section": "3.6",
+  "description": "Same case as references.array-interpolation.mapping-element-throws (an array containing a mapping element, used in string interpolation), with strict mode explicitly enabled — References §7 lists this as throwing in both modes; this case pins strict mode as its own explicit regression check rather than relying on the non-strict case as an implicit stand-in.",
+  "input": "a:\n  - 1\n  - x: 2\nlabel: Items: ($a)\n",
+  "expect": {
+    "error": {
+      "line": 4,
+      "token": "($a)",
+      "code": "INVALID_INTERPOLATION"
+    }
+  },
+  "tags": [
+    "error",
+    "array-interpolation",
+    "strict"
+  ],
+  "options": {
+    "strict": true
+  }
+}
