@@ -283,6 +283,19 @@ describe('dotted-path references', () => {
 		expect(result.tags).toEqual(['a', 'b'])
 	})
 
+	it('two pure references to the same partial never share a nested Date instance (References §3.1)', () => {
+		const result = parse('a: (%p)\nb: (%p)\n', {
+			partials: { p: { d: new Date('2024-01-01T00:00:00Z') } },
+		})
+		const a = result.a as { d: Date }
+		const b = result.b as { d: Date }
+		expect(a).not.toBe(b)
+		expect(a.d).not.toBe(b.d)
+		expect(a.d.toISOString()).toBe(b.d.toISOString())
+		a.d.setUTCFullYear(2030)
+		expect(b.d.toISOString()).toBe('2024-01-01T00:00:00.000Z')
+	})
+
 	it('preserves numeric kind through a multi-hop deep-copy chain until final serialization', () => {
 		// A float that looks like an integer (1000.0) must still serialize as
 		// "1000" (canonical float rule), even after being deep-copied twice.

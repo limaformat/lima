@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(234)
+		expect(outcomes).toHaveLength(235)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -350,6 +350,18 @@ describe('runCorpus', () => {
 	 * `parseBlock`). Two new cases —
 	 * core.block-scalar.folded-marker-unsupported.non-strict and
 	 * .strict — cover both modes for `desc: >\n  Hello\n  World`.
+	 * 235/0/0 — Codex CLI review (`REVIEW-CODEX_CLI.md`) P1 finding: multiple
+	 * pure references to the same partial could alias a mutable nested
+	 * `Date`. Root cause was `resolveTree`'s partial branch in
+	 * `references.ts` — it shallow-copied only the reference's root
+	 * (`{ ...target, insertedAt }`) instead of deep-copying, unlike the
+	 * sibling document-reference branch right next to it. `target` is the
+	 * one tree `partialToPositioned` builds per partial name at ingestion,
+	 * so every pure reference to that partial retrieved the same tree and
+	 * shared its descendants. Fixed by deep-copying there too. New case
+	 * references.partial.date-structural-deep-copy asserts the resulting
+	 * values; the identity/mutation check itself (not expressible in this
+	 * value-only corpus format) lives in `references.test.ts`.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -358,7 +370,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 234, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 235, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

@@ -1,0 +1,19 @@
+{
+  "id": "references.partial.date-structural-deep-copy",
+  "spec": "references",
+  "section": "3.1",
+  "description": "Two separate pure references to the same partial produce structurally equal but independent copies, including a nested UTC Instant — the partial's own tree is built once at ingestion, so each reference must deep-copy it, not just its root. (Object-identity/no-aliasing and cross-binding mutation are JS-binding checks, verified separately in references.test.ts — not expressible via value-only corpus comparison.)",
+  "input": "a: (%p)\nb: (%p)\n",
+  "options": {
+    "partials": {
+      "p": { "d": { "$type": "instant", "value": "2024-01-01T00:00:00Z" } }
+    }
+  },
+  "expect": {
+    "result": {
+      "a": { "d": { "$type": "instant", "value": "2024-01-01T00:00:00Z" } },
+      "b": { "d": { "$type": "instant", "value": "2024-01-01T00:00:00Z" } }
+    }
+  },
+  "tags": ["positive", "partial", "pure-reference", "copy"]
+}

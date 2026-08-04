@@ -139,9 +139,10 @@ const deepCopyPositioned = (v: PositionedValue): PositionedValue => {
  * Wraps a partial's ingested value into the annotated representation, with
  * every string leaf marked permanently inert (§3.8: "no traversal into
  * partial values" — the resolution phases must never rediscover a
- * reference-like substring inside partial content). Freshly constructs the
- * whole subtree on every call, so multiple references to the same partial
- * never alias (§6.2 deep-copy requirement is satisfied as a side effect).
+ * reference-like substring inside partial content). Called once per partial
+ * name at ingestion (see the call site), producing the one canonical tree
+ * every pure reference to that partial retrieves — deep-copying it on every
+ * such reference (§3.1) is the resolveTree call site's job, not this one.
  */
 const partialToPositioned = (v: LimaValue, line: number): PositionedValue => {
 	switch (v.kind) {
@@ -199,7 +200,16 @@ const resolveTree = (
 				const insertedAt: InsertedAt = { line: node.line, token: val }
 				if (isPartial) {
 					const target = partials.get(key)
-					if (target !== undefined) return { ...target, insertedAt }
+					// §3.1 deep-copy requirement: `target` is the SAME cached tree
+					// built once per partial name at ingestion (see
+					// `partialToPositioned`'s call site) — every pure reference to
+					// this partial anywhere in the document retrieves that one
+					// tree. A shallow spread of its root would leave descendants
+					// (including a mutable `Date` in an `instant` node) aliased
+					// across every such reference; deep-copying here, exactly like
+					// the document-reference branch below, is what actually
+					// satisfies the guarantee.
+					if (target !== undefined) return { ...deepCopyPositioned(target), insertedAt }
 				} else {
 					const target = getNestedValueP(lookup, key)
 					if (target !== undefined && isReferenceFreeP(target)) {
