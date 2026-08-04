@@ -79,6 +79,35 @@ const parseDateUTC = (str, strict = false, line = 0) => {
             return result;
         }
     }
+    // Exact RFC 3339 form used by typical frontmatter. The length and all
+    // five separators are necessary and sufficient to identify the shape;
+    // any non-digit falls through to the complete regex grammar below.
+    if (str.length === 20 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45 &&
+        str.charCodeAt(10) === 84 && str.charCodeAt(13) === 58 &&
+        str.charCodeAt(16) === 58 && str.charCodeAt(19) === 90) {
+        const d0 = str.charCodeAt(0) - 48, d1 = str.charCodeAt(1) - 48;
+        const d2 = str.charCodeAt(2) - 48, d3 = str.charCodeAt(3) - 48;
+        const d5 = str.charCodeAt(5) - 48, d6 = str.charCodeAt(6) - 48;
+        const d8 = str.charCodeAt(8) - 48, d9 = str.charCodeAt(9) - 48;
+        const d11 = str.charCodeAt(11) - 48, d12 = str.charCodeAt(12) - 48;
+        const d14 = str.charCodeAt(14) - 48, d15 = str.charCodeAt(15) - 48;
+        const d17 = str.charCodeAt(17) - 48, d18 = str.charCodeAt(18) - 48;
+        if ((d0 | d1 | d2 | d3 | d5 | d6 | d8 | d9 | d11 | d12 | d14 | d15 | d17 | d18) >= 0 &&
+            d0 <= 9 && d1 <= 9 && d2 <= 9 && d3 <= 9 && d5 <= 9 && d6 <= 9 &&
+            d8 <= 9 && d9 <= 9 && d11 <= 9 && d12 <= 9 && d14 <= 9 && d15 <= 9 &&
+            d17 <= 9 && d18 <= 9) {
+            const year = d0 * 1000 + d1 * 100 + d2 * 10 + d3;
+            const month = d5 * 10 + d6, day = d8 * 10 + d9;
+            const hour = d11 * 10 + d12, minute = d14 * 10 + d15, second = d17 * 10 + d18;
+            if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month) ||
+                hour > 23 || minute > 59 || second > 59)
+                return invalid();
+            const result = new Date(0);
+            result.setUTCFullYear(year, month - 1, day);
+            result.setUTCHours(hour, minute, second, 0);
+            return result;
+        }
+    }
     let y, mo, d, h = 0, mi = 0, s = 0, offsetMin = 0;
     const iso = ISO_DATE_RE.exec(str);
     const german = !iso ? GERMAN_DATE_RE.exec(str) : null;
@@ -197,7 +226,11 @@ const buildTyped = (str, strict, line, builder) => {
         // Outside the safe integer range, or overflow/underflow already
         // handled above in non-strict mode: fall through to string.
     }
-    if (!str.includes('@') && DATE_PRE_RE.test(str)) {
+    const exactIsoShape = (str.length === 10 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45) ||
+        (str.length === 20 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45 &&
+            str.charCodeAt(10) === 84 && str.charCodeAt(13) === 58 &&
+            str.charCodeAt(16) === 58 && str.charCodeAt(19) === 90);
+    if (!str.includes('@') && (exactIsoShape || DATE_PRE_RE.test(str))) {
         const date = parseDateUTC(str, strict, line);
         if (date !== null)
             return builder.instant(date, line);

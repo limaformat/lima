@@ -152,6 +152,25 @@ for (const value of ['x024-01-01', '2x24-01-01', '2024-x1-01', '2024-0x-01', '20
 	docs.push(`date: ${value}\n`)
 }
 
+// Exact 20-code-unit RFC 3339 Z fast path: component boundaries plus every
+// digit position replaced by a non-digit. Structural mismatches must fall
+// back to the complete date grammar; structurally valid but out-of-range
+// components retain its strict/non-strict invalid-date behavior.
+for (const year of ['0000', '0001', '1900', '2000', '2023', '2024', '9999']) {
+	for (const month of ['00', '01', '02', '12', '13']) {
+		for (const day of ['00', '01', '28', '29', '31', '32']) {
+			for (const time of ['00:00:00', '23:59:59', '24:00:00', '00:60:00', '00:00:60']) {
+				docs.push(`date: ${year}-${month}-${day}T${time}Z\n`)
+			}
+		}
+	}
+}
+for (const position of [0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18]) {
+	const chars = [...'2024-03-01T09:00:00Z']
+	chars[position] = 'x'
+	docs.push(`date: ${chars.join('')}\n`)
+}
+
 // True Unicode leading characters (charCodeAt(0) > 127) — the ASCII-only
 // prefix sweep above cannot exercise this at all. Mix of BMP scripts,
 // combining marks, RTL marks, zero-width characters, and one astral
@@ -264,10 +283,12 @@ docs.push(
 	'items:\n  - name: A\n  - name: "bad \\q escape"\n',
 )
 
-const observe = (parse: typeof thisImpl, doc: string, strict: boolean): string => {
+const observe = (parse: typeof thisImpl, doc: string, strict: boolean, captureWarnings: boolean): string => {
 	const warnings: unknown[] = []
 	try {
-		const value = parse(doc, { strict, onWarning: (warning) => warnings.push(warning) })
+		const value = captureWarnings
+			? parse(doc, { strict, onWarning: (warning) => warnings.push(warning) })
+			: parse(doc, { strict })
 		return JSON.stringify({ value, warnings })
 	} catch (error) {
 		const e = error as Error & Record<string, unknown>
@@ -279,13 +300,15 @@ let checked = 0
 let mismatches = 0
 for (const doc of docs) {
 	for (const strict of [false, true]) {
-		const expected = observe(thisImpl, doc, strict)
-		const actual = observe(otherImpl, doc, strict)
-		if (actual !== expected) {
-			console.error(JSON.stringify({ doc, strict, expected, actual }, null, 2))
-			mismatches++
+		for (const captureWarnings of [false, true]) {
+			const expected = observe(thisImpl, doc, strict, captureWarnings)
+			const actual = observe(otherImpl, doc, strict, captureWarnings)
+			if (actual !== expected) {
+				console.error(JSON.stringify({ doc, strict, captureWarnings, expected, actual }, null, 2))
+				mismatches++
+			}
+			checked++
 		}
-		checked++
 	}
 }
 console.log(mismatches === 0
