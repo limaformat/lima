@@ -20,10 +20,13 @@
   "files": ["dist", "README.md", "LICENSE"],
   "engines": { "node": ">=18" },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "pretest": "bun run build",
     "test": "bun test",
     "bench": "bun run bench/index.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "typescript": "latest"
   }
 }

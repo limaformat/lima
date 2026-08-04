@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.folded-marker-unsupported.non-strict",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "Core 1.0 does not support the folded block scalar marker `>` — it is an ordinary unquoted string, and the following freetext line is not part of it. Non-strict: the inline value is kept, the freetext line is silently skipped.",
+  "input": "desc: >\n  Hello\n  World\n",
+  "expect": {
+    "result": { "desc": ">" }
+  },
+  "tags": ["fallback", "block-scalar"]
+}

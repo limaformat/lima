@@ -14,7 +14,7 @@
  * `parseCore` is the public, position-free projection of the same parse.
  */
 
-import { type LimaValue, LNull, LBool, LFloat, LInt, LString, LInstant } from './value'
+import { type LimaValue, LNull, LBool, LFloat, LInt, LString, LInstant } from './value.js'
 
 type Meta = Record<string, any>
 
@@ -791,7 +791,7 @@ export const parseCoreWithPositions = (frontMatter: string, ctx: ParseContext): 
 			}
 
 			const line0Trimmed = lines[0].trim()
-			if (lines.length === 1 || (line0Trimmed !== '|' && line0Trimmed !== '>')) {
+			if (lines.length === 1 || line0Trimmed !== '|') {
 				const line0 = lines[0]
 				const val   = line0.includes('#') ? stripComment(line0) : line0
 				const flowSeq = parseFlowSequence(val, ctx, keyLine(i))
@@ -804,10 +804,7 @@ export const parseCoreWithPositions = (frontMatter: string, ctx: ParseContext): 
 				continue
 			}
 
-			// Multi-line string (`|` literal / `>` folded block scalar).
-			const isPipeBlock   = lines[0].trim() === '|'
-			const isFoldedBlock = !isPipeBlock && lines[0].trim() === '>'
-
+			// Multi-line string (`|` literal block scalar).
 			const bodyLines = raw.slice(raw.indexOf('\n') + 1).split('\n')
 
 			let minIndent = Infinity
@@ -822,7 +819,7 @@ export const parseCoreWithPositions = (frontMatter: string, ctx: ParseContext): 
 			const mergedLines: string[] = []
 			for (const bodyLine of bodyLines) {
 				const dedented = trimAmt > 0 ? bodyLine.slice(trimAmt) : bodyLine
-				const isContinuation = isPipeBlock && dedented.startsWith('^^')
+				const isContinuation = dedented.startsWith('^^')
 				const content = (isContinuation ? dedented.slice(2) : dedented).trimEnd()
 				if (isContinuation) {
 					if (mergedLines.length > 0) {
@@ -837,7 +834,7 @@ export const parseCoreWithPositions = (frontMatter: string, ctx: ParseContext): 
 
 			while (mergedLines.length > 0 && mergedLines[mergedLines.length - 1] === '') mergedLines.pop()
 
-			const joined = isFoldedBlock ? mergedLines.join(' ') : mergedLines.join('\n')
+			const joined = mergedLines.join('\n')
 			checkScalarLimit(LString(joined), keyLine(i))
 			root.set(key, { kind: 'string', value: joined, line: keyLine(i), quoted: false })
 		}

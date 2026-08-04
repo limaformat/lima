@@ -111,6 +111,14 @@ describe('strings', () => {
 		expect(result.description).toBe('First line.')
 	})
 
+	it('an inline value followed by a freetext line is unchanged in strict mode — not on the closed strict-error list (Core §10.1)', () => {
+		const result = parse(`
+			description: First line.
+			  Second line.
+		`, { strict: true })
+		expect(result.description).toBe('First line.')
+	})
+
 	it('supports | as explicit block scalar — trims all lines equally', () => {
 		const result = parse(`
 			description: |
@@ -120,19 +128,18 @@ describe('strings', () => {
 		expect(result.description).toBe('First line.\nSecond line.')
 	})
 
-	it('supports > as folded block scalar — newlines become spaces', () => {
-		const result = parse(`
-			description: >
-			  This is a long sentence that
-			  continues here as one line.
-		`)
-		expect(result.description).toBe('This is a long sentence that continues here as one line.')
+	it('> is a plain unquoted string, not a block scalar marker (Core 1.0 excludes >)', () => {
+		expect(parse('desc: >')).toEqual({ desc: '>' })
 	})
 
-	it('> and | produce the same result for single-line content', () => {
-		const pipe   = parse('desc: |\n  Hello world')
-		const folded = parse('desc: >\n  Hello world')
-		expect(folded.desc).toBe(pipe.desc)
+	it('a freetext line after `>` is silently dropped in non-strict mode', () => {
+		const result = parse('desc: >\n  Hello\n  World')
+		expect(result.desc).toBe('>')
+	})
+
+	it('a freetext line after `>` is unchanged in strict mode — not on the closed strict-error list (Core §10.1)', () => {
+		const result = parse('desc: >\n  Hello\n  World', { strict: true })
+		expect(result.desc).toBe('>')
 	})
 
 	it('attaches a line beginning with ^^ to the preceding line (Core §6.1.6)', () => {
@@ -172,12 +179,8 @@ describe('strings', () => {
 	})
 
 	it('^^ has no special meaning outside a | block', () => {
-		const result = parse(`
-			description: >
-			  This line ends with ^^
-			  and this is the next one.
-		`)
-		expect(result.description).toBe('This line ends with ^^ and this is the next one.')
+		const result = parse('description: This line ends with ^^')
+		expect(result.description).toBe('This line ends with ^^')
 	})
 
 	it('preserves an internal blank line inside a | block scalar as an empty string (Core §6.1.5)', () => {

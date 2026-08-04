@@ -25,11 +25,11 @@ import {
 	type LimaValue, countNodes, canonicalString,
 	ingestPartialValue, PARTIAL_COUNT_LIMIT, PARTIAL_NAME_LENGTH_LIMIT, PARTIAL_NODE_LIMIT,
 	RESULT_NODE_LIMIT, SCALAR_LENGTH_LIMIT,
-} from './value'
+} from './value.js'
 import {
 	parseCoreWithPositions, toPlainValue, toNativeFromPositioned, NESTING_DEPTH_LIMIT,
 	type PositionedValue, type Diagnostic, type InsertedAt,
-} from './core'
+} from './core.js'
 
 type Meta = Record<string, any>
 const emptyMapping = (): Meta => Object.create(null)

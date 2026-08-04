@@ -1,0 +1,13 @@
+{
+  "id": "core.block-scalar.folded-marker-unsupported.strict",
+  "spec": "core",
+  "section": "10.1",
+  "description": "Core 1.0 does not support the folded block scalar marker `>` — it is an ordinary unquoted string. The freetext line following it is not on the closed strict-error list (§10.1 only lists an empty inline slot's freetext-without-`|` as `null`/throw), so strict mode behaves identically to non-strict: the inline value is kept, the freetext line is silently skipped.",
+  "input": "desc: >\n  Hello\n  World\n",
+  "options": { "strict": true },
+  "expect": {
+    "result": { "desc": ">" }
+  },
+  "notes": "Same input as core.block-scalar.folded-marker-unsupported.non-strict, asserting strict/non-strict parity — mirrors the closed-list regression guards core.strict-list.is-closed and core.document.unrecognized-line.skipped-both-modes.",
+  "tags": ["strict", "block-scalar"]
+}

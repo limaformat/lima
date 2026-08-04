@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(232)
+		expect(outcomes).toHaveLength(234)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -340,6 +340,16 @@ describe('runCorpus', () => {
 	 * unreachable through either check — documented in
 	 * coverage/references.md rather than forced into a case, the same
 	 * reasoning as R-073.
+	 * 234/0/0 — Core 1.0 (`docs/lima-core-1.0-spec.md:309`) excludes the
+	 * folded block scalar marker `>`; `js/src/core.ts` incorrectly special-
+	 * cased it as a fold-on-join block scalar (a Codex CLI review finding).
+	 * Fixed: `>` is now an ordinary unquoted string like any other non-`|`
+	 * inline value, and the top-level inline-value path gained the strict-
+	 * mode throw §6.1.5 already requires for a freetext line following it
+	 * (previously only implemented for the isBlock/no-inline-value case in
+	 * `parseBlock`). Two new cases —
+	 * core.block-scalar.folded-marker-unsupported.non-strict and
+	 * .strict — cover both modes for `desc: >\n  Hello\n  World`.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -348,7 +358,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 232, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 234, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

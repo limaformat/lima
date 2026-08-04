@@ -12,5 +12,5 @@
  * `parseReferences` under a name kept for backward compatibility.
  */
 
-export { parseCore, type CoreOptions, type Diagnostic } from './core'
-export { parseReferences, parse, type ReferencesOptions, type ParseOptions } from './references'
+export { parseCore, type CoreOptions, type Diagnostic } from './core.js'
+export { parseReferences, parse, type ReferencesOptions, type ParseOptions } from './references.js'
