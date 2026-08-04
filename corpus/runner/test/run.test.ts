@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(248)
+		expect(outcomes).toHaveLength(250)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -409,6 +409,19 @@ describe('runCorpus', () => {
 	 * `parseCore` (deferred — each needs its own behavioral check, not
 	 * just a test, before deciding what to assert) and the References
 	 * Appendix "host-language types in partials" row.
+	 * 250/0/0 — second step of the Core Appendix A sweep: `\0` escape.
+	 * Checked the implementation first rather than assuming — `\0` is
+	 * already deliberately excluded from `SINGLE_CHAR_ESCAPES` in
+	 * `js/src/scalars.ts` with a comment citing exactly this appendix row,
+	 * so it already falls through to the general "unknown escape" path
+	 * (§6.1.2/§10.1) with no special-casing: left intact with the
+	 * backslash preserved in non-strict mode, throws `INVALID_ESCAPE` in
+	 * strict mode — verified against actual parser output before writing
+	 * the two new cases (core.strings.null-escape.non-strict/.strict).
+	 * No implementation change was needed here, unlike the Date-aliasing
+	 * fix — this row was simply untested, not incorrect. Still open: the
+	 * `partials` option on `parseCore` and the References Appendix
+	 * "host-language types in partials" row.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -417,7 +430,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 248, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 250, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

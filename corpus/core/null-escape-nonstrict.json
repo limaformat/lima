@@ -1,0 +1,11 @@
+{
+  "id": "core.strings.null-escape.non-strict",
+  "spec": "core",
+  "section": "Appendix A",
+  "description": "`\\0` is explicitly not a null-character shorthand (Appendix A) — it is treated as an unknown escape sequence like `\\q`, not decoded to U+0000. Non-strict: left intact with the backslash preserved, same as any other unknown escape (§6.1.2). Use `\\u0000` for a genuine null code point.",
+  "input": "a: \"x\\0y\"\n",
+  "expect": {
+    "result": { "a": "x\\0y" }
+  },
+  "tags": ["fallback", "string"]
+}

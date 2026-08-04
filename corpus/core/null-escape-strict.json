@@ -1,0 +1,16 @@
+{
+  "id": "core.strings.null-escape.strict",
+  "spec": "core",
+  "section": "Appendix A",
+  "description": "`\\0` is explicitly not a null-character shorthand (Appendix A) — it is treated as an unknown escape sequence and throws in strict mode, same as any other unknown escape (§6.1.2/§10.1).",
+  "input": "a: \"x\\0y\"\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "contains": "\\0",
+      "code": "INVALID_ESCAPE"
+    }
+  },
+  "tags": ["strict", "error", "string"]
+}

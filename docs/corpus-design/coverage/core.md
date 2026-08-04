@@ -139,8 +139,9 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-213 | Appendix A | Unsupported | Multi-document markers (`---`, `...`) are unrecognized lines | fallback | both |
 | C-214 | Appendix A | Unsupported | Year 0000 is date-shaped but fails component validation | pair | both |
 | C-215 | Appendix A | Unsupported | Negative year never matches the date grammar | fallback | both |
+| C-216 | Appendix A | Unsupported | `\0` is an unknown escape, not a null shorthand | pair | both |
 
-**Scope:** 130 substantive check points. A check point can produce multiple concrete cases.
+**Scope:** 131 substantive check points. A check point can produce multiple concrete cases.
 
 ## Known implementation gaps
 
@@ -191,12 +192,22 @@ reason implies a specific parse result:
 - A negative year, by contrast, never matches the date grammar and stays
   a plain string unconditionally — one case, no strict variant.
 
+## Maintainability audit: Appendix A constructs (second step — `\0` escape)
+
+C-216 closes the `\0` escape row. Checked the implementation first,
+same discipline as the first step: `SINGLE_CHAR_ESCAPES` in
+`js/src/scalars.ts` already deliberately excludes `'0'`, with a comment
+citing this exact appendix row — so `\0` already falls through to the
+general "unknown escape" path (§6.1.2/§10.1) with no special-casing,
+verified against actual parser output before writing the cases. No
+implementation change was needed; this was a pure coverage gap, not a
+live defect (unlike the References-side Date-aliasing bug) — the fix
+for this specific row predates this audit, see the `run.test.ts`
+baseline history's 60/0/0 entry.
+
 Still open from the same appendix, deferred because each needs its own
 behavioral/design check before a test can be written, not just a missing
-test: the `\0` escape sequence (Appendix A documents mode-dependent
-behavior for it, structurally identical to the already-covered "unknown
-escape" strict-list row — needs verifying against the current
-implementation, the same way the References-side Date-aliasing bug was
-found) and the `partials` option passed to `parseCore` (unclear whether
+test: the `partials` option passed to `parseCore` (unclear whether
 "silently ignored" or "throws" is the intended contract — a design
-question, not a test gap).
+question, not a test gap) and the References Appendix "host-language
+types in partials" row.
