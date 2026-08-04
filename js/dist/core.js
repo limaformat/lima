@@ -20,7 +20,7 @@
  */
 import { LString } from './value.js';
 import { checkKeyLength, checkScalarLimit, byteLength, DOCUMENT_SIZE_LIMIT, TOP_LEVEL_KEY_LIMIT, NESTING_DEPTH_LIMIT, } from './normalize.js';
-import { unescapeDQ, stripComment, parseScalarValue, } from './scalars.js';
+import { unescapeDQ, stripComment, parseScalarValue, positionedBuilder, } from './scalars.js';
 import { parseFlowSequence, parseFlowMapping } from './flow.js';
 import { parseBlock } from './block.js';
 import { LimaError } from './errors.js';
@@ -35,6 +35,23 @@ const depthOfPositioned = (v) => {
     if (v.kind === 'mapping') {
         const children = [...v.entries.values()];
         return children.length === 0 ? 1 : 1 + Math.max(...children.map(depthOfPositioned));
+    }
+    return 0;
+};
+/**
+ * Same Core §9 depth measurement as `depthOfPositioned`, but over the
+ * untagged native representation `parseCore`'s fast path builds directly —
+ * no `.kind` to switch on, so containers are recognised structurally:
+ * `Array.isArray` for a sequence, else any non-`Date` object for a mapping
+ * (a `Date` is the one native object type that's a scalar leaf, not a
+ * container).
+ */
+const depthOfNative = (v) => {
+    if (Array.isArray(v))
+        return v.length === 0 ? 1 : 1 + Math.max(...v.map(depthOfNative));
+    if (v !== null && typeof v === 'object' && !(v instanceof Date)) {
+        const children = Object.values(v);
+        return children.length === 0 ? 1 : 1 + Math.max(...children.map(depthOfNative));
     }
     return 0;
 };
@@ -60,12 +77,19 @@ const lineAt = (s, pos) => {
     return n;
 };
 /**
- * Parses LIMA Core 1.0 syntax into the internal annotated value tree —
- * every node carrying its source line, string leaves additionally carrying
- * whether they came from quoted syntax. `($key)`/`(%key)` text is left
- * exactly as written; nothing here ever inspects or resolves it.
+ * Parses LIMA Core 1.0 syntax, generic over the output representation
+ * (`builder` — see `builder.ts`): References needs the annotated
+ * `PositionedValue` tree (`parseCoreWithPositions` below fixes `V` to
+ * that), while `parseCore` fixes `V` to the public native shape directly,
+ * skipping the annotated tree — and the extra full-tree conversion pass
+ * out of it — entirely. One shared control flow either way, so the two
+ * never drift apart the way a hand-copied second parser could.
+ * `computeDepth` is similarly representation-specific (Core §9's
+ * pre-resolution nesting-depth check, run once here regardless of `V`):
+ * `depthOfPositioned` inspects a tagged union's `.kind`; `depthOfNative`
+ * inspects the untagged native shape structurally instead.
  */
-export const parseCoreWithPositions = (frontMatter, ctx) => {
+const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
     const { strict } = ctx;
     if (byteLength(frontMatter) > DOCUMENT_SIZE_LIMIT) {
         throw new LimaError({
@@ -191,25 +215,25 @@ export const parseCoreWithPositions = (frontMatter, ctx) => {
             while (firstNonEmpty < lines.length && !lines[firstNonEmpty].trim())
                 firstNonEmpty++;
             const baseIndent = firstNonEmpty < lines.length ? leadingSpaces(lines[firstNonEmpty]) : 0;
-            const parsed = parseBlock(lines, 0, baseIndent, ctx, keyLine(i) + 1).value;
-            root.set(key, parsed ?? { kind: 'null', line: keyLine(i) });
+            const parsed = parseBlock(lines, 0, baseIndent, ctx, keyLine(i) + 1, builder).value;
+            root.set(key, parsed ?? builder.null(keyLine(i)));
         }
         else {
             if (lines.length === 0) {
-                root.set(key, { kind: 'null', line: keyLine(i) });
+                root.set(key, builder.null(keyLine(i)));
                 continue;
             }
             const line0Trimmed = lines[0].trim();
             if (lines.length === 1 || line0Trimmed !== '|') {
                 const line0 = lines[0];
                 const val = line0.includes('#') ? stripComment(line0) : line0;
-                const flowSeq = parseFlowSequence(val, ctx, keyLine(i));
+                const flowSeq = parseFlowSequence(val, ctx, keyLine(i), builder);
                 if (flowSeq !== null) {
-                    root.set(key, { kind: 'array', items: flowSeq, line: keyLine(i) });
+                    root.set(key, builder.array(flowSeq, keyLine(i)));
                 }
                 else {
-                    const flowMap = parseFlowMapping(val, ctx, keyLine(i));
-                    root.set(key, flowMap !== null ? flowMap : parseScalarValue(val, ctx, keyLine(i)));
+                    const flowMap = parseFlowMapping(val, ctx, keyLine(i), builder);
+                    root.set(key, flowMap !== null ? flowMap : parseScalarValue(val, ctx, keyLine(i), builder));
                 }
                 continue;
             }
@@ -258,7 +282,7 @@ export const parseCoreWithPositions = (frontMatter, ctx) => {
                 mergedLines.pop();
             const joined = mergedLines.join('\n');
             checkScalarLimit(LString(joined), keyLine(i));
-            root.set(key, { kind: 'string', value: joined, line: keyLine(i), quoted: false });
+            root.set(key, builder.string(joined, keyLine(i), false));
         }
     }
     // Core §9 nesting depth, over Core's own reference-inert tree. When
@@ -266,7 +290,7 @@ export const parseCoreWithPositions = (frontMatter, ctx) => {
     // post-substitution tree separately — substituted values can add depth
     // this check cannot see yet.
     const rootValues = [...root.values()];
-    const depth = rootValues.length === 0 ? 0 : Math.max(...rootValues.map(depthOfPositioned));
+    const depth = rootValues.length === 0 ? 0 : Math.max(...rootValues.map(computeDepth));
     if (depth > NESTING_DEPTH_LIMIT) {
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line: 1,
@@ -274,6 +298,37 @@ export const parseCoreWithPositions = (frontMatter, ctx) => {
         });
     }
     return root;
+};
+/**
+ * Parses LIMA Core 1.0 syntax into the internal annotated value tree —
+ * every node carrying its source line, string leaves additionally carrying
+ * whether they came from quoted syntax. `($key)`/`(%key)` text is left
+ * exactly as written; nothing here ever inspects or resolves it. The
+ * primitive the References layer (`references.ts`) builds on.
+ */
+export const parseCoreWithPositions = (frontMatter, ctx) => parseCoreGeneric(frontMatter, ctx, positionedBuilder, depthOfPositioned);
+/**
+ * The `ValueBuilder<NativeValue>` — `parseCore`'s fast path. Every scalar
+ * builder is the identity function: unlike `positionedBuilder`, there is no
+ * wrapper object to allocate at all, only the value itself. `array` and
+ * `mapping` build the exact public shape directly (a real array; a
+ * prototype-free object per Core §11.1), so `parseCore` never needs a
+ * separate conversion pass over an intermediate tree afterward.
+ */
+export const nativeBuilder = {
+    null: () => null,
+    bool: (value) => value,
+    int: (value) => value,
+    float: (value) => value,
+    string: (value) => value,
+    instant: (value) => value,
+    array: (items) => items,
+    mapping: (entries) => {
+        const out = emptyMapping();
+        for (const [k, v] of entries)
+            out[k] = v;
+        return out;
+    },
 };
 /** Converts a Lima value to a plain, native JS value (the public result shape). */
 export const toNative = (v) => {
@@ -325,9 +380,10 @@ export const toNativeFromPositioned = (v) => {
  * guaranteed to always pass through unresolved, even in strict mode.
  */
 export const parseCore = (frontMatter, options) => {
-    const root = parseCoreWithPositions(frontMatter, { strict: options?.strict ?? false, onWarning: options?.onWarning });
+    const ctx = { strict: options?.strict ?? false, onWarning: options?.onWarning };
+    const root = parseCoreGeneric(frontMatter, ctx, nativeBuilder, depthOfNative);
     const out = emptyMapping();
     for (const [k, v] of root)
-        out[k] = toNativeFromPositioned(v);
+        out[k] = v;
     return out;
 };

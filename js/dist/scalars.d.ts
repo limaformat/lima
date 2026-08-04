@@ -6,6 +6,7 @@
  */
 import { type LimaValue } from './value.js';
 import { type ParseContext } from './normalize.js';
+import type { ValueBuilder } from './builder.js';
 /**
  * `insertedAt` is never set by Core — it's a References-only annotation
  * (see references.ts's `resolveTree`), stamped on the root of a value
@@ -61,6 +62,8 @@ export type PositionedValue = {
     line: number;
     insertedAt?: InsertedAt;
 };
+/** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */
+export declare const positionedBuilder: ValueBuilder<PositionedValue>;
 /** Strips position/quoted-origin annotations, recursively — the public parseCore() projection. */
 export declare const toPlainValue: (v: PositionedValue) => LimaValue;
 export declare const unescapeDQ: (s: string, strict?: boolean, line?: number) => string;
@@ -75,5 +78,5 @@ export declare const stripKeyQuotes: (s: string) => string;
  * items here, to keep this a faithful behavioral port: the "unclosed flow
  * bracket" throw and the "non-whitespace after closing quote" strict throw.
  */
-export declare const parseQuotedOrTyped: (raw: string, ctx: ParseContext, line: number, topLevel: boolean) => PositionedValue;
-export declare const parseScalarValue: (raw: string, ctx: ParseContext, line: number) => PositionedValue;
+export declare const parseQuotedOrTyped: <V>(raw: string, ctx: ParseContext, line: number, topLevel: boolean, builder: ValueBuilder<V>) => V;
+export declare const parseScalarValue: <V>(raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V>) => V;

@@ -1,10 +1,12 @@
 /**
  * Core §7 block collections (sequences and mappings) — a direct structural
- * port of the legacy block parser, with every value position now producing
- * a `PositionedValue` instead of a raw JS value, and with no reference-
- * resolution concerns at all (no `resolve()` call anywhere, no
- * array-as-sequence-item reference-shape check — that error class cannot
- * occur here since Core never resolves a reference in the first place).
+ * port of the legacy block parser, generic over its output representation
+ * (see `builder.ts`) so `parseCore` can build the public native result
+ * directly, without also building the References-only annotated
+ * `PositionedValue` tree it never needs. No reference-resolution concerns
+ * at all (no `resolve()` call anywhere, no array-as-sequence-item
+ * reference-shape check — that error class cannot occur here since Core
+ * never resolves a reference in the first place).
  */
 import { LString } from './value.js';
 import { checkKeyLength, checkDuplicateKeyMap, checkScalarLimit } from './normalize.js';
@@ -28,7 +30,7 @@ export const findKeySep = (s) => {
  * Recursively parses a block value (array or mapping) from an array of
  * lines.
  */
-export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
+export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) => {
     let items = null;
     let entries = null;
     let pendingItem = null;
@@ -54,11 +56,11 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
                     const itemKey = stripKeyQuotes(trimmed.slice(0, colonPos).trim());
                     checkKeyLength(itemKey, () => baseLine + idx);
                     const itemVal = stripComment(trimmed.slice(colonPos + 2).trim());
-                    const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx);
-                    const flowMap = flowSeq === null ? parseFlowMapping(itemVal, ctx, baseLine + idx) : null;
+                    const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx, builder);
+                    const flowMap = flowSeq === null ? parseFlowMapping(itemVal, ctx, baseLine + idx, builder) : null;
                     pendingItem.set(itemKey, flowSeq !== null
-                        ? { kind: 'array', items: flowSeq, line: baseLine + idx }
-                        : (flowMap !== null ? flowMap : parseScalarValue(itemVal, ctx, baseLine + idx)));
+                        ? builder.array(flowSeq, baseLine + idx)
+                        : (flowMap !== null ? flowMap : parseScalarValue(itemVal, ctx, baseLine + idx, builder)));
                     idx++;
                 }
                 else if (trimmed.endsWith(':')) {
@@ -72,13 +74,13 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
                     if (ni < lines.length) {
                         const nextIndent = lines[ni].length - lines[ni].trimStart().length;
                         if (nextIndent > indent) {
-                            const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine);
-                            pendingItem.set(itemKey, nested ?? { kind: 'null', line: keyLineNum });
+                            const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder);
+                            pendingItem.set(itemKey, nested ?? builder.null(keyLineNum));
                             idx = after;
                             continue;
                         }
                     }
-                    pendingItem.set(itemKey, { kind: 'null', line: keyLineNum });
+                    pendingItem.set(itemKey, builder.null(keyLineNum));
                 }
                 else {
                     if (ctx.strict)
@@ -103,7 +105,7 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
         const isList = trimmed.charCodeAt(0) === 45;
         if (isList) {
             if (pendingItem !== null) {
-                items.push({ kind: 'mapping', entries: pendingItem, line: baseLine + idx });
+                items.push(builder.mapping(pendingItem, baseLine + idx));
                 pendingItem = null;
             }
             if (items === null)
@@ -118,7 +120,7 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
                 continue;
             }
             const afterDash = trimmed === '-' ? '' : stripComment(trimmed.replace(DASH_PREFIX_RE, ''));
-            const flowMap = parseFlowMapping(afterDash, ctx, baseLine + idx);
+            const flowMap = parseFlowMapping(afterDash, ctx, baseLine + idx, builder);
             const colonPos = findKeySep(afterDash);
             if (flowMap !== null) {
                 items.push(flowMap);
@@ -130,7 +132,7 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
                         code: 'INVALID_INDENTATION', line: baseLine + idx,
                         message: `LIMA: nested block sequence at line ${baseLine + idx}: "${trimmed}"`,
                     });
-                items.push({ kind: 'null', line: baseLine + idx });
+                items.push(builder.null(baseLine + idx));
                 idx++;
                 while (idx < lines.length) {
                     const nextTrimmed = lines[idx].trimStart();
@@ -147,12 +149,12 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
                 const pendingKey = stripKeyQuotes(afterDash.slice(0, colonPos).trim());
                 checkKeyLength(pendingKey, () => baseLine + idx);
                 const pendingRaw = afterDash.slice(colonPos + 2).trim();
-                const pendingFlowSeq = parseFlowSequence(pendingRaw, ctx, baseLine + idx);
-                const pendingFlowMap = pendingFlowSeq === null ? parseFlowMapping(pendingRaw, ctx, baseLine + idx) : null;
+                const pendingFlowSeq = parseFlowSequence(pendingRaw, ctx, baseLine + idx, builder);
+                const pendingFlowMap = pendingFlowSeq === null ? parseFlowMapping(pendingRaw, ctx, baseLine + idx, builder) : null;
                 pendingItem = new Map();
                 pendingItem.set(pendingKey, pendingFlowSeq !== null
-                    ? { kind: 'array', items: pendingFlowSeq, line: baseLine + idx }
-                    : (pendingFlowMap !== null ? pendingFlowMap : parseScalarValue(pendingRaw, ctx, baseLine + idx)));
+                    ? builder.array(pendingFlowSeq, baseLine + idx)
+                    : (pendingFlowMap !== null ? pendingFlowMap : parseScalarValue(pendingRaw, ctx, baseLine + idx, builder)));
                 idx++;
             }
             else if (afterDash.endsWith(':')) {
@@ -166,15 +168,15 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
                 if (ni < lines.length) {
                     const nextIndent = lines[ni].length - lines[ni].trimStart().length;
                     if (nextIndent > baseIndent) {
-                        const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine);
+                        const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder);
                         pendingItem = new Map();
-                        pendingItem.set(itemKey, nested ?? { kind: 'null', line: keyLineNum });
+                        pendingItem.set(itemKey, nested ?? builder.null(keyLineNum));
                         idx = after;
                         continue;
                     }
                 }
                 pendingItem = new Map();
-                pendingItem.set(itemKey, { kind: 'null', line: keyLineNum });
+                pendingItem.set(itemKey, builder.null(keyLineNum));
             }
             else {
                 const qFirst = afterDash.charCodeAt(0);
@@ -182,10 +184,10 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
                     const inner = afterDash.slice(1, -1);
                     const value = qFirst === 34 ? unescapeDQ(inner, ctx.strict, baseLine + idx) : inner.replace(/\\'/g, "'");
                     checkScalarLimit(LString(value), baseLine + idx);
-                    items.push({ kind: 'string', value, line: baseLine + idx, quoted: true });
+                    items.push(builder.string(value, baseLine + idx, true));
                 }
                 else {
-                    items.push(parseQuotedOrTyped(afterDash, ctx, baseLine + idx, false));
+                    items.push(parseQuotedOrTyped(afterDash, ctx, baseLine + idx, false, builder));
                 }
                 idx++;
             }
@@ -209,11 +211,11 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
                 checkKeyLength(itemKey, () => baseLine + idx);
                 checkDuplicateKeyMap(entries, itemKey, baseLine + idx, ctx);
                 const itemVal = stripComment(trimmed.slice(colonPos + 2).trim());
-                const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx);
-                const flowMap = flowSeq === null ? parseFlowMapping(itemVal, ctx, baseLine + idx) : null;
+                const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx, builder);
+                const flowMap = flowSeq === null ? parseFlowMapping(itemVal, ctx, baseLine + idx, builder) : null;
                 entries.set(itemKey, flowSeq !== null
-                    ? { kind: 'array', items: flowSeq, line: baseLine + idx }
-                    : (flowMap !== null ? flowMap : parseScalarValue(itemVal, ctx, baseLine + idx)));
+                    ? builder.array(flowSeq, baseLine + idx)
+                    : (flowMap !== null ? flowMap : parseScalarValue(itemVal, ctx, baseLine + idx, builder)));
                 idx++;
             }
             else if (trimmed.endsWith(':')) {
@@ -230,13 +232,13 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
                 if (ni < lines.length) {
                     const nextIndent = lines[ni].length - lines[ni].trimStart().length;
                     if (nextIndent > baseIndent) {
-                        const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine);
-                        entries.set(itemKey, nested ?? { kind: 'null', line: keyLineNum });
+                        const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder);
+                        entries.set(itemKey, nested ?? builder.null(keyLineNum));
                         idx = after;
                         continue;
                     }
                 }
-                entries.set(itemKey, { kind: 'null', line: keyLineNum });
+                entries.set(itemKey, builder.null(keyLineNum));
             }
             else {
                 if (ctx.strict)
@@ -249,9 +251,9 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine) => {
         }
     }
     if (pendingItem !== null)
-        items.push({ kind: 'mapping', entries: pendingItem, line: baseLine + startIdx });
-    const value = items !== null ? { kind: 'array', items, line: baseLine + startIdx } :
-        entries !== null ? { kind: 'mapping', entries, line: baseLine + startIdx } :
+        items.push(builder.mapping(pendingItem, baseLine + startIdx));
+    const value = items !== null ? builder.array(items, baseLine + startIdx) :
+        entries !== null ? builder.mapping(entries, baseLine + startIdx) :
             null;
     return { value, nextIdx: idx };
 };

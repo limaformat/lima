@@ -8,6 +8,7 @@
 import { type LimaValue, LNull, LBool, LFloat, LInt, LString, LInstant } from './value.js'
 import { type ParseContext, checkScalarLimit } from './normalize.js'
 import { LimaError } from './errors.js'
+import type { ValueBuilder } from './builder.js'
 
 /**
  * `insertedAt` is never set by Core — it's a References-only annotation
@@ -31,21 +32,41 @@ export type PositionedValue =
 	| { kind: 'array'; items: PositionedValue[]; line: number; insertedAt?: InsertedAt }
 	| { kind: 'mapping'; entries: Map<string, PositionedValue>; line: number; insertedAt?: InsertedAt }
 
-const withPos = (v: LimaValue, line: number): PositionedValue => {
+/**
+ * `toType`'s classification result is always a plain `LimaValue` — the
+ * number/date grammar in `toType` itself doesn't need to know or care what
+ * final representation the caller wants. This is the one place that
+ * decides: wrap it into the annotated `PositionedValue` tree (References'
+ * `positionedBuilder`), or unwrap it straight into the public native shape
+ * (Core's `nativeBuilder`, defined in core.ts) — see `builder.ts`.
+ */
+const wrap = <V>(v: LimaValue, line: number, builder: ValueBuilder<V>): V => {
 	switch (v.kind) {
-		case 'null': return { kind: 'null', line }
-		case 'bool': return { kind: 'bool', value: v.value, line }
-		case 'int': return { kind: 'int', value: v.value, line }
-		case 'float': return { kind: 'float', value: v.value, line }
-		case 'string': return { kind: 'string', value: v.value, line, quoted: false }
-		case 'instant': return { kind: 'instant', value: v.value, line }
-		case 'array': return { kind: 'array', items: v.items.map((i) => withPos(i, line)), line }
+		case 'null': return builder.null(line)
+		case 'bool': return builder.bool(v.value, line)
+		case 'int': return builder.int(v.value, line)
+		case 'float': return builder.float(v.value, line)
+		case 'string': return builder.string(v.value, line, false)
+		case 'instant': return builder.instant(v.value, line)
+		case 'array': return builder.array(v.items.map((i) => wrap(i, line, builder)), line)
 		case 'mapping': {
-			const entries = new Map<string, PositionedValue>()
-			for (const [k, c] of v.entries) entries.set(k, withPos(c, line))
-			return { kind: 'mapping', entries, line }
+			const entries = new Map<string, V>()
+			for (const [k, c] of v.entries) entries.set(k, wrap(c, line, builder))
+			return builder.mapping(entries, line)
 		}
 	}
+}
+
+/** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */
+export const positionedBuilder: ValueBuilder<PositionedValue> = {
+	null: (line) => ({ kind: 'null', line }),
+	bool: (value, line) => ({ kind: 'bool', value, line }),
+	int: (value, line) => ({ kind: 'int', value, line }),
+	float: (value, line) => ({ kind: 'float', value, line }),
+	string: (value, line, quoted) => ({ kind: 'string', value, line, quoted }),
+	instant: (value, line) => ({ kind: 'instant', value, line }),
+	array: (items, line) => ({ kind: 'array', items, line }),
+	mapping: (entries, line) => ({ kind: 'mapping', entries, line }),
 }
 
 /** Strips position/quoted-origin annotations, recursively — the public parseCore() projection. */
@@ -265,14 +286,16 @@ export const stripKeyQuotes = (s: string): string => {
  * items here, to keep this a faithful behavioral port: the "unclosed flow
  * bracket" throw and the "non-whitespace after closing quote" strict throw.
  */
-export const parseQuotedOrTyped = (raw: string, ctx: ParseContext, line: number, topLevel: boolean): PositionedValue => {
+export const parseQuotedOrTyped = <V>(
+	raw: string, ctx: ParseContext, line: number, topLevel: boolean, builder: ValueBuilder<V>,
+): V => {
 	const first = raw.charCodeAt(0)
 	if (first === 34 || first === 39) {
 		if (raw.charCodeAt(raw.length - 1) === first) {
 			const unquoted = raw.slice(1, -1)
 			const value = first === 34 ? unescapeDQ(unquoted, ctx.strict, line) : unquoted.replace(/\\'/g, "'")
 			checkScalarLimit(LString(value), line)
-			return { kind: 'string', value, line, quoted: true }
+			return builder.string(value, line, true)
 		}
 		if (topLevel && ctx.strict) {
 			throw new LimaError({ code: 'INVALID_QUOTE', line, message: `LIMA: non-whitespace content after closing quote at line ${line}` })
@@ -280,10 +303,10 @@ export const parseQuotedOrTyped = (raw: string, ctx: ParseContext, line: number,
 	}
 	const typed = toType(raw, ctx.strict, line)
 	checkScalarLimit(typed, line)
-	return withPos(typed, line)
+	return wrap(typed, line, builder)
 }
 
-export const parseScalarValue = (raw: string, ctx: ParseContext, line: number): PositionedValue => {
+export const parseScalarValue = <V>(raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V>): V => {
 	const first = raw.charCodeAt(0)
 	if (ctx.strict && (first === 91 || first === 123)) {
 		throw new LimaError({
@@ -291,5 +314,5 @@ export const parseScalarValue = (raw: string, ctx: ParseContext, line: number): 
 			message: `LIMA: unclosed flow ${first === 91 ? 'sequence' : 'mapping'} at line ${line}`,
 		})
 	}
-	return parseQuotedOrTyped(raw, ctx, line, true)
+	return parseQuotedOrTyped(raw, ctx, line, true, builder)
 }

@@ -127,9 +127,10 @@ const deepCopyPositioned = (v) => {
  * Wraps a partial's ingested value into the annotated representation, with
  * every string leaf marked permanently inert (§3.8: "no traversal into
  * partial values" — the resolution phases must never rediscover a
- * reference-like substring inside partial content). Freshly constructs the
- * whole subtree on every call, so multiple references to the same partial
- * never alias (§6.2 deep-copy requirement is satisfied as a side effect).
+ * reference-like substring inside partial content). Called once per partial
+ * name at ingestion (see the call site), producing the one canonical tree
+ * every pure reference to that partial retrieves — deep-copying it on every
+ * such reference (§3.1) is the resolveTree call site's job, not this one.
  */
 const partialToPositioned = (v, line) => {
     switch (v.kind) {
@@ -183,8 +184,17 @@ const resolveTree = (node, lookup, partials, ctx) => {
                 const insertedAt = { line: node.line, token: val };
                 if (isPartial) {
                     const target = partials.get(key);
+                    // §3.1 deep-copy requirement: `target` is the SAME cached tree
+                    // built once per partial name at ingestion (see
+                    // `partialToPositioned`'s call site) — every pure reference to
+                    // this partial anywhere in the document retrieves that one
+                    // tree. A shallow spread of its root would leave descendants
+                    // (including a mutable `Date` in an `instant` node) aliased
+                    // across every such reference; deep-copying here, exactly like
+                    // the document-reference branch below, is what actually
+                    // satisfies the guarantee.
                     if (target !== undefined)
-                        return { ...target, insertedAt };
+                        return { ...deepCopyPositioned(target), insertedAt };
                 }
                 else {
                     const target = getNestedValueP(lookup, key);
@@ -272,34 +282,60 @@ const resolveTree = (node, lookup, partials, ctx) => {
     }
     return node; // null/bool/int/float/instant — nothing to resolve
 };
-const depthWithProvenance = (v) => {
+const finalizePositioned = (v) => {
     const own = v.insertedAt ? [v.insertedAt] : [];
-    if (v.kind === 'array' || v.kind === 'mapping') {
-        const children = v.kind === 'array' ? v.items : [...v.entries.values()];
-        if (children.length === 0)
-            return { depth: 1, participants: own };
-        const results = children.map(depthWithProvenance);
-        const maxDepth = Math.max(...results.map((r) => r.depth));
-        const deepestParticipants = results.filter((r) => r.depth === maxDepth).flatMap((r) => r.participants);
-        return { depth: 1 + maxDepth, participants: [...own, ...deepestParticipants] };
+    if (v.kind === 'array') {
+        if (v.items.length === 0)
+            return { native: [], nodeCount: 1, depth: 1, deepestParticipants: own };
+        const native = new Array(v.items.length);
+        let nodeCount = 1;
+        let maxDepth = -1;
+        let childParticipants = [];
+        for (let i = 0; i < v.items.length; i++) {
+            const r = finalizePositioned(v.items[i]);
+            native[i] = r.native;
+            nodeCount += r.nodeCount;
+            if (r.depth > maxDepth) {
+                maxDepth = r.depth;
+                childParticipants = r.deepestParticipants.slice();
+            }
+            else if (r.depth === maxDepth) {
+                for (const p of r.deepestParticipants)
+                    childParticipants.push(p);
+            }
+        }
+        return { native, nodeCount, depth: 1 + maxDepth, deepestParticipants: own.length ? own.concat(childParticipants) : childParticipants };
     }
-    return { depth: 0, participants: own };
+    if (v.kind === 'mapping') {
+        if (v.entries.size === 0)
+            return { native: emptyMapping(), nodeCount: 1, depth: 1, deepestParticipants: own };
+        const native = emptyMapping();
+        let nodeCount = 1;
+        let maxDepth = -1;
+        let childParticipants = [];
+        for (const [k, c] of v.entries) {
+            const r = finalizePositioned(c);
+            native[k] = r.native;
+            nodeCount += r.nodeCount;
+            if (r.depth > maxDepth) {
+                maxDepth = r.depth;
+                childParticipants = r.deepestParticipants.slice();
+            }
+            else if (r.depth === maxDepth) {
+                for (const p of r.deepestParticipants)
+                    childParticipants.push(p);
+            }
+        }
+        return { native: native, nodeCount, depth: 1 + maxDepth, deepestParticipants: own.length ? own.concat(childParticipants) : childParticipants };
+    }
+    // Scalar leaf: null/bool/int/float/string/instant. No further recursion,
+    // so plain toNativeFromPositioned is exactly the single-node conversion
+    // needed here — reused rather than duplicated.
+    return { native: toNativeFromPositioned(v), nodeCount: 1, depth: 0, deepestParticipants: own };
 };
 /** Earliest (lowest-line) participant, or null when none exist — R-113's "line 1" fallback applies then. */
 const earliestParticipant = (participants) => participants.length === 0 ? null : participants.reduce((a, b) => (b.line < a.line ? b : a));
-/** References §6.2 node-count definition, computed directly on the annotated tree — see the call site's doc comment. */
-const countNodesPositioned = (v) => {
-    if (v.kind === 'array')
-        return 1 + v.items.reduce((sum, item) => sum + countNodesPositioned(item), 0);
-    if (v.kind === 'mapping') {
-        let sum = 1;
-        for (const c of v.entries.values())
-            sum += countNodesPositioned(c);
-        return sum;
-    }
-    return 1;
-};
-/** Node-count attribution: every reference insertion anywhere in the tree contributes to the total. */
+/** Node-count attribution for the RESOURCE_LIMIT error path: every reference insertion anywhere in the tree contributes to the total. */
 const collectAllParticipants = (v, acc) => {
     if (v.insertedAt)
         acc.push(v.insertedAt);
@@ -435,17 +471,22 @@ export const parseReferences = (frontMatter, options) => {
     if (ctx.best !== null) {
         throw new LimaError(ctx.best);
     }
-    // Core §9 nesting depth, re-checked on the final POST-substitution tree
-    // — inserted values can add depth Core's own pre-resolution check
-    // (inside parseCoreWithPositions) could not see yet. References §5/
-    // R-112: attributed to the lowest-line reference token among the
-    // insertions on the actual deepest path, or line 1 (R-113) when the
-    // excess depth came entirely from literal, non-reference content.
-    const finalValues = [...finalMap.values()];
-    const depthResults = finalValues.map(depthWithProvenance);
-    const depth = depthResults.length === 0 ? 0 : Math.max(...depthResults.map((r) => r.depth));
+    // Depth (Core §9, re-checked on the final POST-substitution tree —
+    // inserted values can add depth Core's own pre-resolution check inside
+    // parseCoreWithPositions could not see yet), node count (§6.2), and the
+    // native result itself all come out of one pass over `finalMap` — see
+    // finalizePositioned's doc comment for why this replaces three
+    // independent full-tree walks.
+    const finalResults = [];
+    for (const [k, v] of finalMap)
+        finalResults.push([k, finalizePositioned(v)]);
+    // References §5/R-112: attributed to the lowest-line reference token
+    // among the insertions on the actual deepest path, or line 1 (R-113)
+    // when the excess depth came entirely from literal, non-reference
+    // content.
+    const depth = finalResults.length === 0 ? 0 : Math.max(...finalResults.map(([, r]) => r.depth));
     if (depth > NESTING_DEPTH_LIMIT) {
-        const participants = depthResults.filter((r) => r.depth === depth).flatMap((r) => r.participants);
+        const participants = finalResults.filter(([, r]) => r.depth === depth).flatMap(([, r]) => r.deepestParticipants);
         const winner = earliestParticipant(participants);
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
@@ -456,14 +497,10 @@ export const parseReferences = (frontMatter, options) => {
     }
     // §6.2: total node count of the final result tree, both modes. Same
     // R-112 attribution — every reference insertion anywhere in the tree
-    // contributes to the total, so the lowest-line one is reported. Counted
-    // directly on the annotated tree (see countNodesPositioned) rather than
-    // via a throwaway PositionedValue → LimaValue conversion pass first —
-    // avoids a full extra walk of what can be a large, reference-expanded
-    // result purely to get a number.
+    // contributes to the total, so the lowest-line one is reported.
     let totalResultNodes = 1; // the root mapping itself counts as one node
-    for (const v of finalMap.values())
-        totalResultNodes += countNodesPositioned(v);
+    for (const [, r] of finalResults)
+        totalResultNodes += r.nodeCount;
     if (totalResultNodes > RESULT_NODE_LIMIT) {
         const participants = [];
         for (const v of finalMap.values())
@@ -476,11 +513,9 @@ export const parseReferences = (frontMatter, options) => {
                 : `LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line 1`,
         });
     }
-    // toNativeFromPositioned(v) in one pass instead of toNative(toPlainValue(v))
-    // in two — see its doc comment.
     const out = emptyMapping();
-    for (const [k, v] of finalMap)
-        out[k] = toNativeFromPositioned(v);
+    for (const [k, r] of finalResults)
+        out[k] = r.native;
     return out;
 };
 /** Backward-compatible primary entry point — References layered on Core. */

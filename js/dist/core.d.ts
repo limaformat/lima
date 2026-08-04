@@ -21,6 +21,7 @@
 import { type LimaValue } from './value.js';
 import { type ParseContext, type Diagnostic } from './normalize.js';
 import { type PositionedValue } from './scalars.js';
+import type { ValueBuilder } from './builder.js';
 export type { Diagnostic, ParseContext } from './normalize.js';
 export { NESTING_DEPTH_LIMIT, SCALAR_LENGTH_LIMIT } from './normalize.js';
 export type { PositionedValue, InsertedAt } from './scalars.js';
@@ -35,13 +36,23 @@ export type CoreOptions = {
  * Parses LIMA Core 1.0 syntax into the internal annotated value tree —
  * every node carrying its source line, string leaves additionally carrying
  * whether they came from quoted syntax. `($key)`/`(%key)` text is left
- * exactly as written; nothing here ever inspects or resolves it.
+ * exactly as written; nothing here ever inspects or resolves it. The
+ * primitive the References layer (`references.ts`) builds on.
  */
 export declare const parseCoreWithPositions: (frontMatter: string, ctx: ParseContext) => Map<string, PositionedValue>;
 /** The public result shape (Core §11.1): every value `toNative*` can produce. */
 export type NativeValue = null | boolean | number | string | Date | NativeValue[] | {
     [key: string]: NativeValue;
 };
+/**
+ * The `ValueBuilder<NativeValue>` — `parseCore`'s fast path. Every scalar
+ * builder is the identity function: unlike `positionedBuilder`, there is no
+ * wrapper object to allocate at all, only the value itself. `array` and
+ * `mapping` build the exact public shape directly (a real array; a
+ * prototype-free object per Core §11.1), so `parseCore` never needs a
+ * separate conversion pass over an intermediate tree afterward.
+ */
+export declare const nativeBuilder: ValueBuilder<NativeValue>;
 /** Converts a Lima value to a plain, native JS value (the public result shape). */
 export declare const toNative: (v: LimaValue) => NativeValue;
 /**

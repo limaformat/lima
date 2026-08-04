@@ -35,7 +35,7 @@ const splitFlowItems = (inner) => {
 };
 const isNestedFlowConstruct = (item) => (item.charCodeAt(0) === 91 && item.charCodeAt(item.length - 1) === 93) ||
     (item.charCodeAt(0) === 123 && item.charCodeAt(item.length - 1) === 125);
-export const parseFlowSequence = (val, ctx, line) => {
+export const parseFlowSequence = (val, ctx, line, builder) => {
     if (val.charCodeAt(0) !== 91 || val.charCodeAt(val.length - 1) !== 93)
         return null;
     const inner = val.slice(1, -1).trim();
@@ -48,7 +48,7 @@ export const parseFlowSequence = (val, ctx, line) => {
         if (!item) {
             if (ctx.strict)
                 throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `LIMA: empty element in flow sequence at line ${line}` });
-            return { kind: 'null', line };
+            return builder.null(line);
         }
         if (item.charCodeAt(0) === 91 && item.charCodeAt(item.length - 1) === 93) {
             throw new LimaError({
@@ -57,20 +57,20 @@ export const parseFlowSequence = (val, ctx, line) => {
             });
         }
         if (item.charCodeAt(0) === 123 && item.charCodeAt(item.length - 1) === 125) {
-            const nested = parseFlowMapping(item, ctx, line);
+            const nested = parseFlowMapping(item, ctx, line, builder);
             if (nested !== null)
                 return nested;
         }
-        return parseQuotedOrTyped(item, ctx, line, false);
+        return parseQuotedOrTyped(item, ctx, line, false, builder);
     });
 };
-export const parseFlowMapping = (val, ctx, line) => {
+export const parseFlowMapping = (val, ctx, line, builder) => {
     if (val.charCodeAt(0) !== 123 || val.charCodeAt(val.length - 1) !== 125)
         return null;
     const inner = val.slice(1, -1).trim();
     const entries = new Map();
     if (!inner)
-        return { kind: 'mapping', entries, line };
+        return builder.mapping(entries, line);
     for (const item of splitFlowItems(inner)) {
         if (!item) {
             if (ctx.strict)
@@ -93,7 +93,7 @@ export const parseFlowMapping = (val, ctx, line) => {
         if (isNestedFlowConstruct(rawVal)) {
             throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `LIMA: invalid flow nesting at line ${line}: "${rawVal}"` });
         }
-        entries.set(key, parseQuotedOrTyped(rawVal, ctx, line, false));
+        entries.set(key, parseQuotedOrTyped(rawVal, ctx, line, false, builder));
     }
-    return { kind: 'mapping', entries, line };
+    return builder.mapping(entries, line);
 };
