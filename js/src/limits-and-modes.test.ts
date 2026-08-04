@@ -208,6 +208,14 @@ describe('resource limits', () => {
 		expect(() => parse('k: ' + 'x'.repeat(70000))).toThrow('LIMA')
 	})
 
+	it('keeps the UTF-16 length shortcut below the 64 KB UTF-8 limit', () => {
+		expect(() => parse('\u0800'.repeat(21845))).not.toThrow()
+	})
+
+	it('still measures UTF-8 bytes immediately above the safe shortcut bound', () => {
+		expect(() => parse('\u0800'.repeat(21846))).toThrow('LIMA')
+	})
+
 	it('accepts nesting exactly at the 16-level limit', () => {
 		expect(() => parse(nestedDoc(16))).not.toThrow()
 	})

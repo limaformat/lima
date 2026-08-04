@@ -15,7 +15,9 @@ export const NESTING_DEPTH_LIMIT = 16;
 const utf8Encoder = new TextEncoder();
 export const byteLength = (s) => utf8Encoder.encode(s).length;
 export const checkStringLimit = (value, line) => {
-    if (codepointLength(value) > SCALAR_LENGTH_LIMIT) {
+    // UTF-16 code-unit length is always >= Unicode code-point length. Short
+    // values therefore cannot violate the limit and need no surrogate scan.
+    if (value.length > SCALAR_LENGTH_LIMIT && codepointLength(value) > SCALAR_LENGTH_LIMIT) {
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line,
             message: `LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${line}`,
@@ -35,7 +37,7 @@ export const checkScalarLimit = (v, line) => {
  * thunk defers it to the one branch that actually needs a line number.
  */
 export const checkKeyLength = (key, line) => {
-    if (codepointLength(key) > KEY_LENGTH_LIMIT) {
+    if (key.length > KEY_LENGTH_LIMIT && codepointLength(key) > KEY_LENGTH_LIMIT) {
         const l = line();
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line: l,

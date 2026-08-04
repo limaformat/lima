@@ -28,7 +28,7 @@ import {
 	type PositionedValue, unescapeDQ, stripComment, positionedBuilder,
 } from './scalars.js'
 import { parseFlowOrScalarValue } from './flow.js'
-import { parseBlock } from './block.js'
+import { parseBlockRange } from './block.js'
 import { LimaError, type LimaDiagnostic } from './errors.js'
 import { scanKeys } from './scanner.js'
 import type { ValueBuilder } from './builder.js'
@@ -123,7 +123,12 @@ const parseCoreGeneric = <V, M>(
 	frontMatter: string, ctx: ParseContext, builder: ValueBuilder<V, M>, computeDepth: (v: V) => number,
 ): M => {
 	const { strict } = ctx
-	if (byteLength(frontMatter) > DOCUMENT_SIZE_LIMIT) {
+	// One UTF-16 code unit contributes at most three UTF-8 bytes (a valid
+	// surrogate pair contributes four bytes across two units). Below this
+	// bound the document cannot exceed §9's byte limit, so typical small
+	// frontmatter avoids allocating and filling TextEncoder's byte array.
+	if (frontMatter.length > Math.floor(DOCUMENT_SIZE_LIMIT / 3) &&
+		byteLength(frontMatter) > DOCUMENT_SIZE_LIMIT) {
 		throw new LimaError({
 			code: 'RESOURCE_LIMIT', line: 1,
 			message: `LIMA: document exceeds maximum size of ${DOCUMENT_SIZE_LIMIT} bytes at line 1`,
@@ -208,22 +213,29 @@ const parseCoreGeneric = <V, M>(
 		}
 
 		const nextStart = i + 1 < matches.length ? matches[i + 1].matchStart : frontMatter.length
-		const raw       = frontMatter.slice(m.rawStart, nextStart)
 		const isBlock   = m.isBlock
-		const firstNewline = raw.indexOf('\n')
+		const firstNewline = m.inlineEnd ?? frontMatter.indexOf('\n', m.rawStart)
+		const newlineInRange = firstNewline < nextStart
 
 		// Typical frontmatter uses one inline scalar per key. Avoid building
 		// and filling a temporary lines array for that overwhelmingly common
 		// case; the scanner-delimited raw slice contains at most its terminal
 		// newline here.
-		if (!isBlock && (firstNewline === -1 || firstNewline === raw.length - 1)) {
-			const val = firstNewline === -1 ? raw : raw.slice(0, -1)
+		if (!isBlock && (!newlineInRange || firstNewline === nextStart - 1)) {
+			const valueEnd = newlineInRange ? firstNewline : nextStart
+			const val = frontMatter.slice(m.rawStart, valueEnd)
 			const line = m.line
 			const uncommented = val.includes('#') ? stripComment(val) : val
 			builder.setMapping(root, key, parseFlowOrScalarValue(uncommented, ctx, line, builder))
 			continue
 		}
 
+		if (isBlock) {
+			const parsed = parseBlockRange(frontMatter, m.rawStart, nextStart, ctx, keyLine(i) + 1, builder)
+			builder.setMapping(root, key, parsed ?? builder.null(keyLine(i)))
+			continue
+		}
+		const raw = frontMatter.slice(m.rawStart, nextStart)
 		const lines: string[] = []
 		let lineStart = 0
 		for (let j = 0; j <= raw.length; j++) {
@@ -233,13 +245,7 @@ const parseCoreGeneric = <V, M>(
 			}
 		}
 
-		if (isBlock) {
-			let firstNonEmpty = 0
-			while (firstNonEmpty < lines.length && !lines[firstNonEmpty].trim()) firstNonEmpty++
-			const baseIndent = firstNonEmpty < lines.length ? leadingSpaces(lines[firstNonEmpty]) : 0
-			const parsed = parseBlock(lines, 0, baseIndent, ctx, keyLine(i) + 1, builder).value
-			builder.setMapping(root, key, parsed ?? builder.null(keyLine(i)))
-		} else {
+		{
 			if (lines.length === 0) {
 				builder.setMapping(root, key, builder.null(keyLine(i)))
 				continue
@@ -350,7 +356,11 @@ export const nativeBuilder: ValueBuilder<NativeValue, Record<string, NativeValue
 	// the unwrap-an-opaque-`unknown`-and-hope casts the `unknown`-typed
 	// interface required at every method below.
 	createMapping: () => emptyMapping() as Record<string, NativeValue>,
-	hasMappingKey: (entries, key) => Object.prototype.hasOwnProperty.call(entries, key),
+	// Lima values can never be `undefined`, and every native mapping has a
+	// null prototype. A direct lookup therefore distinguishes absent from
+	// present keys without the considerably more expensive generic own-key
+	// helper (including for names such as "__proto__").
+	hasMappingKey: (entries, key) => entries[key] !== undefined,
 	setMapping: (entries, key, value) => { entries[key] = value },
 	mappingMaxDepth: (entries, depthOf) => {
 		let max = 0

@@ -18,52 +18,9 @@ import {
 import { parseFlowMapping, parseFlowOrScalarValue } from './flow.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
+import { isTrimWhitespace } from './chars.js'
 
 const DASH_PREFIX_RE = /^-\s+/
-
-/**
- * The exact ECMAScript WhiteSpace + LineTerminator code-point set consumed
- * by String.prototype.trimStart(). Keeping the set explicit avoids the
- * substring allocation in the block parser's hottest operation without
- * narrowing behavior to ASCII space (notably, U+00A0 indentation must keep
- * working). All members are single UTF-16 code units, so the returned index
- * is identical to `line.length - line.trimStart().length`.
- *
- * Claude Code review fix (round 2): the range below used to start at
- * 0x000b, omitting U+000A (LINE FEED) from the set — confirmed by
- * exhaustively comparing every BMP code point's actual `trimStart()`
- * behavior against this predicate. Currently unreachable in practice (every
- * `line` this function sees comes from splitting on `\n` upstream, so no
- * individual line can ever contain one), but the doc comment above claims
- * "the exact" set, which was false, and this function has no other
- * enforced guarantee tying it to that invariant — a future caller outside
- * `parseBlock`'s current pre-split usage could reintroduce the gap as a
- * real bug. One code point, no behavioral or performance change today.
- */
-const isTrimWhitespace = (c: number): boolean =>
-	c === 0x0009 || (c >= 0x000a && c <= 0x000d) || c === 0x0020 || c === 0x00a0 ||
-	c === 0x1680 || (c >= 0x2000 && c <= 0x200a) || c === 0x2028 || c === 0x2029 ||
-	c === 0x202f || c === 0x205f || c === 0x3000 || c === 0xfeff
-
-const lineIndent = (line: string): number => {
-	let i = 0
-	// Plain spaces dominate normalized frontmatter indentation. Keep that
-	// path to one cheap comparison per character, then fall back to the full
-	// trimStart set for mixed or non-ASCII whitespace.
-	while (i < line.length && line.charCodeAt(i) === 0x0020) i++
-	while (i < line.length && isTrimWhitespace(line.charCodeAt(i))) i++
-	return i
-}
-
-const isBlankLine = (line: string): boolean => lineIndent(line) === line.length
-
-/** Equivalent to `line.replace(/^-\s+/, '')` for a dash-prefixed line. */
-const stripDashPrefix = (line: string): string => {
-	let i = 1
-	if (!isTrimWhitespace(line.charCodeAt(i))) return line
-	while (i < line.length && isTrimWhitespace(line.charCodeAt(i))) i++
-	return line.slice(i)
-}
 
 export const findKeySep = (s: string): number => {
 	const first = s.charCodeAt(0)
@@ -77,11 +34,41 @@ export const findKeySep = (s: string): number => {
 }
 
 /**
- * Recursively parses a block value (array or mapping) from an array of
- * lines.
+ * Recursively parses a block value over numeric line spans in the original
+ * source. Strings are materialized only when grammar or scalar parsing needs
+ * their content.
  */
-export const parseBlock = <V, M>(
-	lines: string[],
+type BlockLines = {
+	source: string
+	starts: number[]
+	indents: number[]
+	end: number
+	finalNewline: boolean
+}
+
+const blockLineEnd = (lines: BlockLines, index: number): number => index + 1 < lines.starts.length
+	? lines.starts[index + 1] - 1
+	: (lines.finalNewline ? lines.end - 1 : lines.end)
+
+const blockLineLength = (lines: BlockLines, index: number): number =>
+	blockLineEnd(lines, index) - lines.starts[index]
+
+const blockContent = (lines: BlockLines, index: number, indent: number): string =>
+	lines.source.slice(lines.starts[index] + indent, blockLineEnd(lines, index))
+
+/** The dash-prefix regex semantics, directly over a source span, with one final slice. */
+const blockAfterDash = (lines: BlockLines, index: number, indent: number): string => {
+	const start = lines.starts[index] + indent
+	const end = blockLineEnd(lines, index)
+	if (start + 1 === end) return ''
+	let content = start + 1
+	if (!isTrimWhitespace(lines.source.charCodeAt(content))) return lines.source.slice(start, end)
+	while (content < end && isTrimWhitespace(lines.source.charCodeAt(content))) content++
+	return lines.source.slice(content, end)
+}
+
+const parseBlock = <V, M>(
+	lines: BlockLines,
 	startIdx: number,
 	baseIndent: number,
 	ctx: ParseContext,
@@ -93,16 +80,16 @@ export const parseBlock = <V, M>(
 	let pendingItem: M | null = null
 	let idx = startIdx
 
-	while (idx < lines.length) {
-		const line    = lines[idx]
-		const indent = lineIndent(line)
-		if (indent === line.length) { idx++; continue }
-		const trimmed = indent === 0 ? line : line.slice(indent)
-		if (trimmed.charCodeAt(0) === 35) { idx++; continue }
+	while (idx < lines.starts.length) {
+		const indent = lines.indents[idx]
+		if (indent === blockLineLength(lines, idx)) { idx++; continue }
+		const firstCode = lines.source.charCodeAt(lines.starts[idx] + indent)
+		if (firstCode === 35) { idx++; continue }
 
 		if (indent < baseIndent) break
 
 		if (indent > baseIndent) {
+			const trimmed = blockContent(lines, idx, indent)
 			if (items !== null && pendingItem !== null) {
 				const colonPos = findKeySep(trimmed)
 				if (colonPos !== -1) {
@@ -118,9 +105,9 @@ export const parseBlock = <V, M>(
 					checkKeyLength(itemKey, () => keyLineNum)
 					idx++
 					let ni = idx
-					while (ni < lines.length && isBlankLine(lines[ni])) ni++
-					if (ni < lines.length) {
-						const nextIndent = lineIndent(lines[ni])
+					while (ni < lines.starts.length && lines.indents[ni] === blockLineLength(lines, ni)) ni++
+					if (ni < lines.starts.length) {
+						const nextIndent = lines.indents[ni]
 						if (nextIndent > indent) {
 							const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder)
 							builder.setMapping(pendingItem, itemKey, nested ?? builder.null(keyLineNum))
@@ -147,7 +134,7 @@ export const parseBlock = <V, M>(
 		}
 
 		// ── indent === baseIndent ──────────────────────────────────────────
-		const isList = trimmed.charCodeAt(0) === 45
+		const isList = firstCode === 45
 
 		if (isList) {
 			if (pendingItem !== null) {
@@ -175,7 +162,7 @@ export const parseBlock = <V, M>(
 			// `-  {a: 1}` produced a mangled `{"{a":"1}"}` instead of the
 			// parsed mapping `{a:1}`. Reverted to the regex, which correctly
 			// consumes the whole whitespace run regardless of length or kind.
-			let afterDash = trimmed === '-' ? '' : stripDashPrefix(trimmed)
+			let afterDash = blockAfterDash(lines, idx, indent)
 			if (afterDash.includes('#')) afterDash = stripComment(afterDash)
 			// Claude Code review fix (round 3): this gate skips the flow-mapping
 			// probe and findKeySep to fast-path an ordinary scalar list item,
@@ -208,13 +195,13 @@ export const parseBlock = <V, M>(
 			} else if (afterDash === '-' || DASH_PREFIX_RE.test(afterDash)) {
 				if (ctx.strict) throw new LimaError({
 					code: 'INVALID_INDENTATION', line: baseLine + idx,
-					message: `LIMA: nested block sequence at line ${baseLine + idx}: "${trimmed}"`,
+					message: `LIMA: nested block sequence at line ${baseLine + idx}: "${blockContent(lines, idx, indent)}"`,
 				})
 				items.push(builder.null(baseLine + idx))
 				idx++
-				while (idx < lines.length) {
-					const nextIndent = lineIndent(lines[idx])
-					if (nextIndent === lines[idx].length || lines[idx].charCodeAt(nextIndent) === 35) { idx++; continue }
+				while (idx < lines.starts.length) {
+					const nextIndent = lines.indents[idx]
+					if (nextIndent === blockLineLength(lines, idx) || blockContent(lines, idx, nextIndent).charCodeAt(0) === 35) { idx++; continue }
 					if (nextIndent <= baseIndent) break
 					idx++
 				}
@@ -229,18 +216,19 @@ export const parseBlock = <V, M>(
 				// lists. Consume only unquoted `key: value` continuation lines
 				// directly from the original line; every other syntax shape is
 				// left untouched for the existing branch chain on the next loop.
-				while (idx < lines.length) {
-					const continuation = lines[idx]
-					const continuationIndent = lineIndent(continuation)
+				while (idx < lines.starts.length) {
+					const continuationIndent = lines.indents[idx]
 					if (continuationIndent <= baseIndent) break
-					const first = continuation.charCodeAt(continuationIndent)
+					const continuationStart = lines.starts[idx] + continuationIndent
+					const continuationEnd = blockLineEnd(lines, idx)
+					const first = lines.source.charCodeAt(continuationStart)
 					if (first === 34 || first === 39 || first === 35) break
-					const continuationColon = continuation.indexOf(': ', continuationIndent)
-					if (continuationColon === -1) break
-					const continuationKey = continuation.slice(continuationIndent, continuationColon).trim()
+					const continuationColon = lines.source.indexOf(': ', continuationStart)
+					if (continuationColon === -1 || continuationColon >= continuationEnd) break
+					const continuationKey = lines.source.slice(continuationStart, continuationColon).trim()
 					if (!continuationKey) break
 					checkKeyLength(continuationKey, () => baseLine + idx)
-					let continuationValue = continuation.slice(continuationColon + 2).trim()
+					let continuationValue = lines.source.slice(continuationColon + 2, continuationEnd).trim()
 					if (continuationValue.includes('#')) continuationValue = stripComment(continuationValue)
 					builder.setMapping(pendingItem, continuationKey,
 						parseFlowOrScalarValue(continuationValue, ctx, baseLine + idx, builder))
@@ -252,9 +240,9 @@ export const parseBlock = <V, M>(
 				checkKeyLength(itemKey, () => keyLineNum)
 				idx++
 				let ni = idx
-				while (ni < lines.length && isBlankLine(lines[ni])) ni++
-				if (ni < lines.length) {
-					const nextIndent = lineIndent(lines[ni])
+				while (ni < lines.starts.length && lines.indents[ni] === blockLineLength(lines, ni)) ni++
+				if (ni < lines.starts.length) {
+					const nextIndent = lines.indents[ni]
 					if (nextIndent > baseIndent) {
 						const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder)
 						pendingItem = builder.createMapping()
@@ -278,6 +266,7 @@ export const parseBlock = <V, M>(
 				idx++
 			}
 		} else {
+			const trimmed = blockContent(lines, idx, indent)
 			// ── Map entry ────────────────────────────────────────────────────
 			if (items !== null) {
 				if (ctx.strict) throw new LimaError({
@@ -305,9 +294,9 @@ export const parseBlock = <V, M>(
 				checkDuplicateKey(builder.hasMappingKey(entries, itemKey), itemKey, keyLineNum, ctx)
 				idx++
 				let ni = idx
-				while (ni < lines.length && isBlankLine(lines[ni])) ni++
-				if (ni < lines.length) {
-					const nextIndent = lineIndent(lines[ni])
+				while (ni < lines.starts.length && lines.indents[ni] === blockLineLength(lines, ni)) ni++
+				if (ni < lines.starts.length) {
+					const nextIndent = lines.indents[ni]
 					if (nextIndent > baseIndent) {
 						const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder)
 						builder.setMapping(entries, itemKey, nested ?? builder.null(keyLineNum))
@@ -334,4 +323,38 @@ export const parseBlock = <V, M>(
 		null
 
 	return { value, nextIdx: idx }
+}
+
+/** Complete block grammar over numeric line starts in the original source. */
+export const parseBlockRange = <V, M>(
+	source: string, start: number, end: number, ctx: ParseContext, baseLine: number,
+	builder: ValueBuilder<V, M>,
+): V | null => {
+	const starts: number[] = []
+	const indents: number[] = []
+	let pos = start
+	while (pos < end) {
+		starts.push(pos)
+		const newline = source.indexOf('\n', pos)
+		const limit = newline === -1 || newline >= end ? end : newline
+		let content = pos
+		while (content < limit && source.charCodeAt(content) === 0x0020) content++
+		while (content < limit && isTrimWhitespace(source.charCodeAt(content))) content++
+		indents.push(content - pos)
+		if (newline === -1 || newline >= end) break
+		pos = newline + 1
+	}
+	const lines: BlockLines = {
+		source, starts, indents, end,
+		finalNewline: end > start && source.charCodeAt(end - 1) === 10,
+	}
+	let first = 0
+	while (first < starts.length && indents[first] === blockLineLength(lines, first)) first++
+	let baseIndent = 0
+	if (first < starts.length) {
+		const firstStart = starts[first]
+		const firstEnd = blockLineEnd(lines, first)
+		while (firstStart + baseIndent < firstEnd && source.charCodeAt(firstStart + baseIndent) === 32) baseIndent++
+	}
+	return parseBlock(lines, 0, baseIndent, ctx, baseLine, builder).value
 }

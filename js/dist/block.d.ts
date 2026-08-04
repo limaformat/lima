@@ -11,11 +11,5 @@
 import { type ParseContext } from './normalize.js';
 import type { ValueBuilder } from './builder.js';
 export declare const findKeySep: (s: string) => number;
-/**
- * Recursively parses a block value (array or mapping) from an array of
- * lines.
- */
-export declare const parseBlock: <V, M>(lines: string[], startIdx: number, baseIndent: number, ctx: ParseContext, baseLine: number, builder: ValueBuilder<V, M>) => {
-    value: V | null;
-    nextIdx: number;
-};
+/** Complete block grammar over numeric line starts in the original source. */
+export declare const parseBlockRange: <V, M>(source: string, start: number, end: number, ctx: ParseContext, baseLine: number, builder: ValueBuilder<V, M>) => V | null;

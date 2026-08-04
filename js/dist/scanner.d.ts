@@ -48,6 +48,8 @@ export interface KeyMatch {
     rawStart: number;
     /** True for the `( *\n)` block-form separator, false for the single-space inline form. */
     isBlock: boolean;
+    /** End of the first physical value line, populated for inline matches. */
+    inlineEnd?: number;
     unquoted?: string;
     singleQuoted?: string;
     doubleQuotedRaw?: string;

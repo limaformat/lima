@@ -55,6 +55,8 @@ export interface KeyMatch {
 	rawStart: number
 	/** True for the `( *\n)` block-form separator, false for the single-space inline form. */
 	isBlock: boolean
+	/** End of the first physical value line, populated for inline matches. */
+	inlineEnd?: number
 	// Exactly one of these three is set, mirroring the source regex's three key alternatives.
 	unquoted?: string
 	singleQuoted?: string
@@ -153,6 +155,7 @@ export const scanKeys = (frontMatter: string): KeyMatch[] => {
 				continue
 			}
 			const nextNl = frontMatter.indexOf('\n', pos)
+			m.inlineEnd = nextNl === -1 ? frontMatter.length : nextNl
 			if (nextNl === -1) pos = frontMatter.length + 1
 			else { pos = nextNl + 1; line++ }
 			continue

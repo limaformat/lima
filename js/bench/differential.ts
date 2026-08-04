@@ -188,6 +188,82 @@ for (const a of whitespace) {
 	}
 }
 
+// Position-cursor research round: canonical block shapes plus the exact
+// boundaries that must force a fallback to the complete grammar. Generate
+// enough combinations to exercise every cursor state repeatedly instead of
+// relying on the six performance documents alone.
+const cursorValues = [
+	'word', 'two words', '0', '-1', '.5', 'true', 'false', 'null', '~',
+	'2024-03-01', 'a@example.com', 'https://example.com/path', '($ref)',
+]
+for (let i = 0; i < 512; i++) {
+	const a = cursorValues[i % cursorValues.length]
+	const b = cursorValues[(i * 7 + 3) % cursorValues.length]
+	docs.push(`root:\n  key${i}: ${a}\n  other${i}: ${b}\n`)
+	docs.push(`items:\n  - ${a}\n  - ${b}\n`)
+	docs.push(`items:\n  - name: ${a}\n    value: ${b}\n`)
+	docs.push(`root:\n  nested${i}:\n    leaf: ${a}\n`)
+}
+
+for (const suffix of [' # comment', '\u00a0', '\u2003', '\ufeff']) {
+	docs.push(`root:\n  key: value${suffix}\n`)
+	docs.push(`items:\n  - value${suffix}\n`)
+	docs.push(`items:\n  - key: value${suffix}\n`)
+	docs.push(`items:\n  - key: value\n    next: other${suffix}\n`)
+}
+
+// Discover the runtime's actual single-code-unit trimStart set over the
+// complete BMP and exercise every member at cursor value boundaries. This
+// validates the hand-written predicate against the primitive it replaces.
+for (let code = 0; code <= 0xffff; code++) {
+	const char = String.fromCharCode(code)
+	if (char.trimStart() !== '') continue
+	docs.push(`root:\n  key: ${char}value\n`)
+	docs.push(`root:\n  key: value${char}\n`)
+	docs.push(`items:\n  - ${char}value\n`)
+}
+
+// Claude Code additions (position-cursor round): the cursor's native
+// hasMappingKey optimization (`entries[key] !== undefined`, relying on
+// null-prototype objects having no magic __proto__ accessor) and its
+// continuation-loop key extraction (asciiKey allows '-' as an ordinary
+// character, same as the pre-cursor continuation loop's plain
+// indexOf(': ')) both needed direct verification, not just the reasoning
+// in their own code comments — differential testing across the cursor's
+// several entry points (top-level, nested, array-item, continuation) for
+// each.
+docs.push(
+	'__proto__: value\n',
+	'a:\n  __proto__: value\n',
+	'items:\n  - name: A\n    __proto__: value\n',
+	'items:\n  - __proto__: value\n',
+	'toString: value\n',
+	'constructor: value\n',
+	'hasOwnProperty: value\n',
+	'items:\n  - name: A\n    : value\n',
+	'items:\n  - name: A\n    -something: value\n',
+	'items:\n  - -something: value\n',
+	'a:\n  : value\n',
+)
+
+// Strict error precedence under speculative parsing: an early
+// cursor-throwable value (strict-mode number overflow / invalid date /
+// unclosed flow) paired with a later shape the cursor can't handle at
+// all (quoted key, nested key marker), and the reverse ordering — proves
+// the cursor never processes lines out of document order relative to
+// the complete grammar, so whichever error a top-to-bottom scan hits
+// first is unaffected by which parser (cursor or fallback) happens to
+// run.
+docs.push(
+	'items:\n  - name: A\n    val: 1e999\n  - "quoted": B\n',
+	'items:\n  - "quoted": B\n  - name: A\n    val: 1e999\n',
+	'items:\n  - d: 2024-02-30\n  - a:\n      b: 1\n',
+	'items:\n  - arr: [1, 2\n  - a:\n      b: 1\n',
+	'items:\n  - name: A\n    email: a@x.com\n   badindent\n  - name: B\n',
+	'a:\n  b:\n    c: 1\n    c: 2\n',
+	'items:\n  - name: A\n  - name: "bad \\q escape"\n',
+)
+
 const observe = (parse: typeof thisImpl, doc: string, strict: boolean): string => {
 	const warnings: unknown[] = []
 	try {

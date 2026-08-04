@@ -141,6 +141,7 @@ export const scanKeys = (frontMatter) => {
                 continue;
             }
             const nextNl = frontMatter.indexOf('\n', pos);
+            m.inlineEnd = nextNl === -1 ? frontMatter.length : nextNl;
             if (nextNl === -1)
                 pos = frontMatter.length + 1;
             else {
