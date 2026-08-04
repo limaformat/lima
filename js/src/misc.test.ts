@@ -41,6 +41,15 @@ describe('input normalization', () => {
 	it('normalizes a tab mixed with leading spaces in indentation', () => {
 		expect(limaParser('author:\n  \tname: Alice')).toEqual({ author: { name: 'Alice' } })
 	})
+
+	it('fully strips a blank line consisting only of tabs (tab-expansion + trailing-space-strip interaction)', () => {
+		// Regression guard: the tab-expansion pass turns an all-tab line
+		// into an all-space line, which the trailing-whitespace-strip pass
+		// must still catch — a naive "skip this pass if no tabs/no trailing
+		// spaces up front" fastpath could miss whitespace newly created by
+		// an earlier pass.
+		expect(limaParser('a: 1\n\t\t\nb: 2')).toEqual({ a: 1, b: 2 })
+	})
 })
 
 describe('real-world document', () => {

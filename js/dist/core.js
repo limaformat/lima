@@ -72,10 +72,25 @@ export const parseCoreWithPositions = (frontMatter, ctx) => {
     const root = new Map();
     if (!frontMatter)
         return root;
-    frontMatter = frontMatter
-        .replace(/\r\n|\r/g, '\n')
-        .replace(/^([ \t]*)/gm, (leading) => (leading.includes('\t') ? leading.replace(/\t/g, '  ') : leading))
-        .replace(/ +(?=\n|$)/gm, '');
+    // Each of these three passes is skipped outright when a cheap upfront
+    // check proves it would be a no-op — a full-document regex `.replace()`
+    // always allocates a new string even when nothing actually changes, and
+    // real documents are overwhelmingly already LF-only, space-indented,
+    // and free of trailing whitespace (git normalizes line endings, most
+    // editors strip trailing whitespace on save). Each guard is sound (a
+    // negative guard never skips a pass that would have changed something):
+    // checked sequentially against the already-updated string, so e.g. the
+    // trailing-space guard correctly sees spaces the tab-expansion pass
+    // itself just created (an all-tab blank line expands to an all-space
+    // line, which then still needs trimming).
+    if (frontMatter.includes('\r'))
+        frontMatter = frontMatter.replace(/\r\n|\r/g, '\n');
+    if (frontMatter.includes('\t')) {
+        frontMatter = frontMatter.replace(/^([ \t]*)/gm, (leading) => (leading.includes('\t') ? leading.replace(/\t/g, '  ') : leading));
+    }
+    if (frontMatter.includes(' \n') || frontMatter.endsWith(' ')) {
+        frontMatter = frontMatter.replace(/ +(?=\n|$)/gm, '');
+    }
     // Lazy — the regex scan below only runs the first time any key's line
     // is actually needed (duplicate-key/warning/strict-mode/resource-limit
     // messages), never on the happy path otherwise.
