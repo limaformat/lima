@@ -41,6 +41,30 @@ const docs: string[] = [
 	'values:\n  -  value\n  -   \'quoted\'\n  -  [1, 2]\n  -  {a: 1}\n',
 	'a:\n  b: 1\n\u00a0\u00a0c: 2\n',
 	'a:\n  b: 1\n\u00a0\u00a0\n  c: 2\n',
+	// Every branch that follows the canonical block-object continuation
+	// path: ordinary value, quoted key, nested key, comment, blank line,
+	// invalid continuation and the next sibling object.
+	'items:\n  - name: A\n    email: a@example.com\n',
+	'items:\n  - name: A\n    "quoted key": value\n',
+	'items:\n  - name: A\n    nested:\n      value: 1\n',
+	'items:\n  - name: A\n    # comment\n    email: a@example.com\n',
+	'items:\n  - name: A\n\n    email: a@example.com\n',
+	// Claude Code round-4 additions: three more shapes the continuation
+	// loop's break conditions should hand back to the slow path for, not
+	// found in Codex's own 7-case list — an empty unquoted key (Core §5.2
+	// explicitly allows '': as a valid key, but the loop's
+	// `!continuationKey` check bails on it rather than trying to replicate
+	// stripKeyQuotes/checkDuplicateKey-equivalent handling inline), a
+	// continuation line itself starting with '-' (not excluded by the
+	// quote/comment first-character check, relies on indexOf(': ') finding
+	// the same split point findKeySep would), and three consecutive
+	// continuation lines (single-iteration cases above can't show the loop
+	// itself iterating correctly, only firing once).
+	'items:\n  - name: A\n    : empty-key-value\n    email: a@example.com\n',
+	'items:\n  - name: A\n    - nested: dash-value\n',
+	'items:\n  - name: A\n    email: a@example.com\n    role: admin\n',
+	'items:\n  - name: A\n    invalid continuation\n',
+	'items:\n  - name: A\n  - name: B\n',
 ]
 
 // Claude Code round-3 addition: a block-sequence item that's itself a bare

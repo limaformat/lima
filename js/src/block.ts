@@ -225,6 +225,27 @@ export const parseBlock = <V, M>(
 				pendingItem = builder.createMapping()
 				builder.setMapping(pendingItem, pendingKey, parseFlowOrScalarValue(pendingRaw, ctx, baseLine + idx, builder))
 				idx++
+				// Canonical multi-key object items dominate frontmatter object
+				// lists. Consume only unquoted `key: value` continuation lines
+				// directly from the original line; every other syntax shape is
+				// left untouched for the existing branch chain on the next loop.
+				while (idx < lines.length) {
+					const continuation = lines[idx]
+					const continuationIndent = lineIndent(continuation)
+					if (continuationIndent <= baseIndent) break
+					const first = continuation.charCodeAt(continuationIndent)
+					if (first === 34 || first === 39 || first === 35) break
+					const continuationColon = continuation.indexOf(': ', continuationIndent)
+					if (continuationColon === -1) break
+					const continuationKey = continuation.slice(continuationIndent, continuationColon).trim()
+					if (!continuationKey) break
+					checkKeyLength(continuationKey, () => baseLine + idx)
+					let continuationValue = continuation.slice(continuationColon + 2).trim()
+					if (continuationValue.includes('#')) continuationValue = stripComment(continuationValue)
+					builder.setMapping(pendingItem, continuationKey,
+						parseFlowOrScalarValue(continuationValue, ctx, baseLine + idx, builder))
+					idx++
+				}
 			} else if (afterDash.endsWith(':')) {
 				const itemKey = stripKeyQuotes(afterDash.slice(0, -1).trim())
 				const keyLineNum = baseLine + idx
