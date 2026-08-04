@@ -17,7 +17,7 @@
  * Claude Code review note: an earlier version of this interface typed the
  * accumulator as `unknown`, requiring every concrete builder to `as`-cast
  * it back to its real type at every one of `createMapping`/`hasMappingKey`/
- * `setMapping`/`mappingValues`/`mapping` — full call-site type-checking on
+ * `setMapping`/`mappingMaxDepth`/`mapping` — full call-site type-checking on
  * `block.ts`/`flow.ts`/`scalars.ts` (they only ever go through these
  * methods, never touch `M` directly) with none of the safety lost in
  * exchange, purely by making `M` a second generic parameter instead. This
@@ -35,6 +35,6 @@ export interface ValueBuilder<V, M = Map<string, V>> {
 	createMapping(): M
 	hasMappingKey(entries: M, key: string): boolean
 	setMapping(entries: M, key: string, value: V): void
-	mappingValues(entries: M): Iterable<V>
+	mappingMaxDepth(entries: M, depthOf: (value: V) => number): number
 	mapping(entries: M, line: number): V
 }

@@ -25,9 +25,9 @@ import {
 	DOCUMENT_SIZE_LIMIT, TOP_LEVEL_KEY_LIMIT, NESTING_DEPTH_LIMIT,
 } from './normalize.js'
 import {
-	type PositionedValue, unescapeDQ, stripComment, parseScalarValue, positionedBuilder,
+	type PositionedValue, unescapeDQ, stripComment, positionedBuilder,
 } from './scalars.js'
-import { parseFlowSequence, parseFlowMapping } from './flow.js'
+import { parseFlowOrScalarValue } from './flow.js'
 import { parseBlock } from './block.js'
 import { LimaError, type LimaDiagnostic } from './errors.js'
 import { scanKeys } from './scanner.js'
@@ -44,10 +44,15 @@ type Meta = Record<string, unknown>
 const emptyMapping = (): Meta => Object.create(null)
 
 const depthOfPositioned = (v: PositionedValue): number => {
-	if (v.kind === 'array') return v.items.length === 0 ? 1 : 1 + Math.max(...v.items.map(depthOfPositioned))
+	if (v.kind === 'array') {
+		let max = 0
+		for (const item of v.items) max = Math.max(max, depthOfPositioned(item))
+		return 1 + max
+	}
 	if (v.kind === 'mapping') {
-		const children = [...v.entries.values()]
-		return children.length === 0 ? 1 : 1 + Math.max(...children.map(depthOfPositioned))
+		let max = 0
+		for (const child of v.entries.values()) max = Math.max(max, depthOfPositioned(child))
+		return 1 + max
 	}
 	return 0
 }
@@ -61,10 +66,15 @@ const depthOfPositioned = (v: PositionedValue): number => {
  * container).
  */
 const depthOfNative = (v: NativeValue): number => {
-	if (Array.isArray(v)) return v.length === 0 ? 1 : 1 + Math.max(...v.map(depthOfNative))
+	if (Array.isArray(v)) {
+		let max = 0
+		for (const item of v) max = Math.max(max, depthOfNative(item))
+		return 1 + max
+	}
 	if (v !== null && typeof v === 'object' && !(v instanceof Date)) {
-		const children = Object.values(v)
-		return children.length === 0 ? 1 : 1 + Math.max(...children.map(depthOfNative))
+		let max = 0
+		for (const key in v) max = Math.max(max, depthOfNative(v[key]))
+		return 1 + max
 	}
 	return 0
 }
@@ -210,13 +220,7 @@ const parseCoreGeneric = <V, M>(
 			const val = firstNewline === -1 ? raw : raw.slice(0, -1)
 			const line = m.line
 			const uncommented = val.includes('#') ? stripComment(val) : val
-			const flowSeq = parseFlowSequence(uncommented, ctx, line, builder)
-			if (flowSeq !== null) {
-				builder.setMapping(root, key, builder.array(flowSeq, line))
-			} else {
-				const flowMap = parseFlowMapping(uncommented, ctx, line, builder)
-				builder.setMapping(root, key, flowMap !== null ? flowMap : parseScalarValue(uncommented, ctx, line, builder))
-			}
+			builder.setMapping(root, key, parseFlowOrScalarValue(uncommented, ctx, line, builder))
 			continue
 		}
 
@@ -245,13 +249,7 @@ const parseCoreGeneric = <V, M>(
 			if (lines.length === 1 || line0Trimmed !== '|') {
 				const line0 = lines[0]
 				const val   = line0.includes('#') ? stripComment(line0) : line0
-				const flowSeq = parseFlowSequence(val, ctx, keyLine(i), builder)
-				if (flowSeq !== null) {
-					builder.setMapping(root, key, builder.array(flowSeq, keyLine(i)))
-				} else {
-					const flowMap = parseFlowMapping(val, ctx, keyLine(i), builder)
-					builder.setMapping(root, key, flowMap !== null ? flowMap : parseScalarValue(val, ctx, keyLine(i), builder))
-				}
+				builder.setMapping(root, key, parseFlowOrScalarValue(val, ctx, keyLine(i), builder))
 				continue
 			}
 
@@ -304,8 +302,7 @@ const parseCoreGeneric = <V, M>(
 	// References is layered on top, it re-checks depth on the final,
 	// post-substitution tree separately — substituted values can add depth
 	// this check cannot see yet.
-	const rootValues = [...builder.mappingValues(root)]
-	const depth = rootValues.length === 0 ? 0 : Math.max(...rootValues.map(computeDepth))
+	const depth = builder.mappingMaxDepth(root, computeDepth)
 	if (depth > NESTING_DEPTH_LIMIT) {
 		throw new LimaError({
 			code: 'RESOURCE_LIMIT', line: 1,
@@ -355,7 +352,16 @@ export const nativeBuilder: ValueBuilder<NativeValue, Record<string, NativeValue
 	createMapping: () => emptyMapping() as Record<string, NativeValue>,
 	hasMappingKey: (entries, key) => Object.prototype.hasOwnProperty.call(entries, key),
 	setMapping: (entries, key, value) => { entries[key] = value },
-	mappingValues: (entries) => Object.values(entries),
+	mappingMaxDepth: (entries, depthOf) => {
+		let max = 0
+		for (const key in entries) {
+			const value = entries[key]
+			if (Array.isArray(value) || (value !== null && typeof value === 'object' && !(value instanceof Date))) {
+				max = Math.max(max, depthOf(value))
+			}
+		}
+		return max
+	},
 	mapping: (entries) => entries,
 }
 

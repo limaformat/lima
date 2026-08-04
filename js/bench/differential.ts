@@ -43,6 +43,25 @@ const docs: string[] = [
 	'a:\n  b: 1\n\u00a0\u00a0\n  c: 2\n',
 ]
 
+// Claude Code round-3 addition: a block-sequence item that's itself a bare
+// "key:" marker (no inline value), with its value nested on following
+// lines — e.g. `- author:\n    name: Alice`. Found missing from every
+// existing sweep below (the dash-item × scalarBodies sweep only ever
+// produces self-contained single-line values, never a colon-terminated key
+// needing a lookahead) while reviewing a round-3 candidate whose new
+// block-sequence fast path skipped exactly this case, discarding the
+// nested mapping entirely (`{"items":["author:"]}` instead of
+// `{"items":[{"author":{"name":"Alice"}}]}`) — 16,026/16,026 differential
+// cases passed at the time, including Codex's own round-3 extension,
+// because none of them exercised this shape.
+docs.push(
+	'items:\n  - author:\n      name: Alice\n',
+	'items:\n  - author:\n      name: Alice\n  - author:\n      name: Bob\n',
+	'items:\n  - a:\n      b:\n        c: 1\n',
+	'items:\n  - key:\n  - next: 1\n',
+	'items:\n  - key:\nafter: 1\n',
+)
+
 // Sweeps every possible leading byte (0-127) against a fixed set of value
 // bodies — targets any fast path that branches on a scalar's first
 // character (e.g. "only digit/'-'/'.' can start a number or date").
@@ -53,7 +72,10 @@ const scalarBodies = [
 	'[1, 2]', '{a: 1}', 'Infinity', '+1', '0x10', '($ref)', 'https://x/y',
 ]
 for (const prefix of scalarPrefixes) {
-	for (const body of scalarBodies) docs.push(`key: ${prefix}${body}\n`)
+	for (const body of scalarBodies) {
+		docs.push(`key: ${prefix}${body}\n`)
+		docs.push(`items:\n  - ${prefix}${body}\n`)
+	}
 }
 
 // The ASCII-only prefix sweep above stresses toType's first-character gate
@@ -93,6 +115,19 @@ for (const prefix of ['', '-', '.']) {
 	for (const body of numberAndDateBodies) docs.push(`key: ${prefix}${body}\n`)
 }
 
+// Exact YYYY-MM-DD fast-path boundaries, including structurally matching
+// invalid dates and non-digits that must fall back to an ordinary string.
+for (const year of ['0000', '0001', '1900', '2000', '2023', '2024', '9999']) {
+	for (let month = 0; month <= 13; month++) {
+		for (const day of [0, 1, 28, 29, 30, 31, 32]) {
+			docs.push(`date: ${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}\n`)
+		}
+	}
+}
+for (const value of ['x024-01-01', '2x24-01-01', '2024-x1-01', '2024-0x-01', '2024-01-x1', '2024-01-0x']) {
+	docs.push(`date: ${value}\n`)
+}
+
 // True Unicode leading characters (charCodeAt(0) > 127) — the ASCII-only
 // prefix sweep above cannot exercise this at all. Mix of BMP scripts,
 // combining marks, RTL marks, zero-width characters, and one astral
@@ -122,6 +157,10 @@ for (const a of whitespace) {
 	for (const b of whitespace) {
 		docs.push(`root:\n${a}${b}key: value\n`)
 		docs.push(`items:\n  -${a}${b}{key: value}\n`)
+		// Block key/value trimming uses the same full whitespace set at both
+		// slice boundaries; cover mixed leading/trailing combinations.
+		docs.push(`root:\n  ${a}key${b}: ${a}value${b}\n`)
+		docs.push(`items:\n  - key${a}${b}: ${b}value${a}\n`)
 	}
 }
 

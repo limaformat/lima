@@ -26,6 +26,7 @@ export declare const KEY_LENGTH_LIMIT = 128;
 export declare const TOP_LEVEL_KEY_LIMIT = 128;
 export declare const NESTING_DEPTH_LIMIT = 16;
 export declare const byteLength: (s: string) => number;
+export declare const checkStringLimit: (value: string, line: number) => void;
 export declare const checkScalarLimit: (v: LimaValue, line: number) => void;
 /**
  * `line` is a thunk, not a plain number: computing a top-level key's line

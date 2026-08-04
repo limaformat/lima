@@ -10,8 +10,8 @@
  */
 import { LString } from './value.js';
 import { checkKeyLength, checkDuplicateKey, checkScalarLimit } from './normalize.js';
-import { stripKeyQuotes, unescapeDQ, stripComment, parseQuotedOrTyped, parseScalarValue, } from './scalars.js';
-import { parseFlowSequence, parseFlowMapping } from './flow.js';
+import { stripKeyQuotes, unescapeDQ, stripComment, parseQuotedOrTyped, } from './scalars.js';
+import { parseFlowMapping, parseFlowOrScalarValue } from './flow.js';
 import { LimaError } from './errors.js';
 const DASH_PREFIX_RE = /^-\s+/;
 /**
@@ -48,6 +48,15 @@ const lineIndent = (line) => {
     return i;
 };
 const isBlankLine = (line) => lineIndent(line) === line.length;
+/** Equivalent to `line.replace(/^-\s+/, '')` for a dash-prefixed line. */
+const stripDashPrefix = (line) => {
+    let i = 1;
+    if (!isTrimWhitespace(line.charCodeAt(i)))
+        return line;
+    while (i < line.length && isTrimWhitespace(line.charCodeAt(i)))
+        i++;
+    return line.slice(i);
+};
 export const findKeySep = (s) => {
     const first = s.charCodeAt(0);
     if (first === 39 || first === 34) {
@@ -92,11 +101,7 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
                     let itemVal = trimmed.slice(colonPos + 2).trim();
                     if (itemVal.includes('#'))
                         itemVal = stripComment(itemVal);
-                    const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx, builder);
-                    const flowMap = flowSeq === null ? parseFlowMapping(itemVal, ctx, baseLine + idx, builder) : null;
-                    builder.setMapping(pendingItem, itemKey, flowSeq !== null
-                        ? builder.array(flowSeq, baseLine + idx)
-                        : (flowMap !== null ? flowMap : parseScalarValue(itemVal, ctx, baseLine + idx, builder)));
+                    builder.setMapping(pendingItem, itemKey, parseFlowOrScalarValue(itemVal, ctx, baseLine + idx, builder));
                     idx++;
                 }
                 else if (trimmed.endsWith(':')) {
@@ -166,9 +171,31 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
             // `-  {a: 1}` produced a mangled `{"{a":"1}"}` instead of the
             // parsed mapping `{a:1}`. Reverted to the regex, which correctly
             // consumes the whole whitespace run regardless of length or kind.
-            let afterDash = trimmed === '-' ? '' : trimmed.replace(DASH_PREFIX_RE, '');
+            let afterDash = trimmed === '-' ? '' : stripDashPrefix(trimmed);
             if (afterDash.includes('#'))
                 afterDash = stripComment(afterDash);
+            // Claude Code review fix (round 3): this gate skips the flow-mapping
+            // probe and findKeySep to fast-path an ordinary scalar list item,
+            // but originally didn't exclude a bare "key:" marker (a dash item
+            // that's itself a mapping key with its value nested on following
+            // lines, e.g. `- author:\n    name: Alice`) — findKeySep's
+            // ': '-substring check and this fast path's identical `indexOf(': ')`
+            // check both correctly return "no colon found" for "author:" (no
+            // space follows the trailing colon), so the fast path took over
+            // and treated "author:" as a literal scalar string, silently
+            // discarding the nested mapping entirely (confirmed via
+            // differential testing: candidate produced {"items":["author:"]}
+            // instead of baseline's {"items":[{"author":{"name":"Alice"}}]}).
+            // The slow path's next branch after this one specifically checks
+            // `afterDash.endsWith(':')` for exactly this case; the fast path
+            // must exclude it too.
+            const simpleFirst = afterDash.charCodeAt(0);
+            if (simpleFirst !== 34 && simpleFirst !== 39 && simpleFirst !== 45 && simpleFirst !== 123 &&
+                afterDash.indexOf(': ') === -1 && !afterDash.endsWith(':')) {
+                items.push(parseQuotedOrTyped(afterDash, ctx, baseLine + idx, false, builder));
+                idx++;
+                continue;
+            }
             const flowMap = parseFlowMapping(afterDash, ctx, baseLine + idx, builder);
             const colonPos = findKeySep(afterDash);
             if (flowMap !== null) {
@@ -198,12 +225,8 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
                 const pendingKey = stripKeyQuotes(afterDash.slice(0, colonPos).trim());
                 checkKeyLength(pendingKey, () => baseLine + idx);
                 const pendingRaw = afterDash.slice(colonPos + 2).trim();
-                const pendingFlowSeq = parseFlowSequence(pendingRaw, ctx, baseLine + idx, builder);
-                const pendingFlowMap = pendingFlowSeq === null ? parseFlowMapping(pendingRaw, ctx, baseLine + idx, builder) : null;
                 pendingItem = builder.createMapping();
-                builder.setMapping(pendingItem, pendingKey, pendingFlowSeq !== null
-                    ? builder.array(pendingFlowSeq, baseLine + idx)
-                    : (pendingFlowMap !== null ? pendingFlowMap : parseScalarValue(pendingRaw, ctx, baseLine + idx, builder)));
+                builder.setMapping(pendingItem, pendingKey, parseFlowOrScalarValue(pendingRaw, ctx, baseLine + idx, builder));
                 idx++;
             }
             else if (afterDash.endsWith(':')) {
@@ -262,11 +285,7 @@ export const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) 
                 let itemVal = trimmed.slice(colonPos + 2).trim();
                 if (itemVal.includes('#'))
                     itemVal = stripComment(itemVal);
-                const flowSeq = parseFlowSequence(itemVal, ctx, baseLine + idx, builder);
-                const flowMap = flowSeq === null ? parseFlowMapping(itemVal, ctx, baseLine + idx, builder) : null;
-                builder.setMapping(entries, itemKey, flowSeq !== null
-                    ? builder.array(flowSeq, baseLine + idx)
-                    : (flowMap !== null ? flowMap : parseScalarValue(itemVal, ctx, baseLine + idx, builder)));
+                builder.setMapping(entries, itemKey, parseFlowOrScalarValue(itemVal, ctx, baseLine + idx, builder));
                 idx++;
             }
             else if (trimmed.endsWith(':')) {

@@ -1,6 +1,6 @@
 /** Core §15.8 flow collections: `[...]` sequences and `{...}` mappings. */
 import { checkKeyLength, checkDuplicateKey } from './normalize.js';
-import { parseQuotedOrTyped, stripKeyQuotes } from './scalars.js';
+import { parseQuotedOrTyped, parseScalarValue, stripKeyQuotes } from './scalars.js';
 import { LimaError } from './errors.js';
 const splitFlowItems = (inner) => {
     const items = [];
@@ -96,4 +96,19 @@ export const parseFlowMapping = (val, ctx, line, builder) => {
         builder.setMapping(entries, key, parseQuotedOrTyped(rawVal, ctx, line, false, builder));
     }
     return builder.mapping(entries, line);
+};
+/** Parses a value that may be a flow collection, without probing both flow parsers for ordinary scalars. */
+export const parseFlowOrScalarValue = (raw, ctx, line, builder) => {
+    const first = raw.charCodeAt(0);
+    if (first === 91) {
+        const sequence = parseFlowSequence(raw, ctx, line, builder);
+        if (sequence !== null)
+            return builder.array(sequence, line);
+    }
+    else if (first === 123) {
+        const mapping = parseFlowMapping(raw, ctx, line, builder);
+        if (mapping !== null)
+            return mapping;
+    }
+    return parseScalarValue(raw, ctx, line, builder);
 };

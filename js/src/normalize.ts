@@ -30,13 +30,17 @@ export const NESTING_DEPTH_LIMIT = 16
 const utf8Encoder = new TextEncoder()
 export const byteLength = (s: string): number => utf8Encoder.encode(s).length
 
-export const checkScalarLimit = (v: LimaValue, line: number): void => {
-	if (v.kind === 'string' && codepointLength(v.value) > SCALAR_LENGTH_LIMIT) {
+export const checkStringLimit = (value: string, line: number): void => {
+	if (codepointLength(value) > SCALAR_LENGTH_LIMIT) {
 		throw new LimaError({
 			code: 'RESOURCE_LIMIT', line,
 			message: `LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${line}`,
 		})
 	}
+}
+
+export const checkScalarLimit = (v: LimaValue, line: number): void => {
+	if (v.kind === 'string') checkStringLimit(v.value, line)
 }
 
 /**

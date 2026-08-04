@@ -6,7 +6,7 @@
  */
 
 import { type LimaValue, LNull, LBool, LFloat, LInt, LString, LInstant } from './value.js'
-import { type ParseContext, checkScalarLimit } from './normalize.js'
+import { type ParseContext, checkScalarLimit, checkStringLimit } from './normalize.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
 
@@ -69,7 +69,13 @@ export const positionedBuilder: ValueBuilder<PositionedValue> = {
 	createMapping: () => new Map<string, PositionedValue>(),
 	hasMappingKey: (entries, key) => entries.has(key),
 	setMapping: (entries, key, value) => { entries.set(key, value) },
-	mappingValues: (entries) => entries.values(),
+	mappingMaxDepth: (entries, depthOf) => {
+		let max = 0
+		for (const value of entries.values()) {
+			if (value.kind === 'array' || value.kind === 'mapping') max = Math.max(max, depthOf(value))
+		}
+		return max
+	},
 	mapping: (entries, line) => ({ kind: 'mapping', entries, line }),
 }
 
@@ -105,6 +111,24 @@ const parseDateUTC = (str: string, strict = false, line = 0): Date | null => {
 	const invalid = (): null => {
 		if (strict) throw new LimaError({ code: 'INVALID_DATE', line, message: `LIMA: invalid date "${str}" at line ${line}` })
 		return null
+	}
+
+	if (str.length === 10 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45) {
+		const d0 = str.charCodeAt(0) - 48, d1 = str.charCodeAt(1) - 48
+		const d2 = str.charCodeAt(2) - 48, d3 = str.charCodeAt(3) - 48
+		const d5 = str.charCodeAt(5) - 48, d6 = str.charCodeAt(6) - 48
+		const d8 = str.charCodeAt(8) - 48, d9 = str.charCodeAt(9) - 48
+		if ((d0 | d1 | d2 | d3 | d5 | d6 | d8 | d9) >= 0 &&
+			d0 <= 9 && d1 <= 9 && d2 <= 9 && d3 <= 9 &&
+			d5 <= 9 && d6 <= 9 && d8 <= 9 && d9 <= 9) {
+			const year = d0 * 1000 + d1 * 100 + d2 * 10 + d3
+			const month = d5 * 10 + d6
+			const day = d8 * 10 + d9
+			if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) return invalid()
+			const result = new Date(0)
+			result.setUTCFullYear(year, month - 1, day)
+			return result
+		}
 	}
 
 	let y: number, mo: number, d: number, h = 0, mi = 0, s = 0, offsetMin = 0
@@ -304,12 +328,17 @@ export const parseQuotedOrTyped = <V, M>(
 		if (raw.charCodeAt(raw.length - 1) === first) {
 			const unquoted = raw.slice(1, -1)
 			const value = first === 34 ? unescapeDQ(unquoted, ctx.strict, line) : unquoted.replace(/\\'/g, "'")
-			checkScalarLimit(LString(value), line)
+			checkStringLimit(value, line)
 			return builder.string(value, line, true)
 		}
 		if (topLevel && ctx.strict) {
 			throw new LimaError({ code: 'INVALID_QUOTE', line, message: `LIMA: non-whitespace content after closing quote at line ${line}` })
 		}
+	}
+	if (raw !== '' && raw !== 'null' && raw !== '~' && raw !== 'true' && raw !== 'false' &&
+		!((first >= 48 && first <= 57) || first === 45 || first === 46)) {
+		checkStringLimit(raw, line)
+		return builder.string(raw, line, false)
 	}
 	const typed = toType(raw, ctx.strict, line)
 	checkScalarLimit(typed, line)
