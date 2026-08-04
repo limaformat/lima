@@ -15,22 +15,6 @@ export const LString = (value) => ({ kind: 'string', value });
 export const LInstant = (value) => ({ kind: 'instant', value });
 export const LArray = (items) => ({ kind: 'array', items });
 export const LMapping = (entries = new Map()) => ({ kind: 'mapping', entries });
-export const isScalar = (v) => v.kind === 'null' || v.kind === 'bool' || v.kind === 'int' || v.kind === 'float' ||
-    v.kind === 'string' || v.kind === 'instant';
-/** Structural deep copy — Lima references never alias their target (Core/References: no aliasing). */
-export const deepCopy = (v) => {
-    switch (v.kind) {
-        case 'instant': return { kind: 'instant', value: new Date(v.value.getTime()) };
-        case 'array': return { kind: 'array', items: v.items.map(deepCopy) };
-        case 'mapping': {
-            const entries = new Map();
-            for (const [k, child] of v.entries)
-                entries.set(k, deepCopy(child));
-            return { kind: 'mapping', entries };
-        }
-        default: return v; // scalars are immutable value types — sharing is safe
-    }
-};
 /**
  * References §6.2 node-count definition: `nodeCount(scalar) = 1`,
  * `nodeCount(collection) = 1 + sum(nodeCount(child))` — mapping keys do not
@@ -46,20 +30,6 @@ export const countNodes = (v) => {
         return sum;
     }
     return 1;
-};
-/**
- * Core §9 nesting-depth formula: `depth(scalar) = 0`, `depth(collection) =
- * 1 + max(depth(child))` (or 1 if empty).
- */
-export const computeDepth = (v) => {
-    if (v.kind === 'array') {
-        return v.items.length === 0 ? 1 : 1 + Math.max(...v.items.map(computeDepth));
-    }
-    if (v.kind === 'mapping') {
-        const children = [...v.entries.values()];
-        return children.length === 0 ? 1 : 1 + Math.max(...children.map(computeDepth));
-    }
-    return 0;
 };
 /**
  * Canonical string representation for interpolation (References §3.5.1).

@@ -38,20 +38,12 @@ export declare const LString: (value: string) => LimaValue;
 export declare const LInstant: (value: Date) => LimaValue;
 export declare const LArray: (items: LimaValue[]) => LimaValue;
 export declare const LMapping: (entries?: Map<string, LimaValue>) => LimaValue;
-export declare const isScalar: (v: LimaValue) => boolean;
-/** Structural deep copy — Lima references never alias their target (Core/References: no aliasing). */
-export declare const deepCopy: (v: LimaValue) => LimaValue;
 /**
  * References §6.2 node-count definition: `nodeCount(scalar) = 1`,
  * `nodeCount(collection) = 1 + sum(nodeCount(child))` — mapping keys do not
  * count as separate nodes.
  */
 export declare const countNodes: (v: LimaValue) => number;
-/**
- * Core §9 nesting-depth formula: `depth(scalar) = 0`, `depth(collection) =
- * 1 + max(depth(child))` (or 1 if empty).
- */
-export declare const computeDepth: (v: LimaValue) => number;
 /**
  * Canonical string representation for interpolation (References §3.5.1).
  * `Number.prototype.toString` already picks the correct fixed-vs-exponential
