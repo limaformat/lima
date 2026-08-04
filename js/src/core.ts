@@ -59,6 +59,13 @@ const leadingSpaces = (line: string): number => {
 	return i
 }
 
+/** Index right after the last non-space character — the `trimEnd()` boundary, without allocating. */
+const trailingSpaceEnd = (line: string): number => {
+	let i = line.length
+	while (i > 0 && line.charCodeAt(i - 1) === 32) i--
+	return i
+}
+
 const lineAt = (s: string, pos: number): number => {
 	let n = 1
 	for (let i = 0; i < pos; i++) if (s.charCodeAt(i) === 10) n++
@@ -231,10 +238,15 @@ export const parseCoreWithPositions = (frontMatter: string, ctx: ParseContext): 
 			// Multi-line string (`|` literal block scalar).
 			const bodyLines = raw.slice(raw.indexOf('\n') + 1).split('\n')
 
+			// Avoids trim()/trimStart()/trimEnd() — each allocates a whole new
+			// string just to measure or strip whitespace. leadingSpaces/
+			// trailingSpaceEnd compute the same boundaries by scanning char
+			// codes, and dedent+continuation-strip+trailing-trim collapse
+			// into a single final slice() per line instead of up to three.
 			let minIndent = Infinity
 			for (const bodyLine of bodyLines) {
-				if (!bodyLine.trim()) continue
-				const indent = bodyLine.length - bodyLine.trimStart().length
+				const indent = leadingSpaces(bodyLine)
+				if (indent === bodyLine.length) continue // blank (all spaces, or empty)
 				if (indent < minIndent) minIndent = indent
 			}
 			minIndent = Math.min(minIndent, key.length + 2)
@@ -242,9 +254,13 @@ export const parseCoreWithPositions = (frontMatter: string, ctx: ParseContext): 
 
 			const mergedLines: string[] = []
 			for (const bodyLine of bodyLines) {
-				const dedented = trimAmt > 0 ? bodyLine.slice(trimAmt) : bodyLine
-				const isContinuation = dedented.startsWith('^^')
-				const content = (isContinuation ? dedented.slice(2) : dedented).trimEnd()
+				const lineLen = bodyLine.length
+				let start = trimAmt < lineLen ? trimAmt : lineLen
+				const isContinuation = bodyLine.charCodeAt(start) === 94 && bodyLine.charCodeAt(start + 1) === 94 // ^^
+				if (isContinuation) start += 2
+				let end = trailingSpaceEnd(bodyLine)
+				if (end < start) end = start
+				const content = bodyLine.slice(start, end)
 				if (isContinuation) {
 					if (mergedLines.length > 0) {
 						if (content) mergedLines[mergedLines.length - 1] += ' ' + content
