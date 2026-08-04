@@ -1,0 +1,11 @@
+{
+  "id": "core.dates.negative-year-unsupported",
+  "spec": "core",
+  "section": "Appendix A",
+  "description": "A negative year (e.g. `-0001-01-01`) does not match the ISO date grammar at all — unlike year 0000 (core.dates.year-zero.*), which is syntactically date-shaped and fails component validation, this never enters date parsing and remains an ordinary unquoted string in both modes; no separate strict case applies since there is no date-grammar match to validate.",
+  "input": "d: -0001-01-01\n",
+  "expect": {
+    "result": { "d": "-0001-01-01" }
+  },
+  "tags": ["fallback", "dates", "unsupported"]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "core.dates.year-zero.strict",
+  "spec": "core",
+  "section": "6.5.2",
+  "description": "Year 0000 is syntactically date-shaped but fails calendar-component validation (valid range 0001-9999, Appendix A) — throws in strict mode, same as any other invalid calendar date.",
+  "input": "d: 0000-01-01\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_DATE"
+    }
+  },
+  "tags": ["strict", "error", "dates"]
+}

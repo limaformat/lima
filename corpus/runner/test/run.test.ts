@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(241)
+		expect(outcomes).toHaveLength(248)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -380,6 +380,35 @@ describe('runCorpus', () => {
 	 * unreachable, since a nested array can no longer survive far enough
 	 * (rejected earlier, either by Core's own flow-nesting/sequence-item
 	 * checks or by partial validation) to reach that particular check.
+	 * 248/0/0 — first step of a Core Appendix A maintainability sweep
+	 * (same audit as above): five previously-untested "not supported"
+	 * constructs got dedicated cases, each after confirming actual runtime
+	 * behavior first rather than assuming it. Chomping indicators `|-`/`|+`
+	 * behave exactly like the already-covered `>` case (ordinary unquoted
+	 * string, freetext line silently skipped, identical in both modes) —
+	 * added as a strict/non-strict pair mirroring
+	 * core.block-scalar.folded-marker-unsupported.*. YAML anchors/aliases
+	 * (`&`, `*`) and type tags (`!!str`, `!!int`) have no scanner special-
+	 * casing at all and remain part of the unquoted string in both modes —
+	 * one case, no strict pair needed (no strict-list condition can ever
+	 * fire for them). Multi-document markers (`---`, `...`) turned out to
+	 * be nothing more than instances of the general "unrecognized top-
+	 * level line" mechanism (§4) already strict-mode-verified by
+	 * core.document.unrecognized-line.skipped-both-modes — one case
+	 * documents the specific construct, no redundant strict pair. Year
+	 * 0000 was the one surprise: it's syntactically date-shaped and fails
+	 * ordinary calendar-component validation (0001-9999 range), i.e. it's
+	 * a genuine instance of the existing INVALID_DATE strict-error-list
+	 * row and needed its own strict/non-strict pair, distinct from
+	 * core.dates.utc-range.* (which tests a valid literal year pushed out
+	 * of range by UTC offset, not the literal year field itself). A
+	 * negative year, by contrast, never matches the date grammar at all
+	 * and stays a plain string unconditionally — one case, no strict
+	 * variant, since there's no date-grammar match to validate. Still open
+	 * from the same appendix: `\0` escape and the `partials` option on
+	 * `parseCore` (deferred — each needs its own behavioral check, not
+	 * just a test, before deciding what to assert) and the References
+	 * Appendix "host-language types in partials" row.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -388,7 +417,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 241, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 248, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

@@ -1,0 +1,11 @@
+{
+  "id": "core.appendix-a.multi-document-markers-unrecognized",
+  "spec": "core",
+  "section": "Appendix A",
+  "description": "Multi-document stream markers (`---`, `...`) are out of scope for Core 1.0 (Appendix A) — Lima frontmatter is always a single document, so each marker line matches no key pattern and is silently skipped like any other unrecognized top-level line (§4), not treated as a document boundary. Strict-mode parity for this general mechanism is already covered by core.document.unrecognized-line.skipped-both-modes; no separate strict case is needed here.",
+  "input": "a: 1\n---\nb: 2\n...\nc: 3\n",
+  "expect": {
+    "result": { "a": 1, "b": 2, "c": 3 }
+  },
+  "tags": ["fallback", "unsupported", "document"]
+}

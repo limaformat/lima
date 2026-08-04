@@ -1,0 +1,11 @@
+{
+  "id": "core.dates.year-zero.non-strict",
+  "spec": "core",
+  "section": "6.5.2",
+  "description": "Year 0000 is syntactically date-shaped (matches the ISO date grammar) but fails calendar-component validation — Core's valid range is 0001-9999 (Appendix A). Distinct from core.dates.utc-range.* (§6.5.3), which tests a valid literal year pushed out of range by UTC offset adjustment; this tests the literal year field itself, with no offset involved. Falls back to a string in non-strict mode.",
+  "input": "d: 0000-01-01\n",
+  "expect": {
+    "result": { "d": "0000-01-01" }
+  },
+  "tags": ["fallback", "dates", "boundary"]
+}

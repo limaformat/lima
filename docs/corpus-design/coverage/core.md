@@ -134,8 +134,13 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-202 | §11.2 | API | onWarning receives a Diagnostic with message and line | api | non-strict |
 | C-203 | §11.3 | API | Errors are at minimum a plain Error with a message | api | both |
 | C-210 | Appendix B | Core/References | Core treats ($key) and (%key) as strings | positive | both |
+| C-211 | Appendix A | Unsupported | Chomping indicators `|-`/`|+` are ordinary strings, freetext skipped | pair | both |
+| C-212 | Appendix A | Unsupported | YAML anchors/aliases (`&`, `*`) and tags (`!!str`, `!!int`) are literal | fallback | both |
+| C-213 | Appendix A | Unsupported | Multi-document markers (`---`, `...`) are unrecognized lines | fallback | both |
+| C-214 | Appendix A | Unsupported | Year 0000 is date-shaped but fails component validation | pair | both |
+| C-215 | Appendix A | Unsupported | Negative year never matches the date grammar | fallback | both |
 
-**Scope:** 125 substantive check points. A check point can produce multiple concrete cases.
+**Scope:** 130 substantive check points. A check point can produce multiple concrete cases.
 
 ## Known implementation gaps
 
@@ -155,3 +160,43 @@ errors — see `corpus/runner/src/run.ts` — instead of capturing
 directly (via the case's `api: "core"` field) with strict mode on and two
 unresolvable tokens — no `UNRESOLVED_REFERENCE` is thrown, proving Core
 never even recognizes the syntax, let alone resolves it.
+
+## Maintainability audit: Appendix A constructs (first step)
+
+A 2026-08-04 maintainability audit (same one that found the References §7
+strict-mode gaps, see `coverage/references.md`) found that most of Core's
+Appendix A ("What Lima Core Does Not Support") had never had a single
+corpus case verifying the documented behavior — the exceptions being the
+already-covered `>` folded marker and the excluded date forms (C-109).
+C-211 through C-215 close five of these, each added only after confirming
+actual runtime behavior first rather than assuming the appendix's stated
+reason implies a specific parse result:
+
+- Chomping indicators behave exactly like `>` (ordinary string, freetext
+  silently skipped, identical in both modes) — genuine strict/non-strict
+  pair, mirroring the `>` cases.
+- YAML anchors/aliases/tags have no scanner special-casing at all and
+  remain part of the unquoted string — one case; no strict-list condition
+  can ever fire for them, so no pair is needed.
+- Multi-document markers turned out to be nothing more than instances of
+  the general "unrecognized top-level line" mechanism (C-022), already
+  strict-mode-verified there — one case documents the specific construct
+  without a redundant strict pair.
+- Year 0000 was the one surprise: it *is* syntactically date-shaped and
+  fails ordinary calendar-component validation, making it a genuine
+  instance of the existing C-104/C-105 strict-error-list check rather
+  than a distinct "unsupported form" — it needed its own strict/non-strict
+  pair, and is distinct from C-108 (a valid literal year pushed out of
+  range by UTC offset, not the literal year field itself).
+- A negative year, by contrast, never matches the date grammar and stays
+  a plain string unconditionally — one case, no strict variant.
+
+Still open from the same appendix, deferred because each needs its own
+behavioral/design check before a test can be written, not just a missing
+test: the `\0` escape sequence (Appendix A documents mode-dependent
+behavior for it, structurally identical to the already-covered "unknown
+escape" strict-list row — needs verifying against the current
+implementation, the same way the References-side Date-aliasing bug was
+found) and the `partials` option passed to `parseCore` (unclear whether
+"silently ignored" or "throws" is the intended contract — a design
+question, not a test gap).

@@ -1,0 +1,16 @@
+{
+  "id": "core.appendix-a.yaml-anchor-alias-tag-unsupported",
+  "spec": "core",
+  "section": "Appendix A",
+  "description": "YAML anchors (`&name`), aliases (`*name`), and type tags (`!!str`, `!!int`) are out of scope for Core 1.0 (Appendix A) — the scanner has no special handling for `&`, `*`, or `!!` sigils, so each remains part of an ordinary unquoted string value. Behavior is identical in strict mode (verified separately; these forms never match any strict-error-list condition, the same reasoning as core.document.unrecognized-line.skipped-both-modes for other out-of-grammar constructs).",
+  "input": "a: &anchor Alice\nb: *anchor\nc: !!str 42\nd: !!int \"42\"\n",
+  "expect": {
+    "result": {
+      "a": "&anchor Alice",
+      "b": "*anchor",
+      "c": "!!str 42",
+      "d": "!!int \"42\""
+    }
+  },
+  "tags": ["fallback", "unsupported"]
+}

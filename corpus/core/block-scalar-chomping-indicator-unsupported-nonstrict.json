@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.chomping-indicator-unsupported.non-strict",
+  "spec": "core",
+  "section": "Appendix A",
+  "description": "Core 1.0 does not support chomping indicators `|-`/`|+` (Appendix A: not needed without `>`) — each is an ordinary unquoted string, and the following freetext line is not part of it. Non-strict: the inline value is kept, the freetext line is silently skipped. Mirrors the already-covered `>` case (core.block-scalar.folded-marker-unsupported.*).",
+  "input": "a: |-\n  Hello\nb: |+\n  World\n",
+  "expect": {
+    "result": { "a": "|-", "b": "|+" }
+  },
+  "tags": ["fallback", "block-scalar"]
+}
