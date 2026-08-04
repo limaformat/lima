@@ -23,6 +23,7 @@
     "build": "tsc -p tsconfig.build.json",
     "pretest": "bun run build",
     "test": "bun test",
+    "typecheck": "tsc --noEmit",
     "bench": "bun run bench/index.ts"
   },
   "devDependencies": {

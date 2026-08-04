@@ -21,7 +21,7 @@
  * `ResolutionContext` created fresh per call and threaded explicitly.
  */
 import { type Diagnostic } from './core.js';
-type Meta = Record<string, any>;
+type Meta = Record<string, unknown>;
 export type ReferencesOptions = {
     /** Named values available via `(%key)` references. */
     partials?: Meta;

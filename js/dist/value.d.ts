@@ -69,8 +69,6 @@ export declare const PARTIAL_NAME_LENGTH_LIMIT = 128;
 export declare const PARTIAL_NODE_LIMIT = 4096;
 export declare const RESULT_NODE_LIMIT = 65536;
 export declare const SCALAR_LENGTH_LIMIT = 16384;
-export declare class PartialValidationError extends Error {
-}
 /**
  * Converts and validates a single host value against the Lima Value Model
  * (References §6.2), recursively. `seen` tracks the current recursion path
@@ -87,4 +85,4 @@ export declare class PartialValidationError extends Error {
  * — a Rust port has no equivalent step at all, since its partials API takes
  * a native Rust type up front.
  */
-export declare const ingestPartialValue: (value: any, partialName: string, path: string, depth?: number, seen?: Set<any>) => LimaValue;
+export declare const ingestPartialValue: (value: any, partialName: string, path: string, depth?: number, seen?: Set<unknown>) => LimaValue;

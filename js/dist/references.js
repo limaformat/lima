@@ -22,6 +22,7 @@
  */
 import { countNodes, canonicalString, ingestPartialValue, PARTIAL_COUNT_LIMIT, PARTIAL_NAME_LENGTH_LIMIT, PARTIAL_NODE_LIMIT, RESULT_NODE_LIMIT, SCALAR_LENGTH_LIMIT, } from './value.js';
 import { parseCoreWithPositions, toPlainValue, toNativeFromPositioned, NESTING_DEPTH_LIMIT, } from './core.js';
+import { LimaError } from './errors.js';
 const emptyMapping = () => Object.create(null);
 // References §2.1/§2.2/Appendix B grammar, per sigil.
 const DOC_SEGMENT = '[a-zA-Z0-9_][a-zA-Z0-9_:-]*';
@@ -29,6 +30,21 @@ const DOC_PATH = `${DOC_SEGMENT}(?:\\.${DOC_SEGMENT})*`;
 const PARTIAL_KEY = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*';
 const PURE_REF_RE = new RegExp(`^\\((?:\\$(${DOC_PATH})|%(${PARTIAL_KEY}))\\)$`);
 const INTERP_RE = new RegExp(`\\((?:\\$(${DOC_PATH})|%(${PARTIAL_KEY}))\\)`, 'g');
+/**
+ * §5: of every reference-resolution error encountered during a single
+ * resolveTree pass, only the one at the lowest source line is ultimately
+ * thrown. Tracking a running minimum instead of collecting every diagnostic
+ * into an array and sorting it at the end avoids an O(e log e) sort (and
+ * its allocations) for documents with many reference errors — `<` (not
+ * `<=`) preserves the original stable-sort-then-take-first tie-break: the
+ * first diagnostic reported at any given minimum line keeps winning over a
+ * later one at the same line, exactly as it did when every one of them was
+ * pushed into an array and stably sorted by line.
+ */
+const reportDiagnostic = (ctx, d) => {
+    if (ctx.best === null || d.line < ctx.best.line)
+        ctx.best = d;
+};
 // ─── PositionedValue-level helpers ─────────────────────────────────────────
 const getNestedValueP = (root, path) => {
     if (!path.includes('.'))
@@ -43,22 +59,48 @@ const getNestedValueP = (root, path) => {
     return cur;
 };
 /**
+ * `resolveTree` re-checks reference-freedom repeatedly on the SAME target
+ * subtree — once per reference pointing at it (the fast-path guard at the
+ * top of `resolveTree`, once more before copying a pure-reference target,
+ * once more per interpolation match) — so a document with many references
+ * into one large shared mapping would otherwise re-traverse that whole
+ * subtree for every single reference. `PositionedValue` nodes are only ever
+ * produced fresh (by Core, or by `deepCopyPositioned` below) and never
+ * mutated in place, so object identity is a stable cache key for the
+ * lifetime of a single `parseReferences` call — a module-level `WeakMap`
+ * is safe (and self-cleaning: entries vanish once a parse's tree is
+ * garbage-collected) rather than needing a per-call cache threaded through
+ * every function.
+ */
+const referenceFreeCache = new WeakMap();
+/**
  * A reference is only resolved from a target that is itself reference-free
  * (§4). Quoted strings are always free (§2.3); partial-derived values are
  * always free too, but never reach this function — see `partialToPositioned`.
  */
 const isReferenceFreeP = (v) => {
-    if (v.kind === 'string')
-        return v.quoted || (!v.value.includes('($') && !v.value.includes('(%'));
-    if (v.kind === 'array')
-        return v.items.every(isReferenceFreeP);
-    if (v.kind === 'mapping') {
-        for (const c of v.entries.values())
-            if (!isReferenceFreeP(c))
-                return false;
+    if (v.kind !== 'string' && v.kind !== 'array' && v.kind !== 'mapping')
         return true;
+    const cached = referenceFreeCache.get(v);
+    if (cached !== undefined)
+        return cached;
+    let result;
+    if (v.kind === 'string') {
+        result = v.quoted || (!v.value.includes('($') && !v.value.includes('(%'));
     }
-    return true;
+    else if (v.kind === 'array') {
+        result = v.items.every(isReferenceFreeP);
+    }
+    else {
+        result = true;
+        for (const c of v.entries.values())
+            if (!isReferenceFreeP(c)) {
+                result = false;
+                break;
+            }
+    }
+    referenceFreeCache.set(v, result);
+    return result;
 };
 /**
  * Structural deep copy for document-derived targets — preserves each leaf's
@@ -162,16 +204,16 @@ const resolveTree = (node, lookup, partials, ctx) => {
                 if (target === undefined || (!isPartial && !isReferenceFreeP(target)))
                     return match;
                 if (target.kind === 'mapping') {
-                    ctx.diagnostics.push({
-                        line: node.line,
+                    reportDiagnostic(ctx, {
+                        code: 'INVALID_INTERPOLATION', line: node.line, token: match,
                         message: `LIMA: invalid interpolation of "${match}" at line ${node.line}: mapping cannot be interpolated into a string`,
                     });
                     return match;
                 }
                 if (target.kind === 'array') {
                     if (target.items.some((item) => item.kind === 'array' || item.kind === 'mapping')) {
-                        ctx.diagnostics.push({
-                            line: node.line,
+                        reportDiagnostic(ctx, {
+                            code: 'INVALID_INTERPOLATION', line: node.line, token: match,
                             message: `LIMA: invalid interpolation of "${match}" at line ${node.line}: array contains a nested array or mapping`,
                         });
                         return match;
@@ -186,7 +228,10 @@ const resolveTree = (node, lookup, partials, ctx) => {
             // both modes, thrown immediately like the other resource limits
             // (never part of the ordered diagnostics set below).
             if ([...replaced].length > SCALAR_LENGTH_LIMIT) {
-                throw new Error(`LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${node.line}`);
+                throw new LimaError({
+                    code: 'RESOURCE_LIMIT', line: node.line,
+                    message: `LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${node.line}`,
+                });
             }
             return { kind: 'string', value: replaced, line: node.line, quoted: false };
         }
@@ -209,8 +254,8 @@ const resolveTree = (node, lookup, partials, ctx) => {
                     // nested array produced by reference insertion violates
                     // Core §7.2 (sequences contain scalars or mappings only) —
                     // throws in BOTH modes (R-036/R-143).
-                    ctx.diagnostics.push({
-                        line: item.line,
+                    reportDiagnostic(ctx, {
+                        code: 'INVALID_REFERENCE_SHAPE', line: item.line, token: item.value,
                         message: `LIMA: reference "${item.value}" resolves to an array, which cannot be inserted as a sequence item at line ${item.line}`,
                     });
                     return item;
@@ -275,11 +320,14 @@ export const parseReferences = (frontMatter, options) => {
     // diagnostics collected below.
     const partialNames = Object.keys(rawPartials);
     if (partialNames.length > PARTIAL_COUNT_LIMIT) {
-        throw new Error(`LIMA: too many partials (max ${PARTIAL_COUNT_LIMIT})`);
+        throw new LimaError({ code: 'INVALID_PARTIAL', message: `LIMA: too many partials (max ${PARTIAL_COUNT_LIMIT})` });
     }
     for (const name of partialNames) {
         if ([...name].length > PARTIAL_NAME_LENGTH_LIMIT) {
-            throw new Error(`LIMA: invalid partial "${name}" at path "${name}": name exceeds maximum length of ${PARTIAL_NAME_LENGTH_LIMIT} code points`);
+            throw new LimaError({
+                code: 'INVALID_PARTIAL', partial: name, path: name,
+                message: `LIMA: invalid partial "${name}" at path "${name}": name exceeds maximum length of ${PARTIAL_NAME_LENGTH_LIMIT} code points`,
+            });
         }
     }
     const partials = new Map();
@@ -290,7 +338,10 @@ export const parseReferences = (frontMatter, options) => {
     for (const v of partials.values())
         totalPartialNodes += countNodes(v);
     if (totalPartialNodes > PARTIAL_NODE_LIMIT) {
-        throw new Error(`LIMA: partials exceed the combined maximum of ${PARTIAL_NODE_LIMIT} value nodes`);
+        throw new LimaError({
+            code: 'INVALID_PARTIAL',
+            message: `LIMA: partials exceed the combined maximum of ${PARTIAL_NODE_LIMIT} value nodes`,
+        });
     }
     // Converted to the annotated representation once per partial, not once
     // per reference: nothing downstream ever mutates a PositionedValue tree
@@ -306,7 +357,7 @@ export const parseReferences = (frontMatter, options) => {
     for (const [name, value] of partials)
         partialsPositioned.set(name, partialToPositioned(value, 0));
     const root = parseCoreWithPositions(frontMatter, { strict, onWarning: options?.onWarning });
-    const ctx = { diagnostics: [] };
+    const ctx = { best: null };
     const hasRefs = frontMatter.includes('($') || frontMatter.includes('(%');
     let finalMap;
     if (!hasRefs) {
@@ -357,7 +408,10 @@ export const parseReferences = (frontMatter, options) => {
                 if (!v.quoted && (v.value.includes('($') || v.value.includes('(%'))) {
                     const m = v.value.match(/\(([%$])([^)]+)\)/);
                     if (m) {
-                        ctx.diagnostics.push({ line: v.line, message: `LIMA: unresolved reference "(${m[1]}${m[2]})" at line ${v.line}` });
+                        reportDiagnostic(ctx, {
+                            code: 'UNRESOLVED_REFERENCE', line: v.line, token: `(${m[1]}${m[2]})`,
+                            message: `LIMA: unresolved reference "(${m[1]}${m[2]})" at line ${v.line}`,
+                        });
                     }
                 }
                 return;
@@ -378,9 +432,8 @@ export const parseReferences = (frontMatter, options) => {
     }
     // §5: of every reference-resolution error collected above, the one at
     // the lowest source line is thrown; the rest are discarded.
-    if (ctx.diagnostics.length > 0) {
-        ctx.diagnostics.sort((a, b) => a.line - b.line);
-        throw new Error(ctx.diagnostics[0].message);
+    if (ctx.best !== null) {
+        throw new LimaError(ctx.best);
     }
     // Core §9 nesting depth, re-checked on the final POST-substitution tree
     // — inserted values can add depth Core's own pre-resolution check
@@ -394,9 +447,12 @@ export const parseReferences = (frontMatter, options) => {
     if (depth > NESTING_DEPTH_LIMIT) {
         const participants = depthResults.filter((r) => r.depth === depth).flatMap((r) => r.participants);
         const winner = earliestParticipant(participants);
-        throw new Error(winner
-            ? `LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line ${winner.line}: "${winner.token}"`
-            : `LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line 1`);
+        throw new LimaError({
+            code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
+            message: winner
+                ? `LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line ${winner.line}: "${winner.token}"`
+                : `LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line 1`,
+        });
     }
     // §6.2: total node count of the final result tree, both modes. Same
     // R-112 attribution — every reference insertion anywhere in the tree
@@ -413,9 +469,12 @@ export const parseReferences = (frontMatter, options) => {
         for (const v of finalMap.values())
             collectAllParticipants(v, participants);
         const winner = earliestParticipant(participants);
-        throw new Error(winner
-            ? `LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line ${winner.line}: "${winner.token}"`
-            : `LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line 1`);
+        throw new LimaError({
+            code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
+            message: winner
+                ? `LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line ${winner.line}: "${winner.token}"`
+                : `LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line 1`,
+        });
     }
     // toNativeFromPositioned(v) in one pass instead of toNative(toPlainValue(v))
     // in two — see its doc comment.

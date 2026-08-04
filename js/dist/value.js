@@ -6,6 +6,7 @@
  * from the moment a scalar is recognised, rather than reconstructing it
  * later from formatting details.
  */
+import { LimaError } from './errors.js';
 export const LNull = { kind: 'null' };
 export const LBool = (value) => ({ kind: 'bool', value });
 export const LInt = (value) => ({ kind: 'int', value: value === 0 ? 0 : value });
@@ -93,8 +94,6 @@ export const PARTIAL_NAME_LENGTH_LIMIT = 128;
 export const PARTIAL_NODE_LIMIT = 4096;
 export const RESULT_NODE_LIMIT = 65536;
 export const SCALAR_LENGTH_LIMIT = 16384;
-export class PartialValidationError extends Error {
-}
 /**
  * Converts and validates a single host value against the Lima Value Model
  * (References §6.2), recursively. `seen` tracks the current recursion path
@@ -113,7 +112,10 @@ export class PartialValidationError extends Error {
  */
 export const ingestPartialValue = (value, partialName, path, depth = 0, seen = new Set()) => {
     const invalid = (reason) => {
-        throw new PartialValidationError(`LIMA: invalid partial "${partialName}" at path "${path}": ${reason}`);
+        throw new LimaError({
+            code: 'INVALID_PARTIAL', partial: partialName, path,
+            message: `LIMA: invalid partial "${partialName}" at path "${path}": ${reason}`,
+        });
     };
     if (value === null)
         return LNull;
@@ -151,7 +153,10 @@ export const ingestPartialValue = (value, partialName, path, depth = 0, seen = n
     if (Array.isArray(value)) {
         result = LArray(value.map((item, i) => {
             if (Array.isArray(item)) {
-                throw new PartialValidationError(`LIMA: invalid partial "${partialName}" at path "${path}[${i}]": nested arrays are not supported`);
+                throw new LimaError({
+                    code: 'INVALID_PARTIAL', partial: partialName, path: `${path}[${i}]`,
+                    message: `LIMA: invalid partial "${partialName}" at path "${path}[${i}]": nested arrays are not supported`,
+                });
             }
             return ingestPartialValue(item, partialName, `${path}[${i}]`, depth + 1, seen);
         }));
@@ -168,10 +173,16 @@ export const ingestPartialValue = (value, partialName, path, depth = 0, seen = n
         for (const key of Object.keys(value)) {
             const descriptor = Object.getOwnPropertyDescriptor(value, key);
             if (!descriptor || !('value' in descriptor)) {
-                throw new PartialValidationError(`LIMA: invalid partial "${partialName}" at path "${path}.${key}": accessor properties are not supported`);
+                throw new LimaError({
+                    code: 'INVALID_PARTIAL', partial: partialName, path: `${path}.${key}`,
+                    message: `LIMA: invalid partial "${partialName}" at path "${path}.${key}": accessor properties are not supported`,
+                });
             }
             if ([...key].length > PARTIAL_KEY_LENGTH_LIMIT) {
-                throw new PartialValidationError(`LIMA: invalid partial "${partialName}" at path "${path}.${key}": key exceeds maximum length of ${PARTIAL_KEY_LENGTH_LIMIT} code points`);
+                throw new LimaError({
+                    code: 'INVALID_PARTIAL', partial: partialName, path: `${path}.${key}`,
+                    message: `LIMA: invalid partial "${partialName}" at path "${path}.${key}": key exceeds maximum length of ${PARTIAL_KEY_LENGTH_LIMIT} code points`,
+                });
             }
             entries.set(key, ingestPartialValue(value[key], partialName, `${path}.${key}`, depth + 1, seen));
         }

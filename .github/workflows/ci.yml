@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  js:
+    name: js (build, typecheck, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+        working-directory: js
+      - run: bun run build
+        working-directory: js
+      - run: bun run typecheck
+        working-directory: js
+      - run: bun test
+        working-directory: js
+
+  corpus:
+    name: corpus (typecheck, test, conformance run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      # The runner imports js/src directly (not the published package), so
+      # js/ needs its own dependencies installed too.
+      - run: bun install
+        working-directory: js
+      - run: bun install
+        working-directory: corpus/runner
+      - run: bun run typecheck
+        working-directory: corpus/runner
+      - run: bun test
+        working-directory: corpus/runner
+      - run: bun run run
+        working-directory: corpus/runner
+
+  pack-smoke:
+    name: js (pack + import smoke test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+        working-directory: js
+      - run: bun run build
+        working-directory: js
+      # A build/test run against js/src (the two jobs above) never proves
+      # the *published* npm tarball works — package.json's `files`/`exports`
+      # fields could omit something the source tree doesn't need. Packs for
+      # real, extracts it, and imports only from the extracted package —
+      # never from js/ directly — so a missing `files` entry fails here
+      # exactly as it would for a real npm consumer.
+      - run: bun pm pack --destination /tmp/pack --quiet
+        working-directory: js
+      - run: |
+          mkdir -p /tmp/pack-test
+          tar xzf /tmp/pack/*.tgz -C /tmp/pack-test
+          cd /tmp/pack-test/package
+          bun -e "
+            import('./dist/index.js').then((m) => {
+              if (typeof m.parseCore !== 'function') throw new Error('parseCore missing from packed tarball')
+              if (typeof m.parseReferences !== 'function') throw new Error('parseReferences missing from packed tarball')
+              if (typeof m.parse !== 'function') throw new Error('parse missing from packed tarball')
+              const result = m.parse('title: Hello\ndesc: (\$title)')
+              if (JSON.stringify(result) !== JSON.stringify({ title: 'Hello', desc: 'Hello' })) {
+                throw new Error('unexpected parse result: ' + JSON.stringify(result))
+              }
+              console.log('pack smoke test OK')
+            })
+          "

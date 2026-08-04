@@ -1,9 +1,45 @@
 import { join } from 'node:path'
 import { loadCorpus, type LoadedCase, type LoadedCorpus } from './loader'
 import { corpusValuesEqual, diffCorpusValues, hasOnlySafeOwnDataProperties } from './normalize'
-import { adaptLegacyError } from './legacy-adapter'
 import { compareDiagnostic, type LimaDiagnostic } from './errors'
 import { parse, parseCore } from '../../../js/src/index'
+import { LimaError } from '../../../js/src/errors'
+
+export type AdaptedDiagnostic =
+	| { mapped: true; diagnostic: LimaDiagnostic }
+	| { mapped: false; rawMessage: string }
+
+/**
+ * Reads the structured diagnostic directly off a `LimaError` — or an
+ * `onWarning` payload carrying the same shape; the public `Diagnostic` type
+ * js/src exposes is spec-frozen to `{message, line}` (Core §11.2), but the
+ * concrete object js/src actually delivers is the richer `LimaDiagnostic`.
+ * Every throw site in js/src now carries one (verified: a full corpus run
+ * produces zero errors and zero warnings without a `code`), so there is no
+ * message-regex fallback — anything without a `code` is reported unmapped
+ * rather than guessed at, so it can never be silently miscounted as PASS.
+ */
+function classify(error: unknown): AdaptedDiagnostic {
+	const d = error instanceof LimaError ? error
+		: (typeof error === 'object' && error !== null && 'code' in error && 'message' in error ? error : null)
+	if (d === null) {
+		const message = error instanceof Error ? error.message : String(error)
+		return { mapped: false, rawMessage: message }
+	}
+	const { code, message, line, column, token, key, partial, path } = d as LimaDiagnostic
+	return {
+		mapped: true,
+		diagnostic: {
+			code, message,
+			...(line !== undefined ? { line } : {}),
+			...(column !== undefined ? { column } : {}),
+			...(token !== undefined ? { token } : {}),
+			...(key !== undefined ? { key } : {}),
+			...(partial !== undefined ? { partial } : {}),
+			...(path !== undefined ? { path } : {}),
+		},
+	}
+}
 
 export type Classification = 'PASS' | 'FAIL' | 'BLOCKED'
 
@@ -35,7 +71,7 @@ function invokeParser(c: LoadedCase): {
 	const warnings: LimaDiagnostic[] = []
 	const unmappedWarnings: string[] = []
 	const onWarning = (d: { message: string; line: number }) => {
-		const adapted = adaptLegacyError(d.message)
+		const adapted = classify(d)
 		if (adapted.mapped) warnings.push(adapted.diagnostic)
 		else unmappedWarnings.push(d.message)
 	}
@@ -59,7 +95,7 @@ function runCase(c: LoadedCase): CaseOutcome {
 
 	if (c.expectation.kind === 'result') {
 		if (result.threw) {
-			const adapted = adaptLegacyError(result.error)
+			const adapted = classify(result.error)
 			const reason = adapted.mapped
 				? `expected a successful result, but parsing threw ${adapted.diagnostic.code}: ${adapted.diagnostic.message}`
 				: `expected a successful result, but parsing threw an unmapped error: ${adapted.rawMessage}`
@@ -102,7 +138,7 @@ function runCase(c: LoadedCase): CaseOutcome {
 		}
 	}
 
-	const adapted = adaptLegacyError(result.error)
+	const adapted = classify(result.error)
 	if (!adapted.mapped) {
 		return {
 			id: c.id,

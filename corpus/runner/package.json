@@ -6,9 +6,11 @@
   "type": "module",
   "scripts": {
     "test": "bun test",
-    "run": "bun src/run.ts"
+    "run": "bun src/run.ts",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "typescript": "latest"
   }
 }

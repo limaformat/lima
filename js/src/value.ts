@@ -7,6 +7,8 @@
  * later from formatting details.
  */
 
+import { LimaError } from './errors.js'
+
 export type LimaValue =
 	| { kind: 'null' }
 	| { kind: 'bool'; value: boolean }
@@ -110,8 +112,6 @@ export const PARTIAL_NODE_LIMIT = 4096
 export const RESULT_NODE_LIMIT = 65536
 export const SCALAR_LENGTH_LIMIT = 16384
 
-export class PartialValidationError extends Error {}
-
 /**
  * Converts and validates a single host value against the Lima Value Model
  * (References §6.2), recursively. `seen` tracks the current recursion path
@@ -129,10 +129,13 @@ export class PartialValidationError extends Error {}
  * a native Rust type up front.
  */
 export const ingestPartialValue = (
-	value: any, partialName: string, path: string, depth = 0, seen: Set<any> = new Set()
+	value: any, partialName: string, path: string, depth = 0, seen: Set<unknown> = new Set()
 ): LimaValue => {
 	const invalid = (reason: string): never => {
-		throw new PartialValidationError(`LIMA: invalid partial "${partialName}" at path "${path}": ${reason}`)
+		throw new LimaError({
+			code: 'INVALID_PARTIAL', partial: partialName, path,
+			message: `LIMA: invalid partial "${partialName}" at path "${path}": ${reason}`,
+		})
 	}
 	if (value === null) return LNull
 	if (typeof value === 'boolean') return LBool(value)
@@ -164,7 +167,10 @@ export const ingestPartialValue = (
 	if (Array.isArray(value)) {
 		result = LArray(value.map((item, i) => {
 			if (Array.isArray(item)) {
-				throw new PartialValidationError(`LIMA: invalid partial "${partialName}" at path "${path}[${i}]": nested arrays are not supported`)
+				throw new LimaError({
+					code: 'INVALID_PARTIAL', partial: partialName, path: `${path}[${i}]`,
+					message: `LIMA: invalid partial "${partialName}" at path "${path}[${i}]": nested arrays are not supported`,
+				})
 			}
 			return ingestPartialValue(item, partialName, `${path}[${i}]`, depth + 1, seen)
 		}))
@@ -179,10 +185,16 @@ export const ingestPartialValue = (
 		for (const key of Object.keys(value)) {
 			const descriptor = Object.getOwnPropertyDescriptor(value, key)
 			if (!descriptor || !('value' in descriptor)) {
-				throw new PartialValidationError(`LIMA: invalid partial "${partialName}" at path "${path}.${key}": accessor properties are not supported`)
+				throw new LimaError({
+					code: 'INVALID_PARTIAL', partial: partialName, path: `${path}.${key}`,
+					message: `LIMA: invalid partial "${partialName}" at path "${path}.${key}": accessor properties are not supported`,
+				})
 			}
 			if ([...key].length > PARTIAL_KEY_LENGTH_LIMIT) {
-				throw new PartialValidationError(`LIMA: invalid partial "${partialName}" at path "${path}.${key}": key exceeds maximum length of ${PARTIAL_KEY_LENGTH_LIMIT} code points`)
+				throw new LimaError({
+					code: 'INVALID_PARTIAL', partial: partialName, path: `${path}.${key}`,
+					message: `LIMA: invalid partial "${partialName}" at path "${path}.${key}": key exceeds maximum length of ${PARTIAL_KEY_LENGTH_LIMIT} code points`,
+				})
 			}
 			entries.set(key, ingestPartialValue(value[key], partialName, `${path}.${key}`, depth + 1, seen))
 		}

@@ -1,59 +1,24 @@
 /**
  * Small public Lima error API, as defined in docs/corpus-design/error-api.md.
- * The corpus runner uses this diagnostic core directly — it is not a
- * corpus-only concept.
+ * The diagnostic core (`LimaDiagnosticCode`/`LimaDiagnostic`/`LimaError`)
+ * lives in `js/src/errors.ts` — it is not a corpus-only concept, `js/src`'s
+ * own parser throws these directly. This module re-exports that core and
+ * adds the corpus-comparison-only pieces (`DiagnosticExpectation`,
+ * `compareDiagnostic`) that have no meaning outside the conformance runner.
  */
 
-export type LimaDiagnosticCode =
-	| 'INVALID_ESCAPE'
-	| 'INVALID_QUOTE'
-	| 'INVALID_DATE'
-	| 'INVALID_NUMBER'
-	| 'INVALID_REFERENCE_SHAPE'
-	| 'INVALID_INDENTATION'
-	| 'INVALID_FLOW_SYNTAX'
-	| 'DUPLICATE_KEY'
-	| 'RESOURCE_LIMIT'
-	| 'UNRESOLVED_REFERENCE'
-	| 'INVALID_INTERPOLATION'
-	| 'INVALID_PARTIAL'
-
-export interface LimaDiagnostic {
-	code: LimaDiagnosticCode
-	message: string
-	line?: number
-	column?: number
-	token?: string
-	key?: string
-	partial?: string
-	path?: string
-}
-
-export class LimaError extends Error {
-	readonly code: LimaDiagnosticCode
-	readonly line?: number
-	readonly column?: number
-	readonly token?: string
-	readonly key?: string
-	readonly partial?: string
-	readonly path?: string
-
-	constructor(diagnostic: LimaDiagnostic) {
-		super(diagnostic.message)
-		this.name = 'LimaError'
-		Object.assign(this, diagnostic)
-	}
-}
+export { type LimaDiagnosticCode, type LimaDiagnostic, LimaError } from '../../../js/src/errors'
+import type { LimaDiagnostic, LimaDiagnosticCode } from '../../../js/src/errors'
 
 /**
  * The subset of diagnostic fields a corpus case may assert on. Only fields
  * present in `expected` are compared — this mirrors docs/corpus-design/
  * README.md §6: the corpus compares semantic fields, not full message text.
  */
-export type DiagnosticExpectation = Partial<LimaDiagnostic> & { code: LimaDiagnosticCode }
+export type DiagnosticExpectation = Partial<LimaDiagnostic> & { code: LimaDiagnosticCode; contains?: string }
 
 export interface DiagnosticMismatch {
-	field: keyof LimaDiagnostic
+	field: keyof DiagnosticExpectation
 	expected: unknown
 	actual: unknown
 }

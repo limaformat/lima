@@ -103,7 +103,7 @@ export function materialize(value: CorpusValue): unknown {
 				}
 			}
 			default:
-				throw new Error(`materialize: unknown $type "${value.$type}"`)
+				throw new Error(`materialize: unknown $type "${(value as { $type: string }).$type}"`)
 		}
 	}
 
