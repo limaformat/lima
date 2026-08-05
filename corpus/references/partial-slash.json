@@ -3,6 +3,7 @@
   "spec": "references",
   "section": "3.4",
   "description": "A slash in a partial name is a literal key character.",
+  "input": "author: (%persons/alice)\n",
   "options": {
     "partials": {
       "persons/alice": {
@@ -21,6 +22,5 @@
     "positive",
     "partial",
     "deep-copy"
-  ],
-  "inputFile": "partial-slash.lima"
+  ]
 }

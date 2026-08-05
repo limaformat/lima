@@ -3,6 +3,7 @@
   "spec": "core",
   "section": "3",
   "description": "Leaves a tab inside scalar content unchanged — only leading indentation tabs are normalized.",
+  "input": "value: a\tb\n",
   "expect": {
     "result": {
       "value": "a\tb"
@@ -11,6 +12,5 @@
   "tags": [
     "positive",
     "normalization"
-  ],
-  "inputFile": "tabs-in-scalar.lima"
+  ]
 }

@@ -13,14 +13,30 @@ an issue rather than trusting stale prose here.
 
 ## 1. Required architecture
 
-As a rule, every hand-written test consists of two sidecar files:
+Every case is a single `case-name.json` file. In the common case, the exact
+parser input is stored inline as the JSON string field `input`:
+
+```text
+case-name.json   # metadata, options, expectation, and input, all inline
+```
+
+A `.json`-plus-`.lima` sidecar pair remains a supported alternative, for a
+case whose input is long or awkward enough that JSON-string escaping would
+hurt readability more than a second file costs:
 
 ```text
 case-name.lima   # exact parser input
-case-name.json   # metadata, options, and expectation
+case-name.json   # metadata, options, and expectation; refers to the
+                  # sidecar via the "inputFile" field instead of "input"
 ```
 
-Exceptions:
+As of this writing, all 250 cases use the inline form; none currently use a
+`.lima` sidecar. The sidecar mechanism (`inputFile`, handled by
+`corpus/runner/src/loader.ts`) stays fully implemented and covered by its
+own test (`corpus/runner/test/loader.test.ts`) so it is available the next
+time a case needs it, rather than being a dead code path.
+
+Further exceptions:
 
 - Generator cases may have only a `.json` description.
 - Host values that JSON cannot natively express are represented via typed
@@ -28,10 +44,12 @@ Exceptions:
 - Byte-exact special cases may use a `.bin` file or a specially generated
   input; the generator is then part of the case description.
 
-## 2. Why `.lima` plus JSON?
+## 2. Why JSON, with `.lima` available for the input?
 
-The Lima input stays verbatim and readable. JSON describes only the test
-contract and introduces no YAML-native type semantics.
+The Lima input stays verbatim and readable, whether inline as a JSON string
+or — for the rare case where that hurts readability — in its own `.lima`
+file. JSON describes only the test contract and introduces no YAML-native
+type semantics.
 
 The corpus is not described in YAML, because:
 

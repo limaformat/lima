@@ -3,6 +3,7 @@
   "spec": "core",
   "section": "6.1.2",
   "description": "Preserves an unknown escape sequence in non-strict mode.",
+  "input": "value: \"hello\\qworld\"\n",
   "expect": {
     "result": {
       "value": "hello\\qworld"
@@ -11,6 +12,5 @@
   "tags": [
     "fallback",
     "string"
-  ],
-  "inputFile": "unknown-escape-nonstrict.lima"
+  ]
 }

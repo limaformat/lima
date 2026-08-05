@@ -3,6 +3,7 @@
   "spec": "core",
   "section": "3",
   "description": "Strips trailing spaces from each line before parsing.",
+  "input": "title: Hello   \n",
   "expect": {
     "result": {
       "title": "Hello"
@@ -11,6 +12,5 @@
   "tags": [
     "positive",
     "normalization"
-  ],
-  "inputFile": "trailing-spaces.lima"
+  ]
 }

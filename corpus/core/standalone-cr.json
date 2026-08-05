@@ -3,6 +3,7 @@
   "spec": "core",
   "section": "3",
   "description": "Normalizes a standalone CR (not part of CRLF) to LF before parsing.",
+  "input": "title: Hello\rcount: 42\n",
   "expect": {
     "result": {
       "title": "Hello",
@@ -12,6 +13,5 @@
   "tags": [
     "positive",
     "normalization"
-  ],
-  "inputFile": "standalone-cr.lima"
+  ]
 }

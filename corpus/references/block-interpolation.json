@@ -3,6 +3,7 @@
   "spec": "references",
   "section": "2.5",
   "description": "Active tokens interpolate inside block scalars.",
+  "input": "author: Alice\ndescription: |\n  Written by ($author).\n",
   "expect": {
     "result": {
       "author": "Alice",
@@ -13,6 +14,5 @@
     "positive",
     "interpolation",
     "block-scalar"
-  ],
-  "inputFile": "block-interpolation.lima"
+  ]
 }

@@ -3,6 +3,7 @@
   "spec": "references",
   "section": "3.5",
   "description": "Rejects mapping interpolation in both modes.",
+  "input": "person:\n  name: Alice\nlabel: Person: ($person)\n",
   "expect": {
     "error": {
       "line": 3,
@@ -13,6 +14,5 @@
   "tags": [
     "error",
     "interpolation"
-  ],
-  "inputFile": "mapping-interpolation-error.lima"
+  ]
 }

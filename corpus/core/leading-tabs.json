@@ -3,6 +3,7 @@
   "spec": "core",
   "section": "3",
   "description": "Normalizes a leading tab in indentation to two spaces before parsing.",
+  "input": "parent:\n\tchild: value\n",
   "expect": {
     "result": {
       "parent": {
@@ -13,6 +14,5 @@
   "tags": [
     "positive",
     "normalization"
-  ],
-  "inputFile": "leading-tabs.lima"
+  ]
 }

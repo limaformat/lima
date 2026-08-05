@@ -3,6 +3,7 @@
   "spec": "references",
   "section": "7",
   "description": "Reports an unresolved reference after phase 2 in strict mode.",
+  "input": "value: ($missing)\n",
   "options": {
     "strict": true
   },
@@ -16,6 +17,5 @@
   "tags": [
     "strict",
     "error"
-  ],
-  "inputFile": "unresolved-strict.lima"
+  ]
 }

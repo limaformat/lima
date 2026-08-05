@@ -3,6 +3,7 @@
   "spec": "core",
   "section": "6.5.3",
   "description": "Converts an ISO datetime with offset to a UTC Instant.",
+  "input": "published: 2024-03-01T09:00:00+02:00\n",
   "expect": {
     "result": {
       "published": {
@@ -14,6 +15,5 @@
   "tags": [
     "positive",
     "date"
-  ],
-  "inputFile": "date-offset.lima"
+  ]
 }

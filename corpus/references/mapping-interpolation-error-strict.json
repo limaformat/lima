@@ -3,6 +3,7 @@
   "spec": "references",
   "section": "3.5",
   "description": "Same case as references.interpolation.mapping.error (a mapping value used directly in string interpolation), with strict mode explicitly enabled — References §7 lists this as throwing in both modes; this case pins strict mode as its own explicit regression check rather than relying on the non-strict case as an implicit stand-in.",
+  "input": "person:\n  name: Alice\nlabel: Person: ($person)\n",
   "expect": {
     "error": {
       "line": 3,
@@ -15,7 +16,6 @@
     "interpolation",
     "strict"
   ],
-  "inputFile": "mapping-interpolation-error.lima",
   "options": {
     "strict": true
   }

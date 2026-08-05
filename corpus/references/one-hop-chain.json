@@ -3,6 +3,7 @@
   "spec": "references",
   "section": "3.7",
   "description": "Only b resolves in a three-key chain; a remains an unresolved token.",
+  "input": "a: ($b)\nb: ($c)\nc: 42\n",
   "expect": {
     "result": {
       "a": "($b)",
@@ -15,6 +16,5 @@
     "snapshot",
     "non-strict"
   ],
-  "notes": "Trace: phase 1 resolves neither a nor b. Phase 2 resolves b from c; a cannot use b from the same snapshot.",
-  "inputFile": "one-hop-chain.lima"
+  "notes": "Trace: phase 1 resolves neither a nor b. Phase 2 resolves b from c; a cannot use b from the same snapshot."
 }

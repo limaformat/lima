@@ -3,6 +3,7 @@
   "spec": "core",
   "section": "6.1.2",
   "description": "Rejects an unknown escape sequence in strict mode.",
+  "input": "value: \"hello\\qworld\"\n",
   "options": {
     "strict": true
   },
@@ -16,6 +17,5 @@
   "tags": [
     "strict",
     "error"
-  ],
-  "inputFile": "unknown-escape-strict.lima"
+  ]
 }

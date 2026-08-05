@@ -3,6 +3,7 @@
   "spec": "core",
   "section": "7.4",
   "description": "Rejects a trailing comma in strict mode.",
+  "input": "tags: [a, b,]\n",
   "options": {
     "strict": true
   },
@@ -16,6 +17,5 @@
     "strict",
     "flow",
     "error"
-  ],
-  "inputFile": "flow-trailing-comma-strict.lima"
+  ]
 }

@@ -3,6 +3,7 @@
   "spec": "references",
   "section": "4.2",
   "description": "A direct forward reference resolves from the phase-2 snapshot.",
+  "input": "copy: ($source)\nsource: true\n",
   "expect": {
     "result": {
       "copy": true,
@@ -12,6 +13,5 @@
   "tags": [
     "positive",
     "phase-2"
-  ],
-  "inputFile": "forward-reference.lima"
+  ]
 }

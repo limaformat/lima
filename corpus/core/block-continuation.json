@@ -3,6 +3,7 @@
   "spec": "core",
   "section": "6.1.6",
   "description": "Joins a continuation line using exactly one space.",
+  "input": "description: |\n  This is long\n  ^^and continues.\n",
   "expect": {
     "result": {
       "description": "This is long and continues."
@@ -11,6 +12,5 @@
   "tags": [
     "positive",
     "block-scalar"
-  ],
-  "inputFile": "block-continuation.lima"
+  ]
 }

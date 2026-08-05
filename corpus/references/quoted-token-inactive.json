@@ -3,6 +3,7 @@
   "spec": "references",
   "section": "2.3",
   "description": "A token inside a double-quoted value remains literal.",
+  "input": "source: 42\nvalue: \"($source)\"\n",
   "options": {
     "strict": true
   },
@@ -15,6 +16,5 @@
   "tags": [
     "negative",
     "quoted"
-  ],
-  "inputFile": "quoted-token-inactive.lima"
+  ]
 }

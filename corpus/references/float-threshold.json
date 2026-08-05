@@ -3,6 +3,7 @@
   "spec": "references",
   "section": "3.5.1",
   "description": "Uses ECMAScript fixed/exponential thresholds for document floats.",
+  "input": "small: 0.000001\ntiny: 1e-7\nlarge: 1e20\nhuge: 1e21\nlabel: ($small)|($tiny)|($large)|($huge)\n",
   "expect": {
     "result": {
       "small": 1e-06,
@@ -16,6 +17,5 @@
     "float",
     "boundary",
     "interpolation"
-  ],
-  "inputFile": "float-threshold.lima"
+  ]
 }
