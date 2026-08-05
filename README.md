@@ -1,6 +1,6 @@
 # Lima
 
-**LIMA Is Metadata Annotation** — a tiny, deterministic frontmatter format with a complete reference specification.
+**LIMA Is Metadata Annotation** — a YAML-familiar, deliberately bounded frontmatter format with a complete reference specification.
 
 The name is a recursive backronym — LIMA contains itself, just like [YAML (YAML Ain't Markup Language)](https://stackoverflow.com/questions/6968366/if-yaml-aint-markup-language-what-is-it). Consider it a nod: Lima is a deliberate, focused subset of YAML, keeping what works and leaving out what doesn't. Fittingly, *lima* is also Esperanto for "bounded" or "limiting" (from *limo*, "boundary") — Lima is a deliberately bounded, precisely defined metadata language.
 
@@ -17,11 +17,60 @@ draft: false
 ---
 ```
 
+## Quickstart
+
+```bash
+npm install @limaformat/lima
+# or
+bun add @limaformat/lima
+```
+
+**Parsing content between the fences** — `parse` takes the raw Lima content, not the surrounding `---` delimiters or the Markdown body:
+
+```ts
+import { parse } from '@limaformat/lima'
+
+const meta = parse(`
+title: My First Post
+tags:
+  - javascript
+  - webdev
+published: 2024-03-01
+draft: false
+`)
+// { title: 'My First Post', tags: ['javascript', 'webdev'],
+//   published: 2024-03-01T00:00:00.000Z, draft: false }
+```
+
+**Parsing a whole Markdown file** — splitting the fences off is the caller's job; Lima has no file-reading or fence-splitting API of its own. This is a plain, dependency-free recipe, not a bundled function — copy it, or use a library like [`front-matter`](https://www.npmjs.com/package/front-matter)/[`gray-matter`](https://www.npmjs.com/package/gray-matter) for the splitting step and hand the extracted text to Lima's `parse`:
+
+```ts
+import { readFileSync } from 'node:fs'
+import { parse } from '@limaformat/lima'
+
+function splitFrontmatter(fileContent: string): { frontmatter: string; body: string } | null {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*\r?\n?([\s\S]*)$/.exec(fileContent)
+  if (!match) return null
+  return { frontmatter: match[1], body: match[2] }
+}
+
+const file = readFileSync('post.md', 'utf-8')
+const split = splitFrontmatter(file)
+if (!split) throw new Error('post.md has no --- frontmatter block')
+
+const meta = parse(split.frontmatter)
+// split.body is the Markdown content after the closing fence
+```
+
+This recipe requires the opening `---` on the file's literal first line and a `---`-only closing line; it does not recognise a completely empty frontmatter block with zero blank lines between the fences (`---\n---\n`, as opposed to `---\n\n---\n`, which works). If this pattern turns out to be widely needed, an official `extractFrontmatter` (or similar) export is a reasonable future addition — proposed here, not implemented, since it's a new public API surface that deserves its own review rather than arriving as a side effect of a docs pass.
+
+Full syntax, the References extension, resource limits, strict mode, and the complete API: **[`docs/guide.md`](docs/guide.md)**. Migrating existing YAML frontmatter: **[`docs/migrating-from-yaml.md`](docs/migrating-from-yaml.md)**. Static site generator integration status: **[`docs/integrations.md`](docs/integrations.md)**.
+
 ## Why not YAML / TOML / JSON?
 
-- **YAML** — technically powerful, practically a minefield of edge cases and indentation ambiguity.
-- **TOML** — solid, but verbose for simple frontmatter.
-- **JSON** — not for humans who don't write code for a living.
+- **YAML** — a large, feature-rich grammar. Frontmatter typically uses a small fraction of it, and the unused parts are exactly where implementations diverge from each other and where past CVEs have concentrated (see [Security](#security), below).
+- **TOML** — solid, but its `[section]`/`key = value` syntax is noticeably more verbose than indentation for nested frontmatter, and it has no equivalent of Lima's References.
+- **JSON** — no comments, every key and string must be quoted, no multi-line strings — workable for machines, awkward to hand-author and diff as frontmatter.
 
 Lima is what you'd write if you just wanted key-value pairs that work, with a spec small enough to read in one sitting — no 92-page grammar, no implementation-defined corners.
 
@@ -41,7 +90,7 @@ YAML's specification is **~5.2–5.5× longer** than JSON's or TOML's, and **~2.
 
 This isn't a case of counting favourably: separating "Core" from "References" in the implementation required checking actual imports, not just file boundaries — `countNodes`, `canonicalString`, and the partial-ingestion machinery sit in the same source file as Core's value model but are only ever imported by the References layer, so they're excluded from Core's count. Three exports (`isScalar`, `deepCopy`, `computeDepth`) turned out to be unused by anything at all, including tests — surfaced by this accounting and deleted outright rather than merely excluded from it.
 
-Reproducible: `bun run bench:vs-yaml` (from `js/`) measures parse speed against js-yaml on realistic frontmatter; `bun src/run.ts` (from `compat/`) reports where Lima and YAML actually diverge on the same input, not just how long each takes.
+Reproducible: `bun run bench:vs-yaml` (from `js/`) measures parse speed against js-yaml on realistic frontmatter — Bun-only numbers, don't assume they transfer proportionally to other JavaScript engines; `bun src/run.ts` (from `compat/`) reports where Lima and YAML actually diverge on the same input, not just how long each takes. Migrating existing YAML frontmatter to Lima: see [`docs/migrating-from-yaml.md`](docs/migrating-from-yaml.md), which uses this same divergence report as its evidence.
 
 ### What a smaller grammar buys
 
@@ -52,7 +101,7 @@ Reproducible: `bun run bench:vs-yaml` (from `js/`) measures parse speed against 
 - **Hard resource limits are part of the normative spec**, not an implementation afterthought: document size, key length, scalar length, and nesting depth are all specified limits, checked in both parse modes.
 - **A closed strict-mode error list** (Core §10.1) — strict mode validates an explicit, enumerated set of conditions, not "everything a parser feels like flagging."
 - **A grammar expressible without regex backtracking.** The TypeScript implementation's tokenizer uses zero lookahead/lookbehind/backreference constructs and zero genuinely backtracking-dependent matching — verifiably RE2-representable, the same property linear-time engines like Google's RE2 and Rust's `regex` crate require. Not a claim about immunity to slow input in general, just that the grammar itself doesn't force a backtracking engine the way some regex-heavy formats do.
-- **An implementation-independent conformance corpus** (234 cases as of this writing) that any implementation — TypeScript, Rust, or otherwise — is checked against, addressing a longstanding YAML criticism: different YAML parsers routinely disagree with each other on ambiguous edge cases.
+- **An implementation-independent conformance corpus** (250 cases, count pinned by a test so it can't silently drift — reproduce with `bun run run` from `corpus/runner/`) that any implementation — TypeScript, Rust, or otherwise — is checked against, addressing a longstanding YAML criticism: different YAML parsers routinely disagree with each other on ambiguous edge cases.
 
 None of this makes Lima a YAML replacement — it's deliberately scoped to frontmatter, not general-purpose data serialisation, and the constructs it leaves out are exactly the ones YAML-parsing frontmatter rarely needs in the first place. The trade-off is explicit, not hidden: see [Appendix A](docs/lima-core-1.0-spec.md#12-appendix-a-what-lima-core-does-not-support) for the full, reasoned list.
 
@@ -71,7 +120,7 @@ Worth being precise about the threat model this actually matters for: both CVEs 
 
 - [x] Lima Core 1.0 specification — final ([`docs/lima-core-1.0-spec.md`](docs/lima-core-1.0-spec.md))
 - [x] Lima References 1.0 specification — final ([`docs/lima-references-1.0-spec.md`](docs/lima-references-1.0-spec.md))
-- [x] Conformance test corpus — 234 cases, both specs ([`corpus/`](corpus/), design rationale in [`docs/corpus-design/`](docs/corpus-design/))
+- [x] Conformance test corpus — 250 cases, both specs, pinned by test ([`corpus/`](corpus/), design rationale in [`docs/corpus-design/`](docs/corpus-design/)); reproduce with `bun run run` from `corpus/runner/`
 - [x] TypeScript/JavaScript implementation — published as [`@limaformat/lima`](js/)
 - [ ] Rust implementation — placeholder published as [`lima`](rust/)
 
@@ -84,7 +133,7 @@ The normative specifications are the single source of truth for Lima's syntax an
 - [Lima Core 1.0](docs/lima-core-1.0-spec.md) — syntax, types, and error behaviour.
 - [Lima References 1.0](docs/lima-references-1.0-spec.md) — property references and external partials.
 
-Both specifications are self-contained as of 1.0 Final; no design-history documents are part of this repository.
+Both specifications are self-contained as of 1.0 Final; no design-history documents are part of this repository. [`docs/guide.md`](docs/guide.md) is a non-normative walkthrough of both — where it disagrees with a spec, the spec wins.
 
 ## Conformance corpus
 
@@ -101,7 +150,7 @@ The Rust package is currently a placeholder; see its status list for progress.
 
 ## Contributing
 
-This repository is under active development ahead of its first published packages. Issues and discussion are welcome; please read the specifications first, since they — not any single implementation — define correct Lima behaviour.
+Issues and discussion are welcome; please read the specifications first, since they — not any single implementation — define correct Lima behaviour.
 
 ## License
 
