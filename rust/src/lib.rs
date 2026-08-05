@@ -2,15 +2,19 @@
 //!
 //! **LIMA Is Metadata Annotation** — a small, predictable frontmatter parser.
 //!
-//! > ⚠️ This is a placeholder release. The implementation is in active
-//! > development. See <https://limaformat.dev> for the specification.
+//! > ⚠️ This crate is a placeholder. The Rust implementation itself has not
+//! > been written yet — the specifications and conformance corpus it will
+//! > be checked against are both finished. See <https://limaformat.dev> for
+//! > the specification, and the TypeScript implementation
+//! > (`@limaformat/lima` on npm) for a working parser today.
 //!
 //! ## Status
 //!
 //! - Lima Core 1.0 specification: complete
 //! - Lima References 1.0 specification: complete
-//! - Conformance test corpus: in progress
-//! - Implementation: in progress
+//! - Conformance test corpus: complete (250 cases, shared with the
+//!   TypeScript implementation)
+//! - Rust implementation: not started
 
 /// Placeholder — implementation not yet available.
 ///

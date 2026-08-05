@@ -1,8 +1,14 @@
 # Lima Conformance Corpus – Design Package
 
-**Status:** design draft, prior to implementation
+**Status:** implemented — 250 cases, count pinned by a test
+(`corpus/runner/test/loader.test.ts`), verified with `bun run run` from
+`corpus/runner/`. This document is the design rationale the corpus was
+built from; §11's "Implementation order" is a historical record of how
+that happened, not an open plan. Where this document and the actual
+corpus disagree, the corpus and its passing tests are authoritative — file
+an issue rather than trusting stale prose here.
 **Normative basis:** Lima Core 1.0 and Lima References 1.0
-**Target platform for the first implementation:** TypeScript/Bun
+**First implementation:** TypeScript/Bun (`@limaformat/lima`)
 **Long-term goal:** the same corpus validates TypeScript, Rust, and further implementations
 
 ## 1. Required architecture
@@ -258,7 +264,9 @@ a plain string (input only, the four above) or `{ input, partials }`.
 
 ## 10. Small public error API
 
-Lima should use a single error class plus a shared diagnostic core:
+Lima uses a single error class plus a shared diagnostic core (implemented
+in `js/src/errors.ts`, matching this design exactly — see also
+[`error-api.md`](error-api.md) for the current export status):
 
 ```ts
 export type LimaDiagnosticCode =
@@ -307,6 +315,10 @@ No subclasses, no complex error hierarchy, and no fully normalized message
 text.
 
 ## 11. Implementation order
+
+Historical record of how the corpus and its runner were actually built —
+both phases below are complete, kept here as the rationale for the
+resulting architecture, not as a remaining plan.
 
 ### Phase 1: build the measuring instrument
 

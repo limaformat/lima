@@ -34,7 +34,7 @@
 
 - Claude Code and Codex CLI work alternately, never concurrently writing to
   the same working tree.
-- Typical order in this project: Claude Code implements a unit of work,
-  then Codex CLI reviews it independently against the specs.
+- Typical order in this project: Codex CLI implements a unit of work,
+  then Claude Code reviews it independently against the specs.
 - A reviewing agent reports findings; it does not silently "fix" them
   without confirmation from the human maintainer.
