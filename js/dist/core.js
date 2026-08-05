@@ -20,11 +20,11 @@
  */
 import { LString } from './value.js';
 import { checkKeyLength, checkScalarLimit, byteLength, DOCUMENT_SIZE_LIMIT, TOP_LEVEL_KEY_LIMIT, NESTING_DEPTH_LIMIT, } from './normalize.js';
-import { unescapeDQ, stripComment, positionedBuilder, } from './scalars.js';
+import { unescapeDQ, stripComment, positionedBuilder, NO_SPAN_VALUE, parseSimpleScalarSpan, } from './scalars.js';
 import { parseFlowOrScalarValue } from './flow.js';
 import { parseBlockRange } from './block.js';
 import { LimaError } from './errors.js';
-import { scanKeys } from './scanner.js';
+import { KeyCursor, scanKeys } from './scanner.js';
 export { NESTING_DEPTH_LIMIT, SCALAR_LENGTH_LIMIT } from './normalize.js';
 export { toPlainValue } from './scalars.js';
 /** Every Lima mapping result must be a prototype-free object (Core §11.1). */
@@ -117,6 +117,11 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
     const root = builder.createMapping();
     if (!frontMatter)
         return root;
+    // Core flow syntax is capped at two container levels, far below §9's
+    // depth limit of 16. Only block syntax can possibly reach that limit;
+    // documents without a block value therefore need no final root walk.
+    // Once set, the existing exact traversal remains authoritative.
+    const blockDepthRisk = { mayExceed: false };
     // Each of these three passes is skipped outright when a cheap upfront
     // check proves it would be a no-op — a full-document regex `.replace()`
     // always allocates a new string even when nothing actually changes, and
@@ -141,9 +146,6 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
         // (and RE2-family engines like Rust's `regex` crate) don't support.
         frontMatter = frontMatter.replace(/( +)(\n|$)/gm, '$2');
     }
-    const matches = scanKeys(frontMatter);
-    const keyCount = matches.length;
-    const keyLine = (i) => matches[i].line;
     if (strict) {
         let searchFrom = 0;
         while (searchFrom <= frontMatter.length) {
@@ -160,23 +162,9 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
             searchFrom = lineEnd + 1;
         }
     }
-    if (keyCount === 0)
-        return root;
-    if (keyCount > TOP_LEVEL_KEY_LIMIT) {
-        throw new LimaError({
-            code: 'RESOURCE_LIMIT', line: 1,
-            message: `LIMA: too many top-level key entries (max ${TOP_LEVEL_KEY_LIMIT}) at line 1`,
-        });
-    }
-    for (let i = 0; i < keyCount; i++) {
-        const m = matches[i];
-        const rawDQ = m.doubleQuotedRaw;
-        const key = m.unquoted ?? m.singleQuoted ?? (rawDQ !== undefined ? unescapeDQ(rawDQ) : undefined);
-        if (key === undefined)
-            continue;
-        checkKeyLength(key, () => keyLine(i));
+    const parseEntry = (key, line, rawStart, isBlock, inlineEnd, nextStart) => {
+        checkKeyLength(key, () => line);
         if ((strict || ctx.onWarning !== undefined) && builder.hasMappingKey(root, key)) {
-            const line = keyLine(i);
             const diagnostic = {
                 code: 'DUPLICATE_KEY', line, key,
                 message: `LIMA: duplicate key "${key}" at line ${line} — last value wins`,
@@ -188,9 +176,7 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
             // object is delivered anyway.
             ctx.onWarning?.(diagnostic);
         }
-        const nextStart = i + 1 < matches.length ? matches[i + 1].matchStart : frontMatter.length;
-        const isBlock = m.isBlock;
-        const firstNewline = m.inlineEnd ?? frontMatter.indexOf('\n', m.rawStart);
+        const firstNewline = inlineEnd ?? frontMatter.indexOf('\n', rawStart);
         const newlineInRange = firstNewline < nextStart;
         // Typical frontmatter uses one inline scalar per key. Avoid building
         // and filling a temporary lines array for that overwhelmingly common
@@ -198,18 +184,22 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
         // newline here.
         if (!isBlock && (!newlineInRange || firstNewline === nextStart - 1)) {
             const valueEnd = newlineInRange ? firstNewline : nextStart;
-            const val = frontMatter.slice(m.rawStart, valueEnd);
-            const line = m.line;
+            const spanned = parseSimpleScalarSpan(frontMatter, rawStart, valueEnd, line, strict, builder);
+            if (spanned !== NO_SPAN_VALUE) {
+                builder.setMapping(root, key, spanned);
+                return;
+            }
+            const val = frontMatter.slice(rawStart, valueEnd);
             const uncommented = val.includes('#') ? stripComment(val) : val;
             builder.setMapping(root, key, parseFlowOrScalarValue(uncommented, ctx, line, builder));
-            continue;
+            return;
         }
         if (isBlock) {
-            const parsed = parseBlockRange(frontMatter, m.rawStart, nextStart, ctx, keyLine(i) + 1, builder);
-            builder.setMapping(root, key, parsed ?? builder.null(keyLine(i)));
-            continue;
+            const parsed = parseBlockRange(frontMatter, rawStart, nextStart, ctx, line + 1, builder, blockDepthRisk);
+            builder.setMapping(root, key, parsed ?? builder.null(line));
+            return;
         }
-        const raw = frontMatter.slice(m.rawStart, nextStart);
+        const raw = frontMatter.slice(rawStart, nextStart);
         const lines = [];
         let lineStart = 0;
         for (let j = 0; j <= raw.length; j++) {
@@ -221,15 +211,15 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
         }
         {
             if (lines.length === 0) {
-                builder.setMapping(root, key, builder.null(keyLine(i)));
-                continue;
+                builder.setMapping(root, key, builder.null(line));
+                return;
             }
             const line0Trimmed = lines[0].trim();
             if (lines.length === 1 || line0Trimmed !== '|') {
                 const line0 = lines[0];
                 const val = line0.includes('#') ? stripComment(line0) : line0;
-                builder.setMapping(root, key, parseFlowOrScalarValue(val, ctx, keyLine(i), builder));
-                continue;
+                builder.setMapping(root, key, parseFlowOrScalarValue(val, ctx, line, builder));
+                return;
             }
             // Multi-line string (`|` literal block scalar).
             const bodyLines = raw.slice(raw.indexOf('\n') + 1).split('\n');
@@ -275,16 +265,66 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
             while (mergedLines.length > 0 && mergedLines[mergedLines.length - 1] === '')
                 mergedLines.pop();
             const joined = mergedLines.join('\n');
-            checkScalarLimit(LString(joined), keyLine(i));
-            builder.setMapping(root, key, builder.string(joined, keyLine(i), false));
+            checkScalarLimit(LString(joined), line);
+            builder.setMapping(root, key, builder.string(joined, line, false));
+        }
+    };
+    // A recognised top-level entry needs at least one UTF-16 unit of key text,
+    // `:`, and its terminating newline: three units. Consequently 129 entries
+    // need at least 3 * 129 = 387 units. Below that proven bound the limit
+    // cannot be exceeded; larger documents use the independent line-count proof.
+    let directKeyCursor = frontMatter.length < 3 * (TOP_LEVEL_KEY_LIMIT + 1);
+    if (!directKeyCursor && !strict && ctx.onWarning === undefined) {
+        let newlines = 0;
+        for (let pos = 0; pos < frontMatter.length; pos++) {
+            if (frontMatter.charCodeAt(pos) === 10 && ++newlines >= TOP_LEVEL_KEY_LIMIT)
+                break;
+        }
+        // Every top-level key occupies its own physical line. Fewer than 128
+        // newlines therefore proves that at most 128 key positions can exist;
+        // all other documents retain scanKeys()'s exact key-count check.
+        directKeyCursor = newlines < TOP_LEVEL_KEY_LIMIT;
+    }
+    if (!strict && ctx.onWarning === undefined && directKeyCursor) {
+        const cursor = new KeyCursor(frontMatter);
+        let hasToken = cursor.next();
+        if (!hasToken)
+            return root;
+        while (hasToken) {
+            const line = cursor.tokenLine;
+            const rawStart = cursor.rawStart;
+            const isBlock = cursor.isBlock;
+            const inlineEnd = cursor.inlineEnd < 0 ? undefined : cursor.inlineEnd;
+            const rawKey = frontMatter.slice(cursor.keyStart, cursor.keyEnd);
+            const key = cursor.keyKind === 2 ? unescapeDQ(rawKey) : rawKey;
+            hasToken = cursor.next();
+            parseEntry(key, line, rawStart, isBlock, inlineEnd, hasToken ? cursor.matchStart : frontMatter.length);
+        }
+    }
+    else {
+        const matches = scanKeys(frontMatter);
+        const keyCount = matches.length;
+        if (keyCount === 0)
+            return root;
+        if (keyCount > TOP_LEVEL_KEY_LIMIT) {
+            throw new LimaError({
+                code: 'RESOURCE_LIMIT', line: 1,
+                message: `LIMA: too many top-level key entries (max ${TOP_LEVEL_KEY_LIMIT}) at line 1`,
+            });
+        }
+        for (let i = 0; i < keyCount; i++) {
+            const m = matches[i];
+            const rawDQ = m.doubleQuotedRaw;
+            const key = m.unquoted ?? m.singleQuoted ?? (rawDQ !== undefined ? unescapeDQ(rawDQ) : undefined);
+            if (key !== undefined)
+                parseEntry(key, m.line, m.rawStart, m.isBlock, m.inlineEnd, i + 1 < keyCount ? matches[i + 1].matchStart : frontMatter.length);
         }
     }
     // Core §9 nesting depth, over Core's own reference-inert tree. When
     // References is layered on top, it re-checks depth on the final,
     // post-substitution tree separately — substituted values can add depth
     // this check cannot see yet.
-    const depth = builder.mappingMaxDepth(root, computeDepth);
-    if (depth > NESTING_DEPTH_LIMIT) {
+    if (blockDepthRisk.mayExceed && builder.mappingMaxDepth(root, computeDepth) > NESTING_DEPTH_LIMIT) {
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line: 1,
             message: `LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line 1`,

@@ -240,7 +240,18 @@ for (let code = 0; code <= 0xffff; code++) {
 	docs.push(`root:\n  key: ${char}value\n`)
 	docs.push(`root:\n  key: value${char}\n`)
 	docs.push(`items:\n  - ${char}value\n`)
+	// Position-based flow cursor boundaries: outer/item/key/value trimming
+	// must remain exactly equivalent to String.prototype.trim().
+	docs.push(`flow: [${char}a${char},${char}b${char}]\n`)
+	docs.push(`flow: {${char}a${char}: ${char}b${char}}\n`)
 }
+
+docs.push(
+	'flow: [😀, "x,😀", {emoji: 😀}]\n',
+	'flow: {😀: value, key: "😀,x"}\n',
+	'flow: [a,,]\n',
+	'flow: {a: b,,}\n',
+)
 
 // Claude Code additions (position-cursor round): the cursor's native
 // hasMappingKey optimization (`entries[key] !== undefined`, relying on
@@ -281,6 +292,27 @@ docs.push(
 	'items:\n  - name: A\n    email: a@x.com\n   badindent\n  - name: B\n',
 	'a:\n  b:\n    c: 1\n    c: 2\n',
 	'items:\n  - name: A\n  - name: "bad \\q escape"\n',
+)
+
+// Gate-3 regression: the removed document-length shortcut incorrectly
+// assumed a minimal top-level key consumed roughly four UTF-16 units. A
+// block-form key is only `k:\n` (three units), so 129–171 occurrences could
+// bypass §9's 128-key limit on the direct cursor path. These four boundaries
+// run through all strict/warning combinations in the loop below.
+for (const count of [128, 129, 171, 172]) docs.push('k:\n'.repeat(count))
+
+// Cheap block-depth upper bound: one-space nesting is the densest possible
+// recursive block chain. Sequence-item mappings and their flow values exercise
+// the three same-indent container levels covered by the bound's +4 reserve.
+for (const depth of [15, 16, 17, 18]) {
+	const lines: string[] = []
+	for (let level = 0; level < depth; level++) lines.push(' '.repeat(level) + 'k:')
+	lines.push(' '.repeat(depth) + 'k: v')
+	docs.push(lines.join('\n') + '\n')
+}
+docs.push(
+	'root:\n - item: [{key: value}]\n',
+	'root:\n child:\n  items:\n   - item: [{key: value}]\n',
 )
 
 const observe = (parse: typeof thisImpl, doc: string, strict: boolean, captureWarnings: boolean): string => {

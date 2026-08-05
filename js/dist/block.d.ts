@@ -11,5 +11,8 @@
 import { type ParseContext } from './normalize.js';
 import type { ValueBuilder } from './builder.js';
 export declare const findKeySep: (s: string) => number;
-/** Complete block grammar over numeric line starts in the original source. */
-export declare const parseBlockRange: <V, M>(source: string, start: number, end: number, ctx: ParseContext, baseLine: number, builder: ValueBuilder<V, M>) => V | null;
+/** Complete block grammar over one UTF-16 source range. */
+export type BlockDepthRisk = {
+    mayExceed: boolean;
+};
+export declare const parseBlockRange: <V, M>(source: string, start: number, end: number, ctx: ParseContext, baseLine: number, builder: ValueBuilder<V, M>, depthRisk: BlockDepthRisk) => V | null;

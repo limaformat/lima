@@ -22,7 +22,7 @@ import { load } from 'js-yaml'
 import { log, JSON_OUTPUT, type BenchResult } from './helpers'
 
 const results: BenchResult[] = []
-const SAMPLES = 9
+const SAMPLES = 25
 
 function time(fn: () => void, iterations: number): number {
 	const start = performance.now()
@@ -53,23 +53,29 @@ function compare(name: string, doc: string, iterations: number): void {
 	for (let i = 0; i < Math.min(iterations, 1000); i++) { parseLima(); parseYaml() }
 	const limaSamples: number[] = []
 	const yamlSamples: number[] = []
+	const speedups: number[] = []
 	for (let sample = 0; sample < SAMPLES; sample++) {
 		// Alternating which parser runs first prevents systematic order bias
 		// from JIT state, CPU frequency changes, and background load.
+		let limaUs: number, yamlUs: number
 		if (sample % 2 === 0) {
-			limaSamples.push(time(parseLima, iterations))
-			yamlSamples.push(time(parseYaml, iterations))
+			limaUs = time(parseLima, iterations)
+			yamlUs = time(parseYaml, iterations)
 		} else {
-			yamlSamples.push(time(parseYaml, iterations))
-			limaSamples.push(time(parseLima, iterations))
+			yamlUs = time(parseYaml, iterations)
+			limaUs = time(parseLima, iterations)
 		}
+		limaSamples.push(limaUs)
+		yamlSamples.push(yamlUs)
+		speedups.push(yamlUs / limaUs)
 	}
 	const lima = result(`${name} — Lima (parseCore)`, limaSamples, iterations)
 	const yaml = result(`${name} — js-yaml (load)`, yamlSamples, iterations)
 	results.push(lima, yaml)
 	print(lima)
 	print(yaml)
-	log(`  → Lima is ${(yaml.medianUs / lima.medianUs).toFixed(2)}x the speed of js-yaml (median)\n`)
+	speedups.sort((a, b) => a - b)
+	log(`  → paired speedup min ${speedups[0].toFixed(2)}x, median ${speedups[Math.floor(speedups.length / 2)].toFixed(2)}x, max ${speedups[speedups.length - 1].toFixed(2)}x\n`)
 }
 
 // ── Representative frontmatter-shaped documents (Core-only) ─────────────

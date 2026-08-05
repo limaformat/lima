@@ -4,30 +4,51 @@ import { checkKeyLength, checkDuplicateKey, type ParseContext } from './normaliz
 import { parseQuotedOrTyped, parseScalarValue, stripKeyQuotes } from './scalars.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
+import { isTrimWhitespace } from './chars.js'
 
-const splitFlowItems = (inner: string): string[] => {
-	const items: string[] = []
-	let start = 0
-	let quote = 0
-	let depth = 0
-	for (let i = 0; i < inner.length; i++) {
-		const cc = inner.charCodeAt(i)
-		if (quote) {
-			if (cc === 92) { i++ }
-			else if (cc === quote) quote = 0
-		} else if (cc === 34 || cc === 39) {
-			quote = cc
-		} else if (cc === 91 || cc === 123) {
-			depth++
-		} else if (cc === 93 || cc === 125) {
-			depth--
-		} else if (cc === 44 && depth === 0) {
-			items.push(inner.slice(start, i).trim())
-			start = i + 1
-		}
+const trimStart = (source: string, start: number, end: number): number => {
+	while (start < end && isTrimWhitespace(source.charCodeAt(start))) start++
+	return start
+}
+const trimEnd = (source: string, start: number, end: number): number => {
+	while (end > start && isTrimWhitespace(source.charCodeAt(end - 1))) end--
+	return end
+}
+
+/** Stateful comma-item cursor over a flow container's original string. */
+class FlowCursor {
+	itemStart = 0
+	itemEnd = 0
+	private nextStart: number
+	private done = false
+
+	constructor(private readonly source: string, start: number, private readonly end: number) {
+		this.nextStart = start
 	}
-	items.push(inner.slice(start).trim())
-	return items
+
+	next(): boolean {
+		if (this.done) return false
+		let quote = 0
+		let depth = 0
+		let pos = this.nextStart
+		for (; pos < this.end; pos++) {
+			const code = this.source.charCodeAt(pos)
+			if (quote) {
+				if (code === 92) pos++
+				else if (code === quote) quote = 0
+			} else if (code === 34 || code === 39) quote = code
+			else if (code === 91 || code === 123) depth++
+			else if (code === 93 || code === 125) depth--
+			else if (code === 44 && depth === 0) break
+		}
+		this.itemStart = trimStart(this.source, this.nextStart, pos)
+		this.itemEnd = trimEnd(this.source, this.itemStart, pos)
+		if (pos < this.end) this.nextStart = pos + 1
+		else this.done = true
+		return true
+	}
+
+	get isLast(): boolean { return this.done }
 }
 
 const isNestedFlowConstruct = (item: string): boolean =>
@@ -36,16 +57,20 @@ const isNestedFlowConstruct = (item: string): boolean =>
 
 export const parseFlowSequence = <V, M>(val: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>): V[] | null => {
 	if (val.charCodeAt(0) !== 91 || val.charCodeAt(val.length - 1) !== 93) return null
-	const inner = val.slice(1, -1).trim()
-	if (!inner) return []
-	const rawItems = splitFlowItems(inner)
-
-	if (!ctx.strict && rawItems.length > 1 && !rawItems[rawItems.length - 1]) rawItems.pop()
-
-	return rawItems.map((item): V => {
+	const innerStart = trimStart(val, 1, val.length - 1)
+	const innerEnd = trimEnd(val, innerStart, val.length - 1)
+	if (innerStart === innerEnd) return []
+	const items: V[] = []
+	const cursor = new FlowCursor(val, innerStart, innerEnd)
+	let itemCount = 0
+	while (cursor.next()) {
+		const start = cursor.itemStart, end = cursor.itemEnd
+		itemCount++
+		if (start === end && !ctx.strict && cursor.isLast && itemCount > 1) break
+		const item = val.slice(start, end)
 		if (!item) {
 			if (ctx.strict) throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `LIMA: empty element in flow sequence at line ${line}` })
-			return builder.null(line)
+			items.push(builder.null(line)); continue
 		}
 		if (item.charCodeAt(0) === 91 && item.charCodeAt(item.length - 1) === 93) {
 			throw new LimaError({
@@ -55,36 +80,45 @@ export const parseFlowSequence = <V, M>(val: string, ctx: ParseContext, line: nu
 		}
 		if (item.charCodeAt(0) === 123 && item.charCodeAt(item.length - 1) === 125) {
 			const nested = parseFlowMapping(item, ctx, line, builder)
-			if (nested !== null) return nested
+			if (nested !== null) { items.push(nested); continue }
 		}
-		return parseQuotedOrTyped(item, ctx, line, false, builder)
-	})
+		items.push(parseQuotedOrTyped(item, ctx, line, false, builder))
+	}
+	return items
 }
 
 export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>): V | null => {
 	if (val.charCodeAt(0) !== 123 || val.charCodeAt(val.length - 1) !== 125) return null
-	const inner = val.slice(1, -1).trim()
+	const innerStart = trimStart(val, 1, val.length - 1)
+	const innerEnd = trimEnd(val, innerStart, val.length - 1)
 	const entries = builder.createMapping()
-	if (!inner) return builder.mapping(entries, line)
-	for (const item of splitFlowItems(inner)) {
+	if (innerStart === innerEnd) return builder.mapping(entries, line)
+	const cursor = new FlowCursor(val, innerStart, innerEnd)
+	while (cursor.next()) {
+		const itemStart = cursor.itemStart, itemEnd = cursor.itemEnd
+		const item = val.slice(itemStart, itemEnd)
 		if (!item) {
 			if (ctx.strict) throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `LIMA: empty element in flow mapping at line ${line}` })
 			continue
 		}
-		const colonPos = item.indexOf(': ')
-		if (colonPos === -1) {
+		const colonPos = val.indexOf(': ', itemStart)
+		if (colonPos === -1 || colonPos >= itemEnd) {
 			if (ctx.strict) throw new LimaError({
 				code: 'INVALID_FLOW_SYNTAX', line,
 				message: `LIMA: invalid flow mapping item (missing ": ") at line ${line}: "${item}"`,
 			})
 			return null
 		}
-		const key = stripKeyQuotes(item.slice(0, colonPos).trim())
+		const keyStart = trimStart(val, itemStart, colonPos)
+		const keyEnd = trimEnd(val, keyStart, colonPos)
+		const key = stripKeyQuotes(val.slice(keyStart, keyEnd))
 		checkKeyLength(key, () => line)
 		if (ctx.strict || ctx.onWarning !== undefined) {
 			checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
 		}
-		const rawVal = item.slice(colonPos + 2).trim()
+		const valueStart = trimStart(val, colonPos + 2, itemEnd)
+		const valueEnd = trimEnd(val, valueStart, itemEnd)
+		const rawVal = val.slice(valueStart, valueEnd)
 		if (isNestedFlowConstruct(rawVal)) {
 			throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `LIMA: invalid flow nesting at line ${line}: "${rawVal}"` })
 		}

@@ -9,11 +9,12 @@
  * never resolves a reference in the first place).
  */
 import { LString } from './value.js';
-import { checkKeyLength, checkDuplicateKey, checkScalarLimit } from './normalize.js';
+import { checkKeyLength, checkDuplicateKey, checkScalarLimit, NESTING_DEPTH_LIMIT } from './normalize.js';
 import { stripKeyQuotes, unescapeDQ, stripComment, parseQuotedOrTyped, } from './scalars.js';
 import { parseFlowMapping, parseFlowOrScalarValue } from './flow.js';
 import { LimaError } from './errors.js';
 import { isTrimWhitespace } from './chars.js';
+import { BlockCursor } from './block-cursor.js';
 const DASH_PREFIX_RE = /^-\s+/;
 export const findKeySep = (s) => {
     const first = s.charCodeAt(0);
@@ -27,24 +28,11 @@ export const findKeySep = (s) => {
     }
     return s.indexOf(': ');
 };
-const blockLineEnd = (lines, index) => index + 1 < lines.starts.length
-    ? lines.starts[index + 1] - 1
-    : (lines.finalNewline ? lines.end - 1 : lines.end);
-const blockLineLength = (lines, index) => blockLineEnd(lines, index) - lines.starts[index];
-const blockContent = (lines, index, indent) => lines.source.slice(lines.starts[index] + indent, blockLineEnd(lines, index));
-/** The dash-prefix regex semantics, directly over a source span, with one final slice. */
-const blockAfterDash = (lines, index, indent) => {
-    const start = lines.starts[index] + indent;
-    const end = blockLineEnd(lines, index);
-    if (start + 1 === end)
-        return '';
-    let content = start + 1;
-    if (!isTrimWhitespace(lines.source.charCodeAt(content)))
-        return lines.source.slice(start, end);
-    while (content < end && isTrimWhitespace(lines.source.charCodeAt(content)))
-        content++;
-    return lines.source.slice(content, end);
-};
+/**
+ * Recursively parses a block value from a mutable physical-line cursor over
+ * the original source. Strings are materialized only when grammar or scalar
+ * parsing needs their content.
+ */
 /** `source.slice(start, end).trim()` with no temporary untrimmed substring. */
 const trimSlice = (source, start, end) => {
     if (start < end) {
@@ -63,320 +51,255 @@ const trimSlice = (source, start, end) => {
         end--;
     return source.slice(start, end);
 };
-const parseBlock = (lines, startIdx, baseIndent, ctx, baseLine, builder) => {
+const cursorContent = (cursor) => cursor.source.slice(cursor.contentStart, cursor.lineEnd);
+const cursorAfterDash = (cursor) => {
+    const start = cursor.contentStart;
+    const end = cursor.lineEnd;
+    if (start + 1 === end)
+        return '';
+    let content = start + 1;
+    if (!isTrimWhitespace(cursor.source.charCodeAt(content)))
+        return cursor.source.slice(start, end);
+    while (content < end && isTrimWhitespace(cursor.source.charCodeAt(content)))
+        content++;
+    return cursor.source.slice(content, end);
+};
+/** Shared block grammar consuming one mutable physical-line cursor. */
+const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
     let items = null;
     let entries = null;
     let pendingItem = null;
-    let idx = startIdx;
-    while (idx < lines.starts.length) {
-        const indent = lines.indents[idx];
-        if (indent === blockLineLength(lines, idx)) {
-            idx++;
+    const startLine = cursor.lineIndex;
+    while (cursor.valid) {
+        const line = baseLine + cursor.lineIndex;
+        if (cursor.empty || cursor.firstCode === 35) {
+            cursor.next();
             continue;
         }
-        const firstCode = lines.source.charCodeAt(lines.starts[idx] + indent);
-        if (firstCode === 35) {
-            idx++;
-            continue;
-        }
+        const indent = cursor.indent;
         if (indent < baseIndent)
             break;
         if (indent > baseIndent) {
-            const trimmed = blockContent(lines, idx, indent);
+            const trimmed = cursorContent(cursor);
             if (items !== null && pendingItem !== null) {
                 const colonPos = findKeySep(trimmed);
                 if (colonPos !== -1) {
-                    const itemKey = stripKeyQuotes(trimSlice(trimmed, 0, colonPos));
-                    checkKeyLength(itemKey, () => baseLine + idx);
-                    let itemVal = trimSlice(trimmed, colonPos + 2, trimmed.length);
-                    if (itemVal.includes('#'))
-                        itemVal = stripComment(itemVal);
-                    builder.setMapping(pendingItem, itemKey, parseFlowOrScalarValue(itemVal, ctx, baseLine + idx, builder));
-                    idx++;
+                    const key = stripKeyQuotes(trimSlice(trimmed, 0, colonPos));
+                    checkKeyLength(key, () => line);
+                    let raw = trimSlice(trimmed, colonPos + 2, trimmed.length);
+                    if (raw.includes('#'))
+                        raw = stripComment(raw);
+                    builder.setMapping(pendingItem, key, parseFlowOrScalarValue(raw, ctx, line, builder));
+                    cursor.next();
                 }
                 else if (trimmed.endsWith(':')) {
-                    const itemKey = stripKeyQuotes(trimSlice(trimmed, 0, trimmed.length - 1));
-                    const keyLineNum = baseLine + idx;
-                    checkKeyLength(itemKey, () => keyLineNum);
-                    idx++;
-                    let ni = idx;
-                    while (ni < lines.starts.length && lines.indents[ni] === blockLineLength(lines, ni))
-                        ni++;
-                    if (ni < lines.starts.length) {
-                        const nextIndent = lines.indents[ni];
-                        if (nextIndent > indent) {
-                            const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder);
-                            builder.setMapping(pendingItem, itemKey, nested ?? builder.null(keyLineNum));
-                            idx = after;
-                            continue;
-                        }
+                    const key = stripKeyQuotes(trimSlice(trimmed, 0, trimmed.length - 1));
+                    checkKeyLength(key, () => line);
+                    cursor.next();
+                    while (cursor.valid && cursor.empty)
+                        cursor.next();
+                    if (cursor.valid && cursor.indent > indent) {
+                        const nested = parseCursorBlock(cursor, cursor.indent, ctx, baseLine, builder);
+                        builder.setMapping(pendingItem, key, nested ?? builder.null(line));
                     }
-                    builder.setMapping(pendingItem, itemKey, builder.null(keyLineNum));
+                    else
+                        builder.setMapping(pendingItem, key, builder.null(line));
                 }
                 else {
                     if (ctx.strict)
-                        throw new LimaError({
-                            code: 'INVALID_INDENTATION', line: baseLine + idx,
-                            message: `LIMA: unexpected syntax in array item continuation at line ${baseLine + idx}: "${trimmed}"`,
-                        });
-                    idx++;
+                        throw new LimaError({ code: 'INVALID_INDENTATION', line,
+                            message: `LIMA: unexpected syntax in array item continuation at line ${line}: "${trimmed}"` });
+                    cursor.next();
                 }
             }
             else {
                 if (ctx.strict)
-                    throw new LimaError({
-                        code: 'INVALID_INDENTATION', line: baseLine + idx,
-                        message: `LIMA: unexpected indentation at line ${baseLine + idx}: "${trimmed}"`,
-                    });
-                idx++;
+                    throw new LimaError({ code: 'INVALID_INDENTATION', line,
+                        message: `LIMA: unexpected indentation at line ${line}: "${trimmed}"` });
+                cursor.next();
             }
             continue;
         }
-        // ── indent === baseIndent ──────────────────────────────────────────
-        const isList = firstCode === 45;
-        if (isList) {
+        if (cursor.firstCode === 45) {
             if (pendingItem !== null) {
-                items.push(builder.mapping(pendingItem, baseLine + idx));
+                items.push(builder.mapping(pendingItem, line));
                 pendingItem = null;
             }
             if (items === null)
                 items = [];
             if (entries !== null) {
                 if (ctx.strict)
-                    throw new LimaError({
-                        code: 'INVALID_INDENTATION', line: baseLine + idx,
-                        message: `LIMA: mixed array and map entries for the same key at line ${baseLine + idx}`,
-                    });
-                idx++;
+                    throw new LimaError({ code: 'INVALID_INDENTATION', line,
+                        message: `LIMA: mixed array and map entries for the same key at line ${line}` });
+                cursor.next();
                 continue;
             }
-            // Claude Code review fix: the fast path only ever inspected the
-            // single character right after the dash, so it stripped exactly
-            // one whitespace character even when DASH_PREFIX_RE's `\s+` would
-            // have consumed a longer run (e.g. two spaces, or a space then a
-            // tab) — confirmed via differential testing: `-  value` (two
-            // spaces) produced `" value"` (leading space preserved) instead
-            // of `"value"`, and for a flow-shaped item the stray leading
-            // space broke the `[`/`{`/quote first-character check entirely —
-            // `-  {a: 1}` produced a mangled `{"{a":"1}"}` instead of the
-            // parsed mapping `{a:1}`. Reverted to the regex, which correctly
-            // consumes the whole whitespace run regardless of length or kind.
-            let afterDash = blockAfterDash(lines, idx, indent);
+            let afterDash = cursorAfterDash(cursor);
             if (afterDash.includes('#'))
                 afterDash = stripComment(afterDash);
-            // Claude Code review fix (round 3): this gate skips the flow-mapping
-            // probe and findKeySep to fast-path an ordinary scalar list item,
-            // but originally didn't exclude a bare "key:" marker (a dash item
-            // that's itself a mapping key with its value nested on following
-            // lines, e.g. `- author:\n    name: Alice`) — findKeySep's
-            // ': '-substring check and this fast path's identical `indexOf(': ')`
-            // check both correctly return "no colon found" for "author:" (no
-            // space follows the trailing colon), so the fast path took over
-            // and treated "author:" as a literal scalar string, silently
-            // discarding the nested mapping entirely (confirmed via
-            // differential testing: candidate produced {"items":["author:"]}
-            // instead of baseline's {"items":[{"author":{"name":"Alice"}}]}).
-            // The slow path's next branch after this one specifically checks
-            // `afterDash.endsWith(':')` for exactly this case; the fast path
-            // must exclude it too.
-            const simpleFirst = afterDash.charCodeAt(0);
-            if (simpleFirst !== 34 && simpleFirst !== 39 && simpleFirst !== 45 && simpleFirst !== 123 &&
+            const first = afterDash.charCodeAt(0);
+            if (first !== 34 && first !== 39 && first !== 45 && first !== 123 &&
                 afterDash.indexOf(': ') === -1 && !afterDash.endsWith(':')) {
-                items.push(parseQuotedOrTyped(afterDash, ctx, baseLine + idx, false, builder));
-                idx++;
+                items.push(parseQuotedOrTyped(afterDash, ctx, line, false, builder));
+                cursor.next();
                 continue;
             }
-            const flowMap = parseFlowMapping(afterDash, ctx, baseLine + idx, builder);
+            const flowMap = parseFlowMapping(afterDash, ctx, line, builder);
             const colonPos = findKeySep(afterDash);
             if (flowMap !== null) {
                 items.push(flowMap);
-                idx++;
+                cursor.next();
             }
             else if (afterDash === '-' || DASH_PREFIX_RE.test(afterDash)) {
                 if (ctx.strict)
-                    throw new LimaError({
-                        code: 'INVALID_INDENTATION', line: baseLine + idx,
-                        message: `LIMA: nested block sequence at line ${baseLine + idx}: "${blockContent(lines, idx, indent)}"`,
-                    });
-                items.push(builder.null(baseLine + idx));
-                idx++;
-                while (idx < lines.starts.length) {
-                    const nextIndent = lines.indents[idx];
-                    if (nextIndent === blockLineLength(lines, idx) || blockContent(lines, idx, nextIndent).charCodeAt(0) === 35) {
-                        idx++;
+                    throw new LimaError({ code: 'INVALID_INDENTATION', line,
+                        message: `LIMA: nested block sequence at line ${line}: "${cursorContent(cursor)}"` });
+                items.push(builder.null(line));
+                cursor.next();
+                while (cursor.valid) {
+                    if (cursor.empty || cursor.source.charCodeAt(cursor.contentStart) === 35) {
+                        cursor.next();
                         continue;
                     }
-                    if (nextIndent <= baseIndent)
+                    if (cursor.indent <= baseIndent)
                         break;
-                    idx++;
+                    cursor.next();
                 }
             }
             else if (colonPos !== -1) {
-                const pendingKey = stripKeyQuotes(trimSlice(afterDash, 0, colonPos));
-                checkKeyLength(pendingKey, () => baseLine + idx);
-                const pendingRaw = trimSlice(afterDash, colonPos + 2, afterDash.length);
-                pendingItem = builder.createMappingWith(pendingKey, parseFlowOrScalarValue(pendingRaw, ctx, baseLine + idx, builder));
-                idx++;
-                // Canonical multi-key object items dominate frontmatter object
-                // lists. Consume only unquoted `key: value` continuation lines
-                // directly from the original line; every other syntax shape is
-                // left untouched for the existing branch chain on the next loop.
-                while (idx < lines.starts.length) {
-                    const continuationIndent = lines.indents[idx];
-                    if (continuationIndent <= baseIndent)
+                const keyFirst = afterDash.charCodeAt(0);
+                const keyLast = afterDash.charCodeAt(colonPos - 1);
+                const keyRaw = keyFirst > 0x20 && keyFirst < 0x7f && keyLast > 0x20 && keyLast < 0x7f
+                    ? afterDash.slice(0, colonPos) : trimSlice(afterDash, 0, colonPos);
+                const key = keyFirst === 34 || keyFirst === 39 ? stripKeyQuotes(keyRaw) : keyRaw;
+                checkKeyLength(key, () => line);
+                const valueStart = colonPos + 2;
+                const valueFirst = afterDash.charCodeAt(valueStart);
+                const valueLast = afterDash.charCodeAt(afterDash.length - 1);
+                const raw = valueFirst > 0x20 && valueFirst < 0x7f && valueLast > 0x20 && valueLast < 0x7f
+                    ? afterDash.slice(valueStart) : trimSlice(afterDash, valueStart, afterDash.length);
+                pendingItem = builder.createMappingWith(key, parseFlowOrScalarValue(raw, ctx, line, builder));
+                cursor.next();
+                while (cursor.valid && cursor.indent > baseIndent) {
+                    const continuationLine = baseLine + cursor.lineIndex;
+                    const start = cursor.contentStart, end = cursor.lineEnd;
+                    const cfirst = cursor.source.charCodeAt(start);
+                    if (cfirst === 34 || cfirst === 39 || cfirst === 35)
                         break;
-                    const continuationStart = lines.starts[idx] + continuationIndent;
-                    const continuationEnd = blockLineEnd(lines, idx);
-                    const first = lines.source.charCodeAt(continuationStart);
-                    if (first === 34 || first === 39 || first === 35)
+                    const sep = cursor.source.indexOf(': ', start);
+                    if (sep === -1 || sep >= end)
                         break;
-                    const continuationColon = lines.source.indexOf(': ', continuationStart);
-                    if (continuationColon === -1 || continuationColon >= continuationEnd)
+                    const keyLast = cursor.source.charCodeAt(sep - 1);
+                    const ckey = cfirst > 0x20 && cfirst < 0x7f && keyLast > 0x20 && keyLast < 0x7f
+                        ? cursor.source.slice(start, sep) : trimSlice(cursor.source, start, sep);
+                    if (!ckey)
                         break;
-                    const continuationKey = trimSlice(lines.source, continuationStart, continuationColon);
-                    if (!continuationKey)
-                        break;
-                    checkKeyLength(continuationKey, () => baseLine + idx);
-                    let continuationValue = trimSlice(lines.source, continuationColon + 2, continuationEnd);
-                    if (continuationValue.includes('#'))
-                        continuationValue = stripComment(continuationValue);
-                    builder.setMapping(pendingItem, continuationKey, parseFlowOrScalarValue(continuationValue, ctx, baseLine + idx, builder));
-                    idx++;
+                    checkKeyLength(ckey, () => continuationLine);
+                    const valueStart = sep + 2;
+                    const valueFirst = cursor.source.charCodeAt(valueStart);
+                    const valueLast = cursor.source.charCodeAt(end - 1);
+                    let value = valueFirst > 0x20 && valueFirst < 0x7f && valueLast > 0x20 && valueLast < 0x7f
+                        ? cursor.source.slice(valueStart, end) : trimSlice(cursor.source, valueStart, end);
+                    if (value.includes('#'))
+                        value = stripComment(value);
+                    builder.setMapping(pendingItem, ckey, parseFlowOrScalarValue(value, ctx, continuationLine, builder));
+                    cursor.next();
                 }
             }
             else if (afterDash.endsWith(':')) {
-                const itemKey = stripKeyQuotes(trimSlice(afterDash, 0, afterDash.length - 1));
-                const keyLineNum = baseLine + idx;
-                checkKeyLength(itemKey, () => keyLineNum);
-                idx++;
-                let ni = idx;
-                while (ni < lines.starts.length && lines.indents[ni] === blockLineLength(lines, ni))
-                    ni++;
-                if (ni < lines.starts.length) {
-                    const nextIndent = lines.indents[ni];
-                    if (nextIndent > baseIndent) {
-                        const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder);
-                        pendingItem = builder.createMappingWith(itemKey, nested ?? builder.null(keyLineNum));
-                        idx = after;
-                        continue;
-                    }
+                const key = stripKeyQuotes(trimSlice(afterDash, 0, afterDash.length - 1));
+                checkKeyLength(key, () => line);
+                cursor.next();
+                while (cursor.valid && cursor.empty)
+                    cursor.next();
+                if (cursor.valid && cursor.indent > baseIndent) {
+                    const nested = parseCursorBlock(cursor, cursor.indent, ctx, baseLine, builder);
+                    pendingItem = builder.createMappingWith(key, nested ?? builder.null(line));
                 }
-                pendingItem = builder.createMappingWith(itemKey, builder.null(keyLineNum));
+                else
+                    pendingItem = builder.createMappingWith(key, builder.null(line));
             }
             else {
-                const qFirst = afterDash.charCodeAt(0);
-                if ((qFirst === 34 || qFirst === 39) && afterDash.charCodeAt(afterDash.length - 1) === qFirst) {
+                const q = afterDash.charCodeAt(0);
+                if ((q === 34 || q === 39) && afterDash.charCodeAt(afterDash.length - 1) === q) {
                     const inner = afterDash.slice(1, -1);
-                    const value = qFirst === 34 ? unescapeDQ(inner, ctx.strict, baseLine + idx) : inner.replace(/\\'/g, "'");
-                    checkScalarLimit(LString(value), baseLine + idx);
-                    items.push(builder.string(value, baseLine + idx, true));
+                    const value = q === 34 ? unescapeDQ(inner, ctx.strict, line) : inner.replace(/\\'/g, "'");
+                    checkScalarLimit(LString(value), line);
+                    items.push(builder.string(value, line, true));
                 }
-                else {
-                    items.push(parseQuotedOrTyped(afterDash, ctx, baseLine + idx, false, builder));
-                }
-                idx++;
+                else
+                    items.push(parseQuotedOrTyped(afterDash, ctx, line, false, builder));
+                cursor.next();
             }
         }
         else {
-            const trimmed = blockContent(lines, idx, indent);
-            // ── Map entry ────────────────────────────────────────────────────
+            const trimmed = cursorContent(cursor);
             if (items !== null) {
                 if (ctx.strict)
-                    throw new LimaError({
-                        code: 'INVALID_INDENTATION', line: baseLine + idx,
-                        message: `LIMA: mixed map and array entries for the same key at line ${baseLine + idx}`,
-                    });
-                idx++;
+                    throw new LimaError({ code: 'INVALID_INDENTATION', line,
+                        message: `LIMA: mixed map and array entries for the same key at line ${line}` });
+                cursor.next();
                 continue;
             }
             const colonPos = findKeySep(trimmed);
             if (colonPos !== -1) {
                 if (entries === null)
                     entries = builder.createMapping();
-                const itemKey = stripKeyQuotes(trimSlice(trimmed, 0, colonPos));
-                checkKeyLength(itemKey, () => baseLine + idx);
-                if (ctx.strict || ctx.onWarning !== undefined) {
-                    checkDuplicateKey(builder.hasMappingKey(entries, itemKey), itemKey, baseLine + idx, ctx);
-                }
-                let itemVal = trimSlice(trimmed, colonPos + 2, trimmed.length);
-                if (itemVal.includes('#'))
-                    itemVal = stripComment(itemVal);
-                builder.setMapping(entries, itemKey, parseFlowOrScalarValue(itemVal, ctx, baseLine + idx, builder));
-                idx++;
+                const key = stripKeyQuotes(trimSlice(trimmed, 0, colonPos));
+                checkKeyLength(key, () => line);
+                if (ctx.strict || ctx.onWarning !== undefined)
+                    checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx);
+                let raw = trimSlice(trimmed, colonPos + 2, trimmed.length);
+                if (raw.includes('#'))
+                    raw = stripComment(raw);
+                builder.setMapping(entries, key, parseFlowOrScalarValue(raw, ctx, line, builder));
+                cursor.next();
             }
             else if (trimmed.endsWith(':')) {
                 if (entries === null)
                     entries = builder.createMapping();
-                const itemKey = stripKeyQuotes(trimSlice(trimmed, 0, trimmed.length - 1));
-                const keyLineNum = baseLine + idx;
-                checkKeyLength(itemKey, () => keyLineNum);
-                if (ctx.strict || ctx.onWarning !== undefined) {
-                    checkDuplicateKey(builder.hasMappingKey(entries, itemKey), itemKey, keyLineNum, ctx);
+                const key = stripKeyQuotes(trimSlice(trimmed, 0, trimmed.length - 1));
+                checkKeyLength(key, () => line);
+                if (ctx.strict || ctx.onWarning !== undefined)
+                    checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx);
+                cursor.next();
+                while (cursor.valid && cursor.empty)
+                    cursor.next();
+                if (cursor.valid && cursor.indent > baseIndent) {
+                    const nested = parseCursorBlock(cursor, cursor.indent, ctx, baseLine, builder);
+                    builder.setMapping(entries, key, nested ?? builder.null(line));
                 }
-                idx++;
-                let ni = idx;
-                while (ni < lines.starts.length && lines.indents[ni] === blockLineLength(lines, ni))
-                    ni++;
-                if (ni < lines.starts.length) {
-                    const nextIndent = lines.indents[ni];
-                    if (nextIndent > baseIndent) {
-                        const { value: nested, nextIdx: after } = parseBlock(lines, ni, nextIndent, ctx, baseLine, builder);
-                        builder.setMapping(entries, itemKey, nested ?? builder.null(keyLineNum));
-                        idx = after;
-                        continue;
-                    }
-                }
-                builder.setMapping(entries, itemKey, builder.null(keyLineNum));
+                else
+                    builder.setMapping(entries, key, builder.null(line));
             }
             else {
                 if (ctx.strict)
-                    throw new LimaError({
-                        code: 'INVALID_INDENTATION', line: baseLine + idx,
-                        message: `LIMA: indented freetext without a block scalar marker at line ${baseLine + idx}: "${trimmed}"`,
-                    });
-                idx++;
+                    throw new LimaError({ code: 'INVALID_INDENTATION', line,
+                        message: `LIMA: indented freetext without a block scalar marker at line ${line}: "${trimmed}"` });
+                cursor.next();
             }
         }
     }
     if (pendingItem !== null)
-        items.push(builder.mapping(pendingItem, baseLine + startIdx));
-    const value = items !== null ? builder.array(items, baseLine + startIdx) :
-        entries !== null ? builder.mapping(entries, baseLine + startIdx) :
-            null;
-    return { value, nextIdx: idx };
+        items.push(builder.mapping(pendingItem, baseLine + startLine));
+    return items !== null ? builder.array(items, baseLine + startLine) :
+        entries !== null ? builder.mapping(entries, baseLine + startLine) : null;
 };
-/** Complete block grammar over numeric line starts in the original source. */
-export const parseBlockRange = (source, start, end, ctx, baseLine, builder) => {
-    const starts = [];
-    const indents = [];
-    let pos = start;
-    while (pos < end) {
-        starts.push(pos);
-        const newline = source.indexOf('\n', pos);
-        const limit = newline === -1 || newline >= end ? end : newline;
-        let content = pos;
-        while (content < limit && source.charCodeAt(content) === 0x0020)
-            content++;
-        while (content < limit && isTrimWhitespace(source.charCodeAt(content)))
-            content++;
-        indents.push(content - pos);
-        if (newline === -1 || newline >= end)
-            break;
-        pos = newline + 1;
-    }
-    const lines = {
-        source, starts, indents, end,
-        finalNewline: end > start && source.charCodeAt(end - 1) === 10,
-    };
-    let first = 0;
-    while (first < starts.length && indents[first] === blockLineLength(lines, first))
-        first++;
-    let baseIndent = 0;
-    if (first < starts.length) {
-        const firstStart = starts[first];
-        const firstEnd = blockLineEnd(lines, first);
-        while (firstStart + baseIndent < firstEnd && source.charCodeAt(firstStart + baseIndent) === 32)
-            baseIndent++;
-    }
-    return parseBlock(lines, 0, baseIndent, ctx, baseLine, builder).value;
+export const parseBlockRange = (source, start, end, ctx, baseLine, builder, depthRisk) => {
+    const cursor = new BlockCursor(source, start, end);
+    if (!cursor.next())
+        return null;
+    while (cursor.valid && cursor.empty)
+        cursor.next();
+    if (!cursor.valid)
+        return null;
+    const baseIndent = cursor.asciiIndent;
+    const value = parseCursorBlock(cursor, baseIndent, ctx, baseLine, builder);
+    // Recursive block containers require strictly increasing integer
+    // indentation. At one indentation level a sequence-item mapping can add
+    // one container and Core flow syntax at most two more, so delta + 4 is a
+    // conservative depth bound below the document root.
+    if (cursor.maxIndent - baseIndent + 4 > NESTING_DEPTH_LIMIT)
+        depthRisk.mayExceed = true;
+    return value;
 };

@@ -66,6 +66,13 @@ export type PositionedValue = {
 export declare const positionedBuilder: ValueBuilder<PositionedValue>;
 /** Strips position/quoted-origin annotations, recursively — the public parseCore() projection. */
 export declare const toPlainValue: (v: PositionedValue) => LimaValue;
+export declare const NO_SPAN_VALUE: unique symbol;
+/**
+ * Parses allocation-free scalar forms whose complete grammar can be proven
+ * directly from one source span. Everything else returns a sentinel and is
+ * handled by the full string-based scalar/flow grammar.
+ */
+export declare const parseSimpleScalarSpan: <V, M>(source: string, start: number, end: number, line: number, strict: boolean, builder: ValueBuilder<V, M>) => V | typeof NO_SPAN_VALUE;
 export declare const unescapeDQ: (s: string, strict?: boolean, line?: number) => string;
 export declare const stripComment: (val: string) => string;
 /** Strips a key's surrounding quotes (unescaping double-quoted keys), or returns it unchanged. */

@@ -83,58 +83,52 @@ const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 const isLeapYear = (y: number): boolean => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
 const daysInMonth = (y: number, m: number): number => (m === 2 && isLeapYear(y)) ? 29 : DAYS_IN_MONTH[m - 1]
 
+/** Shared exact ISO-date recognizer over either a complete string or a source span. */
+const parseExactIsoSpan = (source: string, start: number, end: number, strict: boolean, line: number): Date | null => {
+	const length = end - start
+	const dateOnly = length === 10 && source.charCodeAt(start + 4) === 45 && source.charCodeAt(start + 7) === 45
+	const instant = length === 20 && source.charCodeAt(start + 4) === 45 && source.charCodeAt(start + 7) === 45 &&
+		source.charCodeAt(start + 10) === 84 && source.charCodeAt(start + 13) === 58 &&
+		source.charCodeAt(start + 16) === 58 && source.charCodeAt(start + 19) === 90
+	if (!dateOnly && !instant) return null
+	const digitAt = (offset: number): number => source.charCodeAt(start + offset) - 48
+	const d0 = digitAt(0), d1 = digitAt(1), d2 = digitAt(2), d3 = digitAt(3)
+	const d5 = digitAt(5), d6 = digitAt(6), d8 = digitAt(8), d9 = digitAt(9)
+	if (d0 < 0 || d0 > 9 || d1 < 0 || d1 > 9 || d2 < 0 || d2 > 9 || d3 < 0 || d3 > 9 ||
+		d5 < 0 || d5 > 9 || d6 < 0 || d6 > 9 || d8 < 0 || d8 > 9 || d9 < 0 || d9 > 9) return null
+	const year = d0 * 1000 + d1 * 100 + d2 * 10 + d3
+	const month = d5 * 10 + d6, day = d8 * 10 + d9
+	let hour = 0, minute = 0, second = 0
+	if (instant) {
+		const d11 = digitAt(11), d12 = digitAt(12), d14 = digitAt(14), d15 = digitAt(15)
+		const d17 = digitAt(17), d18 = digitAt(18)
+		if (d11 < 0 || d11 > 9 || d12 < 0 || d12 > 9 || d14 < 0 || d14 > 9 ||
+			d15 < 0 || d15 > 9 || d17 < 0 || d17 > 9 || d18 < 0 || d18 > 9) return null
+		hour = d11 * 10 + d12; minute = d14 * 10 + d15; second = d17 * 10 + d18
+	}
+	if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month) ||
+		hour > 23 || minute > 59 || second > 59) {
+		if (strict) {
+			const raw = source.slice(start, end)
+			throw new LimaError({ code: 'INVALID_DATE', line, message: `LIMA: invalid date "${raw}" at line ${line}` })
+		}
+		return null
+	}
+	if (year >= 100) return new Date(Date.UTC(year, month - 1, day, hour, minute, second))
+	const result = new Date(0)
+	result.setUTCFullYear(year, month - 1, day)
+	if (instant) result.setUTCHours(hour, minute, second, 0)
+	return result
+}
+
 const parseDateUTC = (str: string, strict = false, line = 0): Date | null => {
 	const invalid = (): null => {
 		if (strict) throw new LimaError({ code: 'INVALID_DATE', line, message: `LIMA: invalid date "${str}" at line ${line}` })
 		return null
 	}
 
-	if (str.length === 10 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45) {
-		const d0 = str.charCodeAt(0) - 48, d1 = str.charCodeAt(1) - 48
-		const d2 = str.charCodeAt(2) - 48, d3 = str.charCodeAt(3) - 48
-		const d5 = str.charCodeAt(5) - 48, d6 = str.charCodeAt(6) - 48
-		const d8 = str.charCodeAt(8) - 48, d9 = str.charCodeAt(9) - 48
-		if ((d0 | d1 | d2 | d3 | d5 | d6 | d8 | d9) >= 0 &&
-			d0 <= 9 && d1 <= 9 && d2 <= 9 && d3 <= 9 &&
-			d5 <= 9 && d6 <= 9 && d8 <= 9 && d9 <= 9) {
-			const year = d0 * 1000 + d1 * 100 + d2 * 10 + d3
-			const month = d5 * 10 + d6
-			const day = d8 * 10 + d9
-			if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) return invalid()
-			const result = new Date(0)
-			result.setUTCFullYear(year, month - 1, day)
-			return result
-		}
-	}
-
-	// Exact RFC 3339 form used by typical frontmatter. The length and all
-	// five separators are necessary and sufficient to identify the shape;
-	// any non-digit falls through to the complete regex grammar below.
-	if (str.length === 20 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45 &&
-		str.charCodeAt(10) === 84 && str.charCodeAt(13) === 58 &&
-		str.charCodeAt(16) === 58 && str.charCodeAt(19) === 90) {
-		const d0 = str.charCodeAt(0) - 48, d1 = str.charCodeAt(1) - 48
-		const d2 = str.charCodeAt(2) - 48, d3 = str.charCodeAt(3) - 48
-		const d5 = str.charCodeAt(5) - 48, d6 = str.charCodeAt(6) - 48
-		const d8 = str.charCodeAt(8) - 48, d9 = str.charCodeAt(9) - 48
-		const d11 = str.charCodeAt(11) - 48, d12 = str.charCodeAt(12) - 48
-		const d14 = str.charCodeAt(14) - 48, d15 = str.charCodeAt(15) - 48
-		const d17 = str.charCodeAt(17) - 48, d18 = str.charCodeAt(18) - 48
-		if ((d0 | d1 | d2 | d3 | d5 | d6 | d8 | d9 | d11 | d12 | d14 | d15 | d17 | d18) >= 0 &&
-			d0 <= 9 && d1 <= 9 && d2 <= 9 && d3 <= 9 && d5 <= 9 && d6 <= 9 &&
-			d8 <= 9 && d9 <= 9 && d11 <= 9 && d12 <= 9 && d14 <= 9 && d15 <= 9 &&
-			d17 <= 9 && d18 <= 9) {
-			const year = d0 * 1000 + d1 * 100 + d2 * 10 + d3
-			const month = d5 * 10 + d6, day = d8 * 10 + d9
-			const hour = d11 * 10 + d12, minute = d14 * 10 + d15, second = d17 * 10 + d18
-			if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month) ||
-				hour > 23 || minute > 59 || second > 59) return invalid()
-			const result = new Date(0)
-			result.setUTCFullYear(year, month - 1, day)
-			result.setUTCHours(hour, minute, second, 0)
-			return result
-		}
-	}
+	const exact = parseExactIsoSpan(str, 0, str.length, strict, line)
+	if (exact !== null) return exact
 
 	let y: number, mo: number, d: number, h = 0, mi = 0, s = 0, offsetMin = 0
 
@@ -190,6 +184,43 @@ const DATE_PRE_RE = /\d[\d\-:.\/a-zA-Z]{4,}/
 const isFloatForm = (str: string): boolean => str.includes('.') || str.includes('e') || str.includes('E')
 const isZeroLiteral = (str: string): boolean => /^0+(\.0+)?$/.test(str.replace(/^-/, '').split(/[eE]/)[0])
 
+export const NO_SPAN_VALUE: unique symbol = Symbol('NO_SPAN_VALUE')
+
+/**
+ * Parses allocation-free scalar forms whose complete grammar can be proven
+ * directly from one source span. Everything else returns a sentinel and is
+ * handled by the full string-based scalar/flow grammar.
+ */
+export const parseSimpleScalarSpan = <V, M>(
+	source: string, start: number, end: number, line: number, strict: boolean, builder: ValueBuilder<V, M>,
+): V | typeof NO_SPAN_VALUE => {
+	const length = end - start
+	if (length === 10 || length === 20) {
+		const exact = parseExactIsoSpan(source, start, end, strict, line)
+		if (exact !== null) return builder.instant(exact, line)
+	}
+	if (length === 1 && source.charCodeAt(start) === 126) return builder.null(line)
+	if (length === 4) {
+		const a = source.charCodeAt(start), b = source.charCodeAt(start + 1)
+		const c = source.charCodeAt(start + 2), d = source.charCodeAt(start + 3)
+		if (a === 116 && b === 114 && c === 117 && d === 101) return builder.bool(true, line)
+		if (a === 110 && b === 117 && c === 108 && d === 108) return builder.null(line)
+	}
+	if (length === 5 && source.charCodeAt(start) === 102 && source.charCodeAt(start + 1) === 97 &&
+		source.charCodeAt(start + 2) === 108 && source.charCodeAt(start + 3) === 115 &&
+		source.charCodeAt(start + 4) === 101) return builder.bool(false, line)
+	if (length === 0 || length > 15) return NO_SPAN_VALUE
+	const first = source.charCodeAt(start)
+	if (first === 48 && length !== 1) return NO_SPAN_VALUE
+	let value = 0
+	for (let pos = start; pos < end; pos++) {
+		const digit = source.charCodeAt(pos) - 48
+		if (digit < 0 || digit > 9) return NO_SPAN_VALUE
+		value = value * 10 + digit
+	}
+	return value <= Number.MAX_SAFE_INTEGER ? builder.int(value, line) : NO_SPAN_VALUE
+}
+
 /**
  * Classifies a raw token and constructs its final builder value directly,
  * per Core §6.4.1's explicit number
@@ -223,6 +254,17 @@ const buildTyped = <V, M>(
 		checkStringLimit(str, line)
 		return builder.string(str, line, false)
 	}
+	const exactIsoShape =
+		(str.length === 10 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45) ||
+		(str.length === 20 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45 &&
+			str.charCodeAt(10) === 84 && str.charCodeAt(13) === 58 &&
+			str.charCodeAt(16) === 58 && str.charCodeAt(19) === 90)
+	if (exactIsoShape) {
+		const date = parseDateUTC(str, strict, line)
+		if (date !== null) return builder.instant(date, line)
+		checkStringLimit(str, line)
+		return builder.string(str, line, false)
+	}
 	if (NUMBER_RE.test(str)) {
 		const n = Number(str)
 		if (isFloatForm(str)) {
@@ -245,12 +287,7 @@ const buildTyped = <V, M>(
 		// Outside the safe integer range, or overflow/underflow already
 		// handled above in non-strict mode: fall through to string.
 	}
-	const exactIsoShape =
-		(str.length === 10 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45) ||
-		(str.length === 20 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45 &&
-			str.charCodeAt(10) === 84 && str.charCodeAt(13) === 58 &&
-			str.charCodeAt(16) === 58 && str.charCodeAt(19) === 90)
-	if (!str.includes('@') && (exactIsoShape || DATE_PRE_RE.test(str))) {
+	if (!str.includes('@') && DATE_PRE_RE.test(str)) {
 		const date = parseDateUTC(str, strict, line)
 		if (date !== null) return builder.instant(date, line)
 	}

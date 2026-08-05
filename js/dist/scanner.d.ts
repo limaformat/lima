@@ -63,3 +63,20 @@ export interface KeyMatch {
  * were.
  */
 export declare const scanKeys: (frontMatter: string) => KeyMatch[];
+/** Stateful top-level token cursor; `next()` performs no text slicing. */
+export declare class KeyCursor {
+    private readonly source;
+    tokenLine: number;
+    matchStart: number;
+    sepStart: number;
+    rawStart: number;
+    inlineEnd: number;
+    keyStart: number;
+    keyEnd: number;
+    keyKind: number;
+    isBlock: boolean;
+    private pos;
+    private line;
+    constructor(source: string);
+    next(): boolean;
+}

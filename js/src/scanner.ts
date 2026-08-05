@@ -63,33 +63,32 @@ export interface KeyMatch {
 	doubleQuotedRaw?: string
 }
 
-/** Matches `( *\n| )` starting at `pos`. Returns null if neither alternative matches. */
-const matchSeparator = (s: string, pos: number): { end: number; isBlock: boolean } | null => {
+/** Positive = block end, negative = inline end, zero = no separator. */
+const matchSeparator = (s: string, pos: number): number => {
 	let i = pos
 	while (i < s.length && s.charCodeAt(i) === 32) i++ // consume spaces
-	if (i < s.length && s.charCodeAt(i) === 10) return { end: i + 1, isBlock: true }
+	if (i < s.length && s.charCodeAt(i) === 10) return i + 1
 	// Backtracking a pure-space run can never reveal a `\n` the maximal
 	// scan didn't already see (every intermediate position is followed by
 	// either another space or the same non-`\n` stop character) — so
 	// falling straight through to the single-space alternative, without a
 	// loop, is exactly equivalent to real regex backtracking here.
-	if (s.charCodeAt(pos) === 32) return { end: pos + 1, isBlock: false }
-	return null
+	if (s.charCodeAt(pos) === 32) return -(pos + 1)
+	return 0
 }
 
-const matchAt = (s: string, pos: number, line: number): KeyMatch | null => {
+const matchAt = (s: string, pos: number, line: number, out: KeyCursor): boolean => {
 	const c = s.charCodeAt(pos)
+	let keyStart = pos, keyEnd = pos, keyKind = 0, sepStart = 0, separator = 0
 
 	if (c === 39) { // '
 		const end = s.indexOf("'", pos + 1)
-		if (end === -1) return null
-		if (s.charCodeAt(end + 1) !== 58) return null // mandatory ':'
-		const sep = matchSeparator(s, end + 2)
-		if (sep === null) return null
-		return { line, matchStart: pos, sepStart: end + 2, rawStart: sep.end, isBlock: sep.isBlock, singleQuoted: s.slice(pos + 1, end) }
-	}
-
-	if (c === 34) { // "
+		if (end === -1 || s.charCodeAt(end + 1) !== 58) return false
+		sepStart = end + 2
+		separator = matchSeparator(s, sepStart)
+		if (separator === 0) return false
+		keyStart = pos + 1; keyEnd = end; keyKind = 1
+	} else if (c === 34) { // "
 		let i = pos + 1
 		let closed = false
 		while (i < s.length) {
@@ -97,36 +96,37 @@ const matchAt = (s: string, pos: number, line: number): KeyMatch | null => {
 			if (cc === 92) {
 				// `\\.` in the source regex — see the module doc comment.
 				const next = s.charCodeAt(i + 1)
-				if (i + 1 >= s.length || next === 10 || next === 13 || next === 0x2028 || next === 0x2029) return null
+				if (i + 1 >= s.length || next === 10 || next === 13 || next === 0x2028 || next === 0x2029) return false
 				i += 2
 				continue
 			}
 			if (cc === 34) { closed = true; break }
 			i++
 		}
-		if (!closed) return null // no closing quote
+		if (!closed) return false
 		const end = i
-		if (s.charCodeAt(end + 1) !== 58) return null
-		const sep = matchSeparator(s, end + 2)
-		if (sep === null) return null
-		return { line, matchStart: pos, sepStart: end + 2, rawStart: sep.end, isBlock: sep.isBlock, doubleQuotedRaw: s.slice(pos + 1, end) }
-	}
-
-	if (!isKeyStartChar(c)) return null
-
-	let runEnd = pos + 1
-	while (runEnd < s.length && isKeyContinueChar(s.charCodeAt(runEnd))) runEnd++
-
-	// Rightmost-first: real regex backtracking always tries the longest
-	// capture first, shrinking only when the rest of the pattern fails.
-	for (let k = runEnd - 1; k >= pos + 1; k--) {
-		if (s.charCodeAt(k) !== 58) continue // must be the mandatory ':'
-		const sep = matchSeparator(s, k + 1)
-		if (sep !== null) {
-			return { line, matchStart: pos, sepStart: k + 1, rawStart: sep.end, isBlock: sep.isBlock, unquoted: s.slice(pos, k) }
+		if (s.charCodeAt(end + 1) !== 58) return false
+		sepStart = end + 2
+		separator = matchSeparator(s, sepStart)
+		if (separator === 0) return false
+		keyStart = pos + 1; keyEnd = end; keyKind = 2
+	} else {
+		if (!isKeyStartChar(c)) return false
+		let runEnd = pos + 1
+		while (runEnd < s.length && isKeyContinueChar(s.charCodeAt(runEnd))) runEnd++
+		for (let k = runEnd - 1; k >= pos + 1; k--) {
+			if (s.charCodeAt(k) !== 58) continue
+			sepStart = k + 1
+			separator = matchSeparator(s, sepStart)
+			if (separator !== 0) { keyEnd = k; break }
 		}
+		if (separator === 0) return false
 	}
-	return null
+	out.tokenLine = line; out.matchStart = pos; out.sepStart = sepStart
+	out.rawStart = separator > 0 ? separator : -separator
+	out.isBlock = separator > 0; out.keyStart = keyStart; out.keyEnd = keyEnd
+	out.keyKind = keyKind
+	return true
 }
 
 /**
@@ -139,31 +139,58 @@ const matchAt = (s: string, pos: number, line: number): KeyMatch | null => {
  */
 export const scanKeys = (frontMatter: string): KeyMatch[] => {
 	const matches: KeyMatch[] = []
-	let pos = 0
-	let line = 1
-	while (pos <= frontMatter.length) {
-		const m = matchAt(frontMatter, pos, line)
-		if (m !== null) {
-			matches.push(m)
-			for (let i = pos; i < m.rawStart; i++) {
-				if (frontMatter.charCodeAt(i) === 10) line++
-			}
-			pos = m.rawStart
-			if (m.isBlock) {
-				// rawStart already sits right after the separator's own `\n`,
-				// i.e. exactly at a line start — try again from here directly.
-				continue
-			}
-			const nextNl = frontMatter.indexOf('\n', pos)
-			m.inlineEnd = nextNl === -1 ? frontMatter.length : nextNl
-			if (nextNl === -1) pos = frontMatter.length + 1
-			else { pos = nextNl + 1; line++ }
-			continue
-		}
-		const nextNl = frontMatter.indexOf('\n', pos)
-		if (nextNl === -1) break
-		pos = nextNl + 1
-		line++
+	const cursor = new KeyCursor(frontMatter)
+	while (cursor.next()) {
+		const rawKey = frontMatter.slice(cursor.keyStart, cursor.keyEnd)
+		matches.push({
+			line: cursor.tokenLine, matchStart: cursor.matchStart,
+			sepStart: cursor.sepStart, rawStart: cursor.rawStart,
+			isBlock: cursor.isBlock, inlineEnd: cursor.inlineEnd,
+			...(cursor.keyKind === 0 ? { unquoted: rawKey } :
+				cursor.keyKind === 1 ? { singleQuoted: rawKey } : { doubleQuotedRaw: rawKey }),
+		})
 	}
 	return matches
+}
+
+/** Stateful top-level token cursor; `next()` performs no text slicing. */
+export class KeyCursor {
+	tokenLine = 0
+	matchStart = 0
+	sepStart = 0
+	rawStart = 0
+	inlineEnd = -1
+	keyStart = 0
+	keyEnd = 0
+	keyKind = 0
+	isBlock = false
+	private pos = 0
+	private line = 1
+
+	constructor(private readonly source: string) {}
+
+	next(): boolean {
+		while (this.pos <= this.source.length) {
+			const start = this.pos
+			if (matchAt(this.source, start, this.line, this)) {
+				for (let i = start; i < this.rawStart; i++) {
+					if (this.source.charCodeAt(i) === 10) this.line++
+				}
+				this.pos = this.rawStart
+				this.inlineEnd = -1
+				if (!this.isBlock) {
+					const nextNl = this.source.indexOf('\n', this.pos)
+					this.inlineEnd = nextNl === -1 ? this.source.length : nextNl
+					if (nextNl === -1) this.pos = this.source.length + 1
+					else { this.pos = nextNl + 1; this.line++ }
+				}
+				return true
+			}
+			const nextNl = this.source.indexOf('\n', this.pos)
+			if (nextNl === -1) break
+			this.pos = nextNl + 1
+			this.line++
+		}
+		return false
+	}
 }
