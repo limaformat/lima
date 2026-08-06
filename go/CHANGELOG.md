@@ -11,10 +11,9 @@ and [Lima References
 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-1.0-spec.md)
 are both frozen regardless of what this file shows.
 
-## [Unreleased]
+## [0.1.0] — 2026-08-07
 
-Initial implementation. Not yet tagged — see `go/README.md` for install
-instructions once a `go/vX.Y.Z` tag exists.
+Initial release, tagged as `go/v0.1.0`.
 
 ### Added
 
