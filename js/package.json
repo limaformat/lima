@@ -30,6 +30,7 @@
     "bench": "bun run bench/index.ts",
     "bench:vs-yaml": "bun run bench/vs-yaml.ts",
     "bench:vs-yaml:node": "node bench/vs-yaml-node.mjs",
+    "bench:cross-language": "bun run bench/cross-language.ts",
     "bench:differential": "bun run bench/differential.ts"
   },
   "devDependencies": {
