@@ -332,13 +332,18 @@ fn parse_core_generic<B: Builder>(
 
     let mut root: B::Mapping = B::m_create();
     let mut depth_risk = false;
-    for (i, tk) in top_keys.iter().enumerate() {
+    let mut top_keys = top_keys.into_iter().peekable();
+    while let Some(tk) = top_keys.next() {
         let next_start = top_keys
-            .get(i + 1)
+            .peek()
             .map(|n| n.key_start)
             .unwrap_or(front_matter.len());
         check_key_length(&tk.key, tk.line)?;
-        check_duplicate_key(B::m_has_key(&root, &tk.key), &tk.key, tk.line, strict)?;
+        if strict {
+            // The outer guard avoids the mapping lookup entirely in
+            // non-strict mode; this call is therefore necessarily strict.
+            check_duplicate_key(B::m_has_key(&root, &tk.key), &tk.key, tk.line, true)?;
+        }
 
         let value = if tk.is_block {
             parse_block_range::<B>(
@@ -358,32 +363,32 @@ fn parse_core_generic<B: Builder>(
             match first_newline {
                 None => {
                     let val = &front_matter[tk.value_start..span_end];
-                    let val = if val.contains('#') {
-                        strip_comment(val)
+                    if val.contains('#') {
+                        let val = strip_comment(val);
+                        parse_flow_or_scalar_value::<B>(&val, strict, tk.line)?
                     } else {
-                        val.to_string()
-                    };
-                    parse_flow_or_scalar_value::<B>(&val, strict, tk.line)?
+                        parse_flow_or_scalar_value::<B>(val, strict, tk.line)?
+                    }
                 }
                 Some(nl) if nl == span_end.saturating_sub(1) => {
                     let val = &front_matter[tk.value_start..nl];
-                    let val = if val.contains('#') {
-                        strip_comment(val)
+                    if val.contains('#') {
+                        let val = strip_comment(val);
+                        parse_flow_or_scalar_value::<B>(&val, strict, tk.line)?
                     } else {
-                        val.to_string()
-                    };
-                    parse_flow_or_scalar_value::<B>(&val, strict, tk.line)?
+                        parse_flow_or_scalar_value::<B>(val, strict, tk.line)?
+                    }
                 }
                 Some(nl) => {
                     let line0 = &front_matter[tk.value_start..nl];
                     let line0_trimmed = line0.trim_matches(is_trim_whitespace);
                     if line0_trimmed != "|" {
-                        let val = if line0.contains('#') {
-                            strip_comment(line0)
+                        if line0.contains('#') {
+                            let val = strip_comment(line0);
+                            parse_flow_or_scalar_value::<B>(&val, strict, tk.line)?
                         } else {
-                            line0.to_string()
-                        };
-                        parse_flow_or_scalar_value::<B>(&val, strict, tk.line)?
+                            parse_flow_or_scalar_value::<B>(line0, strict, tk.line)?
+                        }
                     } else {
                         let body = &front_matter[nl + 1..span_end];
                         let joined = merge_block_scalar(body, &tk.key);
@@ -393,7 +398,7 @@ fn parse_core_generic<B: Builder>(
                 }
             }
         };
-        B::m_set(&mut root, tk.key.clone(), value);
+        B::m_set(&mut root, tk.key, value);
     }
 
     // Core §9 nesting depth, over Core's own reference-inert tree. When

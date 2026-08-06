@@ -24,6 +24,20 @@ impl Instant {
     }
 }
 
+/// Deliberately no `serde::Serialize`/`Deserialize` (yet). Two separable
+/// pieces of future work, neither started:
+///
+/// 1. Making `LimaValue` itself serializable (e.g. to JSON) — mechanically
+///    straightforward, similar to `serde_json::Value`'s own impl.
+/// 2. Deserializing straight into a caller-defined `#[derive(Deserialize)]`
+///    struct (the ergonomic win `serde_yaml` offered) — needs a real
+///    `serde::Deserializer` impl over a `LimaValue` wrapper; a known,
+///    well-trodden pattern, but genuine work, not a one-liner.
+///
+/// Both are purely additive — safe to add later behind an opt-in `serde`
+/// Cargo feature without breaking anything published now. Deferred for
+/// 0.1.1 pending actual demand: the JS package has no equivalent (JS is
+/// dynamically typed), so there is no parity pressure driving this.
 #[derive(Debug, Clone, PartialEq)]
 pub enum LimaValue {
     Null,
