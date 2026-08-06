@@ -107,12 +107,12 @@ const parseCursorBlock = <V, M>(
 					} else builder.setMapping(pendingItem, key, builder.null(line))
 				} else {
 					if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
-						message: `LIMA: unexpected syntax in array item continuation at line ${line}: "${trimmed}"` })
+						message: `Lima: unexpected syntax in array item continuation at line ${line}: "${trimmed}"` })
 					cursor.next()
 				}
 			} else {
 				if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
-					message: `LIMA: unexpected indentation at line ${line}: "${trimmed}"` })
+					message: `Lima: unexpected indentation at line ${line}: "${trimmed}"` })
 				cursor.next()
 			}
 			continue
@@ -125,7 +125,7 @@ const parseCursorBlock = <V, M>(
 			if (items === null) items = []
 			if (entries !== null) {
 				if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
-					message: `LIMA: mixed array and map entries for the same key at line ${line}` })
+					message: `Lima: mixed array and map entries for the same key at line ${line}` })
 				cursor.next(); continue
 			}
 
@@ -143,7 +143,7 @@ const parseCursorBlock = <V, M>(
 				items.push(flowMap); cursor.next()
 			} else if (afterDash === '-' || DASH_PREFIX_RE.test(afterDash)) {
 				if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
-					message: `LIMA: nested block sequence at line ${line}: "${cursorContent(cursor)}"` })
+					message: `Lima: nested block sequence at line ${line}: "${cursorContent(cursor)}"` })
 				items.push(builder.null(line)); cursor.next()
 				while (cursor.valid) {
 					if (cursor.empty || cursor.source.charCodeAt(cursor.contentStart) === 35) { cursor.next(); continue }
@@ -209,7 +209,7 @@ const parseCursorBlock = <V, M>(
 			const trimmed = cursorContent(cursor)
 			if (items !== null) {
 				if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
-					message: `LIMA: mixed map and array entries for the same key at line ${line}` })
+					message: `Lima: mixed map and array entries for the same key at line ${line}` })
 				cursor.next(); continue
 			}
 			const colonPos = findKeySep(trimmed)
@@ -237,7 +237,7 @@ const parseCursorBlock = <V, M>(
 				} else builder.setMapping(entries, key, builder.null(line))
 			} else {
 				if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
-					message: `LIMA: indented freetext without a block scalar marker at line ${line}: "${trimmed}"` })
+					message: `Lima: indented freetext without a block scalar marker at line ${line}: "${trimmed}"` })
 				cursor.next()
 			}
 		}

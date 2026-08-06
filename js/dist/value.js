@@ -106,7 +106,7 @@ export const ingestPartialValue = (value, partialName, path, depth = 0, seen = n
     const invalid = (reason) => {
         throw new LimaError({
             code: 'INVALID_PARTIAL', partial: partialName, path,
-            message: `LIMA: invalid partial "${partialName}" at path "${path}": ${reason}`,
+            message: `Lima: invalid partial "${partialName}" at path "${path}": ${reason}`,
         });
     };
     if (value === null)
@@ -147,7 +147,7 @@ export const ingestPartialValue = (value, partialName, path, depth = 0, seen = n
             if (Array.isArray(item)) {
                 throw new LimaError({
                     code: 'INVALID_PARTIAL', partial: partialName, path: `${path}[${i}]`,
-                    message: `LIMA: invalid partial "${partialName}" at path "${path}[${i}]": nested arrays are not supported`,
+                    message: `Lima: invalid partial "${partialName}" at path "${path}[${i}]": nested arrays are not supported`,
                 });
             }
             return ingestPartialValue(item, partialName, `${path}[${i}]`, depth + 1, seen);
@@ -167,13 +167,13 @@ export const ingestPartialValue = (value, partialName, path, depth = 0, seen = n
             if (!descriptor || !('value' in descriptor)) {
                 throw new LimaError({
                     code: 'INVALID_PARTIAL', partial: partialName, path: `${path}.${key}`,
-                    message: `LIMA: invalid partial "${partialName}" at path "${path}.${key}": accessor properties are not supported`,
+                    message: `Lima: invalid partial "${partialName}" at path "${path}.${key}": accessor properties are not supported`,
                 });
             }
             if (codepointLength(key) > PARTIAL_KEY_LENGTH_LIMIT) {
                 throw new LimaError({
                     code: 'INVALID_PARTIAL', partial: partialName, path: `${path}.${key}`,
-                    message: `LIMA: invalid partial "${partialName}" at path "${path}.${key}": key exceeds maximum length of ${PARTIAL_KEY_LENGTH_LIMIT} code points`,
+                    message: `Lima: invalid partial "${partialName}" at path "${path}.${key}": key exceeds maximum length of ${PARTIAL_KEY_LENGTH_LIMIT} code points`,
                 });
             }
             entries.set(key, ingestPartialValue(value[key], partialName, `${path}.${key}`, depth + 1, seen));

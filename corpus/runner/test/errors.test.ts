@@ -58,7 +58,7 @@ describe('compareDiagnostic', () => {
 	it('treats "contains" as a substring check against the message, not an exact field match', () => {
 		const actual: LimaDiagnostic = {
 			code: 'INVALID_ESCAPE',
-			message: 'LIMA: unknown escape sequence "\\q" at line 1',
+			message: 'Lima: unknown escape sequence "\\q" at line 1',
 		}
 		expect(compareDiagnostic(actual, { code: 'INVALID_ESCAPE', contains: '\\q' })).toEqual([])
 	})

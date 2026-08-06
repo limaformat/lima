@@ -97,7 +97,7 @@ describe('arrays — block sequence (dash-prefixed)', () => {
 	})
 
 	it('throws on a nested block sequence in strict mode', () => {
-		expect(() => parse('a:\n  - - 1\n    - 2\n  - 3\n', { strict: true })).toThrow('LIMA')
+		expect(() => parse('a:\n  - - 1\n    - 2\n  - 3\n', { strict: true })).toThrow('Lima')
 	})
 })
 
@@ -395,8 +395,8 @@ describe('quoted keys, continued', () => {
 	})
 
 	it('strict: a space between a quoted key\'s closing quote and the colon throws', () => {
-		expect(() => parse('"first name" : Alice', { strict: true })).toThrow('LIMA')
-		expect(() => parse("'first name' : Alice", { strict: true })).toThrow('LIMA')
+		expect(() => parse('"first name" : Alice', { strict: true })).toThrow('Lima')
+		expect(() => parse("'first name' : Alice", { strict: true })).toThrow('Lima')
 	})
 })
 

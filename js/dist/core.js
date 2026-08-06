@@ -1,5 +1,5 @@
 /**
- * LIMA Core 1.0 parser — reference-unaware by construction (Appendix B:
+ * Lima Core 1.0 parser — reference-unaware by construction (Appendix B:
  * reference resolution is exclusively the concern of the optional
  * References extension). `($key)`/`(%key)`-shaped text is never
  * recognised or coerced here; it simply falls through as an ordinary
@@ -89,7 +89,7 @@ const lineAt = (s, pos) => {
     return n;
 };
 /**
- * Parses LIMA Core 1.0 syntax, generic over the output representation
+ * Parses Lima Core 1.0 syntax, generic over the output representation
  * (`builder` — see `builder.ts`): References needs the annotated
  * `PositionedValue` tree (`parseCoreWithPositions` below fixes `V` to
  * that), while `parseCore` fixes `V` to the public native shape directly,
@@ -111,7 +111,7 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
         byteLength(frontMatter) > DOCUMENT_SIZE_LIMIT) {
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line: 1,
-            message: `LIMA: document exceeds maximum size of ${DOCUMENT_SIZE_LIMIT} bytes at line 1`,
+            message: `Lima: document exceeds maximum size of ${DOCUMENT_SIZE_LIMIT} bytes at line 1`,
         });
     }
     const root = builder.createMapping();
@@ -154,7 +154,7 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
             if (SPACE_BEFORE_COLON_RE.test(line)) {
                 throw new LimaError({
                     code: 'INVALID_QUOTE', line: lineAt(frontMatter, searchFrom),
-                    message: `LIMA: space between closing quote and colon at line ${lineAt(frontMatter, searchFrom)}`,
+                    message: `Lima: space between closing quote and colon at line ${lineAt(frontMatter, searchFrom)}`,
                 });
             }
             if (lineEnd === -1)
@@ -167,7 +167,7 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
         if ((strict || ctx.onWarning !== undefined) && builder.hasMappingKey(root, key)) {
             const diagnostic = {
                 code: 'DUPLICATE_KEY', line, key,
-                message: `LIMA: duplicate key "${key}" at line ${line} — last value wins`,
+                message: `Lima: duplicate key "${key}" at line ${line} — last value wins`,
             };
             if (strict)
                 throw new LimaError(diagnostic);
@@ -309,7 +309,7 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
         if (keyCount > TOP_LEVEL_KEY_LIMIT) {
             throw new LimaError({
                 code: 'RESOURCE_LIMIT', line: 1,
-                message: `LIMA: too many top-level key entries (max ${TOP_LEVEL_KEY_LIMIT}) at line 1`,
+                message: `Lima: too many top-level key entries (max ${TOP_LEVEL_KEY_LIMIT}) at line 1`,
             });
         }
         for (let i = 0; i < keyCount; i++) {
@@ -327,13 +327,13 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
     if (blockDepthRisk.mayExceed && builder.mappingMaxDepth(root, computeDepth) > NESTING_DEPTH_LIMIT) {
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line: 1,
-            message: `LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line 1`,
+            message: `Lima: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line 1`,
         });
     }
     return root;
 };
 /**
- * Parses LIMA Core 1.0 syntax into the internal annotated value tree —
+ * Parses Lima Core 1.0 syntax into the internal annotated value tree —
  * every node carrying its source line, string leaves additionally carrying
  * whether they came from quoted syntax. `($key)`/`(%key)` text is left
  * exactly as written; nothing here ever inspects or resolves it. The

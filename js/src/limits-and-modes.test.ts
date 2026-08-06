@@ -82,23 +82,23 @@ describe('duplicate keys', () => {
 
 describe('strict mode', () => {
 	it('throws on unresolved pure ($key) reference', () => {
-		expect(() => parse('count: ($missing)', { strict: true })).toThrow('LIMA')
+		expect(() => parse('count: ($missing)', { strict: true })).toThrow('Lima')
 	})
 
 	it('throws on unresolved (%key) partial reference', () => {
-		expect(() => parse('author: (%unknown)', { strict: true })).toThrow('LIMA')
+		expect(() => parse('author: (%unknown)', { strict: true })).toThrow('Lima')
 	})
 
 	it('throws on unresolved reference in interpolation', () => {
-		expect(() => parse('title: Hello ($ghost)!', { strict: true })).toThrow('LIMA')
+		expect(() => parse('title: Hello ($ghost)!', { strict: true })).toThrow('Lima')
 	})
 
 	it('throws on invalid flow mapping item', () => {
-		expect(() => parse('note: {just some text}', { strict: true })).toThrow('LIMA')
+		expect(() => parse('note: {just some text}', { strict: true })).toThrow('Lima')
 	})
 
 	it('throws on non-whitespace content after a closing quote', () => {
-		expect(() => parse('title: "Hello" trailing', { strict: true })).toThrow('LIMA')
+		expect(() => parse('title: "Hello" trailing', { strict: true })).toThrow('Lima')
 	})
 
 	it('does not throw on non-whitespace content after a closing quote in non-strict mode', () => {
@@ -148,7 +148,7 @@ describe('strict mode', () => {
 		expect(() => parse(dedent(`
 			b: ($a)
 			a: ($c)
-		`), { strict: true })).toThrow('LIMA')
+		`), { strict: true })).toThrow('Lima')
 	})
 })
 
@@ -166,23 +166,23 @@ describe('resource limits', () => {
 	})
 
 	it('rejects a scalar one code point over the limit', () => {
-		expect(() => parse(`value: ${'x'.repeat(16385)}`)).toThrow('LIMA')
+		expect(() => parse(`value: ${'x'.repeat(16385)}`)).toThrow('Lima')
 	})
 
 	it('rejects an oversized scalar inside a flow sequence', () => {
-		expect(() => parse(`tags: [${'x'.repeat(16385)}]`)).toThrow('LIMA')
+		expect(() => parse(`tags: [${'x'.repeat(16385)}]`)).toThrow('Lima')
 	})
 
 	it('rejects an oversized scalar inside a flow mapping', () => {
-		expect(() => parse(`author: {name: ${'x'.repeat(16385)}}`)).toThrow('LIMA')
+		expect(() => parse(`author: {name: ${'x'.repeat(16385)}}`)).toThrow('Lima')
 	})
 
 	it('rejects an oversized scalar inside a block array item', () => {
-		expect(() => parse(`tags:\n  - ${'x'.repeat(16385)}`)).toThrow('LIMA')
+		expect(() => parse(`tags:\n  - ${'x'.repeat(16385)}`)).toThrow('Lima')
 	})
 
 	it('rejects an oversized | block scalar', () => {
-		expect(() => parse(`description: |\n  ${'x'.repeat(16385)}`)).toThrow('LIMA')
+		expect(() => parse(`description: |\n  ${'x'.repeat(16385)}`)).toThrow('Lima')
 	})
 
 	it('accepts a key exactly at the 128-code-point limit', () => {
@@ -191,7 +191,7 @@ describe('resource limits', () => {
 	})
 
 	it('rejects a key exceeding the 128-code-point limit', () => {
-		expect(() => parse(`${'k'.repeat(129)}: value`)).toThrow('LIMA')
+		expect(() => parse(`${'k'.repeat(129)}: value`)).toThrow('Lima')
 	})
 
 	it('accepts exactly 128 top-level key entries', () => {
@@ -201,11 +201,11 @@ describe('resource limits', () => {
 
 	it('rejects more than 128 top-level key entries', () => {
 		const doc = Array.from({ length: 129 }, (_, i) => `k${i}: v`).join('\n')
-		expect(() => parse(doc)).toThrow('LIMA')
+		expect(() => parse(doc)).toThrow('Lima')
 	})
 
 	it('rejects a document exceeding the 64 KB size limit', () => {
-		expect(() => parse('k: ' + 'x'.repeat(70000))).toThrow('LIMA')
+		expect(() => parse('k: ' + 'x'.repeat(70000))).toThrow('Lima')
 	})
 
 	it('keeps the UTF-16 length shortcut below the 64 KB UTF-8 limit', () => {
@@ -213,7 +213,7 @@ describe('resource limits', () => {
 	})
 
 	it('still measures UTF-8 bytes immediately above the safe shortcut bound', () => {
-		expect(() => parse('\u0800'.repeat(21846))).toThrow('LIMA')
+		expect(() => parse('\u0800'.repeat(21846))).toThrow('Lima')
 	})
 
 	it('accepts nesting exactly at the 16-level limit', () => {
@@ -221,7 +221,7 @@ describe('resource limits', () => {
 	})
 
 	it('rejects nesting one level deeper than the limit', () => {
-		expect(() => parse(nestedDoc(17))).toThrow('LIMA')
+		expect(() => parse(nestedDoc(17))).toThrow('Lima')
 	})
 })
 

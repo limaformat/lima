@@ -110,7 +110,7 @@ const parseExactIsoSpan = (source: string, start: number, end: number, strict: b
 		hour > 23 || minute > 59 || second > 59) {
 		if (strict) {
 			const raw = source.slice(start, end)
-			throw new LimaError({ code: 'INVALID_DATE', line, message: `LIMA: invalid date "${raw}" at line ${line}` })
+			throw new LimaError({ code: 'INVALID_DATE', line, message: `Lima: invalid date "${raw}" at line ${line}` })
 		}
 		return null
 	}
@@ -123,7 +123,7 @@ const parseExactIsoSpan = (source: string, start: number, end: number, strict: b
 
 const parseDateUTC = (str: string, strict = false, line = 0): Date | null => {
 	const invalid = (): null => {
-		if (strict) throw new LimaError({ code: 'INVALID_DATE', line, message: `LIMA: invalid date "${str}" at line ${line}` })
+		if (strict) throw new LimaError({ code: 'INVALID_DATE', line, message: `Lima: invalid date "${str}" at line ${line}` })
 		return null
 	}
 
@@ -271,12 +271,12 @@ const buildTyped = <V, M>(
 			if (!Number.isFinite(n)) {
 				if (strict) throw new LimaError({
 					code: 'INVALID_NUMBER', line,
-					message: `LIMA: float value overflows to a non-finite value at line ${line}: "${str}"`,
+					message: `Lima: float value overflows to a non-finite value at line ${line}: "${str}"`,
 				})
 			} else if (n === 0 && !isZeroLiteral(str)) {
 				if (strict) throw new LimaError({
 					code: 'INVALID_NUMBER', line,
-					message: `LIMA: non-zero float value underflows to zero at line ${line}: "${str}"`,
+					message: `Lima: non-zero float value underflows to zero at line ${line}: "${str}"`,
 				})
 			} else {
 				return builder.float(n === 0 ? 0 : n, line)
@@ -321,7 +321,7 @@ export const unescapeDQ = (s: string, strict = false, line = 0): string => {
 	if (strict) {
 		for (const m of s.matchAll(ANY_ESCAPE_RE)) {
 			if (!isValidEscape(m[0].slice(1))) {
-				throw new LimaError({ code: 'INVALID_ESCAPE', line, message: `LIMA: unknown escape sequence "${m[0]}" at line ${line}` })
+				throw new LimaError({ code: 'INVALID_ESCAPE', line, message: `Lima: unknown escape sequence "${m[0]}" at line ${line}` })
 			}
 		}
 	}
@@ -391,7 +391,7 @@ export const parseQuotedOrTyped = <V, M>(
 			return builder.string(value, line, true)
 		}
 		if (topLevel && ctx.strict) {
-			throw new LimaError({ code: 'INVALID_QUOTE', line, message: `LIMA: non-whitespace content after closing quote at line ${line}` })
+			throw new LimaError({ code: 'INVALID_QUOTE', line, message: `Lima: non-whitespace content after closing quote at line ${line}` })
 		}
 	}
 	if (raw !== '' && raw !== 'null' && raw !== '~' && raw !== 'true' && raw !== 'false' &&
@@ -407,7 +407,7 @@ export const parseScalarValue = <V, M>(raw: string, ctx: ParseContext, line: num
 	if (ctx.strict && (first === 91 || first === 123)) {
 		throw new LimaError({
 			code: 'INVALID_FLOW_SYNTAX', line,
-			message: `LIMA: unclosed flow ${first === 91 ? 'sequence' : 'mapping'} at line ${line}`,
+			message: `Lima: unclosed flow ${first === 91 ? 'sequence' : 'mapping'} at line ${line}`,
 		})
 	}
 	return parseQuotedOrTyped(raw, ctx, line, true, builder)

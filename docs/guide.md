@@ -98,7 +98,7 @@ title: My Article
 **Double-quoted** — suppresses type coercion, decodes escapes:
 
 ```yaml
-title: "LIMA: A Primer"   # → 'LIMA: A Primer' (colon is safe inside quotes)
+title: "Lima: A Primer"   # → 'Lima: A Primer' (colon is safe inside quotes)
 count: "42"                # → '42' (string, not number)
 flag:  "true"               # → 'true' (string, not boolean)
 ```

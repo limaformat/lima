@@ -133,7 +133,7 @@ describe('strings', () => {
 	})
 
 	it('indented freetext with no | marker and no colon throws in strict mode', () => {
-		expect(() => parse('value:\n  freetext\n', { strict: true })).toThrow('LIMA')
+		expect(() => parse('value:\n  freetext\n', { strict: true })).toThrow('Lima')
 	})
 
 	it('# in an unquoted URL is treated as a comment', () => {
@@ -239,7 +239,7 @@ describe('quoted strings', () => {
 
 	it('treats \\0 as an unknown escape, not a null character (Core Appendix A)', () => {
 		expect(parse('v: "a\\0b"')).toEqual({ v: 'a\\0b' })
-		expect(() => parse('v: "a\\0b"', { strict: true })).toThrow('LIMA')
+		expect(() => parse('v: "a\\0b"', { strict: true })).toThrow('Lima')
 	})
 
 	it('leaves an out-of-range \\U codepoint intact instead of throwing a raw RangeError', () => {
@@ -247,12 +247,12 @@ describe('quoted strings', () => {
 		// this must surface as the normal invalid-escape fallback/throw, not
 		// an uncaught native error.
 		expect(parse('v: "a\\U00110000b"')).toEqual({ v: 'a\\U00110000b' })
-		expect(() => parse('v: "a\\U00110000b"', { strict: true })).toThrow('LIMA')
+		expect(() => parse('v: "a\\U00110000b"', { strict: true })).toThrow('Lima')
 	})
 
 	it('leaves a \\uXXXX UTF-16 surrogate (U+D800–U+DFFF) intact instead of decoding it', () => {
 		expect(parse('v: "a\\ud800b"')).toEqual({ v: 'a\\ud800b' })
-		expect(() => parse('v: "a\\ud800b"', { strict: true })).toThrow('LIMA')
+		expect(() => parse('v: "a\\ud800b"', { strict: true })).toThrow('Lima')
 	})
 
 	it('does NOT decode \\n in single-quoted string — backslash is literal', () => {
@@ -406,7 +406,7 @@ describe('type coercion', () => {
 	})
 
 	it('throws on float overflow to a non-finite value in strict mode', () => {
-		expect(() => parse('v: 1e400', { strict: true })).toThrow('LIMA')
+		expect(() => parse('v: 1e400', { strict: true })).toThrow('Lima')
 	})
 
 	it('falls back to string when a non-zero float underflows to zero in non-strict mode', () => {
@@ -416,7 +416,7 @@ describe('type coercion', () => {
 	})
 
 	it('throws when a non-zero float underflows to zero in strict mode', () => {
-		expect(() => parse('v: 1e-400', { strict: true })).toThrow('LIMA')
+		expect(() => parse('v: 1e-400', { strict: true })).toThrow('Lima')
 	})
 
 	it('accepts a non-zero subnormal float as a number in both modes', () => {
@@ -647,7 +647,7 @@ describe('dates — UTC parsing', () => {
 	})
 
 	it('throws on an invalid calendar date in strict mode', () => {
-		expect(() => parse('date: 2024-02-30', { strict: true })).toThrow('LIMA')
+		expect(() => parse('date: 2024-02-30', { strict: true })).toThrow('Lima')
 	})
 
 	it('rejects an offset minute other than 00 when the offset hour is the ±14:00 boundary', () => {
@@ -667,7 +667,7 @@ describe('dates — UTC parsing', () => {
 	})
 
 	it('throws when the UTC Instant falls outside years 0001-9999 in strict mode', () => {
-		expect(() => parse('date: 0001-01-01T00:00+14:00', { strict: true })).toThrow('LIMA')
+		expect(() => parse('date: 0001-01-01T00:00+14:00', { strict: true })).toThrow('Lima')
 	})
 })
 

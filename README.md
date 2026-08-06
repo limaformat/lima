@@ -6,6 +6,8 @@
 
 The name is a recursive backronym — LIMA contains itself, just like [YAML (YAML Ain't Markup Language)](https://stackoverflow.com/questions/6968366/if-yaml-aint-markup-language-what-is-it). Consider it a nod: Lima is a deliberate, focused subset of YAML, keeping what works and leaving out what doesn't. Fittingly, *lima* is also Esperanto for "bounded" or "limiting" (from *limo*, "boundary") — Lima is a deliberately bounded, precisely defined metadata language.
 
+*(**Lima** in running text, always — `LIMA` only when spelling out the backronym, as above. Full naming convention: [Contributing](#contributing).)*
+
 Lima is the part of YAML that frontmatter actually needs, with well-defined types and no surprises. It adds two things YAML doesn't have: references to document properties and to externally provided partials. Everything else is familiar.
 
 ```
@@ -124,7 +126,7 @@ Worth being precise about the threat model this actually matters for: both CVEs 
 - [x] Lima References 1.0 specification — final ([`docs/lima-references-1.0-spec.md`](docs/lima-references-1.0-spec.md))
 - [x] Conformance test corpus — 250 cases, both specs, pinned by test ([`corpus/`](corpus/), design rationale in [`docs/corpus-design/`](docs/corpus-design/)); reproduce with `bun run run` from `corpus/runner/`
 - [x] TypeScript/JavaScript implementation — published as [`@limaformat/lima`](js/)
-- [ ] Rust implementation — placeholder published as [`lima`](rust/)
+- [x] Rust implementation — published as [`lima`](rust/)
 
 Both specifications are frozen at 1.0. Further changes will only ship as errata or a 1.0.1 revision, and only on the basis of the conformance corpus.
 
@@ -148,11 +150,20 @@ This is a monorepo: implementations live alongside the specification and corpus 
 - [`js/`](js/) — [`@limaformat/lima`](https://www.npmjs.com/package/@limaformat/lima) on npm.
 - [`rust/`](rust/) — [`lima`](https://crates.io/crates/lima) on crates.io.
 
-The Rust package is currently a placeholder; see its status list for progress.
-
 ## Contributing
 
 Issues and discussion are welcome; please read the specifications first, since they — not any single implementation — define correct Lima behaviour.
+
+### Naming
+
+| Context | Spelling | Example |
+|---|---|---|
+| Running text, including sentence-initial position | `Lima` | "Lima is a deliberate, focused subset of YAML" |
+| Logo/wordmark | `lima·format` | stays lowercase — a typographic choice, not a spelling rule |
+| Spelling out the backronym | `LIMA Is Metadata Annotation` | acronym letters capitalised, that's the point |
+| Technical identifiers | `lima` | npm package `@limaformat/lima`, crate `lima`, anchor IDs, `---lima` fence |
+
+`Lima` is a proper noun like Python or Rust, not a stylized-lowercase brand (no eBay/iPhone-style forced lowercase at sentence start) — the lowercase word *lima* already means something else in this README (Esperanto for "bounded", see above), so keeping the brand capitalised is what keeps it legible as a name rather than the common word. Technical identifiers stay lowercase because npm/crates.io/URL conventions require it, not because the brand does.
 
 ## License
 

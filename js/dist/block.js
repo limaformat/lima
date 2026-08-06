@@ -108,14 +108,14 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
                 else {
                     if (ctx.strict)
                         throw new LimaError({ code: 'INVALID_INDENTATION', line,
-                            message: `LIMA: unexpected syntax in array item continuation at line ${line}: "${trimmed}"` });
+                            message: `Lima: unexpected syntax in array item continuation at line ${line}: "${trimmed}"` });
                     cursor.next();
                 }
             }
             else {
                 if (ctx.strict)
                     throw new LimaError({ code: 'INVALID_INDENTATION', line,
-                        message: `LIMA: unexpected indentation at line ${line}: "${trimmed}"` });
+                        message: `Lima: unexpected indentation at line ${line}: "${trimmed}"` });
                 cursor.next();
             }
             continue;
@@ -130,7 +130,7 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
             if (entries !== null) {
                 if (ctx.strict)
                     throw new LimaError({ code: 'INVALID_INDENTATION', line,
-                        message: `LIMA: mixed array and map entries for the same key at line ${line}` });
+                        message: `Lima: mixed array and map entries for the same key at line ${line}` });
                 cursor.next();
                 continue;
             }
@@ -153,7 +153,7 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
             else if (afterDash === '-' || DASH_PREFIX_RE.test(afterDash)) {
                 if (ctx.strict)
                     throw new LimaError({ code: 'INVALID_INDENTATION', line,
-                        message: `LIMA: nested block sequence at line ${line}: "${cursorContent(cursor)}"` });
+                        message: `Lima: nested block sequence at line ${line}: "${cursorContent(cursor)}"` });
                 items.push(builder.null(line));
                 cursor.next();
                 while (cursor.valid) {
@@ -237,7 +237,7 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
             if (items !== null) {
                 if (ctx.strict)
                     throw new LimaError({ code: 'INVALID_INDENTATION', line,
-                        message: `LIMA: mixed map and array entries for the same key at line ${line}` });
+                        message: `Lima: mixed map and array entries for the same key at line ${line}` });
                 cursor.next();
                 continue;
             }
@@ -275,7 +275,7 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
             else {
                 if (ctx.strict)
                     throw new LimaError({ code: 'INVALID_INDENTATION', line,
-                        message: `LIMA: indented freetext without a block scalar marker at line ${line}: "${trimmed}"` });
+                        message: `Lima: indented freetext without a block scalar marker at line ${line}: "${trimmed}"` });
                 cursor.next();
             }
         }

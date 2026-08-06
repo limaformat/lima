@@ -20,7 +20,7 @@ export const checkStringLimit = (value, line) => {
     if (value.length > SCALAR_LENGTH_LIMIT && codepointLength(value) > SCALAR_LENGTH_LIMIT) {
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line,
-            message: `LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${line}`,
+            message: `Lima: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${line}`,
         });
     }
 };
@@ -41,7 +41,7 @@ export const checkKeyLength = (key, line) => {
         const l = line();
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line: l,
-            message: `LIMA: key "${key}" exceeds maximum length of ${KEY_LENGTH_LIMIT} code points at line ${l}`,
+            message: `Lima: key "${key}" exceeds maximum length of ${KEY_LENGTH_LIMIT} code points at line ${l}`,
         });
     }
 };
@@ -50,7 +50,7 @@ export const checkDuplicateKey = (exists, key, line, ctx) => {
         return;
     const diagnostic = {
         code: 'DUPLICATE_KEY', line, key,
-        message: `LIMA: duplicate key "${key}" at line ${line} — last value wins`,
+        message: `Lima: duplicate key "${key}" at line ${line} — last value wins`,
     };
     if (ctx.strict)
         throw new LimaError(diagnostic);

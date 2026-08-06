@@ -1,5 +1,5 @@
 /**
- * LIMA Core 1.0 parser — reference-unaware by construction (Appendix B:
+ * Lima Core 1.0 parser — reference-unaware by construction (Appendix B:
  * reference resolution is exclusively the concern of the optional
  * References extension). `($key)`/`(%key)`-shaped text is never
  * recognised or coerced here; it simply falls through as an ordinary
@@ -33,7 +33,7 @@ export type CoreOptions = {
     onWarning?: (diagnostic: Diagnostic) => void;
 };
 /**
- * Parses LIMA Core 1.0 syntax into the internal annotated value tree —
+ * Parses Lima Core 1.0 syntax into the internal annotated value tree —
  * every node carrying its source line, string leaves additionally carrying
  * whether they came from quoted syntax. `($key)`/`(%key)` text is left
  * exactly as written; nothing here ever inspects or resolves it. The

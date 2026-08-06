@@ -1,5 +1,5 @@
 /**
- * LIMA References 1.0 — layered strictly on top of `core.ts` (Appendix B:
+ * Lima References 1.0 — layered strictly on top of `core.ts` (Appendix B:
  * reference resolution is exclusively this extension's concern; Core never
  * sees it). Reads the annotated `PositionedValue` tree Core produces and
  * performs the two-phase resolution the spec describes (§4), keeping every

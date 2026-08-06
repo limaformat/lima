@@ -3,7 +3,7 @@ import { parse as parseIndex, type ParseOptions } from './index.js'
 
 /**
  * Strips common leading whitespace from template literals so tests can be
- * indented naturally without confusing the LIMA parser (which requires keys
+ * indented naturally without confusing the Lima parser (which requires keys
  * to start at column 0).
  */
 export const dedent = (str: string): string => {

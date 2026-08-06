@@ -1,5 +1,5 @@
 /**
- * LIMA References 1.0 — layered strictly on top of `core.ts` (Appendix B:
+ * Lima References 1.0 — layered strictly on top of `core.ts` (Appendix B:
  * reference resolution is exclusively this extension's concern; Core never
  * sees it). Reads the annotated `PositionedValue` tree Core produces and
  * performs the two-phase resolution the spec describes (§4), keeping every
@@ -216,7 +216,7 @@ const resolveTree = (node, lookup, partials, ctx) => {
                 if (target.kind === 'mapping') {
                     reportDiagnostic(ctx, {
                         code: 'INVALID_INTERPOLATION', line: node.line, token: match,
-                        message: `LIMA: invalid interpolation of "${match}" at line ${node.line}: mapping cannot be interpolated into a string`,
+                        message: `Lima: invalid interpolation of "${match}" at line ${node.line}: mapping cannot be interpolated into a string`,
                     });
                     return match;
                 }
@@ -224,7 +224,7 @@ const resolveTree = (node, lookup, partials, ctx) => {
                     if (target.items.some((item) => item.kind === 'array' || item.kind === 'mapping')) {
                         reportDiagnostic(ctx, {
                             code: 'INVALID_INTERPOLATION', line: node.line, token: match,
-                            message: `LIMA: invalid interpolation of "${match}" at line ${node.line}: array contains a nested array or mapping`,
+                            message: `Lima: invalid interpolation of "${match}" at line ${node.line}: array contains a nested array or mapping`,
                         });
                         return match;
                     }
@@ -240,7 +240,7 @@ const resolveTree = (node, lookup, partials, ctx) => {
             if (codepointLength(replaced) > SCALAR_LENGTH_LIMIT) {
                 throw new LimaError({
                     code: 'RESOURCE_LIMIT', line: node.line,
-                    message: `LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${node.line}`,
+                    message: `Lima: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${node.line}`,
                 });
             }
             return { kind: 'string', value: replaced, line: node.line, quoted: false };
@@ -266,7 +266,7 @@ const resolveTree = (node, lookup, partials, ctx) => {
                     // throws in BOTH modes (R-036/R-143).
                     reportDiagnostic(ctx, {
                         code: 'INVALID_REFERENCE_SHAPE', line: item.line, token: item.value,
-                        message: `LIMA: reference "${item.value}" resolves to an array, which cannot be inserted as a sequence item at line ${item.line}`,
+                        message: `Lima: reference "${item.value}" resolves to an array, which cannot be inserted as a sequence item at line ${item.line}`,
                     });
                     return item;
                 }
@@ -356,13 +356,13 @@ export const parseReferences = (frontMatter, options) => {
     // diagnostics collected below.
     const partialNames = Object.keys(rawPartials);
     if (partialNames.length > PARTIAL_COUNT_LIMIT) {
-        throw new LimaError({ code: 'INVALID_PARTIAL', message: `LIMA: too many partials (max ${PARTIAL_COUNT_LIMIT})` });
+        throw new LimaError({ code: 'INVALID_PARTIAL', message: `Lima: too many partials (max ${PARTIAL_COUNT_LIMIT})` });
     }
     for (const name of partialNames) {
         if (codepointLength(name) > PARTIAL_NAME_LENGTH_LIMIT) {
             throw new LimaError({
                 code: 'INVALID_PARTIAL', partial: name, path: name,
-                message: `LIMA: invalid partial "${name}" at path "${name}": name exceeds maximum length of ${PARTIAL_NAME_LENGTH_LIMIT} code points`,
+                message: `Lima: invalid partial "${name}" at path "${name}": name exceeds maximum length of ${PARTIAL_NAME_LENGTH_LIMIT} code points`,
             });
         }
     }
@@ -376,7 +376,7 @@ export const parseReferences = (frontMatter, options) => {
     if (totalPartialNodes > PARTIAL_NODE_LIMIT) {
         throw new LimaError({
             code: 'INVALID_PARTIAL',
-            message: `LIMA: partials exceed the combined maximum of ${PARTIAL_NODE_LIMIT} value nodes`,
+            message: `Lima: partials exceed the combined maximum of ${PARTIAL_NODE_LIMIT} value nodes`,
         });
     }
     // Converted to the annotated representation once per partial, not once
@@ -446,7 +446,7 @@ export const parseReferences = (frontMatter, options) => {
                     if (m) {
                         reportDiagnostic(ctx, {
                             code: 'UNRESOLVED_REFERENCE', line: v.line, token: `(${m[1]}${m[2]})`,
-                            message: `LIMA: unresolved reference "(${m[1]}${m[2]})" at line ${v.line}`,
+                            message: `Lima: unresolved reference "(${m[1]}${m[2]})" at line ${v.line}`,
                         });
                     }
                 }
@@ -491,8 +491,8 @@ export const parseReferences = (frontMatter, options) => {
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
             message: winner
-                ? `LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line ${winner.line}: "${winner.token}"`
-                : `LIMA: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line 1`,
+                ? `Lima: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line ${winner.line}: "${winner.token}"`
+                : `Lima: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line 1`,
         });
     }
     // §6.2: total node count of the final result tree, both modes. Same
@@ -509,8 +509,8 @@ export const parseReferences = (frontMatter, options) => {
         throw new LimaError({
             code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
             message: winner
-                ? `LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line ${winner.line}: "${winner.token}"`
-                : `LIMA: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line 1`,
+                ? `Lima: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line ${winner.line}: "${winner.token}"`
+                : `Lima: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line 1`,
         });
     }
     const out = emptyMapping();

@@ -80,7 +80,7 @@ describe('arrays — flow sequence (inline [...])', () => {
 	})
 
 	it('throws on an unclosed [ in strict mode, at the line of the opening bracket', () => {
-		expect(() => parse('tags: [unclosed', { strict: true })).toThrow('LIMA')
+		expect(() => parse('tags: [unclosed', { strict: true })).toThrow('Lima')
 	})
 
 	it('drops a trailing comma entirely in non-strict mode — not a trailing null item', () => {
@@ -92,7 +92,7 @@ describe('arrays — flow sequence (inline [...])', () => {
 	})
 
 	it('throws on an empty flow sequence element in strict mode', () => {
-		expect(() => parse('tags: [, a]', { strict: true })).toThrow('LIMA')
+		expect(() => parse('tags: [, a]', { strict: true })).toThrow('Lima')
 	})
 
 	it('a flow sequence may contain flow mappings one level deep', () => {
@@ -104,13 +104,13 @@ describe('arrays — flow sequence (inline [...])', () => {
 	})
 
 	it('throws in both modes on a directly nested flow sequence (Core §7.4)', () => {
-		expect(() => parse('matrix: [[1, 2], [3, 4]]')).toThrow('LIMA')
-		expect(() => parse('matrix: [[1, 2], [3, 4]]', { strict: true })).toThrow('LIMA')
+		expect(() => parse('matrix: [[1, 2], [3, 4]]')).toThrow('Lima')
+		expect(() => parse('matrix: [[1, 2], [3, 4]]', { strict: true })).toThrow('Lima')
 	})
 
 	it('throws in both modes on a flow sequence nested via an intermediate flow mapping (depth 2)', () => {
-		expect(() => parse('a: [{key: [1,2]}]')).toThrow('LIMA')
-		expect(() => parse('a: [{key: [1,2]}]', { strict: true })).toThrow('LIMA')
+		expect(() => parse('a: [{key: [1,2]}]')).toThrow('Lima')
+		expect(() => parse('a: [{key: [1,2]}]', { strict: true })).toThrow('Lima')
 	})
 
 	it('parses a flow sequence as a value inside a block map', () => {
@@ -221,7 +221,7 @@ describe('maps — flow mapping (inline {...})', () => {
 	})
 
 	it('throws on an unclosed { in strict mode, at the line of the opening brace', () => {
-		expect(() => parse('meta: {key: val', { strict: true })).toThrow('LIMA')
+		expect(() => parse('meta: {key: val', { strict: true })).toThrow('Lima')
 	})
 
 	it('drops a trailing comma entirely in non-strict mode — keeps the preceding entries', () => {
@@ -233,17 +233,17 @@ describe('maps — flow mapping (inline {...})', () => {
 	})
 
 	it('throws on an empty flow mapping element in strict mode', () => {
-		expect(() => parse('meta: {, a: 1}', { strict: true })).toThrow('LIMA')
+		expect(() => parse('meta: {, a: 1}', { strict: true })).toThrow('Lima')
 	})
 
 	it('throws in both modes when a flow mapping value is itself a nested flow mapping (Core §7.5)', () => {
-		expect(() => parse('meta: {a: {b: 1}}')).toThrow('LIMA')
-		expect(() => parse('meta: {a: {b: 1}}', { strict: true })).toThrow('LIMA')
+		expect(() => parse('meta: {a: {b: 1}}')).toThrow('Lima')
+		expect(() => parse('meta: {a: {b: 1}}', { strict: true })).toThrow('Lima')
 	})
 
 	it('throws in both modes when a flow mapping value is a flow sequence', () => {
-		expect(() => parse('meta: {a: [1, 2]}')).toThrow('LIMA')
-		expect(() => parse('meta: {a: [1, 2]}', { strict: true })).toThrow('LIMA')
+		expect(() => parse('meta: {a: [1, 2]}')).toThrow('Lima')
+		expect(() => parse('meta: {a: [1, 2]}', { strict: true })).toThrow('Lima')
 	})
 })
 

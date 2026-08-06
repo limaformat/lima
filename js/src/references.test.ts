@@ -91,8 +91,8 @@ describe('references', () => {
 			  - extra
 		`
 		const opts = { partials: { baseTags: ['javascript', 'webdev'] } }
-		expect(() => parse(doc, opts)).toThrow('LIMA')
-		expect(() => parse(doc, { ...opts, strict: true })).toThrow('LIMA')
+		expect(() => parse(doc, opts)).toThrow('Lima')
+		expect(() => parse(doc, { ...opts, strict: true })).toThrow('Lima')
 	})
 
 	it('interpolates references embedded in a string', () => {
@@ -272,7 +272,7 @@ describe('dotted-path references', () => {
 	})
 
 	it('throws in strict mode when a dotted-path intermediate segment is not a mapping', () => {
-		expect(() => parse('site:\n  default: hello\na: ($site.default.claim)\n', { strict: true })).toThrow('LIMA')
+		expect(() => parse('site:\n  default: hello\na: ($site.default.claim)\n', { strict: true })).toThrow('Lima')
 	})
 
 	it('a pure array/mapping reference is a structural deep copy, never aliasing the original (References §3.1)', () => {

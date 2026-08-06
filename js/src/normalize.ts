@@ -36,7 +36,7 @@ export const checkStringLimit = (value: string, line: number): void => {
 	if (value.length > SCALAR_LENGTH_LIMIT && codepointLength(value) > SCALAR_LENGTH_LIMIT) {
 		throw new LimaError({
 			code: 'RESOURCE_LIMIT', line,
-			message: `LIMA: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${line}`,
+			message: `Lima: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${line}`,
 		})
 	}
 }
@@ -58,7 +58,7 @@ export const checkKeyLength = (key: string, line: () => number): void => {
 		const l = line()
 		throw new LimaError({
 			code: 'RESOURCE_LIMIT', line: l,
-			message: `LIMA: key "${key}" exceeds maximum length of ${KEY_LENGTH_LIMIT} code points at line ${l}`,
+			message: `Lima: key "${key}" exceeds maximum length of ${KEY_LENGTH_LIMIT} code points at line ${l}`,
 		})
 	}
 }
@@ -67,7 +67,7 @@ export const checkDuplicateKey = (exists: boolean, key: string, line: number, ct
 	if (!exists) return
 	const diagnostic = {
 		code: 'DUPLICATE_KEY', line, key,
-		message: `LIMA: duplicate key "${key}" at line ${line} — last value wins`,
+		message: `Lima: duplicate key "${key}" at line ${line} — last value wins`,
 	} satisfies LimaDiagnostic
 	if (ctx.strict) throw new LimaError(diagnostic)
 	// Core §11.2: "Implementations MUST NOT emit warnings to any implicit

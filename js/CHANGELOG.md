@@ -10,7 +10,17 @@ and [Lima References
 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-1.0-spec.md)
 are both frozen regardless of what this file shows.
 
-## [0.1.0] — Unreleased
+## [Unreleased]
+
+### Changed
+
+- Error message prefix `LIMA:` → `Lima:` throughout (e.g. `LIMA: duplicate
+  key "a" at line 3` → `Lima: duplicate key "a" at line 3`), plus internal
+  code comments — naming-consistency fix, no functional change. `.code`
+  (the stable, documented field for programmatic error handling) is
+  unaffected; message text was never a documented stable API surface.
+
+## [0.1.0] — 2026-08-05
 
 Initial release.
 
