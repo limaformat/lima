@@ -127,6 +127,7 @@ Worth being precise about the threat model this actually matters for: both CVEs 
 - [x] Conformance test corpus — 250 cases, both specs, pinned by test ([`corpus/`](corpus/), design rationale in [`docs/corpus-design/`](docs/corpus-design/)); reproduce with `bun run run` from `corpus/runner/`
 - [x] TypeScript/JavaScript implementation — published as [`@limaformat/lima`](js/)
 - [x] Rust implementation — published as [`lima`](rust/)
+- [ ] Go implementation — checked against the shared conformance corpus in [`go/`](go/), not yet tagged/published
 
 Both specifications are frozen at 1.0. Further changes will only ship as errata or a 1.0.1 revision, and only on the basis of the conformance corpus.
 
@@ -149,6 +150,7 @@ This is a monorepo: implementations live alongside the specification and corpus 
 
 - [`js/`](js/) — [`@limaformat/lima`](https://www.npmjs.com/package/@limaformat/lima) on npm.
 - [`rust/`](rust/) — [`lima`](https://crates.io/crates/lima) on crates.io.
+- [`go/`](go/) — not yet tagged; will be available as `github.com/limaformat/lima/go` via `go get` once a `go/vX.Y.Z` tag exists.
 
 ## Contributing
 
