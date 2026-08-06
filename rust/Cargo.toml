@@ -10,3 +10,9 @@ documentation = "https://docs.rs/lima"
 keywords = ["frontmatter", "parser", "yaml", "markdown"]
 categories = ["parser-implementations", "text-processing"]
 readme = "README.md"
+
+# No runtime dependencies — matches the TypeScript implementation's
+# dependency-free stance. serde_json below is dev-only (fixture loading for
+# tests/corpus.rs), never shipped in the published crate.
+[dev-dependencies]
+serde_json = "1"

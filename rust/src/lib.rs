@@ -1,30 +1,48 @@
 //! # lima
 //!
-//! **LIMA Is Metadata Annotation** — a small, predictable frontmatter parser.
+//! **LIMA Is Metadata Annotation** — a small, predictable frontmatter
+//! parser. A deliberate, focused subset of YAML: the part frontmatter
+//! actually needs, with well-defined types, no surprises, and zero runtime
+//! dependencies.
 //!
-//! > ⚠️ This crate is a placeholder. The Rust implementation itself has not
-//! > been written yet — the specifications and conformance corpus it will
-//! > be checked against are both finished. See <https://limaformat.dev> for
-//! > the specification, and the TypeScript implementation
-//! > (`@limaformat/lima` on npm) for a working parser today.
+//! ```
+//! use lima::{parse_references, ReferencesOptions};
 //!
-//! ## Status
+//! let result = parse_references(
+//!     "title: Hello World\npublished: 2024-03-01\ndraft: false\n",
+//!     ReferencesOptions::default(),
+//! ).unwrap();
+//! ```
 //!
-//! - Lima Core 1.0 specification: complete
-//! - Lima References 1.0 specification: complete
-//! - Conformance test corpus: complete (250 cases, shared with the
-//!   TypeScript implementation)
-//! - Rust implementation: not started
+//! [`parse_core`] implements Lima Core 1.0 in full (block/flow sequences
+//! and mappings, dates, numbers, quoting, `|` literal block scalars).
+//! [`parse_references`] implements References 1.0 on top of it (document
+//! and partial references, string interpolation, two-phase
+//! forward/backward resolution).
+//!
+//! See <https://limaformat.dev> for the specification, and the
+//! TypeScript implementation (`@limaformat/lima` on npm) for a second,
+//! independently maintained reference.
+//!
+//! ## Conformance
+//!
+//! Checked against the **entire** shared conformance corpus
+//! (`tests/corpus.rs`: 250 of 250 cases across both specs, 0 failing, 0
+//! skipped). See each module's doc comment for scoped-down corners
+//! relative to the TS source that don't affect conformance (mainly: no
+//! `WeakMap`-equivalent memoization in `references.rs` — a performance
+//! optimization, not a behavior).
 
-/// Placeholder — implementation not yet available.
-///
-/// # Panics
-///
-/// Always panics. This is a placeholder release.
-/// See <https://limaformat.dev> for progress updates.
-pub fn parse(_input: &str) -> ! {
-    panic!(
-        "lima: implementation not yet available. \
-         See https://limaformat.dev for the specification and progress updates."
-    )
-}
+pub mod block;
+mod block_cursor;
+mod chars;
+pub mod core;
+pub mod errors;
+pub mod flow;
+pub mod normalize;
+pub mod references;
+pub mod scalars;
+pub mod value;
+
+pub use crate::core::parse_core;
+pub use crate::references::{parse_references, ReferencesOptions};
