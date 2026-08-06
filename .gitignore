@@ -3,6 +3,7 @@ node_modules/
 
 # Rust
 rust/target/
+rust/Cargo.lock
 
 # OS / editor
 .DS_Store

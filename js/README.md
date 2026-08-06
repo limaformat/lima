@@ -1,5 +1,7 @@
 # @limaformat/lima
 
+[![npm version](https://img.shields.io/npm/v/%40limaformat%2Flima.svg)](https://www.npmjs.com/package/@limaformat/lima)
+
 **LIMA Is Metadata Annotation** — a small, predictable frontmatter format.
 A deliberate, focused subset of YAML: the part frontmatter actually needs,
 with well-defined types, no surprises, and zero runtime dependencies.

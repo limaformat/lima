@@ -1,6 +1,6 @@
 # Lima Core 1.0 — Normative Specification
 
-**Status:** Release Candidate  
+**Status:** Final  
 **Version:** 1.0.0  
 **Date:** 2026-07-31
 
