@@ -1,11 +1,13 @@
 # Decision: does non-ASCII whitespace count as block indentation?
 
-**Status: proposed, not decided.** This is a recommendation for the
-maintainer to confirm or reject — nothing described here is implemented.
-It does not change [Lima Core 1.0](../lima-core-1.0-spec.md); §3 only
-normatively addresses tabs before the first non-whitespace character. This
-document is about a behavioural question the spec text does not currently
-answer either way.
+**Status: resolved (2026-08-07), option A implemented in Go.** Go's
+structural indentation is now ASCII-space-only, matching Rust's observed
+behaviour, verified in two rounds (the initial revert plus a follow-up fix
+to `lineContent`/`lineStructuralIndent` that closed a gap the first round
+missed). It does not change [Lima Core 1.0](../lima-core-1.0-spec.md); §3
+only normatively addresses tabs before the first non-whitespace character.
+This document is kept for the record of the investigation and the options
+that were considered.
 
 Discovered during Claude Code's final review of the Go port (`go/`),
 2026-08-07, after Codex's fix for the `isTrimWhitespace` dead-code finding
@@ -104,8 +106,23 @@ effectively load-bearing for structural indentation today — option A
 might reveal that Rust itself has room to be more deliberate here, even
 if its current *behaviour* is the one to preserve.
 
-**Not implemented pending maintainer confirmation.** No code in this
-repository has been changed as a result of this document. Tracked as a
-follow-up to the Go port's Abschlussreview (2026-08-07), alongside
-[`corpus-int-float-type-assertion.md`](corpus-int-float-type-assertion.md)
-— both deferred, neither blocking the separate Go benchmark work package.
+**Implemented in `go/core.go`** (`sourceLines`, `lineContent`,
+`lineStructuralIndent`, and the top-level bare-key lookahead), verified
+against Rust for every case in the table above plus additional
+combinations found during review (a correctly-ASCII-indented nested line
+followed by a stray Unicode-whitespace character before the key text; a
+non-nesting Unicode-whitespace line followed by a valid same-level
+sibling). Full corpus (149/149 Core, 101/101 References, 0 skipped) and
+`go vet` unaffected. The open question about *why* Rust's
+`BlockCursor.indent` references `is_trim_whitespace` at all was answered
+during implementation: Rust's top-level range scan removes a
+Unicode-prefixed line from the preceding block before `BlockCursor` ever
+observes it, so the reference is real but not structurally load-bearing
+for the cases this document covers.
+
+Unrelated to
+[`corpus-int-float-type-assertion.md`](corpus-int-float-type-assertion.md),
+[`comment-lines-and-bare-key-block-detection.md`](comment-lines-and-bare-key-block-detection.md),
+and
+[`nested-block-scalars-not-supported.md`](nested-block-scalars-not-supported.md)
+— all three remain open, independent, and undecided.

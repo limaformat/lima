@@ -18,7 +18,13 @@ func sourceLines(input string) []sourceLine {
 	raw := strings.Split(input, "\n")
 	out := make([]sourceLine, len(raw))
 	for i, s := range raw {
-		n := len(s) - len(trimLeftWhitespace(s))
+		// Structural indentation is ASCII-space-only after tabs have already
+		// been expanded above. Non-ASCII trim whitespace remains part of the
+		// key text here, matching Rust's top-level block-boundary scan.
+		n := 0
+		for n < len(s) && s[n] == ' ' {
+			n++
+		}
 		out[i] = sourceLine{strings.TrimRight(s, " "), i + 1, n}
 	}
 	return out
@@ -46,7 +52,20 @@ func expandLeadingTabs(input string) string {
 	return out.String()
 }
 func lineContent(l sourceLine) string {
-	return trimLeftWhitespace(l.text)
+	// sourceLine.indent is the ASCII-space structural boundary computed by
+	// sourceLines after leading tabs have been expanded. Unicode trim
+	// whitespace after that boundary remains part of the physical content.
+	return l.text[l.indent:]
+}
+func lineStructuralIndent(l sourceLine) int {
+	// A zero ASCII indent remains a top-level boundary; Rust's top-level
+	// range scan removes such a line from the preceding block before its
+	// BlockCursor observes any following Unicode whitespace.
+	if l.indent == 0 {
+		return 0
+	}
+	c := lineContent(l)
+	return l.indent + len(c) - len(trimLeftWhitespace(c))
 }
 func setP(m *[]pentry, key string, v *pvalue) {
 	for i := range *m {
@@ -127,7 +146,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue,
 	for *idx < len(lines) && (trimWhitespace(lines[*idx].text) == "" || strings.HasPrefix(trimWhitespace(lines[*idx].text), "#")) {
 		*idx++
 	}
-	if *idx >= len(lines) || lines[*idx].indent < indent {
+	if *idx >= len(lines) || lineStructuralIndent(lines[*idx]) < indent {
 		return nil, nil
 	}
 	start := lines[*idx].number
@@ -141,10 +160,11 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue,
 			*idx++
 			continue
 		}
-		if l.indent < indent {
+		lineIndent := lineStructuralIndent(l)
+		if lineIndent < indent {
 			break
 		}
-		if l.indent > indent {
+		if lineIndent > indent {
 			if strict {
 				return nil, limaError(InvalidIndentation, l.number, fmt.Sprintf("Lima: unexpected indentation at line %d: %q", l.number, c))
 			}
@@ -167,7 +187,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue,
 				}
 				arr = append(arr, pv(Null{}, l.number))
 				*idx++
-				for *idx < len(lines) && lines[*idx].indent > indent {
+				for *idx < len(lines) && lineStructuralIndent(lines[*idx]) > indent {
 					*idx++
 				}
 				continue
@@ -185,7 +205,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue,
 				}
 				item := []pentry{{key, v}}
 				*idx++
-				for *idx < len(lines) && lines[*idx].indent > indent {
+				for *idx < len(lines) && lineStructuralIndent(lines[*idx]) > indent {
 					cl := lines[*idx]
 					cc := lineContent(cl)
 					s := findSep(cc)
@@ -245,8 +265,8 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue,
 			var v *pvalue
 			var e error
 			if bare {
-				if *idx < len(lines) && lines[*idx].indent > indent {
-					v, e = parseBlock(lines, idx, lines[*idx].indent, strict)
+				if *idx < len(lines) && lineStructuralIndent(lines[*idx]) > indent {
+					v, e = parseBlock(lines, idx, lineStructuralIndent(lines[*idx]), strict)
 				}
 				if v == nil && e == nil {
 					v = pv(Null{}, l.number)
@@ -297,7 +317,10 @@ func parseCorePositioned(input string, strict bool) ([]pentry, error) {
 			i++
 			continue
 		}
-		key := stripKeyQuotes(trimWhitespace(c[:sep]))
+		// The top-level scanner preserves non-ASCII leading whitespace as
+		// literal key text. Trimming applies inside recognized block/flow
+		// values, not while deciding top-level structure.
+		key := stripKeyQuotes(c[:sep])
 		entryCount++
 		if entryCount > topLevelKeyLimit {
 			return nil, limaError(ResourceLimit, 1, fmt.Sprintf("Lima: too many top-level key entries (max %d) at line 1", topLevelKeyLimit))
@@ -317,7 +340,10 @@ func parseCorePositioned(input string, strict bool) ([]pentry, error) {
 		var e error
 		if bare {
 			j := i
-			for j < len(lines) && (trimWhitespace(lines[j].text) == "" || strings.HasPrefix(trimWhitespace(lines[j].text), "#")) {
+			// Empty lines do not establish a block baseline. Comments do: their
+			// ASCII indent is structural even though parseBlock later ignores
+			// their content. This mirrors Rust's parse_block_range initialization.
+			for j < len(lines) && trimWhitespace(lines[j].text) == "" {
 				j++
 			}
 			if j < len(lines) && lines[j].indent > 0 {
