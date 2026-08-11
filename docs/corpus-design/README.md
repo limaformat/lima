@@ -1,7 +1,7 @@
 # Lima Conformance Corpus – Design Package
 
 **Status:** implemented — frozen 250-case Core/References 1.0 corpus plus
-a separate 110-case References 2.0 draft corpus; counts are pinned by tests.
+a separate 114-case References 2.0 draft corpus; counts are pinned by tests.
 Verified from `corpus/runner/` with the suite commands described below. This
 document is the design rationale the corpus was
 built from; §11's "Implementation order" is a historical record of how
@@ -126,19 +126,19 @@ For readability, these defaults apply:
 strict = false
 partials = {}
 warnings = []
-api = "references"
+api = "references"  # frozen 1.0 suites
 ```
 
 Default values should not be spelled out in sidecars.
 
 Every case in a newly versioned suite declares `specVersion` explicitly.
 
-`api` selects the entry point a case runs against: the default
-`"references"` calls `parseReferences`/`parse`; `"core"` calls `parseCore`
-directly, with no partials option (Core has none — a case may not combine
-`api: "core"` with `options.partials`). Only needed to exercise Core-only
-behavior directly, e.g. proving `parseCore` never resolves references even
-though the same input would resolve (or throw) under `parseReferences`.
+`api` selects the entry point a case runs against. Frozen 1.0 cases default to
+`"references"`; References 2.0 cases default to `"parse"`. In 2.0,
+`"references"` explicitly exercises the deprecated `parseReferences` alias,
+while `"core"` calls `parseCore` directly. Core cases may not set `partials` or
+`mode`. Only set `api` when the entry-point distinction is itself under
+test.
 
 ## 5. Language-neutral values
 

@@ -159,8 +159,8 @@ export function validateCase(doc: unknown): ValidationResult {
 		if (!API_VALUES.includes(doc.api as string)) {
 			fail(errors, 'api', `must be one of ${API_VALUES.join(', ')}`)
 		}
-		if (doc.api === 'core' && isPlainObject(doc.options) && 'partials' in doc.options) {
-			fail(errors, 'options.partials', 'parseCore has no partials option — must not be set when api is "core"')
+		if (doc.api === 'core' && isPlainObject(doc.options) && ('partials' in doc.options || 'mode' in doc.options)) {
+			fail(errors, 'options', 'parseCore has no partials or mode option')
 		}
 	}
 	if ('section' in doc && (typeof doc.section !== 'string' || doc.section.length < 1)) {
@@ -192,12 +192,18 @@ export function validateCase(doc: unknown): ValidationResult {
 		if (!isPlainObject(options)) fail(errors, 'options', 'must be an object')
 		else {
 			for (const key of Object.keys(options)) {
-				if (key !== 'strict' && key !== 'partials') {
+				if (key !== 'strict' && key !== 'mode' && key !== 'partials') {
 					fail(errors, 'options', `unexpected property "${key}"`)
 				}
 			}
 			if ('strict' in options && typeof options.strict !== 'boolean') {
 				fail(errors, 'options.strict', 'must be a boolean')
+			}
+			if ('mode' in options && options.mode !== 'core' && options.mode !== 'references') {
+				fail(errors, 'options.mode', 'must be core or references')
+			}
+			if (options.mode === 'core' && 'partials' in options) {
+				fail(errors, 'options.partials', 'must not be set when mode is core')
 			}
 			if ('partials' in options) {
 				if (!isPlainObject(options.partials)) fail(errors, 'options.partials', 'must be an object')

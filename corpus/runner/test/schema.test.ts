@@ -52,6 +52,19 @@ describe('validateCase — structural rules', () => {
 		expect(validateCase({ ...valid, specVersion: '3.0' }).valid).toBe(false)
 	})
 
+	it('validates References 2.0 parse API options', () => {
+		const v2 = {
+			...baseCase,
+			id: 'references-2.api.parse.options',
+			spec: 'references',
+			specVersion: '2.0',
+			api: 'parse',
+		}
+		expect(validateCase({ ...v2, options: { mode: 'core' } }).valid).toBe(true)
+		expect(validateCase({ ...v2, options: { mode: 'core', partials: {} } }).valid).toBe(false)
+		expect(validateCase({ ...v2, options: { mode: 'unknown' } }).valid).toBe(false)
+	})
+
 	it('requires exactly one of input, inputFile, generator', () => {
 		const { input, ...withoutInput } = baseCase
 		expect(validateCase(withoutInput).valid).toBe(false)

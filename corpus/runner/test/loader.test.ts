@@ -39,7 +39,7 @@ describe('loadCase', () => {
 					value: { count: 42 },
 					warnings: [],
 				})
-				expect(result.case.options).toEqual({ strict: false, partials: {} })
+				expect(result.case.options).toEqual({ strict: false, mode: 'references', partials: {} })
 			}
 		} finally {
 			rmSync(dir, { recursive: true, force: true })
@@ -118,8 +118,11 @@ describe('loadCorpus', () => {
 	it('loads the versioned References 2.0 suite independently', () => {
 		const { cases, failures } = loadCorpus(corpusRoot, ['references-2.0'])
 		expect(failures).toEqual([])
-		expect(cases).toHaveLength(110)
+		expect(cases).toHaveLength(114)
 		expect(cases.every((c) => c.spec === 'references' && c.specVersion === '2.0')).toBe(true)
-		expect(new Set(cases.map((c) => c.id)).size).toBe(110)
+		expect(cases.every((c) => c.api === 'parse' || c.api === 'core' || c.api === 'references')).toBe(true)
+		expect(cases.find((c) => c.id === 'references-2.activity.block-sequence-item')?.api).toBe('parse')
+		expect(cases.find((c) => c.id === 'references-2.api.parse-references.deprecated-alias')?.api).toBe('references')
+		expect(new Set(cases.map((c) => c.id)).size).toBe(114)
 	})
 })

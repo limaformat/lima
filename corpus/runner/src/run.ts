@@ -5,7 +5,7 @@ import {
 } from './loader'
 import { corpusValuesEqual, diffCorpusValues, hasOnlySafeOwnDataProperties } from './normalize'
 import { compareDiagnostic, type LimaDiagnostic } from './errors'
-import { parse, parseCore } from '../../../js/src/index'
+import { parse, parseCore, parseReferences } from '../../../js/src/index'
 import { LimaError } from '../../../js/src/errors'
 
 export type AdaptedDiagnostic =
@@ -79,10 +79,17 @@ function invokeParser(c: LoadedCase): {
 		else unmappedWarnings.push(d.message)
 	}
 	try {
-		const value =
-			c.api === 'core'
-				? parseCore(c.input, { strict: c.options.strict, onWarning })
-				: parse(c.input, { partials: c.options.partials, strict: c.options.strict, onWarning })
+		const referenceOptions = {
+			partials: c.options.partials,
+			strict: c.options.strict,
+			onWarning,
+			mode: c.options.mode,
+		}
+		const value = c.api === 'core'
+			? parseCore(c.input, { strict: c.options.strict, onWarning })
+			: c.api === 'references'
+				? parseReferences(c.input, referenceOptions)
+				: parse(c.input, referenceOptions)
 		return { result: { threw: false, value }, warnings, unmappedWarnings }
 	} catch (error) {
 		return { result: { threw: true, error }, warnings, unmappedWarnings }
@@ -90,7 +97,7 @@ function invokeParser(c: LoadedCase): {
 }
 
 function runCase(c: LoadedCase): CaseOutcome {
-	if (c.api === 'references' && c.specVersion === '2.0') {
+	if (c.api !== 'core' && c.specVersion === '2.0') {
 		return {
 			id: c.id,
 			sourceFile: c.sourceFile,

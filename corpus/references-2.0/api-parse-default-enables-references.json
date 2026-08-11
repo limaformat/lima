@@ -1,0 +1,16 @@
+{
+  "id": "references-2.api.parse.default-enables-references",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "6.1",
+  "description": "The primary parse entry point enables References 2.0 by default.",
+  "api": "parse",
+  "input": "copy: $(source)\nsource: 42\n",
+  "expect": {
+    "result": {
+      "copy": 42,
+      "source": 42
+    }
+  },
+  "tags": ["positive", "api", "default"]
+}

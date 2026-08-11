@@ -1,0 +1,18 @@
+{
+  "id": "references-2.api.parse-references.deprecated-alias-diagnostic",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "6.1",
+  "description": "The deprecated parseReferences alias reports the same structured References 2.0 diagnostics as parse.",
+  "api": "references",
+  "input": "value: $(missing)\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": {
+      "code": "UNRESOLVED_REFERENCE",
+      "line": 1,
+      "token": "$(missing)"
+    }
+  },
+  "tags": ["error", "strict", "api", "deprecated"]
+}

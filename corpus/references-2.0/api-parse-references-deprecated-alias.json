@@ -1,0 +1,16 @@
+{
+  "id": "references-2.api.parse-references.deprecated-alias",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "6.1",
+  "description": "The deprecated parseReferences compatibility alias has exactly the same References 2.0 behavior as parse.",
+  "api": "references",
+  "input": "copy: $(source)\nsource: 42\n",
+  "expect": {
+    "result": {
+      "copy": 42,
+      "source": 42
+    }
+  },
+  "tags": ["positive", "api", "deprecated"]
+}

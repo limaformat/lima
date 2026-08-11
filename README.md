@@ -126,7 +126,7 @@ Worth being precise about the threat model this actually matters for: both CVEs 
 - [x] Lima Core 1.0 specification — final ([`docs/lima-core-1.0-spec.md`](docs/lima-core-1.0-spec.md))
 - [x] Lima References 1.0 specification — final ([`docs/lima-references-1.0-spec.md`](docs/lima-references-1.0-spec.md))
 - [x] Conformance test corpus — 250 cases, both specs, pinned by test ([`corpus/`](corpus/), design rationale in [`docs/corpus-design/`](docs/corpus-design/)); reproduce with `bun run run` from `corpus/runner/`
-- [ ] Lima References 2.0 — draft specification and separate 110-case draft corpus; parser implementations intentionally not started yet ([spec](docs/lima-references-2.0-spec.md), [coverage](docs/corpus-design/coverage/references-2.0.md))
+- [ ] Lima References 2.0 — draft specification and separate 114-case draft corpus; parser implementations intentionally not started yet ([spec](docs/lima-references-2.0-spec.md), [coverage](docs/corpus-design/coverage/references-2.0.md))
 - [x] TypeScript/JavaScript implementation — published as [`@limaformat/lima`](js/)
 - [x] Rust implementation — published as [`lima`](rust/)
 - [x] Go implementation — published as [`github.com/limaformat/lima/go`](go/)

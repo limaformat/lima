@@ -1,6 +1,6 @@
 # Coverage Matrix: Lima References 2.0
 
-**Status:** draft corpus — 110 cases; parser adapters intentionally blocked
+**Status:** draft corpus — 114 cases; parser adapters intentionally blocked
 until their References 2.0 implementations exist.
 **Normative basis:** `docs/lima-references-2.0-spec.md` Draft.
 
@@ -41,11 +41,12 @@ suite. References 1.0 remains an independent frozen conformance target.
 | R2-060 | §5 | Ordering | earliest source error wins across diagnostic kinds | ordering cases |
 | R2-061 | §5 | Attribution | final global errors identify earliest participating insertion | limit cases |
 | R2-062 | §5 | Priority | partial validation precedes document parsing | priority case |
-| R2-070 | §6.1 | API | References composes Core and defaults partials to empty | API cases |
-| R2-071 | §6.2 | Names | every partial name matches grammar; dot rejected; `_` accepted | validation cases |
-| R2-072 | §6.2 | Partial limits | counts, name/key lengths, node budget | generated boundaries |
-| R2-073 | §6.2 | Value model | accepted types, copies, invalid host values, cycles, dates | inherited/adapted cases |
-| R2-074 | §6.3 | Final limits | scalar, depth, node count, nested arrays | allowed/above and mode pairs |
+| R2-070 | §6.1 | API | `parse` defaults to References mode; `mode: "core"` uses the Core path; `parseReferences` is a deprecated exact alias | API cases |
+| R2-071 | §6.1 | Invalid options | `partials` with `mode: "core"` is rejected before parsing | binding/schema test |
+| R2-072 | §6.2 | Names | every partial name matches grammar; dot rejected; `_` accepted | validation cases |
+| R2-073 | §6.2 | Partial limits | counts, name/key lengths, node budget | generated boundaries |
+| R2-074 | §6.2 | Value model | accepted types, copies, invalid host values, cycles, dates | inherited/adapted cases |
+| R2-075 | §6.3 | Final limits | scalar, depth, node count, nested arrays | allowed/above and mode pairs |
 | R2-080 | §7 | Modes | unresolved falls back only non-strict; hard errors throw in both | mode pairs |
 | R2-090 | §8 | Unsupported | no array indexing/spreading or references in keys | negative cases |
 | R2-100 | §10 | Compatibility | `($...)` and `(%...)` are literal under 2.0 | strict compatibility case |

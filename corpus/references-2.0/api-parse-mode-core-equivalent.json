@@ -1,0 +1,17 @@
+{
+  "id": "references-2.api.parse.mode-core-equivalent",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "6.1",
+  "description": "parse in Core mode uses the same reference-unaware path as parseCore and leaves References 2.0 tokens literal.",
+  "api": "parse",
+  "input": "copy: $(source)\nsource: 42\n",
+  "options": { "mode": "core" },
+  "expect": {
+    "result": {
+      "copy": "$(source)",
+      "source": 42
+    }
+  },
+  "tags": ["positive", "api", "core-equivalence"]
+}

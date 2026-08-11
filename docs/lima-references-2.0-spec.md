@@ -321,21 +321,54 @@ They identify the partial name and value path and carry no document line.
 
 ## 6. API and partial validation
 
-### 6.1 Parse function
+### 6.1 Parse functions
 
 ```text
-parseReferences(input: string,
-                options?: ReferencesParseOptions): Record<string, unknown>
+parse(input: string, options?: ParseOptions): Record<string, unknown>
 ```
 
-The contract is identical to `parseCore` in Lima Core §11.1, with reference
-resolution added as specified here.
+`parse` is the primary References 2.0 entry point. By default it performs Lima
+Core parsing followed by reference resolution as specified here. Its return
+contract is identical to `parseCore` in Lima Core §11.1.
 
-`ReferencesParseOptions` extends Core options with:
+`parseCore(input, options?)` remains the explicit Core-only entry point defined
+by Lima Core 1.0. A call to `parse(input, { mode: "core" })` is
+semantically identical to `parseCore(input, options)` with the shared Core
+options: References 2.0 tokens remain literal, no partials are ingested, and no
+reference-resolution work is performed.
+
+Core mode MUST use the same reference-unaware parsing path as `parseCore`. It
+MUST NOT perform reference-token recognition, active-token metadata collection,
+partial ingestion, dependency analysis, or reference resolution. Dispatching
+on `mode` before any References-specific work is therefore required; internal
+implementation details of the shared Core path remain unrestricted.
+
+Bindings that exposed `parseReferences` before 2.0 SHOULD retain it as a
+deprecated compatibility alias for `parse` during the 2.x release line. The
+alias MUST have exactly the same options, result, diagnostics, and References
+2.0 semantics as `parse`; it is not a References 1.0 compatibility mode. New
+code SHOULD use `parse`.
+
+Names may follow host-language conventions (`parse_core`, `Parse`, etc.), but
+the roles of the primary, Core-only, and deprecated compatibility entry points
+are normative.
+
+`ParseOptions` extends Core options with:
 
 | Option | Type | Default | Description |
 |---|---|---|---|
+| `mode` | `"references" \| "core"` | `"references"` | Select full References 2.0 parsing or Core-only parsing |
 | `partials` | `Record<string, unknown>` | `{}` | Values available through `$(:name)` |
+
+`partials` MUST NOT be supplied when `mode` is `"core"`. Such a call is
+outside the parse contract and MUST be rejected before document parsing; the
+concrete host-language argument-error type is binding-specific. It is never a
+document diagnostic and carries no source position.
+
+Bindings represent an omitted mode according to host-language conventions. In
+particular, a binding MUST NOT require a boolean whose zero value conflicts
+with the normative `"references"` default; an enum, string union, or optional
+mode value is appropriate.
 
 ### 6.2 Partial validation
 
@@ -478,5 +511,6 @@ References 2.0 is intentionally not syntax-compatible with References 1.0:
 | partials are direct-only | partial mappings support dotted traversal |
 | unused partial names may be outside token grammar | every partial name must match `partial-name` |
 | one-hop snapshot model | transitive resolution, maximum three edges |
+| `parseReferences` is primary | `parse` is primary; `parseReferences` is a deprecated alias |
 
 Lima Core 1.0 semantics and APIs are unchanged.

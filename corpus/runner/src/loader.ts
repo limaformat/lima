@@ -12,9 +12,9 @@ export interface LoadedCase {
 	section: string
 	description: string
 	input: string
-	/** Which parser entry point to run against. Defaults to 'references' (parseReferences/parse). */
-	api: 'core' | 'references'
-	options: { strict: boolean; partials: Record<string, unknown> }
+	/** Entry point: legacy suites default to references; References 2.0 defaults to parse. */
+	api: 'core' | 'parse' | 'references'
+	options: { strict: boolean; mode: 'core' | 'references'; partials: Record<string, unknown> }
 	expectation:
 		| { kind: 'result'; value: unknown; warnings: DiagnosticExpectation[] }
 		| { kind: 'error'; diagnostic: DiagnosticExpectation }
@@ -57,9 +57,9 @@ export function loadCase(jsonPath: string): LoadResult {
 		description: string
 		input?: string
 		inputFile?: string
-		api?: 'core' | 'references'
+		api?: 'core' | 'parse' | 'references'
 		generator?: { name: string; parameters: Record<string, unknown> }
-		options?: { strict?: boolean; partials?: Record<string, unknown> }
+		options?: { strict?: boolean; mode?: 'core' | 'references'; partials?: Record<string, unknown> }
 		expect: { result?: unknown; error?: DiagnosticExpectation; warnings?: DiagnosticExpectation[] }
 		tags?: string[]
 		notes?: string
@@ -107,6 +107,7 @@ export function loadCase(jsonPath: string): LoadResult {
 	const rawPartials = { ...(d.options?.partials ?? {}), ...(generatorPartials ?? {}) }
 	const options = {
 		strict: d.options?.strict ?? false,
+		mode: d.options?.mode ?? 'references',
 		partials: (materialize(rawPartials as any) as Record<string, unknown>) ?? {},
 	}
 
@@ -119,7 +120,7 @@ export function loadCase(jsonPath: string): LoadResult {
 			section: d.section,
 			description: d.description,
 			input,
-			api: d.api ?? 'references',
+			api: d.api ?? (d.specVersion === '2.0' ? 'parse' : 'references'),
 			options,
 			expectation,
 			tags: d.tags ?? [],
