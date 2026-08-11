@@ -420,11 +420,10 @@ bun run run:references-2
 ```
 
 The default `bun run run` remains the historical Core 1.0 plus References 1.0
-baseline. Until a local adapter implements References 2.0, its References-API
-cases are reported as `BLOCKED` (a direct Core-API inheritance case can already
-pass); this does not change the 250/250 1.0 result. Once an
-adapter declares 2.0 support, its conformance target is Core 1.0 plus References
-2.0, not References 1.0.
+baseline. The local TypeScript adapter also runs all References 2.0 cases; an
+adapter without 2.0 support may report its References-API cases as `BLOCKED`.
+This does not change the 250/250 1.0 result. A 2.0 conformance target consists
+of Core 1.0 plus References 2.0, not References 1.0.
 
 `docs/corpus-design/` (originally `testkorpus-design/`, filed under `docs/`
 since it is non-normative but, unlike an archive, still actively

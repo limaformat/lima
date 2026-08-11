@@ -14,7 +14,7 @@ export interface LoadedCase {
 	input: string
 	/** Entry point: legacy suites default to references; References 2.0 defaults to parse. */
 	api: 'core' | 'parse' | 'references'
-	options: { strict: boolean; mode: 'core' | 'references'; partials: Record<string, unknown> }
+	options: { strict: boolean; mode: 'core' | 'references'; partials: Record<string, unknown>; partialsSupplied: boolean }
 	expectation:
 		| { kind: 'result'; value: unknown; warnings: DiagnosticExpectation[] }
 		| { kind: 'error'; diagnostic: DiagnosticExpectation }
@@ -108,6 +108,7 @@ export function loadCase(jsonPath: string): LoadResult {
 	const options = {
 		strict: d.options?.strict ?? false,
 		mode: d.options?.mode ?? 'references',
+		partialsSupplied: d.options?.partials !== undefined || generatorPartials !== undefined,
 		partials: (materialize(rawPartials as any) as Record<string, unknown>) ?? {},
 	}
 

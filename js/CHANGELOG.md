@@ -14,6 +14,18 @@ are both frozen regardless of what this file shows.
 
 ### Changed
 
+- **Breaking:** `parse(input, options?)` now implements Lima References 2.0.
+  Document references use `$(key)` instead of `($key)`, and partial
+  references use `$(:key)` instead of `(%key)`. References 1.0 tokens are
+  literal text through the public 2.0 API.
+- `parseReferences(input, options?)` is now a deprecated compatibility alias
+  for `parse` with identical References 2.0 results and diagnostics. It is not
+  a References 1.0 mode.
+- `ParseOptions.mode` selects `"references"` (the default) or `"core"`.
+  Core mode uses the same reference-unaware path as `parseCore`; supplying
+  `partials` in Core mode is invalid. `parseCore` itself is unchanged.
+- References 2.0 adds bounded transitive resolution (at most three reference
+  edges), partial mapping traversal, and `$(:namespace/name.path)` partials.
 - Error message prefix `LIMA:` → `Lima:` throughout (e.g. `LIMA: duplicate
   key "a" at line 3` → `Lima: duplicate key "a" at line 3`), plus internal
   code comments — naming-consistency fix, no functional change. `.code`

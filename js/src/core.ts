@@ -32,7 +32,7 @@ import { parseFlowOrScalarValue } from './flow.js'
 import { parseBlockRange, type BlockDepthRisk } from './block.js'
 import { LimaError, type LimaDiagnostic } from './errors.js'
 import { KeyCursor, scanKeys } from './scanner.js'
-import type { ValueBuilder } from './builder.js'
+import type { StringSourceSpan, ValueBuilder } from './builder.js'
 
 export type { Diagnostic, ParseContext } from './normalize.js'
 export { NESTING_DEPTH_LIMIT, SCALAR_LENGTH_LIMIT } from './normalize.js'
@@ -269,7 +269,9 @@ const parseCoreGeneric = <V, M>(
 			const trimAmt = minIndent > 1 && isFinite(minIndent) ? minIndent : 0
 
 			const mergedLines: string[] = []
-			for (const bodyLine of bodyLines) {
+			const mergedLineSpans: StringSourceSpan[][] | undefined = builder.tracksStringSourcePositions ? [] : undefined
+			for (let bodyIndex = 0; bodyIndex < bodyLines.length; bodyIndex++) {
+				const bodyLine = bodyLines[bodyIndex]
 				const lineLen = bodyLine.length
 				let start = trimAmt < lineLen ? trimAmt : lineLen
 				const isContinuation = bodyLine.charCodeAt(start) === 94 && bodyLine.charCodeAt(start + 1) === 94 // ^^
@@ -279,20 +281,40 @@ const parseCoreGeneric = <V, M>(
 				const content = bodyLine.slice(start, end)
 				if (isContinuation) {
 					if (mergedLines.length > 0) {
-						if (content) mergedLines[mergedLines.length - 1] += ' ' + content
+						if (content) {
+							const outputStart = mergedLines[mergedLines.length - 1].length + 1
+							mergedLines[mergedLines.length - 1] += ' ' + content
+							mergedLineSpans?.[mergedLineSpans.length - 1].push({
+								start: outputStart, line: line + 1 + bodyIndex, sourceOffset: start,
+							})
+						}
 					} else {
 						mergedLines.push(content)
+						mergedLineSpans?.push(content ? [{ start: 0, line: line + 1 + bodyIndex, sourceOffset: start }] : [])
 					}
 				} else {
 					mergedLines.push(content)
+					mergedLineSpans?.push(content ? [{ start: 0, line: line + 1 + bodyIndex, sourceOffset: start }] : [])
 				}
 			}
 
-			while (mergedLines.length > 0 && mergedLines[mergedLines.length - 1] === '') mergedLines.pop()
+			while (mergedLines.length > 0 && mergedLines[mergedLines.length - 1] === '') {
+				mergedLines.pop()
+				mergedLineSpans?.pop()
+			}
 
 			const joined = mergedLines.join('\n')
+			let sourceSpans: StringSourceSpan[] | undefined
+			if (mergedLineSpans) {
+				sourceSpans = []
+				let outputStart = 0
+				for (let i = 0; i < mergedLines.length; i++) {
+					for (const span of mergedLineSpans[i]) sourceSpans.push({ ...span, start: outputStart + span.start })
+					outputStart += mergedLines[i].length + 1
+				}
+			}
 			checkScalarLimit(LString(joined), line)
-			builder.setMapping(root, key, builder.string(joined, line, false))
+			builder.setMapping(root, key, builder.string(joined, line + 1, false, sourceSpans))
 		}
 	}
 

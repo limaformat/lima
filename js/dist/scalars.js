@@ -7,13 +7,21 @@
 import { LNull, LBool, LFloat, LInt, LString, LInstant } from './value.js';
 import { checkStringLimit } from './normalize.js';
 import { LimaError } from './errors.js';
+import { scanReferenceTokens2 } from './reference-tokens2.js';
 /** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */
 export const positionedBuilder = {
+    tracksStringSourcePositions: true,
     null: (line) => ({ kind: 'null', line }),
     bool: (value, line) => ({ kind: 'bool', value, line }),
     int: (value, line) => ({ kind: 'int', value, line }),
     float: (value, line) => ({ kind: 'float', value, line }),
-    string: (value, line, quoted) => ({ kind: 'string', value, line, quoted }),
+    string: (value, line, quoted, sourceSpans) => {
+        const references2 = quoted ? undefined : scanReferenceTokens2(value, line, sourceSpans);
+        return {
+            kind: 'string', value, line, quoted,
+            ...(references2 && references2.length > 0 ? { references2 } : {}),
+        };
+    },
     instant: (value, line) => ({ kind: 'instant', value, line }),
     array: (items, line) => ({ kind: 'array', items, line }),
     createMapping: () => new Map(),

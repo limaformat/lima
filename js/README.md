@@ -35,30 +35,33 @@ tags:
 `parse` accepts the raw content **between** the frontmatter delimiters
 (`---`) — stripping them is the caller's job.
 
-Two functions are exported:
+Three functions are exported:
 
 - `parseCore(input, options?)` — the base format only.
-- `parse(input, options?)` (alias for `parseReferences`) — adds
-  `($key)` document references and `(%key)` external partials.
+- `parse(input, options?)` — the primary References 2.0 parser; adds
+  `$(key)` document references and `$(:key)` external partials.
+- `parseReferences(input, options?)` — deprecated compatibility alias for
+  `parse` with the same References 2.0 semantics.
 
 ```ts
 parse(frontmatter, { strict: true })
 parse(frontmatter, { partials: { author: 'Alice' } })
+parse(frontmatter, { mode: 'core' }) // same reference-unaware path as parseCore
 ```
 
-Full syntax reference, the References extension, resource limits, strict
-mode, and the complete API:
-**[docs/guide.md](https://github.com/limaformat/lima/blob/main/docs/guide.md)**.
+The existing **[guide](https://github.com/limaformat/lima/blob/main/docs/guide.md)**
+covers Core and References 1.0. References 2.0 syntax, resource limits, strict
+mode, and the new API are defined in the
+**[2.0 draft specification](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)**.
 
 Why Lima exists, the case against YAML, and security rationale:
 **[repository README](https://github.com/limaformat/lima#readme)**.
 
 The [Lima Core 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
-and [Lima References 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-1.0-spec.md)
-specifications are the normative source of truth — this package implements
-them exactly, verified against a
-[250-case conformance corpus](https://github.com/limaformat/lima/tree/main/corpus)
-(count pinned by a test) shared with any other Lima implementation.
+and [Lima References 2.0 Draft](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
+specifications are the source of truth for these public entry points. The
+frozen References 1.0 implementation remains available internally to run its
+independent conformance suite.
 
 Migrating existing YAML frontmatter:
 [docs/migrating-from-yaml.md](https://github.com/limaformat/lima/blob/main/docs/migrating-from-yaml.md).

@@ -9,6 +9,7 @@ import { type LimaValue, LNull, LBool, LFloat, LInt, LString, LInstant } from '.
 import { type ParseContext, checkStringLimit } from './normalize.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
+import { scanReferenceTokens2, type ReferenceToken2 } from './reference-tokens2.js'
 
 /**
  * `insertedAt` is never set by Core — it's a References-only annotation
@@ -27,18 +28,25 @@ export type PositionedValue =
 	| { kind: 'bool'; value: boolean; line: number; insertedAt?: InsertedAt }
 	| { kind: 'int'; value: number; line: number; insertedAt?: InsertedAt }
 	| { kind: 'float'; value: number; line: number; insertedAt?: InsertedAt }
-	| { kind: 'string'; value: string; line: number; quoted: boolean; insertedAt?: InsertedAt }
+	| { kind: 'string'; value: string; line: number; quoted: boolean; references2?: ReferenceToken2[]; insertedAt?: InsertedAt }
 	| { kind: 'instant'; value: Date; line: number; insertedAt?: InsertedAt }
 	| { kind: 'array'; items: PositionedValue[]; line: number; insertedAt?: InsertedAt }
 	| { kind: 'mapping'; entries: Map<string, PositionedValue>; line: number; insertedAt?: InsertedAt }
 
 /** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */
 export const positionedBuilder: ValueBuilder<PositionedValue> = {
+	tracksStringSourcePositions: true,
 	null: (line) => ({ kind: 'null', line }),
 	bool: (value, line) => ({ kind: 'bool', value, line }),
 	int: (value, line) => ({ kind: 'int', value, line }),
 	float: (value, line) => ({ kind: 'float', value, line }),
-	string: (value, line, quoted) => ({ kind: 'string', value, line, quoted }),
+	string: (value, line, quoted, sourceSpans) => {
+		const references2 = quoted ? undefined : scanReferenceTokens2(value, line, sourceSpans)
+		return {
+			kind: 'string', value, line, quoted,
+			...(references2 && references2.length > 0 ? { references2 } : {}),
+		}
+	},
 	instant: (value, line) => ({ kind: 'instant', value, line }),
 	array: (items, line) => ({ kind: 'array', items, line }),
 	createMapping: () => new Map<string, PositionedValue>(),

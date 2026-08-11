@@ -7,6 +7,7 @@
 import { type LimaValue } from './value.js';
 import { type ParseContext } from './normalize.js';
 import type { ValueBuilder } from './builder.js';
+import { type ReferenceToken2 } from './reference-tokens2.js';
 /**
  * `insertedAt` is never set by Core — it's a References-only annotation
  * (see references.ts's `resolveTree`), stamped on the root of a value
@@ -45,6 +46,7 @@ export type PositionedValue = {
     value: string;
     line: number;
     quoted: boolean;
+    references2?: ReferenceToken2[];
     insertedAt?: InsertedAt;
 } | {
     kind: 'instant';

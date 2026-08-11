@@ -1,5 +1,5 @@
 import { describe } from 'bun:test'
-import { parse as parseIndex, type ParseOptions } from './index.js'
+import { parseReferencesV1 as parseIndex, type ParseOptions } from './references.js'
 
 /**
  * Strips common leading whitespace from template literals so tests can be

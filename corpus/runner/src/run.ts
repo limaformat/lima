@@ -6,6 +6,7 @@ import {
 import { corpusValuesEqual, diffCorpusValues, hasOnlySafeOwnDataProperties } from './normalize'
 import { compareDiagnostic, type LimaDiagnostic } from './errors'
 import { parse, parseCore, parseReferences } from '../../../js/src/index'
+import { parseReferencesV1 } from '../../../js/src/references'
 import { LimaError } from '../../../js/src/errors'
 
 export type AdaptedDiagnostic =
@@ -80,13 +81,15 @@ function invokeParser(c: LoadedCase): {
 	}
 	try {
 		const referenceOptions = {
-			partials: c.options.partials,
+			...(c.options.partialsSupplied ? { partials: c.options.partials } : {}),
 			strict: c.options.strict,
 			onWarning,
 			mode: c.options.mode,
 		}
 		const value = c.api === 'core'
 			? parseCore(c.input, { strict: c.options.strict, onWarning })
+			: c.specVersion === '1.0'
+				? parseReferencesV1(c.input, referenceOptions)
 			: c.api === 'references'
 				? parseReferences(c.input, referenceOptions)
 				: parse(c.input, referenceOptions)
@@ -97,15 +100,6 @@ function invokeParser(c: LoadedCase): {
 }
 
 function runCase(c: LoadedCase): CaseOutcome {
-	if (c.api !== 'core' && c.specVersion === '2.0') {
-		return {
-			id: c.id,
-			sourceFile: c.sourceFile,
-			classification: 'BLOCKED',
-			reasons: ['the local parser adapter implements Lima References 1.0, not 2.0'],
-			notes: [],
-		}
-	}
 	const { result, warnings, unmappedWarnings } = invokeParser(c)
 	const notes =
 		unmappedWarnings.length > 0

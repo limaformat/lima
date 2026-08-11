@@ -16,7 +16,7 @@
  * genuine regression indistinguishable from run-to-run jitter.
  */
 
-import { parseCore, parseReferences } from '../src/index'
+import { parse, parseCore, parseReferences } from '../src/index'
 import { createBench, log, JSON_OUTPUT, type BenchResult } from './helpers'
 
 const results: BenchResult[] = []
@@ -35,13 +35,16 @@ readingTime: 4.5
 category: Engineering
 `
 bench('typical document (9 keys, no refs) — parseCore', () => parseCore(typical), 20000)
-bench('typical document (9 keys, no refs) — parseReferences', () => parseReferences(typical), 20000)
+const coreMode = { mode: 'core' as const }
+bench('typical document (9 keys, no refs) — parse core mode', () => parse(typical, coreMode), 20000)
+bench('typical document (9 keys, no refs) — parse References', () => parse(typical), 20000)
+bench('typical document (9 keys, no refs) — deprecated alias', () => parseReferences(typical), 20000)
 
 const withRefs = `siteName: My Site
-title: Hello ($siteName)!
-byline: Written by ($author)
+title: Hello $(siteName)!
+byline: Written by $(author)
 author: Alice
-tagline: (%tagline)
+tagline: $(:tagline)
 `
 bench('small document, 3 refs + 1 partial', () => parseReferences(withRefs, { partials: { tagline: 'Welcome' } }), 20000)
 
@@ -63,11 +66,11 @@ bench('wide block array (1000 items)', () => parseCore(wideArray), 2000)
 
 const interpHeavy =
 	Array.from({ length: 20 }, (_, i) => `k${i}: v${i}`).join('\n') + '\nsummary: ' +
-	Array.from({ length: 20 }, (_, i) => `($k${i})`).join(' ') + '\n'
+	Array.from({ length: 20 }, (_, i) => `$(k${i})`).join(' ') + '\n'
 bench('one string interpolating 20 references', () => parseReferences(interpHeavy), 10000)
 
 const bigPartial = Array.from({ length: 2000 }, (_, i) => i)
-const partialHeavy = Array.from({ length: 16 }, (_, i) => `k${i}: (%big)`).join('\n') + '\n'
+const partialHeavy = Array.from({ length: 16 }, (_, i) => `k${i}: $(:big)`).join('\n') + '\n'
 bench('16 refs to a ~2000-node partial (~32K result nodes)', () => parseReferences(partialHeavy, { partials: { big: bigPartial } }), 200)
 
 // ── Scaling sweeps: growth should stay linear ────────────────────────────
@@ -80,7 +83,7 @@ for (const n of [100, 200, 400, 800, 1600]) {
 
 log('\n--- reference count (nested under one key, bypasses the 128 top-level-key limit) ---')
 for (const n of [50, 100, 200, 400, 800, 1600, 3200]) {
-	const doc = 'base: 42\nrefs:\n' + Array.from({ length: n }, (_, i) => `  k${i}: ($base)`).join('\n') + '\n'
+	const doc = 'base: 42\nrefs:\n' + Array.from({ length: n }, (_, i) => `  k${i}: $(base)`).join('\n') + '\n'
 	if (new TextEncoder().encode(doc).length > 65536) continue
 	bench(`${n} backward references`, () => parseReferences(doc), Math.max(30, Math.floor(5000 / n)))
 }

@@ -110,7 +110,7 @@ const isReferenceFreeP = (v) => {
  * already contain the result of an inner reference that resolved first —
  * both insertion sites remain identifiable participants after the copy).
  */
-const deepCopyPositioned = (v) => {
+export const deepCopyPositioned = (v) => {
     switch (v.kind) {
         case 'array': return { kind: 'array', items: v.items.map(deepCopyPositioned), line: v.line, insertedAt: v.insertedAt };
         case 'mapping': {
@@ -132,7 +132,7 @@ const deepCopyPositioned = (v) => {
  * every pure reference to that partial retrieves — deep-copying it on every
  * such reference (§3.1) is the resolveTree call site's job, not this one.
  */
-const partialToPositioned = (v, line) => {
+export const partialToPositioned = (v, line) => {
     switch (v.kind) {
         case 'null': return { kind: 'null', line };
         case 'bool': return { kind: 'bool', value: v.value, line };
@@ -282,7 +282,7 @@ const resolveTree = (node, lookup, partials, ctx) => {
     }
     return node; // null/bool/int/float/instant — nothing to resolve
 };
-const finalizePositioned = (v) => {
+export const finalizePositioned = (v) => {
     const own = v.insertedAt ? [v.insertedAt] : [];
     if (v.kind === 'array') {
         if (v.items.length === 0)
@@ -334,9 +334,9 @@ const finalizePositioned = (v) => {
     return { native: toNativeFromPositioned(v), nodeCount: 1, depth: 0, deepestParticipants: own };
 };
 /** Earliest (lowest-line) participant, or null when none exist — R-113's "line 1" fallback applies then. */
-const earliestParticipant = (participants) => participants.length === 0 ? null : participants.reduce((a, b) => (b.line < a.line ? b : a));
+export const earliestParticipant = (participants) => participants.length === 0 ? null : participants.reduce((a, b) => (b.line < a.line ? b : a));
 /** Node-count attribution for the RESOURCE_LIMIT error path: every reference insertion anywhere in the tree contributes to the total. */
-const collectAllParticipants = (v, acc) => {
+export const collectAllParticipants = (v, acc) => {
     if (v.insertedAt)
         acc.push(v.insertedAt);
     if (v.kind === 'array')
@@ -520,3 +520,5 @@ export const parseReferences = (frontMatter, options) => {
 };
 /** Backward-compatible primary entry point — References layered on Core. */
 export const parse = parseReferences;
+/** Internal conformance entry point for the frozen References 1.0 suite. */
+export const parseReferencesV1 = parseReferences;

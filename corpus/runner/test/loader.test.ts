@@ -39,7 +39,7 @@ describe('loadCase', () => {
 					value: { count: 42 },
 					warnings: [],
 				})
-				expect(result.case.options).toEqual({ strict: false, mode: 'references', partials: {} })
+				expect(result.case.options).toEqual({ strict: false, mode: 'references', partials: {}, partialsSupplied: false })
 			}
 		} finally {
 			rmSync(dir, { recursive: true, force: true })
