@@ -90,7 +90,9 @@ Numbers instead of adjectives. Word count is the most robust metric here (line c
 | Specification (words) | 3,998 | 4,254 | 7,602 | 2,949 | 21,961 |
 | Implementation, code (words) | — | — | 6,954 | 3,457 | 11,787 |
 | Implementation, comments (words) | — | — | 2,940 | 1,127 | 2,144 |
-| Package size (npm, packed) | — | — | 48 KB Core & References combined | | 338 KB |
+| Package size (npm, packed) | — | — | 48 KB\* | — | 338 KB |
+
+<sub>\*Core &amp; References combined package size — they always ship together, so there's no separate Core-only figure.</sub>
 
 YAML's specification is **~5.2–5.5× longer** than JSON's or TOML's, and **~2.9× longer** than Lima Core's ([official 1.2.2 source](https://github.com/yaml/yaml-spec/blob/main/spec/1.2.2/spec.md) — the current revision; 1.2.1/1.2.2 are errata over the 2009 1.2 release, not a newer major version). Lima Core's code is **~1.7× smaller** than js-yaml's parse path (6,954 vs. 11,787 words, comments excluded from both). References 2.0 adds a moderate 3,457 code words to Core — a real feature (document-property and external-partial references YAML has no equivalent for), not padding — but is never included in the YAML comparison. Comments run the other way: Lima's source is proportionally *more* documented, not less — comments make up about 30% of Core's word count (2,940 of 9,894) against 15% for js-yaml (2,144 of 13,931), so the code-only comparison above isn't hiding thin documentation behind a comment-stripping trick. The packed npm tarballs are 48 KB for Lima 0.2.0 and 338 KB for js-yaml 5.2.3; Core and References ship together, so there is no separate Core-only package-size figure. Part of that gap is scope, not just code, because js-yaml also ships full YAML support and pre-built browser bundles. Lima Core's own spec is a little longer than JSON's/TOML's, honestly — it documents explicit type-coercion rules, date parsing, resource limits, and a full strict-mode error catalogue that those simpler formats don't attempt.
 
