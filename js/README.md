@@ -49,16 +49,16 @@ parse(frontmatter, { partials: { author: 'Alice' } })
 parse(frontmatter, { mode: 'core' }) // same reference-unaware path as parseCore
 ```
 
-The existing **[guide](https://github.com/limaformat/lima/blob/main/docs/guide.md)**
-covers Core and References 1.0. References 2.0 syntax, resource limits, strict
-mode, and the new API are defined in the
-**[2.0 draft specification](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)**.
+The **[guide](https://github.com/limaformat/lima/blob/main/docs/guide.md)**
+covers Core and References 2.0 syntax, resource limits, strict mode, and the
+public API. The normative rules are defined in the
+**[References 2.0 specification](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)**.
 
 Why Lima exists, the case against YAML, and security rationale:
 **[repository README](https://github.com/limaformat/lima#readme)**.
 
 The [Lima Core 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
-and [Lima References 2.0 Draft](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
+and [Lima References 2.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
 specifications are the source of truth for these public entry points. The
 frozen References 1.0 implementation remains available internally to run its
 independent conformance suite.

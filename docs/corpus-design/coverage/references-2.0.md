@@ -1,8 +1,8 @@
 # Coverage Matrix: Lima References 2.0
 
-**Status:** draft corpus — 117 cases; the TypeScript adapter passes the full
+**Status:** final corpus — 117 cases; the TypeScript adapter passes the full
 suite, while adapters without References 2.0 support may report cases blocked.
-**Normative basis:** `docs/lima-references-2.0-spec.md` Draft.
+**Normative basis:** `docs/lima-references-2.0-spec.md` Final.
 
 A References 2.0 implementation must additionally pass the unchanged Core 1.0
 suite. References 1.0 remains an independent frozen conformance target.

@@ -42,11 +42,10 @@ Both return `Result<LimaValue, LimaError>` — `LimaError` implements
 (`LimaDiagnosticCode`) for programmatic error handling, alongside a
 human-readable message.
 
-Full syntax reference, the References extension, resource limits, and
-strict mode:
-**[docs/guide.md](https://github.com/limaformat/lima/blob/main/docs/guide.md)**
-(examples there are TypeScript; the syntax and semantics it describes are
-implementation-agnostic). Rust API docs: **[docs.rs/lima](https://docs.rs/lima)**.
+The crate currently implements Lima Core 1.0 and Lima References 1.0. Their
+normative specifications are linked below; the repository's current guide
+describes References 2.0 and therefore does not apply to this crate's
+References API. Rust API docs: **[docs.rs/lima](https://docs.rs/lima)**.
 
 Why Lima exists, the case against YAML, and security rationale:
 **[repository README](https://github.com/limaformat/lima#readme)**.

@@ -12,6 +12,8 @@ are both frozen regardless of what this file shows.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-08-11
+
 ### Changed
 
 - **Breaking:** `parse(input, options?)` now implements Lima References 2.0.

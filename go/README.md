@@ -30,7 +30,9 @@ func main() {
 
 Use `ParseCore(input, strict)` when references and interpolation must remain
 literal text. Use `ParseReferences(input, options)` for document references,
-partials, interpolation, and two-phase forward-reference resolution.
+partials, interpolation, and two-phase forward-reference resolution. This
+module currently implements Lima References 1.0; the repository's current
+guide describes References 2.0 and does not yet apply to this API.
 
 The returned `Value` has the concrete forms `Null`, `Bool`, `Int64`,
 `Float64`, `String`, `Instant`, `Array`, and insertion-ordered `Map`.

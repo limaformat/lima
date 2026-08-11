@@ -1,7 +1,7 @@
 # Lima References 2.0 — Normative Specification
 
-**Status:** Draft
-**Version:** 2.0.0-draft
+**Status:** Final
+**Version:** 2.0.0
 **Date:** 2026-08-11
 
 This document specifies the Lima References Extension 2.0. It is a normative
@@ -99,6 +99,11 @@ While scanning an active scalar, recognise the longest complete reference token
 starting at the current character. Do not recognise overlapping tokens inside
 an accepted token. An incomplete or grammatically invalid reference-like
 substring is ordinary text and is not an unresolved-reference error.
+
+A token's source line and character offset are its physical position in the
+original source text. This includes a token on a `^^` continuation line inside
+a `|` block scalar (Lima Core §6.1.6); its position MUST NOT be reconstructed
+from the continuation-merged decoded string.
 
 ### 2.5 Pure references and interpolation
 

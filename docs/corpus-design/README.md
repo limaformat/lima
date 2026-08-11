@@ -1,7 +1,7 @@
 # Lima Conformance Corpus – Design Package
 
 **Status:** implemented — frozen 250-case Core/References 1.0 corpus plus
-a separate 117-case References 2.0 draft corpus; counts are pinned by tests.
+a separate 117-case References 2.0 final corpus; counts are pinned by tests.
 Verified from `corpus/runner/` with the suite commands described below. This
 document is the design rationale the corpus was
 built from; §11's "Implementation order" is a historical record of how
@@ -51,7 +51,7 @@ Versioned suite layout:
 ```text
 corpus/core/             # Core 1.0, frozen
 corpus/references/       # References 1.0, frozen
-corpus/references-2.0/   # References 2.0 Draft
+corpus/references-2.0/   # References 2.0 Final
 corpus/manifests/        # byte-level protection for both 1.0 suites
 ```
 
@@ -402,7 +402,7 @@ the actual corpus:
 corpus/
 ├── core/             # frozen Core 1.0
 ├── references/       # frozen References 1.0
-├── references-2.0/   # References 2.0 Draft
+├── references-2.0/   # References 2.0 Final
 ├── manifests/        # frozen-suite hashes and stable IDs
 ├── schema/
 │   └── case.schema.json

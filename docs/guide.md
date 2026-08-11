@@ -2,8 +2,8 @@
 
 A practical walkthrough of Lima syntax, the References Extension, resource
 limits, and the JavaScript/TypeScript API. This guide is descriptive, not
-normative — [Lima Core 1.0](lima-core-1.0-spec.md) and
-[Lima References 1.0](lima-references-1.0-spec.md) are the source of truth.
+normative — [Lima Core 1.0](lima-core-1.0-spec.md) and the
+[Lima References 2.0 specification](lima-references-2.0-spec.md) are the source of truth.
 Where this guide and a spec disagree, the spec wins.
 
 ## Installation
@@ -294,28 +294,33 @@ for the indentation-based rule that applies there instead.
 
 ## References (optional extension)
 
-Everything in this section is the **References Extension**, layered on top
-of Core. A Core-only parser (`parseCore`) treats `($key)` and `(%key)` as
-plain strings — nothing below applies unless you call `parse` /
-`parseReferences`.
+Everything in this section is **Lima References 2.0**, layered on top of
+Core. A Core-only parser (`parseCore`) treats `$(key)` and `$(:key)` as plain
+strings. `parse` enables References by default; `parseReferences` is its
+deprecated compatibility alias with identical 2.0 semantics.
 
-**Document reference** — `($key)` or a dotted path `($a.b.c)`:
+**Document reference** — `$(key)` or a dotted path `$(a.b.c)`:
 
 ```yaml
 total: 42
-count: ($total)   # → 42 (number, not string — type preserved)
+count: $(total)   # → 42 (number, not string — type preserved)
 ```
 
-**Partial reference** — `(%key)`, resolved against a `partials` object you
-pass in:
+**Partial reference** — `$(:key)`, resolved against a `partials` object you
+pass in. Later dotted components traverse mappings; `/` remains literal
+namespace content in the partial name:
 
 ```yaml
-author: (%defaultAuthor)
+author: $(:defaultAuthor)
+city: $(:people/alice.address.city)
 ```
 
 ```ts
 parse(frontmatter, {
-  partials: { defaultAuthor: { name: 'Alice', email: 'alice@example.com' } }
+  partials: {
+    defaultAuthor: { name: 'Alice', email: 'alice@example.com' },
+    'people/alice': { address: { city: 'London' } },
+  }
 })
 ```
 
@@ -326,40 +331,34 @@ interpolation and always produces a string:
 
 ```yaml
 firstName: Alice
-fullName: ($firstName) ($lastName)   # interpolation → 'Alice Wonderland'
-greeting: Hello ($firstName)!        # interpolation → 'Hello Alice!'
+fullName: $(firstName) $(lastName)   # interpolation → 'Alice Wonderland'
+greeting: Hello $(firstName)!        # interpolation → 'Hello Alice!'
 ```
 
 A reference inside a **quoted** string is inactive — literal text, never
 resolved:
 
 ```yaml
-title: "($key)"   # NOT a reference — stays the literal string "($key)"
+title: "$(key)"   # NOT a reference — stays the literal string "$(key)"
 ```
 
-**Forward references work**, in both modes — Lima resolves in two passes,
-so a reference to a key defined later in the document still resolves.
-Unresolvable references are left as the literal token string in non-strict
-mode, or throw in strict mode.
-
-**The one-hop limit — read this before relying on chained references.**
-Lima resolves at most one hop. A reference to a reference is *not*
-followed transitively:
+**Forward and bounded transitive references work.** Targets may occur before
+or after their source. A chain may contain at most three reference edges,
+connecting at most four values:
 
 ```yaml
-a: ($b)
-b: ($c)
+a: $(b)
+b: $(c)
 c: 42
 ```
 
-Result: `a` stays the literal string `'($b)'`; `b` resolves to `42`; `c` is
-`42`. This is intentional, not a bug — Lima is a data format, not an
-evaluation system. Design frontmatter so references point directly at
-their final value, not at another reference.
+Both `a` and `b` resolve to `42`. A fourth edge is unresolved: non-strict mode
+leaves that source token literal, while strict mode throws. Suffixes that fit
+within three edges may still resolve.
 
-Partial values are never traversed further — a reference-looking string
-*inside* a partial's value is always literal, even after the partial is
-inserted.
+Partial mappings may be traversed by the token's dotted path. Their stored
+strings remain inert: reference-looking text inside a partial is always
+literal, even after insertion.
 
 ## Resource limits
 
@@ -409,7 +408,7 @@ References adds (Core §10.1 + References §7):
 
 | Condition | Non-strict | Strict |
 |---|---|---|
-| Unresolved reference after both phases | left as token string | throw |
+| Unresolved reference after bounded resolution | left as token string | throw |
 | Mapping value used in interpolation | throw | throw |
 | Array/nested-array element in interpolation | throw | throw |
 | Scalar limit exceeded after interpolation/copy | throw | throw |
@@ -423,7 +422,7 @@ import { parseCore, type CoreOptions } from '@limaformat/lima'
 import { parse, parseReferences, type ParseOptions } from '@limaformat/lima'
 ```
 
-`parseCore` and `parse` (an alias for `parseReferences`) both take
+`parseCore` and `parse` both take
 `(input: string, options?) => T`, `T` defaulting to
 `Record<string, unknown>` — pass your own interface for a typed result.
 This is a compile-time assertion only, not runtime validation: Lima does
@@ -443,22 +442,28 @@ const meta = parse<PostMeta>(frontmatter)
 meta.title.toUpperCase()  // TypeScript knows title is a string
 ```
 
-**`parseCore(input, options?: CoreOptions)`** — Core only. `($key)` /
-`(%key)` are plain strings.
+**`parseCore(input, options?: CoreOptions)`** — Core only. `$(key)` and
+`$(:key)` are plain strings.
 
 | Option | Type | Default |
 |---|---|---|
 | `strict` | `boolean` | `false` |
 | `onWarning` | `(diagnostic) => void` | `undefined` |
 
-**`parse` / `parseReferences`(input, options?: ParseOptions)`** — Core plus
-the References Extension.
+**`parse(input, options?: ParseOptions)`** — the primary Core plus
+References 2.0 parser. **`parseReferences`** is a deprecated exact alias;
+new code should use `parse`.
 
 | Option | Type | Default |
 |---|---|---|
 | `strict` | `boolean` | `false` |
 | `onWarning` | `(diagnostic) => void` | `undefined` |
 | `partials` | `Record<string, unknown>` | `{}` |
+| `mode` | `"references" \| "core"` | `"references"` |
+
+`parse(input, { mode: "core" })` uses the same reference-unaware path as
+`parseCore`. Do not supply `partials` in Core mode; the API rejects that
+combination before parsing.
 
 **Duplicate keys never go to `console.warn`** — or any other implicit
 output channel. Diagnostics are only ever delivered through `onWarning`;
@@ -508,8 +513,10 @@ version, until that's a documented, stable export.
 
 ## Where to go next
 
-- [Lima Core 1.0](lima-core-1.0-spec.md) and
-  [Lima References 1.0](lima-references-1.0-spec.md) — the normative specs;
+- [Lima Core 1.0](lima-core-1.0-spec.md) and the
+  [Lima References 2.0](lima-references-2.0-spec.md) — the normative specs;
   this guide simplifies, they decide.
+- [Migrating References 1.0 to 2.0](migrating-references-1-to-2.md) — syntax
+  and API changes for existing users.
 - [Repository README](../README.md) — why Lima exists, the case against
   YAML, security rationale.

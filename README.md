@@ -69,7 +69,7 @@ const meta = parse(split.frontmatter)
 
 This recipe requires the opening `---` on the file's literal first line and a `---`-only closing line; it does not recognise a completely empty frontmatter block with zero blank lines between the fences (`---\n---\n`, as opposed to `---\n\n---\n`, which works). If this pattern turns out to be widely needed, an official `extractFrontmatter` (or similar) export is a reasonable future addition — proposed here, not implemented, since it's a new public API surface that deserves its own review rather than arriving as a side effect of a docs pass.
 
-Full syntax, the References extension, resource limits, strict mode, and the complete API: **[`docs/guide.md`](docs/guide.md)**. Migrating existing YAML frontmatter: **[`docs/migrating-from-yaml.md`](docs/migrating-from-yaml.md)**. Static site generator integration status: **[`docs/integrations.md`](docs/integrations.md)**.
+Full Core and References 2.0 syntax, resource limits, strict mode, and the complete API: **[`docs/guide.md`](docs/guide.md)**. Migrating existing YAML frontmatter: **[`docs/migrating-from-yaml.md`](docs/migrating-from-yaml.md)**. Migrating References 1.0 documents: **[`docs/migrating-references-1-to-2.md`](docs/migrating-references-1-to-2.md)**. Static site generator integration status: **[`docs/integrations.md`](docs/integrations.md)**.
 
 ## Why not YAML / TOML / JSON?
 
@@ -126,16 +126,18 @@ Worth being precise about the threat model this actually matters for: both CVEs 
 - [x] Lima Core 1.0 specification — final ([`docs/lima-core-1.0-spec.md`](docs/lima-core-1.0-spec.md))
 - [x] Lima References 1.0 specification — final ([`docs/lima-references-1.0-spec.md`](docs/lima-references-1.0-spec.md))
 - [x] Conformance test corpus — 250 cases, both specs, pinned by test ([`corpus/`](corpus/), design rationale in [`docs/corpus-design/`](docs/corpus-design/)); reproduce with `bun run run` from `corpus/runner/`
-- [ ] Lima References 2.0 — draft specification and 117-case draft corpus; the TypeScript implementation passes the complete draft suite, while other bindings remain on 1.0 ([spec](docs/lima-references-2.0-spec.md), [coverage](docs/corpus-design/coverage/references-2.0.md))
+- [x] Lima References 2.0 specification — final with a 117-case corpus; the TypeScript implementation passes the complete suite, while other bindings remain on 1.0 ([spec](docs/lima-references-2.0-spec.md), [coverage](docs/corpus-design/coverage/references-2.0.md))
 - [x] TypeScript/JavaScript implementation — published as [`@limaformat/lima`](js/)
 - [x] Rust implementation — published as [`lima`](rust/)
 - [x] Go implementation — published as [`github.com/limaformat/lima/go`](go/)
 
-Both specifications are frozen at 1.0. Further changes will only ship as errata or a 1.0.1 revision, and only on the basis of the conformance corpus.
+The Core 1.0 and References 1.0 specifications are frozen. Further changes to
+those versions will only ship as errata or a 1.0.1 revision, and only on the
+basis of the conformance corpus.
 
-References 2.0 is being developed as a separate major-version conformance
-target. The frozen 1.0 corpus remains independently runnable and is protected
-by checked-in content-hash manifests.
+References 2.0 is a separate, final major-version conformance target. The
+frozen 1.0 corpus remains independently runnable and is protected by checked-in
+content-hash manifests.
 
 ## Specification
 
@@ -143,9 +145,9 @@ The normative specifications are the single source of truth for Lima's syntax an
 
 - [Lima Core 1.0](docs/lima-core-1.0-spec.md) — syntax, types, and error behaviour.
 - [Lima References 1.0](docs/lima-references-1.0-spec.md) — property references and external partials.
-- [Lima References 2.0 Draft](docs/lima-references-2.0-spec.md) — versioned syntax, partial mapping paths, and bounded transitive references.
+- [Lima References 2.0](docs/lima-references-2.0-spec.md) — versioned syntax, partial mapping paths, and bounded transitive references.
 
-Both specifications are self-contained as of 1.0 Final; no design-history documents are part of this repository. [`docs/guide.md`](docs/guide.md) is a non-normative walkthrough of both — where it disagrees with a spec, the spec wins.
+The specifications are self-contained; no design-history documents are part of this repository. [`docs/guide.md`](docs/guide.md) is a non-normative walkthrough of Core 1.0 and References 2.0 — where it disagrees with a spec, the spec wins. The frozen [References 1.0 specification](docs/lima-references-1.0-spec.md) remains available for older implementations.
 
 ## Conformance corpus
 
