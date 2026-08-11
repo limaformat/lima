@@ -1,0 +1,13 @@
+{
+  "id": "references-2.block-scalar.continuation.token-physical-line",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "5",
+  "description": "An unresolved reference token on a `^^` continuation line (Core §6.1.6) reports its own physical source line, not the line of the block scalar's first content line that `^^` merges it into.",
+  "input": "description: |\n  Written by\n  ^^$(missing) today.\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": { "code": "UNRESOLVED_REFERENCE", "line": 3, "token": "$(missing)" }
+  },
+  "tags": ["error", "strict", "block-scalar", "continuation"]
+}

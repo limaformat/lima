@@ -24,8 +24,8 @@ describe('runCorpus', () => {
 	it('passes the complete References 2.0 suite through the local adapter', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot, ['references-2.0'])
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(114)
-		expect(outcomes.filter((outcome) => outcome.classification === 'PASS')).toHaveLength(114)
+		expect(outcomes).toHaveLength(117)
+		expect(outcomes.filter((outcome) => outcome.classification === 'PASS')).toHaveLength(117)
 		expect(outcomes.filter((outcome) => outcome.classification === 'BLOCKED')).toHaveLength(0)
 		expect(outcomes.filter((outcome) => outcome.classification === 'FAIL')).toHaveLength(0)
 	})

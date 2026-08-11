@@ -1,0 +1,13 @@
+{
+  "id": "references-2.block-scalar.continuation.same-line-offset-order",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "5",
+  "description": "Two unresolved references on the same `^^` continuation line are ordered by character offset (§5's tie-break after line), so the token starting earlier on that line wins.",
+  "input": "description: |\n  intro\n  ^^$(missingA) then $(missingB)\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": { "code": "UNRESOLVED_REFERENCE", "line": 3, "token": "$(missingA)" }
+  },
+  "tags": ["error", "strict", "block-scalar", "continuation", "error-order"]
+}

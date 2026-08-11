@@ -1,7 +1,7 @@
 # Coverage Matrix: Lima References 2.0
 
-**Status:** draft corpus — 114 cases; parser adapters intentionally blocked
-until their References 2.0 implementations exist.
+**Status:** draft corpus — 117 cases; the TypeScript adapter passes the full
+suite, while adapters without References 2.0 support may report cases blocked.
 **Normative basis:** `docs/lima-references-2.0-spec.md` Draft.
 
 A References 2.0 implementation must additionally pass the unchanged Core 1.0
@@ -41,6 +41,7 @@ suite. References 1.0 remains an independent frozen conformance target.
 | R2-060 | §5 | Ordering | earliest source error wins across diagnostic kinds | ordering cases |
 | R2-061 | §5 | Attribution | final global errors identify earliest participating insertion | limit cases |
 | R2-062 | §5 | Priority | partial validation precedes document parsing | priority case |
+| R2-063 | §5 | Block-scalar position | `^^`-continuation tokens report their physical source line; tokens sharing that line follow the character-offset tie-break | continuation cases |
 | R2-070 | §6.1 | API | `parse` defaults to References mode; `mode: "core"` uses the Core path; `parseReferences` is a deprecated exact alias | API cases |
 | R2-071 | §6.1 | Invalid options | `partials` with `mode: "core"` is rejected before parsing | binding/schema test |
 | R2-072 | §6.2 | Names | every partial name matches grammar; dot rejected; `_` accepted | validation cases |
