@@ -67,10 +67,14 @@ let written = 0
 for (const filename of readdirSync(sourceDir).filter((name) => name.endsWith('.json')).sort()) {
 	if (excluded.has(filename)) continue
 	const source = JSON.parse(readFileSync(join(sourceDir, filename), 'utf8')) as Record<string, unknown>
+	const mappedSection = sectionMap[String(source.section)]
+	if (mappedSection === undefined) {
+		throw new Error(`${filename}: no References 2.0 section mapping for source section ${String(source.section)}`)
+	}
 	const result = migrate(source) as Record<string, unknown>
 	result.id = String(result.id).replace(/^references\./, 'references-2.')
 	result.specVersion = '2.0'
-	result.section = sectionMap[String(source.section)] ?? source.section
+	result.section = mappedSection
 	if (filename === 'forward-reference.json') {
 		result.id = 'references-2.resolution.forward-reference.direct'
 		result.description = 'A direct document reference resolves regardless of whether its target appears later in source order.'
@@ -83,6 +87,10 @@ for (const filename of readdirSync(sourceDir).filter((name) => name.endsWith('.j
 		result.description = 'Every token in a two-key dependency cycle remains unresolved in non-strict mode.'
 	}
 	if (filename === 'pure-number.json') result.tags = ['positive', 'pure-reference', 'direct-reference']
+	if (filename === 'limits-final-scalar-length-above.json' || filename === 'limits-final-scalar-length-above-strict.json') {
+		const expectation = result.expect as { error: { token?: string } }
+		expectation.error.token = '$(a)'
+	}
 	await Bun.write(join(targetDir, filename), `${JSON.stringify(result, null, 2)}\n`)
 	written++
 }

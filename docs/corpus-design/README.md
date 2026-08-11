@@ -1,7 +1,7 @@
 # Lima Conformance Corpus – Design Package
 
 **Status:** implemented — frozen 250-case Core/References 1.0 corpus plus
-a separate 109-case References 2.0 draft corpus; counts are pinned by tests.
+a separate 110-case References 2.0 draft corpus; counts are pinned by tests.
 Verified from `corpus/runner/` with the suite commands described below. This
 document is the design rationale the corpus was
 built from; §11's "Implementation order" is a historical record of how

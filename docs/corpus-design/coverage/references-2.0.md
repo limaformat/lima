@@ -1,6 +1,6 @@
 # Coverage Matrix: Lima References 2.0
 
-**Status:** draft corpus — 109 cases; parser adapters intentionally blocked
+**Status:** draft corpus — 110 cases; parser adapters intentionally blocked
 until their References 2.0 implementations exist.
 **Normative basis:** `docs/lima-references-2.0-spec.md` Draft.
 
@@ -13,7 +13,7 @@ suite. References 1.0 remains an independent frozen conformance target.
 |---|---|---|---|---|
 | R2-001 | §1 | Scope | References 2.0 includes Core 1.0 behavior | inherited case + Core suite |
 | R2-010 | §2.1 | Document syntax | `$(path)` and dotted mapping paths | positive, unresolved pair |
-| R2-011 | §2.2 | Partial syntax | `$(:name)`, slash namespacing, dotted mapping traversal | positive, unresolved pair |
+| R2-011 | §2.2 | Partial syntax | `$(:name)`, slash namespacing, dotted mapping traversal, and their combination | positive, unresolved pair |
 | R2-012 | §2.3 | Namespace | colon immediately after `$(` selects partials | disambiguation case |
 | R2-013 | §2.3 | Names | underscore, colon, dash, slash rules | positive and validation cases |
 | R2-014 | §2.4 | Activity | every unquoted scalar context is active | mapping/sequence/flow/block cases |
@@ -52,13 +52,14 @@ suite. References 1.0 remains an independent frozen conformance target.
 
 ## Deliberately not copied from References 1.0
 
-The following 1.0 assertions are not 2.0 assertions and have no mechanically
-renamed counterpart:
+The following 1.0 cases have no mechanically renamed counterpart:
 
 - the phase-1 backward-position rule;
 - the phase-2 immutable-snapshot rule;
 - the one-hop chain limit;
-- the prohibition on partial mapping traversal; and
+- the old `partials-no-traversal` expectation: partial strings remain inert in
+  2.0, but mapping traversal is now permitted, so dedicated traversal and
+  inertia cases replace that mixed 1.0 fixture; and
 - `(%a.b)` as the dotted-partial negative grammar example.
 
 They are replaced by R2-031 and R2-050–R2-056. The derivation script excludes

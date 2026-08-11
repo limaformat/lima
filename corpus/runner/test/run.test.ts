@@ -24,9 +24,9 @@ describe('runCorpus', () => {
 	it('keeps References 2.0 separately blocked until the local adapter supports it', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot, ['references-2.0'])
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(109)
+		expect(outcomes).toHaveLength(110)
 		expect(outcomes.filter((outcome) => outcome.classification === 'PASS')).toHaveLength(1)
-		expect(outcomes.filter((outcome) => outcome.classification === 'BLOCKED')).toHaveLength(108)
+		expect(outcomes.filter((outcome) => outcome.classification === 'BLOCKED')).toHaveLength(109)
 		expect(outcomes.filter((outcome) => outcome.classification === 'FAIL')).toHaveLength(0)
 	})
 

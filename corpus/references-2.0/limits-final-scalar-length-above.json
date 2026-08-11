@@ -7,7 +7,8 @@
   "expect": {
     "error": {
       "line": 2,
-      "code": "RESOURCE_LIMIT"
+      "code": "RESOURCE_LIMIT",
+      "token": "$(a)"
     }
   },
   "tags": [

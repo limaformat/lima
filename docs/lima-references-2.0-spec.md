@@ -389,16 +389,20 @@ The following constraints apply:
 
 ### 6.3 Final-result validation
 
-After resolution and copying, the complete result is checked in both modes:
+After resolution and copying, the complete result is checked in both modes.
+Resource limits are:
 
 | Resource | Limit |
 |---|---:|
 | String length | 16,384 Unicode code points |
 | Combined map/array depth | 16 |
 | Total result nodes | 65,536 |
-| Direct nested arrays | forbidden |
 
 Exceeding a limit is a hard error in strict and non-strict mode.
+
+Separately, a direct nested array in the final result is an invalid reference
+shape, not a resource-limit violation. It throws `INVALID_REFERENCE_SHAPE` in
+both modes.
 
 ---
 

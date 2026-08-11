@@ -1,0 +1,23 @@
+{
+  "id": "references-2.partials.slash-name.mapping-path",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "3.1",
+  "description": "A slash remains part of the partial name while a following dot begins traversal through nested mappings.",
+  "input": "city: $(:persons/alice.address.city)\n",
+  "options": {
+    "partials": {
+      "persons/alice": {
+        "address": {
+          "city": "London"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "city": "London"
+    }
+  },
+  "tags": ["positive", "partial", "slash", "dotted-path"]
+}

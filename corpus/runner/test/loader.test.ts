@@ -118,8 +118,8 @@ describe('loadCorpus', () => {
 	it('loads the versioned References 2.0 suite independently', () => {
 		const { cases, failures } = loadCorpus(corpusRoot, ['references-2.0'])
 		expect(failures).toEqual([])
-		expect(cases).toHaveLength(109)
+		expect(cases).toHaveLength(110)
 		expect(cases.every((c) => c.spec === 'references' && c.specVersion === '2.0')).toBe(true)
-		expect(new Set(cases.map((c) => c.id)).size).toBe(109)
+		expect(new Set(cases.map((c) => c.id)).size).toBe(110)
 	})
 })
