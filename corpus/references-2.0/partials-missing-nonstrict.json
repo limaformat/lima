@@ -1,0 +1,20 @@
+{
+  "id": "references-2.partials.missing.non-strict",
+  "spec": "references",
+  "section": "3.1",
+  "description": "A partial key not found in the validated partials map leaves the token unchanged in non-strict mode.",
+  "input": "a: $(:missing)\n",
+  "options": {
+    "partials": {}
+  },
+  "expect": {
+    "result": {
+      "a": "$(:missing)"
+    }
+  },
+  "tags": [
+    "fallback",
+    "partial"
+  ],
+  "specVersion": "2.0"
+}

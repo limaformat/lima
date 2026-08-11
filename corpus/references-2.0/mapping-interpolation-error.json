@@ -1,0 +1,19 @@
+{
+  "id": "references-2.interpolation.mapping.error",
+  "spec": "references",
+  "section": "3.4",
+  "description": "Rejects mapping interpolation in both modes.",
+  "input": "person:\n  name: Alice\nlabel: Person: $(person)\n",
+  "expect": {
+    "error": {
+      "line": 3,
+      "token": "$(person)",
+      "code": "INVALID_INTERPOLATION"
+    }
+  },
+  "tags": [
+    "error",
+    "interpolation"
+  ],
+  "specVersion": "2.0"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "references-2.cycles.self-reference.strict",
+  "spec": "references",
+  "section": "4.3",
+  "description": "A self-reference is reported as unresolved in strict mode.",
+  "input": "a: $(a)",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "$(a)",
+      "code": "UNRESOLVED_REFERENCE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "cycle"
+  ],
+  "specVersion": "2.0"
+}

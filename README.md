@@ -126,11 +126,16 @@ Worth being precise about the threat model this actually matters for: both CVEs 
 - [x] Lima Core 1.0 specification — final ([`docs/lima-core-1.0-spec.md`](docs/lima-core-1.0-spec.md))
 - [x] Lima References 1.0 specification — final ([`docs/lima-references-1.0-spec.md`](docs/lima-references-1.0-spec.md))
 - [x] Conformance test corpus — 250 cases, both specs, pinned by test ([`corpus/`](corpus/), design rationale in [`docs/corpus-design/`](docs/corpus-design/)); reproduce with `bun run run` from `corpus/runner/`
+- [ ] Lima References 2.0 — draft specification and separate 109-case draft corpus; parser implementations intentionally not started yet ([spec](docs/lima-references-2.0-spec.md), [coverage](docs/corpus-design/coverage/references-2.0.md))
 - [x] TypeScript/JavaScript implementation — published as [`@limaformat/lima`](js/)
 - [x] Rust implementation — published as [`lima`](rust/)
 - [x] Go implementation — published as [`github.com/limaformat/lima/go`](go/)
 
 Both specifications are frozen at 1.0. Further changes will only ship as errata or a 1.0.1 revision, and only on the basis of the conformance corpus.
+
+References 2.0 is being developed as a separate major-version conformance
+target. The frozen 1.0 corpus remains independently runnable and is protected
+by checked-in content-hash manifests.
 
 ## Specification
 
@@ -138,6 +143,7 @@ The normative specifications are the single source of truth for Lima's syntax an
 
 - [Lima Core 1.0](docs/lima-core-1.0-spec.md) — syntax, types, and error behaviour.
 - [Lima References 1.0](docs/lima-references-1.0-spec.md) — property references and external partials.
+- [Lima References 2.0 Draft](docs/lima-references-2.0-spec.md) — versioned syntax, partial mapping paths, and bounded transitive references.
 
 Both specifications are self-contained as of 1.0 Final; no design-history documents are part of this repository. [`docs/guide.md`](docs/guide.md) is a non-normative walkthrough of both — where it disagrees with a spec, the spec wins.
 

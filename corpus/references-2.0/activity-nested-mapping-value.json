@@ -1,0 +1,20 @@
+{
+  "id": "references-2.activity.nested-mapping-value",
+  "spec": "references",
+  "section": "2.4",
+  "description": "A reference token is active in a nested mapping value.",
+  "input": "a: hello\nnested:\n  b: $(a)\n",
+  "expect": {
+    "result": {
+      "a": "hello",
+      "nested": {
+        "b": "hello"
+      }
+    }
+  },
+  "tags": [
+    "positive",
+    "activity"
+  ],
+  "specVersion": "2.0"
+}

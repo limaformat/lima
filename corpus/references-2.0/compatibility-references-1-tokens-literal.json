@@ -1,0 +1,19 @@
+{
+  "id": "references-2.compatibility.references-1-tokens.literal",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "10",
+  "description": "References 1.0 document and partial tokens are ordinary literal strings under References 2.0, including in strict mode.",
+  "input": "oldDocument: ($name)\noldPartial: (%author)\n",
+  "options": {
+    "strict": true,
+    "partials": { "author": "Ada" }
+  },
+  "expect": {
+    "result": {
+      "oldDocument": "($name)",
+      "oldPartial": "(%author)"
+    }
+  },
+  "tags": ["compatibility", "literal", "strict"]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "references-2.limits.partial-mapping-key-length.above",
+  "spec": "references",
+  "section": "6.2",
+  "description": "A partial mapping key of 129 Unicode code points throws.",
+  "input": "a: $(:m)",
+  "options": {
+    "partials": {
+      "m": {
+        "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "v"
+      }
+    }
+  },
+  "expect": {
+    "error": {
+      "partial": "m",
+      "code": "INVALID_PARTIAL"
+    }
+  },
+  "tags": [
+    "boundary",
+    "error",
+    "partial"
+  ],
+  "specVersion": "2.0"
+}

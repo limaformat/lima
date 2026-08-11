@@ -1,0 +1,10 @@
+{
+  "id": "references-2.scanner.longest-complete-token.precedence",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "2.4",
+  "description": "The scanner accepts one longest complete token and does not recognise overlapping content inside it.",
+  "input": "a: A\nb: B\nvalue: $(a)$(b)\n",
+  "expect": { "result": { "a": "A", "b": "B", "value": "AB" } },
+  "tags": ["positive", "scanner", "interpolation"]
+}

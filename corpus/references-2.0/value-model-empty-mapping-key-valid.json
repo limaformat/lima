@@ -1,0 +1,28 @@
+{
+  "id": "references-2.value-model.empty-mapping-key-valid",
+  "spec": "references",
+  "section": "6.2",
+  "description": "An empty string is a valid partial mapping key, consistent with Core quoted key rules.",
+  "input": "a: $(:m)",
+  "options": {
+    "partials": {
+      "m": {
+        "": "empty-key-value",
+        "x": 1
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "a": {
+        "": "empty-key-value",
+        "x": 1
+      }
+    }
+  },
+  "tags": [
+    "positive",
+    "value-model"
+  ],
+  "specVersion": "2.0"
+}

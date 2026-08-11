@@ -1,0 +1,22 @@
+{
+  "id": "references-2.interpolation.float.thresholds",
+  "spec": "references",
+  "section": "3.5",
+  "description": "Uses ECMAScript fixed/exponential thresholds for document floats.",
+  "input": "small: 0.000001\ntiny: 1e-7\nlarge: 1e20\nhuge: 1e21\nlabel: $(small)|$(tiny)|$(large)|$(huge)\n",
+  "expect": {
+    "result": {
+      "small": 0.000001,
+      "tiny": 1e-7,
+      "large": 100000000000000000000,
+      "huge": 1e+21,
+      "label": "0.000001|1e-7|100000000000000000000|1e21"
+    }
+  },
+  "tags": [
+    "float",
+    "boundary",
+    "interpolation"
+  ],
+  "specVersion": "2.0"
+}

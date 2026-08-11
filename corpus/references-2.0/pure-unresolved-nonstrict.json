@@ -1,0 +1,17 @@
+{
+  "id": "references-2.pure.unresolved.non-strict",
+  "spec": "references",
+  "section": "3.2",
+  "description": "An unresolvable pure reference leaves the token unchanged as a string in non-strict mode.",
+  "input": "b: $(missing)\n",
+  "expect": {
+    "result": {
+      "b": "$(missing)"
+    }
+  },
+  "tags": [
+    "fallback",
+    "pure-reference"
+  ],
+  "specVersion": "2.0"
+}

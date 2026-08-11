@@ -40,6 +40,18 @@ describe('validateCase — structural rules', () => {
 		expect(validateCase({ ...baseCase, spec: 'unknown' }).valid).toBe(false)
 	})
 
+	it('accepts References 2.0 only with a References-2 ID and spec', () => {
+		const valid = {
+			...baseCase,
+			id: 'references-2.syntax.document.basic',
+			spec: 'references',
+			specVersion: '2.0',
+		}
+		expect(validateCase(valid)).toEqual({ valid: true, errors: [] })
+		expect(validateCase({ ...valid, spec: 'core' }).valid).toBe(false)
+		expect(validateCase({ ...valid, specVersion: '3.0' }).valid).toBe(false)
+	})
+
 	it('requires exactly one of input, inputFile, generator', () => {
 		const { input, ...withoutInput } = baseCase
 		expect(validateCase(withoutInput).valid).toBe(false)

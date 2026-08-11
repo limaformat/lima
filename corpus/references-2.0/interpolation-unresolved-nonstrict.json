@@ -1,0 +1,17 @@
+{
+  "id": "references-2.interpolation.unresolved.non-strict",
+  "spec": "references",
+  "section": "3.4",
+  "description": "An unresolvable reference token in interpolation mode is left unchanged in the output string in non-strict mode.",
+  "input": "b: Hello $(missing)!\n",
+  "expect": {
+    "result": {
+      "b": "Hello $(missing)!"
+    }
+  },
+  "tags": [
+    "fallback",
+    "interpolation"
+  ],
+  "specVersion": "2.0"
+}

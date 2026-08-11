@@ -1,0 +1,18 @@
+{
+  "id": "references-2.activity.unquoted-top-level-mapping-value",
+  "spec": "references",
+  "section": "2.4",
+  "description": "A reference token is active in an unquoted top-level mapping value.",
+  "input": "a: hello\nb: $(a)\n",
+  "expect": {
+    "result": {
+      "a": "hello",
+      "b": "hello"
+    }
+  },
+  "tags": [
+    "positive",
+    "activity"
+  ],
+  "specVersion": "2.0"
+}

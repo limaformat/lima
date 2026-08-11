@@ -1,0 +1,10 @@
+{
+  "id": "references-2.chains.maximum.four-edges.nonstrict",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "4.2",
+  "description": "Only the source requiring four edges remains unresolved; its three-edge suffix resolves in non-strict mode.",
+  "input": "a: $(b)\nb: $(c)\nc: $(d)\nd: $(e)\ne: 42\n",
+  "expect": { "result": { "a": "$(b)", "b": 42, "c": 42, "d": 42, "e": 42 } },
+  "tags": ["fallback", "chain", "boundary"]
+}

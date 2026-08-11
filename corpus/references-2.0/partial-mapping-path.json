@@ -1,0 +1,13 @@
+{
+  "id": "references-2.partials.mapping-path.traversal",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "3.1",
+  "description": "Segments after the partial name traverse nested mappings without adding reference edges.",
+  "input": "name: $(:author.profile.name)\n",
+  "options": {
+    "partials": { "author": { "profile": { "name": "Ada" } } }
+  },
+  "expect": { "result": { "name": "Ada" } },
+  "tags": ["positive", "partial", "dotted-path"]
+}

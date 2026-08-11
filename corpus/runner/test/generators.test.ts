@@ -140,6 +140,16 @@ describe('result-node-expansion', () => {
 		expect(result.input).toBe('item0: (%shared)\nitem1: (%shared)')
 		expect(Object.keys(result.partials!)).toEqual(['shared'])
 	})
+
+	it('emits References 2.0 partial tokens when requested', () => {
+		const generated = runGenerator('result-node-expansion', {
+			topLevelKeys: 2,
+			partialNodes: 2,
+			partialName: 'shared',
+			referenceSyntax: '2.0',
+		})
+		expect(generated.input).toBe('k0: $(:shared)\nk1: $(:shared)')
+	})
 })
 
 describe('generator dispatch', () => {

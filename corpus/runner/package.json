@@ -7,6 +7,9 @@
   "scripts": {
     "test": "bun test",
     "run": "bun src/run.ts",
+    "run:core-1": "bun src/run.ts --suite core-1.0",
+    "run:references-1": "bun src/run.ts --suite references-1.0",
+    "run:references-2": "bun src/run.ts --suite references-2.0",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

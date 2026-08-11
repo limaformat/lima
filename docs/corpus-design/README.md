@@ -1,13 +1,15 @@
 # Lima Conformance Corpus – Design Package
 
-**Status:** implemented — 250 cases, count pinned by a test
-(`corpus/runner/test/loader.test.ts`), verified with `bun run run` from
-`corpus/runner/`. This document is the design rationale the corpus was
+**Status:** implemented — frozen 250-case Core/References 1.0 corpus plus
+a separate 109-case References 2.0 draft corpus; counts are pinned by tests.
+Verified from `corpus/runner/` with the suite commands described below. This
+document is the design rationale the corpus was
 built from; §11's "Implementation order" is a historical record of how
 that happened, not an open plan. Where this document and the actual
 corpus disagree, the corpus and its passing tests are authoritative — file
 an issue rather than trusting stale prose here.
-**Normative basis:** Lima Core 1.0 and Lima References 1.0
+**Normative basis:** Lima Core 1.0, Lima References 1.0, and Lima References
+2.0 Draft as a separate conformance target
 **First implementation:** TypeScript/Bun (`@limaformat/lima`)
 **Long-term goal:** the same corpus validates TypeScript, Rust, and further implementations
 
@@ -43,6 +45,19 @@ Further exceptions:
   corpus values.
 - Byte-exact special cases may use a `.bin` file or a specially generated
   input; the generator is then part of the case description.
+
+Versioned suite layout:
+
+```text
+corpus/core/             # Core 1.0, frozen
+corpus/references/       # References 1.0, frozen
+corpus/references-2.0/   # References 2.0 Draft
+corpus/manifests/        # byte-level protection for both 1.0 suites
+```
+
+The legacy directories were intentionally not moved. Their paths remain stable,
+and checked-in SHA-256 manifests detect removal, addition, ID changes, and
+content changes in either frozen suite.
 
 ## 2. Why JSON, with `.lima` available for the input?
 
@@ -85,9 +100,14 @@ core.numbers.safe-integer.maximum
 core.strings.unknown-escape.strict
 references.phases.forward-reference.phase-2
 references.interpolation.float.exponent-threshold
+references-2.chains.maximum.three-edges-allowed
 ```
 
 IDs are permanently stable. Renaming an ID is a corpus change.
+
+References 2.0 IDs begin with `references-2.` and explicitly declare
+`"specVersion": "2.0"`. Existing cases omit this field and retain the legacy
+default `1.0`; their exact bytes are protected by the frozen manifests.
 
 ## 4. Case kinds and defaults
 
@@ -110,6 +130,8 @@ api = "references"
 ```
 
 Default values should not be spelled out in sidecars.
+
+Every case in a newly versioned suite declares `specVersion` explicitly.
 
 `api` selects the entry point a case runs against: the default
 `"references"` calls `parseReferences`/`parse`; `"core"` calls `parseCore`
@@ -272,7 +294,8 @@ a plain string (input only, the four above) or `{ input, partials }`.
   boundary (References §6.2, max 4,096 across all partials).
 - **`result-node-expansion`** — `topLevelKeys` (positive integer),
   `partialNodes` (positive integer), optional `keyPrefix` (default `"k"`),
-  optional `partialName` (default `"big"`). Produces `topLevelKeys`
+  optional `partialName` (default `"big"`), and optional `referenceSyntax`
+  (`"1.0"` by default, `"2.0"` for `$(:name)`). Produces `topLevelKeys`
   top-level keys, each a pure reference to the same `partialNodes`-node
   partial. Since a pure reference is a structural deep copy (References
   §3.1), each reference multiplies the final result's node count
@@ -365,7 +388,8 @@ docs/corpus-design/
 ├── error-api.md
 └── coverage/
     ├── core.md
-    └── references.md
+    ├── references.md
+    └── references-2.0.md
 ```
 
 The coverage files are the substantive task list. They are deliberately
@@ -376,12 +400,31 @@ the actual corpus:
 
 ```text
 corpus/
-├── core/          # taken over from examples/core/
-├── references/     # taken over from examples/references/
+├── core/             # frozen Core 1.0
+├── references/       # frozen References 1.0
+├── references-2.0/   # References 2.0 Draft
+├── manifests/        # frozen-suite hashes and stable IDs
 ├── schema/
 │   └── case.schema.json
 └── generated/       # still empty — generated boundary tests
 ```
+
+## 13. Versioned execution
+
+Run suites independently:
+
+```text
+bun run run:core-1
+bun run run:references-1
+bun run run:references-2
+```
+
+The default `bun run run` remains the historical Core 1.0 plus References 1.0
+baseline. Until a local adapter implements References 2.0, its References-API
+cases are reported as `BLOCKED` (a direct Core-API inheritance case can already
+pass); this does not change the 250/250 1.0 result. Once an
+adapter declares 2.0 support, its conformance target is Core 1.0 plus References
+2.0, not References 1.0.
 
 `docs/corpus-design/` (originally `testkorpus-design/`, filed under `docs/`
 since it is non-normative but, unlike an archive, still actively

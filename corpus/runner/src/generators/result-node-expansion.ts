@@ -13,17 +13,23 @@ import type { GeneratorResult } from './index'
  *
  * Parameters: `topLevelKeys` (positive integer), `partialNodes` (positive
  * integer), optional `keyPrefix` (default `"k"`), optional `partialName`
- * (default `"big"`).
+ * (default `"big"`), optional `referenceSyntax` (`"1.0"` by default,
+ * `"2.0"` for `$(:name)`).
  */
 export function resultNodeExpansion(parameters: Record<string, unknown>): GeneratorResult {
 	const topLevelKeys = requirePositiveInt(parameters, 'topLevelKeys')
 	const partialNodes = requirePositiveInt(parameters, 'partialNodes')
 	const keyPrefix = requireString(parameters, 'keyPrefix', 'k')
 	const partialName = requireString(parameters, 'partialName', 'big')
+	const referenceSyntax = requireString(parameters, 'referenceSyntax', '1.0')
+	if (referenceSyntax !== '1.0' && referenceSyntax !== '2.0') {
+		throw new Error('generator parameter "referenceSyntax" must be "1.0" or "2.0"')
+	}
+	const token = referenceSyntax === '2.0' ? `$(:${partialName})` : `(%${partialName})`
 
 	const elements = Array.from({ length: partialNodes - 1 }, () => 1)
 	const lines: string[] = []
-	for (let i = 0; i < topLevelKeys; i++) lines.push(`${keyPrefix}${i}: (%${partialName})`)
+	for (let i = 0; i < topLevelKeys; i++) lines.push(`${keyPrefix}${i}: ${token}`)
 
 	return { input: lines.join('\n'), partials: { [partialName]: elements } }
 }

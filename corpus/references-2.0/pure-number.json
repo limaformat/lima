@@ -1,0 +1,19 @@
+{
+  "id": "references-2.pure.document-number.backward",
+  "spec": "references",
+  "section": "3.2",
+  "description": "A pure backward document reference preserves the integer type.",
+  "input": "total: 42\ncount: $(total)\n",
+  "expect": {
+    "result": {
+      "total": 42,
+      "count": 42
+    }
+  },
+  "tags": [
+    "positive",
+    "pure-reference",
+    "direct-reference"
+  ],
+  "specVersion": "2.0"
+}

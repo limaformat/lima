@@ -1,0 +1,23 @@
+{
+  "id": "references-2.interpolation.mapping.error.strict",
+  "spec": "references",
+  "section": "3.4",
+  "description": "Same case as references-2.interpolation.mapping.error (a mapping value used directly in string interpolation), with strict mode explicitly enabled — References §7 lists this as throwing in both modes; this case pins strict mode as its own explicit regression check rather than relying on the non-strict case as an implicit stand-in.",
+  "input": "person:\n  name: Alice\nlabel: Person: $(person)\n",
+  "expect": {
+    "error": {
+      "line": 3,
+      "token": "$(person)",
+      "code": "INVALID_INTERPOLATION"
+    }
+  },
+  "tags": [
+    "error",
+    "interpolation",
+    "strict"
+  ],
+  "options": {
+    "strict": true
+  },
+  "specVersion": "2.0"
+}

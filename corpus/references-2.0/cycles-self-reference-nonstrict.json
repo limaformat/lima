@@ -1,0 +1,17 @@
+{
+  "id": "references-2.cycles.self-reference.non-strict",
+  "spec": "references",
+  "section": "4.3",
+  "description": "A self-reference is cyclic and remains its complete token string in non-strict mode.",
+  "input": "a: $(a)",
+  "expect": {
+    "result": {
+      "a": "$(a)"
+    }
+  },
+  "tags": [
+    "fallback",
+    "cycle"
+  ],
+  "specVersion": "2.0"
+}

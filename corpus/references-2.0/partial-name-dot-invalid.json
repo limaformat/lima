@@ -1,0 +1,13 @@
+{
+  "id": "references-2.partials.name.dot-invalid",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "6.2",
+  "description": "A dot is reserved for traversal and is not permitted in a host-provided partial name.",
+  "input": "value: ok\n",
+  "options": { "partials": { "author.profile": "Ada" } },
+  "expect": {
+    "error": { "code": "INVALID_PARTIAL", "partial": "author.profile", "contains": "invalid partial name" }
+  },
+  "tags": ["error", "partial", "validation"]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "references-2.chains.source-order.independent",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "4.1",
+  "description": "A permitted chain resolves independently of mixed forward and backward source ordering.",
+  "input": "c: $(d)\na: $(b)\nd: 42\nb: $(c)\n",
+  "expect": { "result": { "c": 42, "a": 42, "d": 42, "b": 42 } },
+  "tags": ["positive", "chain", "determinism"]
+}

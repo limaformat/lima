@@ -1,0 +1,11 @@
+{
+  "id": "references-2.scanner.incomplete-token.literal-strict",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "2.4",
+  "description": "An incomplete reference-like substring is literal content and never an unresolved-reference error.",
+  "input": "document: $(missing\npartial: $(:missing\n",
+  "options": { "strict": true },
+  "expect": { "result": { "document": "$(missing", "partial": "$(:missing" } },
+  "tags": ["negative", "scanner", "strict"]
+}

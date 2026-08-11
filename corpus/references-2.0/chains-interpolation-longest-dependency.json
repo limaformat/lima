@@ -1,0 +1,10 @@
+{
+  "id": "references-2.chains.interpolation.longest-dependency",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "4.2",
+  "description": "An interpolated scalar uses the longest dependency path of its separate reference tokens to determine chain depth.",
+  "input": "a: $(b)\nb: $(c)\nc: 7\nx: X\nlabel: $(x)-$(a)\n",
+  "expect": { "result": { "a": 7, "b": 7, "c": 7, "x": "X", "label": "X-7" } },
+  "tags": ["positive", "chain", "interpolation"]
+}

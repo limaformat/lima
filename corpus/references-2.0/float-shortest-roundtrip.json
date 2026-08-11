@@ -1,0 +1,18 @@
+{
+  "id": "references-2.float.shortest-roundtrip",
+  "spec": "references",
+  "section": "3.5",
+  "description": "0.30000000000000004 round-trips exactly via the ECMAScript Number::toString shortest representation.",
+  "input": "f: 0.30000000000000004\nlabel: Value: $(f)\n",
+  "expect": {
+    "result": {
+      "f": 0.30000000000000004,
+      "label": "Value: 0.30000000000000004"
+    }
+  },
+  "tags": [
+    "positive",
+    "float"
+  ],
+  "specVersion": "2.0"
+}

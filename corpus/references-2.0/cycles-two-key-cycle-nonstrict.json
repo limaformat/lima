@@ -1,0 +1,18 @@
+{
+  "id": "references-2.cycles.two-key-cycle.non-strict",
+  "spec": "references",
+  "section": "4.3",
+  "description": "Every token in a two-key dependency cycle remains unresolved in non-strict mode.",
+  "input": "a: $(b)\nb: $(a)\n",
+  "expect": {
+    "result": {
+      "a": "$(b)",
+      "b": "$(a)"
+    }
+  },
+  "tags": [
+    "fallback",
+    "cycle"
+  ],
+  "specVersion": "2.0"
+}

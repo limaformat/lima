@@ -8,6 +8,7 @@ import type { DiagnosticExpectation } from './errors'
 export interface LoadedCase {
 	id: string
 	spec: 'core' | 'references'
+	specVersion: '1.0' | '2.0'
 	section: string
 	description: string
 	input: string
@@ -51,6 +52,7 @@ export function loadCase(jsonPath: string): LoadResult {
 	const d = doc as {
 		id: string
 		spec: 'core' | 'references'
+		specVersion?: '1.0' | '2.0'
 		section: string
 		description: string
 		input?: string
@@ -113,6 +115,7 @@ export function loadCase(jsonPath: string): LoadResult {
 		case: {
 			id: d.id,
 			spec: d.spec,
+			specVersion: d.specVersion ?? '1.0',
 			section: d.section,
 			description: d.description,
 			input,
@@ -132,15 +135,29 @@ export interface LoadedCorpus {
 }
 
 /**
- * Loads every case under `corpusRoot`'s `core/`, `references/`, and
- * `generated/` subdirectories. A single malformed case is reported as a
- * failure rather than aborting the whole load.
+ * Loads every case in the selected versioned suite directories. The default
+ * remains the frozen Core 1.0 + References 1.0 baseline. A single malformed
+ * case is reported as a failure rather than aborting the whole load.
  */
-export function loadCorpus(corpusRoot: string): LoadedCorpus {
+export const SUITE_DIRECTORIES = {
+	'core-1.0': 'core',
+	'references-1.0': 'references',
+	'references-2.0': 'references-2.0',
+} as const
+
+export type SuiteName = keyof typeof SUITE_DIRECTORIES
+
+export const DEFAULT_SUITES: readonly SuiteName[] = ['core-1.0', 'references-1.0']
+
+export function loadCorpus(
+	corpusRoot: string,
+	suites: readonly SuiteName[] = DEFAULT_SUITES,
+): LoadedCorpus {
 	const cases: LoadedCase[] = []
 	const failures: LoadedCorpus['failures'] = []
 
-	for (const area of ['core', 'references', 'generated']) {
+	for (const suite of suites) {
+		const area = SUITE_DIRECTORIES[suite]
 		const dir = join(corpusRoot, area)
 		let entries: string[]
 		try {
@@ -151,7 +168,15 @@ export function loadCorpus(corpusRoot: string): LoadedCorpus {
 		for (const entry of entries.sort()) {
 			if (!entry.endsWith('.json')) continue
 			const result = loadCase(join(dir, entry))
-			if (result.ok) cases.push(result.case)
+			if (result.ok) {
+				const expectedVersion = suite.endsWith('-2.0') ? '2.0' : '1.0'
+				if (result.case.specVersion !== expectedVersion) {
+					failures.push({
+						sourceFile: result.case.sourceFile,
+						errors: [`suite ${suite} requires specVersion ${expectedVersion}`],
+					})
+				} else cases.push(result.case)
+			}
 			else failures.push(result)
 		}
 	}

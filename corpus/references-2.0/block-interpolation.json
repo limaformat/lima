@@ -1,0 +1,19 @@
+{
+  "id": "references-2.interpolation.block-scalar.basic",
+  "spec": "references",
+  "section": "2.5",
+  "description": "Active tokens interpolate inside block scalars.",
+  "input": "author: Alice\ndescription: |\n  Written by $(author).\n",
+  "expect": {
+    "result": {
+      "author": "Alice",
+      "description": "Written by Alice."
+    }
+  },
+  "tags": [
+    "positive",
+    "interpolation",
+    "block-scalar"
+  ],
+  "specVersion": "2.0"
+}

@@ -1,0 +1,13 @@
+{
+  "id": "references-2.chains.maximum.four-edges.strict",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "4.2",
+  "description": "A source requiring four reference edges is unresolved in strict mode.",
+  "input": "a: $(b)\nb: $(c)\nc: $(d)\nd: $(e)\ne: 42\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": { "code": "UNRESOLVED_REFERENCE", "line": 1, "token": "$(b)" }
+  },
+  "tags": ["error", "strict", "chain", "boundary"]
+}

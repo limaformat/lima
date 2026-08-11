@@ -1,0 +1,18 @@
+{
+  "id": "references-2.canonical.string-unchanged",
+  "spec": "references",
+  "section": "3.4",
+  "description": "A string value's canonical interpolation representation is the string itself, unchanged.",
+  "input": "s: hello world\nlabel: Value: $(s)\n",
+  "expect": {
+    "result": {
+      "s": "hello world",
+      "label": "Value: hello world"
+    }
+  },
+  "tags": [
+    "positive",
+    "canonical"
+  ],
+  "specVersion": "2.0"
+}

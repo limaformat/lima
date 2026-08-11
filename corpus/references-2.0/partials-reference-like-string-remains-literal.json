@@ -1,0 +1,26 @@
+{
+  "id": "references-2.partials.reference-like-string-remains-literal",
+  "spec": "references",
+  "section": "3.3",
+  "description": "A reference-like string inside a partial value is always literal — it is a Lima string value, not an active reference token, and is never resolved further.",
+  "input": "person: $(:author)",
+  "options": {
+    "partials": {
+      "author": {
+        "name": "$(defaultName)"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "person": {
+        "name": "$(defaultName)"
+      }
+    }
+  },
+  "tags": [
+    "negative",
+    "partial"
+  ],
+  "specVersion": "2.0"
+}

@@ -1,5 +1,8 @@
 import { join } from 'node:path'
-import { loadCorpus, type LoadedCase, type LoadedCorpus } from './loader'
+import {
+	DEFAULT_SUITES, loadCorpus, SUITE_DIRECTORIES,
+	type LoadedCase, type LoadedCorpus, type SuiteName,
+} from './loader'
 import { corpusValuesEqual, diffCorpusValues, hasOnlySafeOwnDataProperties } from './normalize'
 import { compareDiagnostic, type LimaDiagnostic } from './errors'
 import { parse, parseCore } from '../../../js/src/index'
@@ -87,6 +90,15 @@ function invokeParser(c: LoadedCase): {
 }
 
 function runCase(c: LoadedCase): CaseOutcome {
+	if (c.api === 'references' && c.specVersion === '2.0') {
+		return {
+			id: c.id,
+			sourceFile: c.sourceFile,
+			classification: 'BLOCKED',
+			reasons: ['the local parser adapter implements Lima References 1.0, not 2.0'],
+			notes: [],
+		}
+	}
 	const { result, warnings, unmappedWarnings } = invokeParser(c)
 	const notes =
 		unmappedWarnings.length > 0
@@ -170,15 +182,33 @@ export interface CorpusRunResult {
 	loadFailures: LoadedCorpus['failures']
 }
 
-export function runCorpus(corpusRoot: string): CorpusRunResult {
-	const { cases, failures } = loadCorpus(corpusRoot)
+export function runCorpus(
+	corpusRoot: string,
+	suites: readonly SuiteName[] = DEFAULT_SUITES,
+): CorpusRunResult {
+	const { cases, failures } = loadCorpus(corpusRoot, suites)
 	return { outcomes: cases.map(runCase), loadFailures: failures }
 }
 
 // CLI entry point: `bun src/run.ts` (or `bun run run` via package.json).
 if (import.meta.main) {
 	const corpusRoot = join(import.meta.dir, '..', '..')
-	const { outcomes, loadFailures } = runCorpus(corpusRoot)
+	const args = process.argv.slice(2)
+	const suites: SuiteName[] = []
+	for (let i = 0; i < args.length; i++) {
+		if (args[i] !== '--suite' || i + 1 >= args.length) {
+			console.error('usage: bun src/run.ts [--suite core-1.0|references-1.0|references-2.0]...')
+			process.exit(2)
+		}
+		const suite = args[++i] as SuiteName
+		if (!(suite in SUITE_DIRECTORIES)) {
+			console.error(`unknown suite: ${suite}`)
+			process.exit(2)
+		}
+		suites.push(suite)
+	}
+	const selectedSuites = suites.length > 0 ? suites : DEFAULT_SUITES
+	const { outcomes, loadFailures } = runCorpus(corpusRoot, selectedSuites)
 
 	for (const outcome of outcomes) {
 		console.log(`[${outcome.classification}] ${outcome.id}`)

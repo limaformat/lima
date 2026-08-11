@@ -14,12 +14,19 @@
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^(core|references)(\\.[a-z0-9][a-z0-9-]*){2,}$"
+      "pattern": "^(core|references|references-2)(\\.[a-z0-9][a-z0-9-]*){2,}$"
     },
     "spec": {
       "enum": [
         "core",
         "references"
+      ]
+    },
+    "specVersion": {
+      "description": "Normative specification version. Legacy cases without this field are References/Core 1.0; every newly versioned suite must set it explicitly.",
+      "enum": [
+        "1.0",
+        "2.0"
       ]
     },
     "api": {

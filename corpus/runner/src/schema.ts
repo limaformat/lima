@@ -117,6 +117,7 @@ export function validateCase(doc: unknown): ValidationResult {
 	const allowed = new Set([
 		'id',
 		'spec',
+		'specVersion',
 		'section',
 		'description',
 		'input',
@@ -141,6 +142,18 @@ export function validateCase(doc: unknown): ValidationResult {
 	}
 	if ('spec' in doc && !SPEC_VALUES.includes(doc.spec as string)) {
 		fail(errors, 'spec', `must be one of ${SPEC_VALUES.join(', ')}`)
+	}
+	if ('specVersion' in doc && !['1.0', '2.0'].includes(doc.specVersion as string)) {
+		fail(errors, 'specVersion', 'must be one of 1.0, 2.0')
+	}
+	if (doc.specVersion === '2.0' && doc.spec !== 'references') {
+		fail(errors, 'specVersion', '2.0 is currently defined only for the References extension')
+	}
+	if (doc.specVersion === '2.0' && typeof doc.id === 'string' && !doc.id.startsWith('references-2.')) {
+		fail(errors, 'id', 'References 2.0 case IDs must begin with references-2.')
+	}
+	if (typeof doc.id === 'string' && doc.id.startsWith('references-2.') && doc.specVersion !== '2.0') {
+		fail(errors, 'specVersion', 'references-2. case IDs require specVersion 2.0')
 	}
 	if ('api' in doc) {
 		if (!API_VALUES.includes(doc.api as string)) {

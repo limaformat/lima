@@ -1,0 +1,18 @@
+{
+  "id": "references-2.array-interpolation.empty",
+  "spec": "references",
+  "section": "3.6",
+  "description": "An empty array used in string interpolation produces an empty string.",
+  "input": "a: []\nlabel: before $(a) after\n",
+  "expect": {
+    "result": {
+      "a": [],
+      "label": "before  after"
+    }
+  },
+  "tags": [
+    "positive",
+    "array-interpolation"
+  ],
+  "specVersion": "2.0"
+}

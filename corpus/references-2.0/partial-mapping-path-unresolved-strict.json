@@ -1,0 +1,13 @@
+{
+  "id": "references-2.partials.mapping-path.invalid-intermediate.strict",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "3.1",
+  "description": "Traversal through a non-mapping partial value is unresolved in strict mode.",
+  "input": "name: $(:author.name)\n",
+  "options": { "strict": true, "partials": { "author": "Ada" } },
+  "expect": {
+    "error": { "code": "UNRESOLVED_REFERENCE", "line": 1, "token": "$(:author.name)" }
+  },
+  "tags": ["error", "strict", "partial", "dotted-path"]
+}

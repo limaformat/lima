@@ -1,0 +1,23 @@
+{
+  "id": "references-2.interpolation.unresolved.strict",
+  "spec": "references",
+  "section": "3.4",
+  "description": "An unresolvable reference token in interpolation mode throws in strict mode after reference resolution.",
+  "input": "b: Hello $(missing)!\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "$(missing)",
+      "code": "UNRESOLVED_REFERENCE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "interpolation"
+  ],
+  "specVersion": "2.0"
+}

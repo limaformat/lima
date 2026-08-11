@@ -1,0 +1,19 @@
+{
+  "id": "references-2.resolution.forward-reference.direct",
+  "spec": "references",
+  "section": "4.1",
+  "description": "A direct document reference resolves regardless of whether its target appears later in source order.",
+  "input": "copy: $(source)\nsource: true\n",
+  "expect": {
+    "result": {
+      "copy": true,
+      "source": true
+    }
+  },
+  "tags": [
+    "positive",
+    "forward-reference",
+    "determinism"
+  ],
+  "specVersion": "2.0"
+}
