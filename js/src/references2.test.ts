@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { parse, parseCore, parseReferences } from './index.js'
 import { LimaError } from './errors.js'
+import { parseCoreWithPositions } from './core.js'
+import { hasActiveReferences2 } from './scalars.js'
 
 describe('References 2.0 public API', () => {
 	it('parse resolves document and partial references with the 2.0 syntax', () => {
@@ -50,5 +52,16 @@ describe('References 2.0 public API', () => {
 			expect((error as LimaError).line).toBe(3)
 			expect((error as LimaError).token).toBe('$(missing)')
 		}
+	})
+
+	it('marks only structural branches containing active 2.0 tokens', () => {
+		const tree = parseCoreWithPositions(
+			'inert:\n  nested:\n    value: literal\nactive:\n  nested:\n    value: $(source)\nsource: 42\n',
+			{ strict: false },
+		)
+		expect(hasActiveReferences2(tree.get('inert')!)).toBe(false)
+		expect(hasActiveReferences2(tree.get('active')!)).toBe(true)
+		expect(parse('inert:\n  nested:\n    value: literal\nactive:\n  nested:\n    value: $(source)\nsource: 42\n'))
+			.toEqual({ inert: { nested: { value: 'literal' } }, active: { nested: { value: 42 } }, source: 42 })
 	})
 })

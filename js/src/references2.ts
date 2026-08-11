@@ -8,6 +8,7 @@ import {
 	NESTING_DEPTH_LIMIT, parseCore, parseCoreWithPositions, toPlainValue,
 	type CoreOptions, type Diagnostic, type InsertedAt, type PositionedValue,
 } from './core.js'
+import { hasActiveReferences2 } from './scalars.js'
 import { LimaError, type LimaDiagnostic } from './errors.js'
 import {
 	collectAllParticipants, deepCopyPositioned, earliestParticipant,
@@ -86,6 +87,7 @@ const resolveNodeUncached = (
 	stack: Set<PositionedValue>,
 ): Resolution => {
 	if (node.kind === 'array') {
+		if (!hasActiveReferences2(node)) return { value: node, complete: true }
 		let complete = true
 		const items = node.items.map((item) => {
 			const result = resolveNode(item, document, partials, ctx, remainingEdges, stack)
@@ -101,9 +103,13 @@ const resolveNodeUncached = (
 			}
 			return result.value
 		})
-		return { value: { ...node, items }, complete }
+		return {
+			value: { ...node, items, references2Active: items.some(hasActiveReferences2) || undefined },
+			complete,
+		}
 	}
 	if (node.kind === 'mapping') {
+		if (!hasActiveReferences2(node)) return { value: node, complete: true }
 		let complete = true
 		const entries = new Map<string, PositionedValue>()
 		for (const [key, child] of node.entries) {
@@ -111,7 +117,11 @@ const resolveNodeUncached = (
 			complete &&= result.complete
 			entries.set(key, result.value)
 		}
-		return { value: { ...node, entries }, complete }
+		let references2Active = false
+		for (const value of entries.values()) {
+			if (hasActiveReferences2(value)) { references2Active = true; break }
+		}
+		return { value: { ...node, entries, references2Active: references2Active || undefined }, complete }
 	}
 	if (!isActiveString(node)) return { value: node, complete: true }
 

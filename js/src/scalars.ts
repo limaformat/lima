@@ -30,8 +30,13 @@ export type PositionedValue =
 	| { kind: 'float'; value: number; line: number; insertedAt?: InsertedAt }
 	| { kind: 'string'; value: string; line: number; quoted: boolean; references2?: ReferenceToken2[]; insertedAt?: InsertedAt }
 	| { kind: 'instant'; value: Date; line: number; insertedAt?: InsertedAt }
-	| { kind: 'array'; items: PositionedValue[]; line: number; insertedAt?: InsertedAt }
-	| { kind: 'mapping'; entries: Map<string, PositionedValue>; line: number; insertedAt?: InsertedAt }
+	| { kind: 'array'; items: PositionedValue[]; line: number; references2Active?: boolean; insertedAt?: InsertedAt }
+	| { kind: 'mapping'; entries: Map<string, PositionedValue>; line: number; references2Active?: boolean; insertedAt?: InsertedAt }
+
+export const hasActiveReferences2 = (value: PositionedValue): boolean =>
+	value.kind === 'string' ? (value.references2?.length ?? 0) > 0
+		: value.kind === 'array' || value.kind === 'mapping' ? value.references2Active === true
+			: false
 
 /** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */
 export const positionedBuilder: ValueBuilder<PositionedValue> = {
@@ -48,7 +53,10 @@ export const positionedBuilder: ValueBuilder<PositionedValue> = {
 		}
 	},
 	instant: (value, line) => ({ kind: 'instant', value, line }),
-	array: (items, line) => ({ kind: 'array', items, line }),
+	array: (items, line) => ({
+		kind: 'array', items, line,
+		...(items.some(hasActiveReferences2) ? { references2Active: true } : {}),
+	}),
 	createMapping: () => new Map<string, PositionedValue>(),
 	createMappingWith: (key, value) => new Map([[key, value]]),
 	hasMappingKey: (entries, key) => entries.has(key),
@@ -60,7 +68,13 @@ export const positionedBuilder: ValueBuilder<PositionedValue> = {
 		}
 		return max
 	},
-	mapping: (entries, line) => ({ kind: 'mapping', entries, line }),
+	mapping: (entries, line) => {
+		let references2Active = false
+		for (const value of entries.values()) {
+			if (hasActiveReferences2(value)) { references2Active = true; break }
+		}
+		return { kind: 'mapping', entries, line, ...(references2Active ? { references2Active: true } : {}) }
+	},
 }
 
 /** Strips position/quoted-origin annotations, recursively — the public parseCore() projection. */

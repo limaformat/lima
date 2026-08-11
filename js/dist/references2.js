@@ -1,6 +1,7 @@
 /** Lima References 2.0 resolver. References 1.0 remains isolated in references.ts. */
 import { canonicalString, codepointLength, countNodes, ingestPartialValue, PARTIAL_COUNT_LIMIT, PARTIAL_NAME_LENGTH_LIMIT, PARTIAL_NODE_LIMIT, RESULT_NODE_LIMIT, SCALAR_LENGTH_LIMIT, } from './value.js';
 import { NESTING_DEPTH_LIMIT, parseCore, parseCoreWithPositions, toPlainValue, } from './core.js';
+import { hasActiveReferences2 } from './scalars.js';
 import { LimaError } from './errors.js';
 import { collectAllParticipants, deepCopyPositioned, earliestParticipant, finalizePositioned, partialToPositioned, } from './references.js';
 const emptyMapping = () => Object.create(null);
@@ -54,6 +55,8 @@ const scalarText = (value, token, line, offset, ctx) => {
 };
 const resolveNodeUncached = (node, document, partials, ctx, remainingEdges, stack) => {
     if (node.kind === 'array') {
+        if (!hasActiveReferences2(node))
+            return { value: node, complete: true };
         let complete = true;
         const items = node.items.map((item) => {
             const result = resolveNode(item, document, partials, ctx, remainingEdges, stack);
@@ -69,9 +72,14 @@ const resolveNodeUncached = (node, document, partials, ctx, remainingEdges, stac
             }
             return result.value;
         });
-        return { value: { ...node, items }, complete };
+        return {
+            value: { ...node, items, references2Active: items.some(hasActiveReferences2) || undefined },
+            complete,
+        };
     }
     if (node.kind === 'mapping') {
+        if (!hasActiveReferences2(node))
+            return { value: node, complete: true };
         let complete = true;
         const entries = new Map();
         for (const [key, child] of node.entries) {
@@ -79,7 +87,14 @@ const resolveNodeUncached = (node, document, partials, ctx, remainingEdges, stac
             complete &&= result.complete;
             entries.set(key, result.value);
         }
-        return { value: { ...node, entries }, complete };
+        let references2Active = false;
+        for (const value of entries.values()) {
+            if (hasActiveReferences2(value)) {
+                references2Active = true;
+                break;
+            }
+        }
+        return { value: { ...node, entries, references2Active: references2Active || undefined }, complete };
     }
     if (!isActiveString(node))
         return { value: node, complete: true };

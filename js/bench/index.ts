@@ -111,6 +111,15 @@ const blockScalarWithContinuation =
 	'author: Alice\ndescription: |\n  Written by $(author) and\n  ^^edited by the team,\n  ^^published $(status).\nstatus: today\n'
 bench('block scalar, refs after a ^^ continuation (source-span tracking)', () => parse(blockScalarWithContinuation), 20000)
 
+const mostlyReferenceFree =
+	'source: 42\nroot:\n' +
+	Array.from({ length: 80 }, (_, group) =>
+		`  group${group}:\n` + Array.from({ length: 10 }, (_, i) => `    inert${i}: value${group}_${i}`).join('\n')
+	).join('\n') +
+	'\n  active:\n    copy: $(source)\n'
+bench('mostly reference-free tree, one nested reference — parseCore', () => parseCore(mostlyReferenceFree), 500)
+bench('mostly reference-free tree, one nested reference — parse', () => parse(mostlyReferenceFree), 500)
+
 // ── Scaling sweeps: growth should stay linear ────────────────────────────
 
 log('\n--- key count (nested, short values to stay under the byte limit) ---')

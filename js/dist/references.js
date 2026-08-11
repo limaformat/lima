@@ -112,12 +112,12 @@ const isReferenceFreeP = (v) => {
  */
 export const deepCopyPositioned = (v) => {
     switch (v.kind) {
-        case 'array': return { kind: 'array', items: v.items.map(deepCopyPositioned), line: v.line, insertedAt: v.insertedAt };
+        case 'array': return { kind: 'array', items: v.items.map(deepCopyPositioned), line: v.line, references2Active: v.references2Active, insertedAt: v.insertedAt };
         case 'mapping': {
             const entries = new Map();
             for (const [k, c] of v.entries)
                 entries.set(k, deepCopyPositioned(c));
-            return { kind: 'mapping', entries, line: v.line, insertedAt: v.insertedAt };
+            return { kind: 'mapping', entries, line: v.line, references2Active: v.references2Active, insertedAt: v.insertedAt };
         }
         case 'instant': return { kind: 'instant', value: new Date(v.value.getTime()), line: v.line, insertedAt: v.insertedAt };
         default: return v;

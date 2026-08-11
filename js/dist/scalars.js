@@ -8,6 +8,9 @@ import { LNull, LBool, LFloat, LInt, LString, LInstant } from './value.js';
 import { checkStringLimit } from './normalize.js';
 import { LimaError } from './errors.js';
 import { scanReferenceTokens2 } from './reference-tokens2.js';
+export const hasActiveReferences2 = (value) => value.kind === 'string' ? (value.references2?.length ?? 0) > 0
+    : value.kind === 'array' || value.kind === 'mapping' ? value.references2Active === true
+        : false;
 /** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */
 export const positionedBuilder = {
     tracksStringSourcePositions: true,
@@ -23,7 +26,10 @@ export const positionedBuilder = {
         };
     },
     instant: (value, line) => ({ kind: 'instant', value, line }),
-    array: (items, line) => ({ kind: 'array', items, line }),
+    array: (items, line) => ({
+        kind: 'array', items, line,
+        ...(items.some(hasActiveReferences2) ? { references2Active: true } : {}),
+    }),
     createMapping: () => new Map(),
     createMappingWith: (key, value) => new Map([[key, value]]),
     hasMappingKey: (entries, key) => entries.has(key),
@@ -36,7 +42,16 @@ export const positionedBuilder = {
         }
         return max;
     },
-    mapping: (entries, line) => ({ kind: 'mapping', entries, line }),
+    mapping: (entries, line) => {
+        let references2Active = false;
+        for (const value of entries.values()) {
+            if (hasActiveReferences2(value)) {
+                references2Active = true;
+                break;
+            }
+        }
+        return { kind: 'mapping', entries, line, ...(references2Active ? { references2Active: true } : {}) };
+    },
 };
 /** Strips position/quoted-origin annotations, recursively — the public parseCore() projection. */
 export const toPlainValue = (v) => {

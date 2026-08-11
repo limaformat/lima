@@ -57,13 +57,16 @@ export type PositionedValue = {
     kind: 'array';
     items: PositionedValue[];
     line: number;
+    references2Active?: boolean;
     insertedAt?: InsertedAt;
 } | {
     kind: 'mapping';
     entries: Map<string, PositionedValue>;
     line: number;
+    references2Active?: boolean;
     insertedAt?: InsertedAt;
 };
+export declare const hasActiveReferences2: (value: PositionedValue) => boolean;
 /** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */
 export declare const positionedBuilder: ValueBuilder<PositionedValue>;
 /** Strips position/quoted-origin annotations, recursively — the public parseCore() projection. */
