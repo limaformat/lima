@@ -1,0 +1,102 @@
+{
+  "buckets": {
+    "lima-core-1.0": {
+      "description": "Everything reachable from parseCore() only — the nativeBuilder fast path. Run with --root pointed at the repo root (the default).",
+      "entries": [
+        { "file": "js/src/block.ts" },
+        { "file": "js/src/flow.ts" },
+        { "file": "js/src/normalize.ts" },
+        { "file": "js/src/errors.ts" },
+        { "file": "js/src/scanner.ts" },
+        { "file": "js/src/builder.ts" },
+        { "file": "js/src/chars.ts" },
+        { "file": "js/src/block-cursor.ts" },
+        {
+          "file": "js/src/value.ts",
+          "exclude": [
+            "LNull", "LBool", "LInt", "LFloat", "LInstant", "LArray", "LMapping",
+            "countNodes", "canonicalString",
+            "PARTIAL_KEY_LENGTH_LIMIT", "PARTIAL_VALUE_DEPTH_LIMIT", "PARTIAL_COUNT_LIMIT",
+            "PARTIAL_NAME_LENGTH_LIMIT", "PARTIAL_NODE_LIMIT", "RESULT_NODE_LIMIT",
+            "ingestPartialValue"
+          ]
+        },
+        {
+          "file": "js/src/core.ts",
+          "excludeModuleComment": true,
+          "exclude": ["depthOfPositioned", "parseCoreWithPositions", "toNative", "toNativeFromPositioned", "PositionedValue", "InsertedAt", "toPlainValue"],
+          "stripComments": ["parseCoreGeneric"]
+        },
+        {
+          "file": "js/src/scalars.ts",
+          "exclude": ["InsertedAt", "PositionedValue", "hasActiveReferences2", "positionedBuilder", "toPlainValue", "LNull", "scanReferenceTokens2"]
+        },
+        { "file": "js/src/index.ts", "include": ["parseCore"] }
+      ]
+    },
+    "lima-references-2.0-additions": {
+      "description": "Everything reachable from parse()/parseReferences() (references2.ts) that parseCore() does NOT reach — i.e. the incremental cost of References 2.0 on top of Core. Deliberately excludes the References-1.0-only internals of references.ts (resolveTree, isReferenceFreeP, its own parseReferences, etc.) that references2.ts never imports — those ship internally for the frozen 1.0 conformance suite but are not part of the current public API. Run with --root pointed at the repo root (the default).",
+      "entries": [
+        {
+          "file": "js/src/value.ts",
+          "include": [
+            "LNull", "LBool", "LInt", "LFloat", "LInstant", "LArray", "LMapping",
+            "countNodes", "canonicalString",
+            "PARTIAL_KEY_LENGTH_LIMIT", "PARTIAL_VALUE_DEPTH_LIMIT", "PARTIAL_COUNT_LIMIT",
+            "PARTIAL_NAME_LENGTH_LIMIT", "PARTIAL_NODE_LIMIT", "RESULT_NODE_LIMIT",
+            "ingestPartialValue"
+          ]
+        },
+        { "file": "js/src/core.ts", "include": ["parseCoreWithPositions", "depthOfPositioned", "toNativeFromPositioned"] },
+        {
+          "file": "js/src/scalars.ts",
+          "include": ["InsertedAt", "PositionedValue", "hasActiveReferences2", "positionedBuilder", "toPlainValue", "LNull", "scanReferenceTokens2"]
+        },
+        { "file": "js/src/reference-tokens2.ts" },
+        { "file": "js/src/references2.ts" },
+        {
+          "file": "js/src/references.ts",
+          "include": ["Meta", "emptyMapping", "deepCopyPositioned", "partialToPositioned", "FinalizedValue", "finalizePositioned", "earliestParticipant", "collectAllParticipants"]
+        },
+        { "file": "js/src/index.ts", "include": ["parseReferences", "parse", "ParseMode", "ParseOptions", "ReferencesOptions"] }
+      ]
+    },
+    "js-yaml-load": {
+      "description": "js-yaml 5.2.3's load()-transitive source: parser, constructor, schema, tag resolvers under the default CORE_SCHEMA. Excludes dump()/serialization and the legacy_map.ts/real_map.ts tag variants CORE_SCHEMA doesn't use. Run with --root pointed at a local checkout of https://github.com/nodeca/js-yaml at tag 5.2.3 (src/ subdirectory) — not vendored in this repo. Reproduce with: git clone --depth 1 --branch 5.2.3 https://github.com/nodeca/js-yaml.git",
+      "entries": [
+        { "file": "load.ts" },
+        { "file": "common/exception.ts" },
+        { "file": "common/object.ts" },
+        { "file": "common/snippet.ts" },
+        { "file": "common/tagname.ts" },
+        { "file": "parser/constructor.ts" },
+        { "file": "parser/parser.ts" },
+        { "file": "parser/parser_scalar.ts" },
+        { "file": "parser/events.ts" },
+        { "file": "schema.ts" },
+        { "file": "tag.ts" },
+        { "file": "tag/scalar/str.ts" },
+        { "file": "tag/scalar/null_core.ts" },
+        { "file": "tag/scalar/null_json.ts" },
+        { "file": "tag/scalar/null_yaml11.ts" },
+        { "file": "tag/scalar/bool_core.ts" },
+        { "file": "tag/scalar/bool_json.ts" },
+        { "file": "tag/scalar/bool_yaml11.ts" },
+        { "file": "tag/scalar/int_core.ts" },
+        { "file": "tag/scalar/int_json.ts" },
+        { "file": "tag/scalar/int_yaml11.ts" },
+        { "file": "tag/scalar/float_core.ts" },
+        { "file": "tag/scalar/float_json.ts" },
+        { "file": "tag/scalar/float_yaml11.ts" },
+        { "file": "tag/scalar/merge.ts" },
+        { "file": "tag/scalar/binary.ts" },
+        { "file": "tag/scalar/timestamp.ts" },
+        { "file": "tag/sequence/seq.ts" },
+        { "file": "tag/sequence/omap.ts" },
+        { "file": "tag/sequence/pairs.ts" },
+        { "file": "tag/mapping/map.ts" },
+        { "file": "tag/mapping/set.ts" }
+      ]
+    }
+  }
+}

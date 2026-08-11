@@ -31,12 +31,14 @@
     "bench:vs-yaml": "bun run bench/vs-yaml.ts",
     "bench:vs-yaml:node": "node bench/vs-yaml-node.mjs",
     "bench:cross-language": "bun run bench/cross-language.ts",
-    "bench:differential": "bun run bench/differential.ts"
+    "bench:differential": "bun run bench/differential.ts",
+    "wordcount": "bun run scripts/wordcount.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
     "@types/js-yaml": "^4.0.9",
     "js-yaml": "^5.2.3",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "typescript-classic": "npm:typescript@^5.9.3"
   }
 }
