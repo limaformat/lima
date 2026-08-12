@@ -2,7 +2,7 @@
 
 **Status:** Final
 **Version:** 2.0.0
-**Date:** 2026-08-11
+**Date:** 2026-08-12
 
 This document specifies the Lima References Extension 2.0. It is a normative
 addition to Lima Core 1.0 and must be read together with that specification.
