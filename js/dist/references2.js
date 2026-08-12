@@ -23,8 +23,18 @@ const lookupPath = (root, segments) => {
 };
 const documentTarget = (root, path) => {
     const segments = path.split('.');
-    const value = root.get(segments[0]);
-    return value === undefined ? undefined : { root: value, tail: segments.slice(1) };
+    let value = root.get(segments[0]);
+    if (value === undefined)
+        return undefined;
+    let index = 1;
+    while (index < segments.length && value.kind === 'mapping') {
+        const child = value.entries.get(segments[index]);
+        if (child === undefined)
+            return undefined;
+        value = child;
+        index++;
+    }
+    return { root: value, tail: segments.slice(index) };
 };
 const lookupPartial = (partials, path) => {
     const dot = path.indexOf('.');

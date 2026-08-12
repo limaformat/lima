@@ -1,0 +1,25 @@
+{
+  "id": "references-2.dotted-path.same-top-level",
+  "spec": "references",
+  "specVersion": "2.0",
+  "section": "3.1",
+  "description": "Document references resolve when source and target share a top-level mapping, both for sibling fields and for separate nested branches.",
+  "input": "a:\n  x: 42\n  y: ${a.x}\n  b:\n    x: 43\n  c: ${a.b.x}\n",
+  "expect": {
+    "result": {
+      "a": {
+        "x": 42,
+        "y": 42,
+        "b": {
+          "x": 43
+        },
+        "c": 43
+      }
+    }
+  },
+  "tags": [
+    "positive",
+    "dotted-path",
+    "cycle-detection"
+  ]
+}

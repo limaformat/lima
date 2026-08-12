@@ -12,6 +12,15 @@ are both frozen regardless of what this file shows.
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-08-12
+
+### Fixed
+
+- References 2.0 document references now resolve correctly when the source
+  and target share a top-level mapping, including sibling fields and separate
+  nested branches. Genuine self-references and dependency cycles remain
+  unresolved.
+
 ## [0.3.0] — 2026-08-12
 
 ### Changed

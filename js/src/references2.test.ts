@@ -11,6 +11,19 @@ describe('References 2.0 public API', () => {
 		})).toEqual({ name: 'Ada', label: 'Hello Ada from London' })
 	})
 
+	it('resolves a sibling under the same top-level key', () => {
+		expect(parse('a:\n  x: 42\n  y: ${a.x}\n')).toEqual({ a: { x: 42, y: 42 } })
+	})
+
+	it('resolves another branch under the same top-level key', () => {
+		expect(parse('a:\n  b:\n    x: 42\n  c: ${a.b.x}\n'))
+			.toEqual({ a: { b: { x: 42 }, c: 42 } })
+	})
+
+	it('continues to resolve across different top-level keys', () => {
+		expect(parse('a:\n  x: 42\nb: ${a.x}\n')).toEqual({ a: { x: 42 }, b: 42 })
+	})
+
 	it('parseReferences is an exact compatibility alias', () => {
 		expect(parseReferences).toBe(parse)
 	})
