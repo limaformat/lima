@@ -3,16 +3,16 @@
   "spec": "references",
   "section": "3.1",
   "description": "A dotted path is unresolved as a whole when an intermediate segment is missing, null, or not a mapping — non-strict leaves the token unchanged.",
-  "input": "site:\n  default: null\n  other: hello\na: $(site.missing.claim)\nb: $(site.default.claim)\nc: $(site.other.claim)\n",
+  "input": "site:\n  default: null\n  other: hello\na: ${site.missing.claim}\nb: ${site.default.claim}\nc: ${site.other.claim}\n",
   "expect": {
     "result": {
       "site": {
         "default": null,
         "other": "hello"
       },
-      "a": "$(site.missing.claim)",
-      "b": "$(site.default.claim)",
-      "c": "$(site.other.claim)"
+      "a": "${site.missing.claim}",
+      "b": "${site.default.claim}",
+      "c": "${site.other.claim}"
     }
   },
   "tags": [

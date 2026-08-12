@@ -3,10 +3,10 @@
   "spec": "references",
   "section": "3.2",
   "description": "An unresolvable pure reference leaves the token unchanged as a string in non-strict mode.",
-  "input": "b: $(missing)\n",
+  "input": "b: ${missing}\n",
   "expect": {
     "result": {
-      "b": "$(missing)"
+      "b": "${missing}"
     }
   },
   "tags": [

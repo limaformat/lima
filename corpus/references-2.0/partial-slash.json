@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "3.1",
   "description": "A slash in a partial name is a literal key character.",
-  "input": "author: $(:persons/alice)\n",
+  "input": "author: $(persons/alice)\n",
   "options": {
     "partials": {
       "persons/alice": {

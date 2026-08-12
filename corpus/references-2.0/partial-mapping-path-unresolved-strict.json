@@ -4,10 +4,10 @@
   "specVersion": "2.0",
   "section": "3.1",
   "description": "Traversal through a non-mapping partial value is unresolved in strict mode.",
-  "input": "name: $(:author.name)\n",
+  "input": "name: $(author.name)\n",
   "options": { "strict": true, "partials": { "author": "Ada" } },
   "expect": {
-    "error": { "code": "UNRESOLVED_REFERENCE", "line": 1, "token": "$(:author.name)" }
+    "error": { "code": "UNRESOLVED_REFERENCE", "line": 1, "token": "$(author.name)" }
   },
   "tags": ["error", "strict", "partial", "dotted-path"]
 }

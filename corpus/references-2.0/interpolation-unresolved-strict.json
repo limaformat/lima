@@ -3,14 +3,14 @@
   "spec": "references",
   "section": "3.4",
   "description": "An unresolvable reference token in interpolation mode throws in strict mode after reference resolution.",
-  "input": "b: Hello $(missing)!\n",
+  "input": "b: Hello ${missing}!\n",
   "options": {
     "strict": true
   },
   "expect": {
     "error": {
       "line": 1,
-      "token": "$(missing)",
+      "token": "${missing}",
       "code": "UNRESOLVED_REFERENCE"
     }
   },

@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "A partial mapping key of exactly 128 Unicode code points (the limit) is allowed.",
-  "input": "a: $(:m)",
+  "input": "a: $(m)",
   "options": {
     "partials": {
       "m": {

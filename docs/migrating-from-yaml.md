@@ -164,11 +164,11 @@ parsing rather than relying on the block scalar to carry it.
 
 ## References — optional, not a YAML equivalent
 
-`$(key)` document references and `$(:key)` external partials are a Lima
+`${key}` document references and `$(key)` external partials are a Lima
 addition with no YAML equivalent — migrating YAML frontmatter never
 requires using them. They're layered on top of Core via a separate
 `parse` function (`parseReferences` is its deprecated alias); plain
-`parseCore` never interprets `$(...)`/`$(:...)`, so existing frontmatter that
+`parseCore` never interprets `${...}`/`$(...)`, so existing frontmatter that
 happens to contain literal token-like text is unaffected in Core mode. See
 [`docs/guide.md`](guide.md#references-optional-extension) for the full
 syntax and the three-edge resolution limit.

@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "An invalid Date (NaN internally) is rejected as a partial value.",
-  "input": "a: $(:d)",
+  "input": "a: $(d)",
   "options": {
     "partials": {
       "d": {

@@ -14,7 +14,7 @@ import type { GeneratorResult } from './index'
  * Parameters: `topLevelKeys` (positive integer), `partialNodes` (positive
  * integer), optional `keyPrefix` (default `"k"`), optional `partialName`
  * (default `"big"`), optional `referenceSyntax` (`"1.0"` by default,
- * `"2.0"` for `$(:name)`).
+ * `"2.0"` for `$(name)`).
  */
 export function resultNodeExpansion(parameters: Record<string, unknown>): GeneratorResult {
 	const topLevelKeys = requirePositiveInt(parameters, 'topLevelKeys')
@@ -25,7 +25,7 @@ export function resultNodeExpansion(parameters: Record<string, unknown>): Genera
 	if (referenceSyntax !== '1.0' && referenceSyntax !== '2.0') {
 		throw new Error('generator parameter "referenceSyntax" must be "1.0" or "2.0"')
 	}
-	const token = referenceSyntax === '2.0' ? `$(:${partialName})` : `(%${partialName})`
+	const token = referenceSyntax === '2.0' ? `$(${partialName})` : `(%${partialName})`
 
 	const elements = Array.from({ length: partialNodes - 1 }, () => 1)
 	const lines: string[] = []

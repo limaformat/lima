@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "2.4",
   "description": "A reference token is active in an unquoted top-level mapping value.",
-  "input": "a: hello\nb: $(a)\n",
+  "input": "a: hello\nb: ${a}\n",
   "expect": {
     "result": {
       "a": "hello",

@@ -3,14 +3,14 @@
   "spec": "references",
   "section": "4.3",
   "description": "A self-reference is reported as unresolved in strict mode.",
-  "input": "a: $(a)",
+  "input": "a: ${a}",
   "options": {
     "strict": true
   },
   "expect": {
     "error": {
       "line": 1,
-      "token": "$(a)",
+      "token": "${a}",
       "code": "UNRESOLVED_REFERENCE"
     }
   },

@@ -3,14 +3,14 @@
   "spec": "references",
   "section": "3.1",
   "description": "A dotted path with a non-mapping intermediate segment throws in strict mode after reference resolution.",
-  "input": "site:\n  other: hello\nc: $(site.other.claim)\n",
+  "input": "site:\n  other: hello\nc: ${site.other.claim}\n",
   "options": {
     "strict": true
   },
   "expect": {
     "error": {
       "line": 3,
-      "token": "$(site.other.claim)",
+      "token": "${site.other.claim}",
       "code": "UNRESOLVED_REFERENCE"
     }
   },

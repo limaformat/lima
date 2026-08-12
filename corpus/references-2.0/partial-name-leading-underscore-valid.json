@@ -4,7 +4,7 @@
   "specVersion": "2.0",
   "section": "6.2",
   "description": "A partial name may begin with underscore because the namespace is selected by colon, not by consuming part of the name.",
-  "input": "value: $(:_author)\n",
+  "input": "value: $(_author)\n",
   "options": { "partials": { "_author": "Ada" } },
   "expect": { "result": { "value": "Ada" } },
   "tags": ["positive", "partial", "validation"]

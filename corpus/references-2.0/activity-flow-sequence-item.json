@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "2.4",
   "description": "A reference token is active in a flow-sequence item.",
-  "input": "a: hello\nitems: [$(a), world]\n",
+  "input": "a: hello\nitems: [${a}, world]\n",
   "expect": {
     "result": {
       "a": "hello",

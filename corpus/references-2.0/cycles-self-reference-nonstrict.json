@@ -3,10 +3,10 @@
   "spec": "references",
   "section": "4.3",
   "description": "A self-reference is cyclic and remains its complete token string in non-strict mode.",
-  "input": "a: $(a)",
+  "input": "a: ${a}",
   "expect": {
     "result": {
-      "a": "$(a)"
+      "a": "${a}"
     }
   },
   "tags": [

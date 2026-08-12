@@ -4,8 +4,8 @@
   "specVersion": "2.0",
   "section": "3.1",
   "description": "Traversal through a non-mapping partial value leaves the complete token unchanged in non-strict mode.",
-  "input": "name: $(:author.name)\n",
+  "input": "name: $(author.name)\n",
   "options": { "partials": { "author": "Ada" } },
-  "expect": { "result": { "name": "$(:author.name)" } },
+  "expect": { "result": { "name": "$(author.name)" } },
   "tags": ["fallback", "partial", "dotted-path"]
 }

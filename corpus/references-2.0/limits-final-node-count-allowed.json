@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "Multiple references to the same partial stay well under the 65,536 final-result node-count limit and resolve normally. (The boundary itself — repeated large-partial references crossing 65,536 — is exercised by references-2.limits.final-node-count.above.)",
-  "input": "k0: $(:small)\nk1: $(:small)\nk2: $(:small)\n",
+  "input": "k0: $(small)\nk1: $(small)\nk2: $(small)\n",
   "options": {
     "partials": {
       "small": [

@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "An empty string is a valid partial mapping key, consistent with Core quoted key rules.",
-  "input": "a: $(:m)",
+  "input": "a: $(m)",
   "options": {
     "partials": {
       "m": {

@@ -246,7 +246,7 @@ export const parse = (frontMatter, options) => {
         return parseCore(frontMatter, options);
     }
     const partials = validatePartials(options?.partials ?? {});
-    if (!frontMatter.includes('$(')) {
+    if (!frontMatter.includes('${') && !frontMatter.includes('$(')) {
         return parseCore(frontMatter, options);
     }
     const document = parseCoreWithPositions(frontMatter, { strict: options?.strict ?? false, onWarning: options?.onWarning });

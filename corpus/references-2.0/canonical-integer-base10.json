@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "3.4",
   "description": "An integer value's canonical interpolation representation is base-10 decimal, no leading sign for positive values, and no exponent.",
-  "input": "i1: 42\ni2: -1\ni3: 0\nlabel: $(i1)/$(i2)/$(i3)\n",
+  "input": "i1: 42\ni2: -1\ni3: 0\nlabel: ${i1}/${i2}/${i3}\n",
   "expect": {
     "result": {
       "i1": 42,

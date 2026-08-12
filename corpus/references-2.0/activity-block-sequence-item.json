@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "2.4",
   "description": "A reference token is active in a block-sequence item.",
-  "input": "a: hello\nitems:\n  - $(a)\n  - world\n",
+  "input": "a: hello\nitems:\n  - ${a}\n  - world\n",
   "expect": {
     "result": {
       "a": "hello",

@@ -4,10 +4,10 @@
   "specVersion": "2.0",
   "section": "5",
   "description": "With two unresolved references — one reached through three stacked `^^` continuation lines inside a block scalar, one an ordinary later key — the earliest-wins rule (§5) is decided by physical source line, not by position within the continuation-merged block-scalar string. Counting only embedded newlines in the merged string would report the block-scalar token near its introducing key's line (line 2) instead of its true physical line (5); reporting line 2 would still happen to pick the same winner here, so this case additionally pins the winning token's exact physical line, not just which token wins.",
-  "input": "a: |\n  first\n  ^^second\n  ^^third\n  ^^$(missing1) fourth\nb: Value $(missing2)\n",
+  "input": "a: |\n  first\n  ^^second\n  ^^third\n  ^^${missing1} fourth\nb: Value ${missing2}\n",
   "options": { "strict": true },
   "expect": {
-    "error": { "code": "UNRESOLVED_REFERENCE", "line": 5, "token": "$(missing1)" }
+    "error": { "code": "UNRESOLVED_REFERENCE", "line": 5, "token": "${missing1}" }
   },
   "tags": ["error", "strict", "block-scalar", "continuation", "error-order"]
 }

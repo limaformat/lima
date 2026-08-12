@@ -118,11 +118,11 @@ describe('loadCorpus', () => {
 	it('loads the versioned References 2.0 suite independently', () => {
 		const { cases, failures } = loadCorpus(corpusRoot, ['references-2.0'])
 		expect(failures).toEqual([])
-		expect(cases).toHaveLength(117)
+		expect(cases).toHaveLength(118)
 		expect(cases.every((c) => c.spec === 'references' && c.specVersion === '2.0')).toBe(true)
 		expect(cases.every((c) => c.api === 'parse' || c.api === 'core' || c.api === 'references')).toBe(true)
 		expect(cases.find((c) => c.id === 'references-2.activity.block-sequence-item')?.api).toBe('parse')
 		expect(cases.find((c) => c.id === 'references-2.api.parse-references.deprecated-alias')?.api).toBe('references')
-		expect(new Set(cases.map((c) => c.id)).size).toBe(117)
+		expect(new Set(cases.map((c) => c.id)).size).toBe(118)
 	})
 })

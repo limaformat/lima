@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "3.4",
   "description": "A boolean value's canonical interpolation representation is the lowercase literal true or false.",
-  "input": "b1: true\nb2: false\nlabel: $(b1)/$(b2)\n",
+  "input": "b1: true\nb2: false\nlabel: ${b1}/${b2}\n",
   "expect": {
     "result": {
       "b1": true,

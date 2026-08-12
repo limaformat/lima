@@ -148,7 +148,7 @@ describe('result-node-expansion', () => {
 			partialName: 'shared',
 			referenceSyntax: '2.0',
 		})
-		expect(generated.input).toBe('k0: $(:shared)\nk1: $(:shared)')
+		expect(generated.input).toBe('k0: $(shared)\nk1: $(shared)')
 	})
 })
 

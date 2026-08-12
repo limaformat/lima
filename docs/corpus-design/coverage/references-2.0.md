@@ -12,9 +12,9 @@ suite. References 1.0 remains an independent frozen conformance target.
 | ID | Spec | Area | Normative assertion | Coverage |
 |---|---|---|---|---|
 | R2-001 | §1 | Scope | References 2.0 includes Core 1.0 behavior | inherited case + Core suite |
-| R2-010 | §2.1 | Document syntax | `$(path)` and dotted mapping paths | positive, unresolved pair |
-| R2-011 | §2.2 | Partial syntax | `$(:name)`, slash namespacing, dotted mapping traversal, and their combination | positive, unresolved pair |
-| R2-012 | §2.3 | Namespace | colon immediately after `$(` selects partials | disambiguation case |
+| R2-010 | §2.1 | Document syntax | `${path}` and dotted mapping paths | positive, unresolved pair |
+| R2-011 | §2.2 | Partial syntax | `$(name)`, slash namespacing, dotted mapping traversal, and their combination | positive, unresolved pair |
+| R2-012 | §2.3 | Namespace | `${...}` selects the document; `$(...)` selects partials | disambiguation case |
 | R2-013 | §2.3 | Names | underscore, colon, dash, slash rules | positive and validation cases |
 | R2-014 | §2.4 | Activity | every unquoted scalar context is active | mapping/sequence/flow/block cases |
 | R2-015 | §2.4 | Inactivity | quoted, incomplete, invalid, and key occurrences are literal | strict negative cases |

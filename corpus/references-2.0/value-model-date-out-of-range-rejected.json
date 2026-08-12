@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "A Date whose UTC year falls outside 0001-9999 is rejected as a partial value.",
-  "input": "a: $(:d)",
+  "input": "a: $(d)",
   "options": {
     "partials": {
       "d": {

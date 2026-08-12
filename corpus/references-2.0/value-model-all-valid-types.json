@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "null, boolean, finite number, string, UTC Instant, array, and mapping are all valid partial value types.",
-  "input": "n: $(:n)\nb: $(:b)\nnum: $(:num)\ns: $(:s)\ni: $(:i)\na: $(:a)\nm: $(:m)\n",
+  "input": "n: $(n)\nb: $(b)\nnum: $(num)\ns: $(s)\ni: $(i)\na: $(a)\nm: $(m)\n",
   "options": {
     "partials": {
       "n": null,

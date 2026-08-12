@@ -295,7 +295,7 @@ a plain string (input only, the four above) or `{ input, partials }`.
 - **`result-node-expansion`** — `topLevelKeys` (positive integer),
   `partialNodes` (positive integer), optional `keyPrefix` (default `"k"`),
   optional `partialName` (default `"big"`), and optional `referenceSyntax`
-  (`"1.0"` by default, `"2.0"` for `$(:name)`). Produces `topLevelKeys`
+  (`"1.0"` by default, `"2.0"` for `$(name)`). Produces `topLevelKeys`
   top-level keys, each a pure reference to the same `partialNodes`-node
   partial. Since a pure reference is a structural deep copy (References
   §3.1), each reference multiplies the final result's node count

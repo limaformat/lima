@@ -15,7 +15,7 @@ describe('package export (dist)', () => {
 
 	it('parses a document through the published entry point', async () => {
 		const { parse } = await import('../dist/index.js')
-		expect(parse('title: Hello\ncopy: $(title)')).toEqual({ title: 'Hello', copy: 'Hello' })
+		expect(parse('title: Hello\ncopy: ${title}')).toEqual({ title: 'Hello', copy: 'Hello' })
 	})
 
 	it('parseCore is reference-unaware, matching the src implementation (Appendix B)', async () => {

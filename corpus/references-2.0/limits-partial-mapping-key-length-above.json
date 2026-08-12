@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "A partial mapping key of 129 Unicode code points throws.",
-  "input": "a: $(:m)",
+  "input": "a: $(m)",
   "options": {
     "partials": {
       "m": {

@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "3.1",
   "description": "A partial key not found in the validated partials map throws in strict mode after reference resolution.",
-  "input": "a: $(:missing)\n",
+  "input": "a: $(missing)\n",
   "options": {
     "strict": true,
     "partials": {}
@@ -11,7 +11,7 @@
   "expect": {
     "error": {
       "line": 1,
-      "token": "$(:missing)",
+      "token": "$(missing)",
       "code": "UNRESOLVED_REFERENCE"
     }
   },

@@ -3,11 +3,11 @@
   "spec": "references",
   "section": "4.3",
   "description": "Every token in a two-key dependency cycle remains unresolved in non-strict mode.",
-  "input": "a: $(b)\nb: $(a)\n",
+  "input": "a: ${b}\nb: ${a}\n",
   "expect": {
     "result": {
-      "a": "$(b)",
-      "b": "$(a)"
+      "a": "${b}",
+      "b": "${a}"
     }
   },
   "tags": [

@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "3.1",
   "description": "A dotted path traverses nested mappings, resolving each segment against the previous segment's mapping value.",
-  "input": "site:\n  default:\n    claim: Software, Tools, AI\ntagline: A blog about $(site.default.claim).\n",
+  "input": "site:\n  default:\n    claim: Software, Tools, AI\ntagline: A blog about ${site.default.claim}.\n",
   "expect": {
     "result": {
       "site": {

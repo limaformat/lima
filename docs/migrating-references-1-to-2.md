@@ -7,8 +7,8 @@ entry point. Lima Core 1.0 is unchanged.
 
 | References 1.0 | References 2.0 |
 |---|---|
-| `($site.title)` | `$(site.title)` |
-| `(%author)` | `$(:author)` |
+| `($site.title)` | `${site.title}` |
+| `(%author)` | `$(author)` |
 
 References 1.0 tokens are ordinary literal strings in References 2.0. They are
 not deprecated aliases, so migrate every active token before switching parser
@@ -20,8 +20,8 @@ References 1.0 partials are selected by a flat name. References 2.0 additionally
 allows mapping traversal after the partial name:
 
 ```lima
-authorName: $(:author.name)
-city: $(:people/alice.address.city)
+authorName: $(author.name)
+city: $(people/alice.address.city)
 ```
 
 ```ts
@@ -42,9 +42,9 @@ References 1.0 uses one-hop resolution. References 2.0 resolves transitively,
 with at most three reference edges for each source token:
 
 ```lima
-a: $(b)
-b: $(c)
-c: $(d)
+a: ${b}
+b: ${c}
+c: ${d}
 d: 42
 ```
 
@@ -78,8 +78,8 @@ This uses the same reference-unaware path as `parseCore`. Do not provide
 
 ## Migration checklist
 
-1. Replace active `($path)` tokens with `$(path)`.
-2. Replace active `(%name)` tokens with `$(:name)`.
+1. Replace active `($path)` tokens with `${path}`.
+2. Replace active `(%name)` tokens with `$(name)`.
 3. Check whether any former one-hop chains now resolve transitively and change
    the resulting value.
 4. Ensure every partial name follows the 2.0 grammar and contains no dot.

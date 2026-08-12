@@ -3,13 +3,13 @@
   "spec": "references",
   "section": "8",
   "description": "Keys are always literal: a reference-like token in a quoted block key or in a flow-mapping key is never resolved.",
-  "input": "a: hello\n\"$(a)\": value\nm: {$(a): value2}\n",
+  "input": "a: hello\n\"${a}\": value\nm: {${a}: value2}\n",
   "expect": {
     "result": {
       "a": "hello",
-      "$(a)": "value",
+      "${a}": "value",
       "m": {
-        "$(a)": "value2"
+        "${a}": "value2"
       }
     }
   },

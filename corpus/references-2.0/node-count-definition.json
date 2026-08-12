@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "Node count: scalar = 1, array/mapping = 1 + sum(child node counts), mapping keys do not count as separate nodes. This partial has 6 nodes total (1 for the outer mapping + 1 for 'x' + 1 for the inner array + 3 for its elements) regardless of how long the key names are — well under the 4,096 combined limit.",
-  "input": "a: $(:m)",
+  "input": "a: $(m)",
   "options": {
     "partials": {
       "m": {

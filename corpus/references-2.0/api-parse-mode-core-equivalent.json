@@ -5,11 +5,11 @@
   "section": "6.1",
   "description": "parse in Core mode uses the same reference-unaware path as parseCore and leaves References 2.0 tokens literal.",
   "api": "parse",
-  "input": "copy: $(source)\nsource: 42\n",
+  "input": "copy: ${source}\nsource: 42\n",
   "options": { "mode": "core" },
   "expect": {
     "result": {
-      "copy": "$(source)",
+      "copy": "${source}",
       "source": 42
     }
   },

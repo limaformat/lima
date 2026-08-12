@@ -1,0 +1,24 @@
+{
+  "id": "references-2.activity.flow-document-brace-boundaries",
+  "spec": "references",
+  "section": "2.4",
+  "description": "Balanced document-reference braces do not interfere with flow-item boundaries, adjacent tokens, or a genuinely nested flow mapping.",
+  "input": "a: hello\nb: world\nitems: [${a}${b}, {nested: 1}, ${a}]\nmap: {joined: ${a}${b}, tail: ${b}}\n",
+  "expect": {
+    "result": {
+      "a": "hello",
+      "b": "world",
+      "items": [
+        "helloworld",
+        { "nested": 1 },
+        "hello"
+      ],
+      "map": {
+        "joined": "helloworld",
+        "tail": "world"
+      }
+    }
+  },
+  "tags": ["positive", "activity", "flow"],
+  "specVersion": "2.0"
+}

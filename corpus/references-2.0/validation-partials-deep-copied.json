@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "Partials are validated and deep-copied into Lima-owned structures before parsing begins; the referenced value is a structural copy, not the original host object.",
-  "input": "a: $(:person)",
+  "input": "a: $(person)",
   "options": {
     "partials": {
       "person": {

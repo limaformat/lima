@@ -12,6 +12,15 @@ are both frozen regardless of what this file shows.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-12
+
+### Changed
+
+- **Breaking:** References 2.0 document references now use `${key}`, while
+  partial references use `$(key)`. The briefly published `$(key)` document
+  syntax is therefore reinterpreted as a partial reference; `$(:key)` is
+  literal text.
+
 ## [0.2.0] — 2026-08-11
 
 ### Changed

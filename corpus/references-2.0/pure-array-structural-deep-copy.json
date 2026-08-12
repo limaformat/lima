@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "3.2",
   "description": "A pure reference to an array produces a structurally equal deep copy. (Object-identity/no-aliasing is a JS-binding check, verified separately in references-2.test.ts — not expressible via value-only corpus comparison.)",
-  "input": "tags: [a, b]\ncopy: $(tags)\n",
+  "input": "tags: [a, b]\ncopy: ${tags}\n",
   "expect": {
     "result": {
       "tags": [

@@ -3,8 +3,8 @@
   "spec": "references",
   "specVersion": "2.0",
   "section": "2.3",
-  "description": "A colon immediately after the opening parenthesis selects the partial namespace; a later colon remains part of a document or partial name.",
-  "input": "\"a:b\": document\ndocumentResult: $(a:b)\npartialResult: $(:a:b)\n",
+  "description": "The delimiters select the document or partial namespace; a colon within either path remains part of the document key or partial name.",
+  "input": "\"a:b\": document\ndocumentResult: ${a:b}\npartialResult: $(a:b)\n",
   "options": { "partials": { "a:b": "partial" } },
   "expect": {
     "result": {

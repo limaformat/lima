@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "A partial array directly containing another array as an element is invalid — no nested arrays in the Lima Value Model.",
-  "input": "a: $(:arr)",
+  "input": "a: $(arr)",
   "options": {
     "partials": {
       "arr": [

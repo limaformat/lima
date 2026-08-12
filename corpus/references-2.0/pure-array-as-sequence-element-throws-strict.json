@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "3.2",
   "description": "A reference resolving to an array, used as a block-sequence item, throws in strict mode too.",
-  "input": "a:\n  - x\nitems:\n  - $(a)\n  - y\n",
+  "input": "a:\n  - x\nitems:\n  - ${a}\n  - y\n",
   "options": {
     "strict": true
   },

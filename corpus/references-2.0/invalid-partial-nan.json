@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "Rejects NaN during partial validation before document parsing.",
-  "input": "value: $(:bad)",
+  "input": "value: $(bad)",
   "options": {
     "partials": {
       "bad": {

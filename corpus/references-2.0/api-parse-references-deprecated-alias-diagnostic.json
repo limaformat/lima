@@ -5,13 +5,13 @@
   "section": "6.1",
   "description": "The deprecated parseReferences alias reports the same structured References 2.0 diagnostics as parse.",
   "api": "references",
-  "input": "value: $(missing)\n",
+  "input": "value: ${missing}\n",
   "options": { "strict": true },
   "expect": {
     "error": {
       "code": "UNRESOLVED_REFERENCE",
       "line": 1,
-      "token": "$(missing)"
+      "token": "${missing}"
     }
   },
   "tags": ["error", "strict", "api", "deprecated"]

@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "3.2",
   "description": "A pure backward document reference preserves the integer type.",
-  "input": "total: 42\ncount: $(total)\n",
+  "input": "total: 42\ncount: ${total}\n",
   "expect": {
     "result": {
       "total": 42,

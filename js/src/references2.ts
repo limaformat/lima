@@ -275,7 +275,7 @@ export const parse = <T extends Record<string, unknown> = Meta>(frontMatter: str
 		return parseCore<T>(frontMatter, options as CoreOptions)
 	}
 	const partials = validatePartials(options?.partials ?? {})
-	if (!frontMatter.includes('$(')) {
+	if (!frontMatter.includes('${') && !frontMatter.includes('$(')) {
 		return parseCore<T>(frontMatter, options as CoreOptions | undefined)
 	}
 	const document = parseCoreWithPositions(frontMatter, { strict: options?.strict ?? false, onWarning: options?.onWarning })

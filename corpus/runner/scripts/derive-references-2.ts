@@ -46,8 +46,8 @@ const sectionMap: Record<string, string> = {
 }
 
 const migrateString = (value: string): string => value
-	.replace(/\(\$([a-zA-Z0-9_][a-zA-Z0-9_:\-.]*)\)/g, '$($1)')
-	.replace(/\(%([a-zA-Z0-9_][a-zA-Z0-9_:\-/]*)\)/g, '$(:$1)')
+	.replace(/\(\$([a-zA-Z0-9_][a-zA-Z0-9_:\-.]*)\)/g, '${$1}')
+	.replace(/\(%([a-zA-Z0-9_][a-zA-Z0-9_:\-/]*)\)/g, '$($1)')
 	.replaceAll('References 1.0', 'References 2.0')
 	.replaceAll('references.', 'references-2.')
 	.replaceAll('after the second resolution phase', 'after reference resolution')
@@ -89,7 +89,7 @@ for (const filename of readdirSync(sourceDir).filter((name) => name.endsWith('.j
 	if (filename === 'pure-number.json') result.tags = ['positive', 'pure-reference', 'direct-reference']
 	if (filename === 'limits-final-scalar-length-above.json' || filename === 'limits-final-scalar-length-above-strict.json') {
 		const expectation = result.expect as { error: { token?: string } }
-		expectation.error.token = '$(a)'
+		expectation.error.token = '${a}'
 	}
 	await Bun.write(join(targetDir, filename), `${JSON.stringify(result, null, 2)}\n`)
 	written++

@@ -4,7 +4,7 @@
   "specVersion": "2.0",
   "section": "4.4",
   "description": "A document mapping copied by a pure reference retains and transitively resolves its active token provenance.",
-  "input": "value: 42\nbase:\n  nested: $(value)\ncopy: $(base)\n",
+  "input": "value: 42\nbase:\n  nested: ${value}\ncopy: ${base}\n",
   "expect": {
     "result": {
       "value": 42,

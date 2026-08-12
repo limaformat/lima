@@ -295,24 +295,24 @@ for the indentation-based rule that applies there instead.
 ## References (optional extension)
 
 Everything in this section is **Lima References 2.0**, layered on top of
-Core. A Core-only parser (`parseCore`) treats `$(key)` and `$(:key)` as plain
+Core. A Core-only parser (`parseCore`) treats `${key}` and `$(key)` as plain
 strings. `parse` enables References by default; `parseReferences` is its
 deprecated compatibility alias with identical 2.0 semantics.
 
-**Document reference** — `$(key)` or a dotted path `$(a.b.c)`:
+**Document reference** — `${key}` or a dotted path `${a.b.c}`:
 
 ```yaml
 total: 42
-count: $(total)   # → 42 (number, not string — type preserved)
+count: ${total}   # → 42 (number, not string — type preserved)
 ```
 
-**Partial reference** — `$(:key)`, resolved against a `partials` object you
+**Partial reference** — `$(key)`, resolved against a `partials` object you
 pass in. Later dotted components traverse mappings; `/` remains literal
 namespace content in the partial name:
 
 ```yaml
-author: $(:defaultAuthor)
-city: $(:people/alice.address.city)
+author: $(defaultAuthor)
+city: $(people/alice.address.city)
 ```
 
 ```ts
@@ -331,15 +331,15 @@ interpolation and always produces a string:
 
 ```yaml
 firstName: Alice
-fullName: $(firstName) $(lastName)   # interpolation → 'Alice Wonderland'
-greeting: Hello $(firstName)!        # interpolation → 'Hello Alice!'
+fullName: ${firstName} ${lastName}   # interpolation → 'Alice Wonderland'
+greeting: Hello ${firstName}!        # interpolation → 'Hello Alice!'
 ```
 
 A reference inside a **quoted** string is inactive — literal text, never
 resolved:
 
 ```yaml
-title: "$(key)"   # NOT a reference — stays the literal string "$(key)"
+title: "${key}"   # NOT a reference — stays the literal string "${key}"
 ```
 
 **Forward and bounded transitive references work.** Targets may occur before
@@ -347,8 +347,8 @@ or after their source. A chain may contain at most three reference edges,
 connecting at most four values:
 
 ```yaml
-a: $(b)
-b: $(c)
+a: ${b}
+b: ${c}
 c: 42
 ```
 
@@ -442,8 +442,8 @@ const meta = parse<PostMeta>(frontmatter)
 meta.title.toUpperCase()  // TypeScript knows title is a string
 ```
 
-**`parseCore(input, options?: CoreOptions)`** — Core only. `$(key)` and
-`$(:key)` are plain strings.
+**`parseCore(input, options?: CoreOptions)`** — Core only. `${key}` and
+`$(key)` are plain strings.
 
 | Option | Type | Default |
 |---|---|---|

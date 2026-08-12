@@ -4,7 +4,7 @@
   "specVersion": "2.0",
   "section": "3.1",
   "description": "A slash remains part of the partial name while a following dot begins traversal through nested mappings.",
-  "input": "city: $(:persons/alice.address.city)\n",
+  "input": "city: $(persons/alice.address.city)\n",
   "options": {
     "partials": {
       "persons/alice": {

@@ -39,7 +39,7 @@ Three functions are exported:
 
 - `parseCore(input, options?)` — the base format only.
 - `parse(input, options?)` — the primary References 2.0 parser; adds
-  `$(key)` document references and `$(:key)` external partials.
+  `${key}` document references and `$(key)` external partials.
 - `parseReferences(input, options?)` — deprecated compatibility alias for
   `parse` with the same References 2.0 semantics.
 

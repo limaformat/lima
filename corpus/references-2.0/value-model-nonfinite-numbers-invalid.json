@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "6.2",
   "description": "NaN and Infinity are invalid partial numbers.",
-  "input": "a: $(:n)",
+  "input": "a: $(n)",
   "options": {
     "partials": {
       "n": {

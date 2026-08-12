@@ -20,8 +20,8 @@ tokens such as `($key)` and `(%key)` are ordinary string content in References
 
 References 2.0 provides two composition mechanisms:
 
-- **Document references** — `$(key)` reads a value from the current document.
-- **Partial references** — `$(:key)` reads a value supplied through the
+- **Document references** — `${key}` reads a value from the current document.
+- **Partial references** — `$(key)` reads a value supplied through the
   `partials` parse option.
 
 Both forms support mapping traversal with dotted paths. A pure reference
@@ -29,8 +29,8 @@ preserves the referenced value's type; a token embedded in surrounding text is
 interpolated as a string. Reference chains may contain at most three reference
 edges, connecting at most four values.
 
-The leading colon in `$(:key)` selects the partial namespace. It is syntax and
-is not part of the partial name.
+The delimiters select the namespace: `${...}` reads from the document and
+`$(...)` reads from the supplied partials.
 
 ---
 
@@ -39,12 +39,12 @@ is not part of the partial name.
 ### 2.1 Document references
 
 ```ebnf
-document-reference = "$(", document-path, ")" ;
+document-reference = "${", document-path, "}" ;
 document-path      = key-segment, { ".", key-segment } ;
 ```
 
-Examples: `$(title)`, `$(site.default.claim)`, `$(og:title)`,
-`$(_internal)`.
+Examples: `${title}`, `${site.default.claim}`, `${og:title}`,
+`${_internal}`.
 
 The first path segment names a top-level document key. Later segments traverse
 nested mappings. A leading underscore has no special meaning in a document
@@ -53,12 +53,12 @@ reference.
 ### 2.2 Partial references
 
 ```ebnf
-partial-reference = "$(:", partial-name,
+partial-reference = "$(", partial-name,
                     { ".", key-segment }, ")" ;
 ```
 
-Examples: `$(:author)`, `$(:author.name)`,
-`$(:persons/alice.address.city)`, `$(:_internal)`.
+Examples: `$(author)`, `$(author.name)`,
+`$(persons/alice.address.city)`, `$(_internal)`.
 
 The first component names an entry in the `partials` option. `/` is literal
 content in that name and permits path-like namespacing. Each component after
@@ -78,9 +78,9 @@ partial-character = reference-character | "/" ;
 
 `ASCII-letter` and `decimal-digit` are defined by Lima Core Appendix D.
 
-The colon has namespace meaning only when it occurs immediately after `$(`.
-Thus `$(a:b)` is a document reference to the key `a:b`, while `$(:a:b)` is a
-partial reference to the partial named `a:b`.
+A colon within either form is part of the document key or partial name. Thus
+`${a:b}` reads the document key `a:b`, while `$(a:b)` reads the partial named
+`a:b`.
 
 ### 2.4 Active tokens
 
@@ -112,16 +112,16 @@ pipeline (trim, comment removal, second trim), it consists of exactly one active
 token and nothing else:
 
 ```yaml
-count: $(total)
-author: $(:defaultAuthor)
+count: ${total}
+author: $(defaultAuthor)
 ```
 
 A scalar is in **interpolation mode** when it contains one or more active tokens
 and is not a pure reference:
 
 ```yaml
-greeting: Hello $(firstName)!
-credit: $(title) by $(:author.name)
+greeting: Hello ${firstName}!
+credit: ${title} by $(author.name)
 ```
 
 ---
@@ -140,10 +140,10 @@ components are mapping keys, never array indexes.
 site:
   default:
     claim: Software, Tools, AI
-tagline: A blog about $(site.default.claim).
+tagline: A blog about ${site.default.claim}.
 ```
 
-For `$(:author.address.city)`, `author` is the partial name and
+For `$(author.address.city)`, `author` is the partial name and
 `address.city` is the mapping path. Dot is always the path separator and slash
 is permitted only in the partial-name component. Mapping keys containing dot
 or slash therefore cannot be selected as later path segments.
@@ -170,8 +170,8 @@ may traverse mappings in a partial to reach a selected value, but MUST NOT
 activate or resolve reference-like text stored anywhere in that partial.
 
 ```text
-partials.author.name = "$(defaultName)"
-$(:author.name)      -> "$(defaultName)"  (literal)
+partials.author.name = "${defaultName}"
+$(author.name)      -> "${defaultName}"  (literal)
 ```
 
 ### 3.4 String interpolation
@@ -266,17 +266,17 @@ The limit is evaluated at each source token, not once for the document as a
 whole. Consequently, suffixes of an overlong chain may still resolve:
 
 ```yaml
-a: $(b)
-b: $(c)
-c: $(d)
-d: $(e)
+a: ${b}
+b: ${c}
+c: ${d}
+d: ${e}
 e: 42
 ```
 
 For `a`, the path `a -> b -> c -> d -> e` has four edges and is not permitted.
 For `b`, the suffix `b -> c -> d -> e` has three edges and is permitted. The
-non-strict result is therefore `a = "$(b)"` and `b = c = d = e = 42`. Strict
-mode reports `$(b)` at `a` as unresolved. A cached target result MUST retain
+non-strict result is therefore `a = "${b}"` and `b = c = d = e = 42`. Strict
+mode reports `${b}` at `a` as unresolved. A cached target result MUST retain
 enough dependency-depth information to preserve this behaviour.
 
 The limit is a conservative complexity boundary, not a statement that longer
@@ -363,7 +363,7 @@ are normative.
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `mode` | `"references" \| "core"` | `"references"` | Select full References 2.0 parsing or Core-only parsing |
-| `partials` | `Record<string, unknown>` | `{}` | Values available through `$(:name)` |
+| `partials` | `Record<string, unknown>` | `{}` | Values available through `$(name)` |
 
 `partials` MUST NOT be supplied when `mode` is `"core"`. Such a call is
 outside the parse contract and MUST be rejected before document parsing; the
@@ -467,6 +467,8 @@ tokens, never produce unresolved-reference errors.
 | Construct | Rule |
 |---|---|
 | References 1.0 `($key)` / `(%key)` | literal text; no compatibility aliases |
+| Briefly published 2.0 `$(:key)` syntax | literal text; no compatibility alias |
+| Briefly published 2.0 `$(key)` document syntax | parsed as a partial reference |
 | More than three reference edges | unresolved |
 | References inside quoted strings | literal |
 | References in mapping keys | literal |
@@ -484,8 +486,8 @@ tokens, never produce unresolved-reference errors.
 ```ebnf
 reference-token    = document-reference | partial-reference ;
 
-document-reference = "$(", document-path, ")" ;
-partial-reference  = "$(:", partial-name,
+document-reference = "${", document-path, "}" ;
+partial-reference  = "$(", partial-name,
                      { ".", key-segment }, ")" ;
 
 document-path      = key-segment, { ".", key-segment } ;
@@ -511,8 +513,8 @@ References 2.0 is intentionally not syntax-compatible with References 1.0:
 
 | References 1.0 | References 2.0 |
 |---|---|
-| `($site.title)` | `$(site.title)` |
-| `(%author)` | `$(:author)` |
+| `($site.title)` | `${site.title}` |
+| `(%author)` | `$(author)` |
 | partials are direct-only | partial mappings support dotted traversal |
 | unused partial names may be outside token grammar | every partial name must match `partial-name` |
 | one-hop snapshot model | transitive resolution, maximum three edges |

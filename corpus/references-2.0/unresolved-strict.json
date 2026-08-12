@@ -3,14 +3,14 @@
   "spec": "references",
   "section": "7",
   "description": "Reports an unresolved reference after reference resolution in strict mode.",
-  "input": "value: $(missing)\n",
+  "input": "value: ${missing}\n",
   "options": {
     "strict": true
   },
   "expect": {
     "error": {
       "line": 1,
-      "token": "$(missing)",
+      "token": "${missing}",
       "code": "UNRESOLVED_REFERENCE"
     }
   },

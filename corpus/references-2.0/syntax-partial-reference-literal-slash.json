@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "2.2",
   "description": "A partial reference's grammar permits a literal forward slash in the key for namespacing; it is not a path separator for traversal.",
-  "input": "a: $(:persons/alice)",
+  "input": "a: $(persons/alice)",
   "options": {
     "partials": {
       "persons/alice": "Alice"

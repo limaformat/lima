@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "3.2",
   "description": "A pure reference returns the referenced value as-is, preserving its original type: string, boolean, null, integer, float, and date.",
-  "input": "s: hello\nb: true\nn: null\ni: 42\nf: 3.14\nd: 2024-03-01\ncs: $(s)\ncb: $(b)\ncn: $(n)\nci: $(i)\ncf: $(f)\ncd: $(d)\n",
+  "input": "s: hello\nb: true\nn: null\ni: 42\nf: 3.14\nd: 2024-03-01\ncs: ${s}\ncb: ${b}\ncn: ${n}\nci: ${i}\ncf: ${f}\ncd: ${d}\n",
   "expect": {
     "result": {
       "s": "hello",

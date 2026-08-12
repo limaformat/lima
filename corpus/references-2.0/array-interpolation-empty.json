@@ -3,7 +3,7 @@
   "spec": "references",
   "section": "3.6",
   "description": "An empty array used in string interpolation produces an empty string.",
-  "input": "a: []\nlabel: before $(a) after\n",
+  "input": "a: []\nlabel: before ${a} after\n",
   "expect": {
     "result": {
       "a": [],
