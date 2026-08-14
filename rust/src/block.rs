@@ -8,7 +8,7 @@
 use crate::block_cursor::BlockCursor;
 use crate::chars::is_trim_whitespace;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
-use crate::flow::{parse_flow_mapping, parse_flow_or_scalar_value};
+use crate::flow::{parse_flow_mapping_checked, parse_flow_or_scalar_value_checked};
 use crate::normalize::{check_duplicate_key, check_key_length, NESTING_DEPTH_LIMIT};
 use crate::scalars::{parse_quoted_or_typed, strip_comment, strip_key_quotes};
 use crate::value::Builder;
@@ -78,7 +78,7 @@ fn is_dash_only_or_prefixed(s: &str) -> bool {
 }
 
 /// Shared block grammar consuming one mutable physical-line cursor.
-fn parse_cursor_block<B: Builder>(
+fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
     cursor: &mut BlockCursor,
     base_indent: usize,
     strict: bool,
@@ -112,7 +112,9 @@ fn parse_cursor_block<B: Builder>(
                     } else {
                         raw.to_string()
                     };
-                    let value = parse_flow_or_scalar_value::<B>(&raw, strict, line)?;
+                    let value = parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                        &raw, strict, line,
+                    )?;
                     B::m_set(pending, key, value);
                     cursor.next();
                 } else if let Some(key_part) = trimmed.strip_suffix(':') {
@@ -123,8 +125,13 @@ fn parse_cursor_block<B: Builder>(
                         cursor.next();
                     }
                     let value = if cursor.valid && cursor.indent > indent {
-                        parse_cursor_block::<B>(cursor, cursor.indent, strict, base_line)?
-                            .unwrap_or(B::v_null(line))
+                        parse_cursor_block::<B, CHECK_DUPLICATES>(
+                            cursor,
+                            cursor.indent,
+                            strict,
+                            base_line,
+                        )?
+                        .unwrap_or(B::v_null(line))
                     } else {
                         B::v_null(line)
                     };
@@ -193,7 +200,8 @@ fn parse_cursor_block<B: Builder>(
                 continue;
             }
 
-            let flow_map = parse_flow_mapping::<B>(&after_dash, strict, line)?;
+            let flow_map =
+                parse_flow_mapping_checked::<B, CHECK_DUPLICATES>(&after_dash, strict, line)?;
             let colon_pos = find_key_sep(&after_dash);
             if let Some(flow_map) = flow_map {
                 items.push(flow_map);
@@ -224,7 +232,8 @@ fn parse_cursor_block<B: Builder>(
                 check_key_length(&key, line)?;
                 let value_start = colon_pos + 2;
                 let raw = trim_slice(&after_dash, value_start, after_dash.len());
-                let value = parse_flow_or_scalar_value::<B>(raw, strict, line)?;
+                let value =
+                    parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(raw, strict, line)?;
                 let mut item = B::m_create_with(key, value);
                 cursor.next();
                 while cursor.valid && cursor.indent > base_indent {
@@ -251,8 +260,11 @@ fn parse_cursor_block<B: Builder>(
                     } else {
                         cvalue.to_string()
                     };
-                    let cvalue =
-                        parse_flow_or_scalar_value::<B>(&cvalue, strict, continuation_line)?;
+                    let cvalue = parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                        &cvalue,
+                        strict,
+                        continuation_line,
+                    )?;
                     B::m_set(&mut item, ckey, cvalue);
                     cursor.next();
                 }
@@ -265,8 +277,13 @@ fn parse_cursor_block<B: Builder>(
                     cursor.next();
                 }
                 let value = if cursor.valid && cursor.indent > base_indent {
-                    parse_cursor_block::<B>(cursor, cursor.indent, strict, base_line)?
-                        .unwrap_or(B::v_null(line))
+                    parse_cursor_block::<B, CHECK_DUPLICATES>(
+                        cursor,
+                        cursor.indent,
+                        strict,
+                        base_line,
+                    )?
+                    .unwrap_or(B::v_null(line))
                 } else {
                     B::v_null(line)
                 };
@@ -311,14 +328,17 @@ fn parse_cursor_block<B: Builder>(
                 let entries = entries.get_or_insert_with(B::m_create);
                 let key = strip_key_quotes(trim_slice(&trimmed, 0, colon_pos));
                 check_key_length(&key, line)?;
-                check_duplicate_key(B::m_has_key(entries, &key), &key, line, strict)?;
+                if CHECK_DUPLICATES {
+                    check_duplicate_key(B::m_has_key(entries, &key), &key, line, strict)?;
+                }
                 let raw = trim_slice(&trimmed, colon_pos + 2, trimmed.len());
                 let raw = if raw.contains('#') {
                     strip_comment(raw)
                 } else {
                     raw.to_string()
                 };
-                let value = parse_flow_or_scalar_value::<B>(&raw, strict, line)?;
+                let value =
+                    parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(&raw, strict, line)?;
                 B::m_set(entries, key, value);
                 cursor.next();
             } else if let Some(key_part) = trimmed.strip_suffix(':') {
@@ -326,15 +346,22 @@ fn parse_cursor_block<B: Builder>(
                 check_key_length(&key, line)?;
                 {
                     let entries_ref = entries.get_or_insert_with(B::m_create);
-                    check_duplicate_key(B::m_has_key(entries_ref, &key), &key, line, strict)?;
+                    if CHECK_DUPLICATES {
+                        check_duplicate_key(B::m_has_key(entries_ref, &key), &key, line, strict)?;
+                    }
                 }
                 cursor.next();
                 while cursor.valid && cursor.empty() {
                     cursor.next();
                 }
                 let value = if cursor.valid && cursor.indent > base_indent {
-                    parse_cursor_block::<B>(cursor, cursor.indent, strict, base_line)?
-                        .unwrap_or(B::v_null(line))
+                    parse_cursor_block::<B, CHECK_DUPLICATES>(
+                        cursor,
+                        cursor.indent,
+                        strict,
+                        base_line,
+                    )?
+                    .unwrap_or(B::v_null(line))
                 } else {
                     B::v_null(line)
                 };
@@ -375,6 +402,22 @@ pub fn parse_block_range<B: Builder>(
     start: usize,
     end: usize,
     strict: bool,
+    check_duplicates: bool,
+    base_line: u32,
+    depth_risk: &mut bool,
+) -> Result<Option<B::Value>, LimaError> {
+    if check_duplicates {
+        parse_block_range_checked::<B, true>(source, start, end, strict, base_line, depth_risk)
+    } else {
+        parse_block_range_checked::<B, false>(source, start, end, strict, base_line, depth_risk)
+    }
+}
+
+pub(crate) fn parse_block_range_checked<B: Builder, const CHECK_DUPLICATES: bool>(
+    source: &str,
+    start: usize,
+    end: usize,
+    strict: bool,
     base_line: u32,
     depth_risk: &mut bool,
 ) -> Result<Option<B::Value>, LimaError> {
@@ -389,7 +432,8 @@ pub fn parse_block_range<B: Builder>(
         return Ok(None);
     }
     let base_indent = cursor.ascii_indent;
-    let value = parse_cursor_block::<B>(&mut cursor, base_indent, strict, base_line)?;
+    let value =
+        parse_cursor_block::<B, CHECK_DUPLICATES>(&mut cursor, base_indent, strict, base_line)?;
     if cursor.max_indent.saturating_sub(base_indent) + 4 > NESTING_DEPTH_LIMIT {
         *depth_risk = true;
     }

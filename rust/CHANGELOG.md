@@ -10,6 +10,30 @@ and [Lima References
 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-1.0-spec.md)
 are both frozen regardless of what this file shows.
 
+## [0.3.0] — 2026-08-14
+
+### Added
+
+- Full Lima References 2.0 support: dotted document and partial paths,
+  transitive three-edge resolution, cycle handling, structural copies,
+  canonical interpolation, ordered diagnostics, and final resource checks.
+- Primary `parse(input, ParseOptions)` entry point and `ParseMode`.
+- Options-based Core parsing with duplicate-key warning callbacks.
+- Structured reference diagnostic fields and References 2.0 benchmarks.
+
+### Changed
+
+- `parse_references` is now a deprecated alias for `parse` and has References
+  2.0 semantics. References 1.0 tokens are literal text.
+- `parse_core` accepts `CoreOptions`; `bool` remains supported through a
+  compatibility conversion.
+- Warning collection and duplicate-key lookup are bypassed entirely when no
+  callback is supplied, preserving the Core hot path.
+- The crate version advances to 0.3.0 to align with the TypeScript 0.3.x
+  release line.
+- The conformance test pins and executes all 369 shared cases: 149 Core,
+  101 References 1.0, and 119 References 2.0.
+
 ## [0.1.1] — 2026-08-06
 
 Initial release. (0.1.0 was reserved on crates.io as a placeholder with no

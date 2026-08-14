@@ -88,7 +88,15 @@ pub fn set_mapping<V>(entries: &mut Vec<(String, V)>, key: String, value: V) {
 #[derive(Debug, Clone, PartialEq)]
 pub struct InsertedAt {
     pub line: u32,
+    pub offset: usize,
     pub token: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StringSourceSpan {
+    pub start: usize,
+    pub line: u32,
+    pub source_offset: usize,
 }
 
 /// The annotated tree Core produces internally and References resolves —
@@ -128,6 +136,7 @@ pub enum PositionedValue {
         value: String,
         line: u32,
         quoted: bool,
+        source_spans: Option<Vec<StringSourceSpan>>,
         inserted_at: Option<InsertedAt>,
     },
     Instant {
@@ -228,6 +237,13 @@ pub trait Builder {
     fn v_int(value: i64, line: u32) -> Self::Value;
     fn v_float(value: f64, line: u32) -> Self::Value;
     fn v_string(value: String, line: u32, quoted: bool) -> Self::Value;
+    fn v_block_string(
+        value: String,
+        line: u32,
+        _source_spans: Vec<StringSourceSpan>,
+    ) -> Self::Value {
+        Self::v_string(value, line, false)
+    }
     fn v_instant(value: Instant, line: u32) -> Self::Value;
     fn v_array(items: Vec<Self::Value>, line: u32) -> Self::Value;
     fn v_mapping(entries: Self::Mapping, line: u32) -> Self::Value;
@@ -332,6 +348,20 @@ impl Builder for PositionedBuilder {
             value,
             line,
             quoted,
+            source_spans: None,
+            inserted_at: None,
+        }
+    }
+    fn v_block_string(
+        value: String,
+        line: u32,
+        source_spans: Vec<StringSourceSpan>,
+    ) -> PositionedValue {
+        PositionedValue::String {
+            value,
+            line,
+            quoted: false,
+            source_spans: Some(source_spans),
             inserted_at: None,
         }
     }

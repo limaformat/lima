@@ -7,6 +7,12 @@
 
 use std::fmt;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Diagnostic {
+    pub message: String,
+    pub line: u32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LimaDiagnosticCode {
     InvalidEscape,
@@ -29,6 +35,10 @@ pub struct LimaError {
     pub message: String,
     pub line: Option<u32>,
     pub key: Option<String>,
+    pub token: Option<Box<str>>,
+    pub partial: Option<Box<str>>,
+    pub path: Option<Box<str>>,
+    pub column: Option<u32>,
 }
 
 impl LimaError {
@@ -38,6 +48,27 @@ impl LimaError {
             message: message.into(),
             line: Some(line),
             key: None,
+            token: None,
+            partial: None,
+            path: None,
+            column: None,
+        }
+    }
+
+    pub fn diagnostic(
+        code: LimaDiagnosticCode,
+        message: impl Into<String>,
+        line: Option<u32>,
+    ) -> Self {
+        Self {
+            code,
+            message: message.into(),
+            line,
+            key: None,
+            token: None,
+            partial: None,
+            path: None,
+            column: None,
         }
     }
 }

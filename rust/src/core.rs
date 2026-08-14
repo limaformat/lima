@@ -14,16 +14,18 @@
 //! `block.rs`'s cheap conservative "may exceed" risk flag so the common
 //! case never pays for a full tree walk just to find depth 0.
 
-use crate::block::parse_block_range;
+use crate::block::parse_block_range_checked;
 use crate::chars::is_trim_whitespace;
-use crate::errors::{LimaDiagnosticCode as Code, LimaError};
-use crate::flow::parse_flow_or_scalar_value;
+use crate::errors::{Diagnostic, LimaDiagnosticCode as Code, LimaError};
+use crate::flow::parse_flow_or_scalar_value_checked;
 use crate::normalize::{
-    check_duplicate_key, check_key_length, DOCUMENT_SIZE_LIMIT, NESTING_DEPTH_LIMIT,
-    TOP_LEVEL_KEY_LIMIT,
+    begin_warning_collection, check_duplicate_key, check_key_length, finish_warning_collection,
+    DOCUMENT_SIZE_LIMIT, NESTING_DEPTH_LIMIT, TOP_LEVEL_KEY_LIMIT,
 };
 use crate::scalars::{check_string_limit, strip_comment, strip_key_quotes};
-use crate::value::{Builder, LimaValue, PlainBuilder, PositionedBuilder, PositionedValue};
+use crate::value::{
+    Builder, LimaValue, PlainBuilder, PositionedBuilder, PositionedValue, StringSourceSpan,
+};
 
 /// One discovered top-level `key:`/`key: value` line.
 struct TopKey {
@@ -175,7 +177,7 @@ fn line_at(source: &str, byte_pos: usize) -> u32 {
 /// (ASCII-space-only, capped defensively at `key.len() + 2`), apply `^^`
 /// continuation-line joining (one space, no marker on an empty line adds
 /// nothing), strip trailing blank lines.
-fn merge_block_scalar(body: &str, key: &str) -> String {
+fn merge_block_scalar(body: &str, key: &str, first_line: u32) -> (String, Vec<StringSourceSpan>) {
     let body_lines: Vec<&str> = body.split('\n').collect();
 
     let mut min_indent = usize::MAX;
@@ -194,7 +196,8 @@ fn merge_block_scalar(body: &str, key: &str) -> String {
     };
 
     let mut merged: Vec<String> = Vec::new();
-    for line in &body_lines {
+    let mut line_spans: Vec<Vec<StringSourceSpan>> = Vec::new();
+    for (body_index, line) in body_lines.iter().enumerate() {
         let b = line.as_bytes();
         let mut start = trim_amt.min(line.len());
         let is_continuation = b.get(start) == Some(&b'^') && b.get(start + 1) == Some(&b'^');
@@ -212,20 +215,54 @@ fn merge_block_scalar(body: &str, key: &str) -> String {
         if is_continuation {
             if let Some(last) = merged.last_mut() {
                 if !content.is_empty() {
+                    let output_start = last.len() + 1;
                     last.push(' ');
                     last.push_str(content);
+                    line_spans.last_mut().unwrap().push(StringSourceSpan {
+                        start: output_start,
+                        line: first_line + body_index as u32,
+                        source_offset: start,
+                    });
                 }
             } else {
                 merged.push(content.to_string());
+                line_spans.push(if content.is_empty() {
+                    Vec::new()
+                } else {
+                    vec![StringSourceSpan {
+                        start: 0,
+                        line: first_line + body_index as u32,
+                        source_offset: start,
+                    }]
+                });
             }
         } else {
             merged.push(content.to_string());
+            line_spans.push(if content.is_empty() {
+                Vec::new()
+            } else {
+                vec![StringSourceSpan {
+                    start: 0,
+                    line: first_line + body_index as u32,
+                    source_offset: start,
+                }]
+            });
         }
     }
     while merged.last().is_some_and(String::is_empty) {
         merged.pop();
+        line_spans.pop();
     }
-    merged.join("\n")
+    let mut spans = Vec::new();
+    let mut output_start = 0;
+    for (line, mut pieces) in merged.iter().zip(line_spans) {
+        for span in &mut pieces {
+            span.start += output_start;
+        }
+        spans.extend(pieces);
+        output_start += line.len() + 1;
+    }
+    (merged.join("\n"), spans)
 }
 
 /// Expands tabs to two spaces, but only within each line's *leading*
@@ -273,7 +310,7 @@ fn strip_trailing_spaces(s: &str) -> String {
 /// directly (`B::Mapping`), not wrapped in a `B::Value` — `parse_core`'s
 /// `LimaValue` and `parse_core_with_positions`'s lookup table are both
 /// "a set of top-level key/value pairs", not a value in their own right.
-fn parse_core_generic<B: Builder>(
+fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
     front_matter: &str,
     strict: bool,
 ) -> Result<B::Mapping, LimaError> {
@@ -339,14 +376,12 @@ fn parse_core_generic<B: Builder>(
             .map(|n| n.key_start)
             .unwrap_or(front_matter.len());
         check_key_length(&tk.key, tk.line)?;
-        if strict {
-            // The outer guard avoids the mapping lookup entirely in
-            // non-strict mode; this call is therefore necessarily strict.
-            check_duplicate_key(B::m_has_key(&root, &tk.key), &tk.key, tk.line, true)?;
+        if CHECK_DUPLICATES {
+            check_duplicate_key(B::m_has_key(&root, &tk.key), &tk.key, tk.line, strict)?;
         }
 
         let value = if tk.is_block {
-            parse_block_range::<B>(
+            parse_block_range_checked::<B, CHECK_DUPLICATES>(
                 front_matter,
                 tk.value_start,
                 next_start,
@@ -365,18 +400,26 @@ fn parse_core_generic<B: Builder>(
                     let val = &front_matter[tk.value_start..span_end];
                     if val.contains('#') {
                         let val = strip_comment(val);
-                        parse_flow_or_scalar_value::<B>(&val, strict, tk.line)?
+                        parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                            &val, strict, tk.line,
+                        )?
                     } else {
-                        parse_flow_or_scalar_value::<B>(val, strict, tk.line)?
+                        parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                            val, strict, tk.line,
+                        )?
                     }
                 }
                 Some(nl) if nl == span_end.saturating_sub(1) => {
                     let val = &front_matter[tk.value_start..nl];
                     if val.contains('#') {
                         let val = strip_comment(val);
-                        parse_flow_or_scalar_value::<B>(&val, strict, tk.line)?
+                        parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                            &val, strict, tk.line,
+                        )?
                     } else {
-                        parse_flow_or_scalar_value::<B>(val, strict, tk.line)?
+                        parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                            val, strict, tk.line,
+                        )?
                     }
                 }
                 Some(nl) => {
@@ -385,15 +428,19 @@ fn parse_core_generic<B: Builder>(
                     if line0_trimmed != "|" {
                         if line0.contains('#') {
                             let val = strip_comment(line0);
-                            parse_flow_or_scalar_value::<B>(&val, strict, tk.line)?
+                            parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                                &val, strict, tk.line,
+                            )?
                         } else {
-                            parse_flow_or_scalar_value::<B>(line0, strict, tk.line)?
+                            parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                                line0, strict, tk.line,
+                            )?
                         }
                     } else {
                         let body = &front_matter[nl + 1..span_end];
-                        let joined = merge_block_scalar(body, &tk.key);
+                        let (joined, spans) = merge_block_scalar(body, &tk.key, tk.line + 1);
                         check_string_limit(&joined, tk.line)?;
-                        B::v_string(joined, tk.line, false)
+                        B::v_block_string(joined, tk.line + 1, spans)
                     }
                 }
             }
@@ -421,11 +468,44 @@ fn parse_core_generic<B: Builder>(
 /// Parses Lima Core 1.0 syntax. `($key)`/`(%key)`-shaped text is never
 /// recognised here — Core is reference-unaware by construction; that's
 /// exclusively the References extension's concern.
-pub fn parse_core(front_matter: &str, strict: bool) -> Result<LimaValue, LimaError> {
-    Ok(LimaValue::Mapping(parse_core_generic::<PlainBuilder>(
-        front_matter,
-        strict,
-    )?))
+#[derive(Default)]
+pub struct CoreOptions {
+    pub strict: bool,
+    pub on_warning: Option<Box<dyn FnMut(Diagnostic)>>,
+}
+
+impl From<bool> for CoreOptions {
+    fn from(strict: bool) -> Self {
+        Self {
+            strict,
+            on_warning: None,
+        }
+    }
+}
+
+pub fn parse_core(
+    front_matter: &str,
+    options: impl Into<CoreOptions>,
+) -> Result<LimaValue, LimaError> {
+    let mut options = options.into();
+    if options.on_warning.is_none() {
+        return if options.strict {
+            parse_core_generic::<PlainBuilder, true>(front_matter, true)
+        } else {
+            parse_core_generic::<PlainBuilder, false>(front_matter, false)
+        }
+        .map(LimaValue::Mapping);
+    }
+    begin_warning_collection(true);
+    let result = parse_core_generic::<PlainBuilder, true>(front_matter, options.strict)
+        .map(LimaValue::Mapping);
+    let warnings = finish_warning_collection();
+    if let Some(callback) = options.on_warning.as_mut() {
+        for warning in warnings {
+            callback(warning);
+        }
+    }
+    result
 }
 
 /// Parses Lima Core 1.0 syntax into the internal annotated value tree —
@@ -437,7 +517,23 @@ pub fn parse_core_with_positions(
     front_matter: &str,
     strict: bool,
 ) -> Result<Vec<(String, PositionedValue)>, LimaError> {
-    parse_core_generic::<PositionedBuilder>(front_matter, strict)
+    if strict {
+        parse_core_generic::<PositionedBuilder, true>(front_matter, true)
+    } else {
+        parse_core_generic::<PositionedBuilder, false>(front_matter, false)
+    }
+}
+
+pub(crate) fn parse_core_with_positions_options(
+    front_matter: &str,
+    strict: bool,
+    collect_warnings: bool,
+) -> Result<Vec<(String, PositionedValue)>, LimaError> {
+    if strict || collect_warnings {
+        parse_core_generic::<PositionedBuilder, true>(front_matter, strict)
+    } else {
+        parse_core_generic::<PositionedBuilder, false>(front_matter, false)
+    }
 }
 
 #[cfg(test)]

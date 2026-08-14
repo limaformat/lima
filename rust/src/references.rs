@@ -243,6 +243,7 @@ fn partial_to_positioned(v: &LimaValue, line: u32) -> PositionedValue {
             value: s.clone(),
             line,
             quoted: true,
+            source_spans: None,
             inserted_at: None,
         },
         LimaValue::Instant(i) => PositionedValue::Instant {
@@ -286,6 +287,10 @@ fn validate_partial_value(
             code: Code::InvalidPartial,
             line: None,
             key: None,
+            token: None,
+            partial: None,
+            path: None,
+            column: None,
             message: format!(
                 "Lima: invalid partial \"{partial_name}\" at path \"{path}\": {reason}"
             ),
@@ -318,6 +323,7 @@ fn validate_partial_value(
                         code: Code::InvalidPartial,
                         line: None,
                         key: None,
+                        token: None, partial: None, path: None, column: None,
                         message: format!(
                             "Lima: invalid partial \"{partial_name}\" at path \"{path}[{i}]\": nested arrays are not supported"
                         ),
@@ -339,6 +345,7 @@ fn validate_partial_value(
                         code: Code::InvalidPartial,
                         line: None,
                         key: None,
+                        token: None, partial: None, path: None, column: None,
                         message: format!(
                             "Lima: invalid partial \"{partial_name}\" at path \"{path}.{k}\": key exceeds maximum length of {PARTIAL_KEY_LENGTH_LIMIT} code points"
                         ),
@@ -408,6 +415,7 @@ fn resolve_tree(
         if let Some((is_partial, key)) = as_pure_ref(val) {
             let inserted_at = InsertedAt {
                 line,
+                offset: 0,
                 token: val.clone(),
             };
             if is_partial {
@@ -479,6 +487,7 @@ fn resolve_tree(
                 value: replaced,
                 line,
                 quoted: false,
+                source_spans: None,
                 inserted_at: None,
             };
         }
@@ -688,6 +697,10 @@ pub fn parse_references(
             code: Code::InvalidPartial,
             line: None,
             key: None,
+            token: None,
+            partial: None,
+            path: None,
+            column: None,
             message: format!("Lima: too many partials (max {PARTIAL_COUNT_LIMIT})"),
         });
     }
@@ -697,6 +710,7 @@ pub fn parse_references(
                 code: Code::InvalidPartial,
                 line: None,
                 key: None,
+                token: None, partial: None, path: None, column: None,
                 message: format!(
                     "Lima: invalid partial \"{name}\" at path \"{name}\": name exceeds maximum length of {PARTIAL_NAME_LENGTH_LIMIT} code points"
                 ),
@@ -716,6 +730,10 @@ pub fn parse_references(
             code: Code::InvalidPartial,
             line: None,
             key: None,
+            token: None,
+            partial: None,
+            path: None,
+            column: None,
             message: format!(
                 "Lima: partials exceed the combined maximum of {PARTIAL_NODE_LIMIT} value nodes"
             ),
@@ -774,6 +792,7 @@ pub fn parse_references(
                             value: text.clone(),
                             line,
                             quoted: false,
+                            source_spans: None,
                             inserted_at: None,
                         },
                     )
@@ -882,6 +901,7 @@ pub fn parse_references(
             code: Code::ResourceLimit,
             line: Some(winner.map(|w| w.line).unwrap_or(1)),
             key: None,
+            token: None, partial: None, path: None, column: None,
             message: match winner {
                 Some(w) => format!("Lima: nesting depth exceeds maximum of {NESTING_DEPTH_LIMIT} at line {}: \"{}\"", w.line, w.token),
                 None => format!("Lima: nesting depth exceeds maximum of {NESTING_DEPTH_LIMIT} at line 1"),
@@ -904,6 +924,7 @@ pub fn parse_references(
             code: Code::ResourceLimit,
             line: Some(winner.map(|w| w.line).unwrap_or(1)),
             key: None,
+            token: None, partial: None, path: None, column: None,
             message: match winner {
                 Some(w) => format!("Lima: result exceeds maximum size of {RESULT_NODE_LIMIT} total nodes at line {}: \"{}\"", w.line, w.token),
                 None => format!("Lima: result exceeds maximum size of {RESULT_NODE_LIMIT} total nodes at line 1"),
@@ -1036,5 +1057,225 @@ mod tests {
             },
         );
         assert!(err.is_err());
+    }
+}
+
+#[cfg(test)]
+mod corpus_tests {
+    use super::*;
+    use crate::errors::LimaDiagnosticCode;
+    use crate::scalars::parse_date_utc;
+    use crate::value::{days_from_civil, Instant};
+    use serde_json::Value as Json;
+    use std::{fs, path::PathBuf};
+
+    fn corpus_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../corpus/references")
+    }
+
+    fn code_name(code: LimaDiagnosticCode) -> &'static str {
+        use LimaDiagnosticCode::*;
+        match code {
+            InvalidEscape => "INVALID_ESCAPE",
+            InvalidQuote => "INVALID_QUOTE",
+            InvalidDate => "INVALID_DATE",
+            InvalidNumber => "INVALID_NUMBER",
+            InvalidReferenceShape => "INVALID_REFERENCE_SHAPE",
+            InvalidIndentation => "INVALID_INDENTATION",
+            InvalidFlowSyntax => "INVALID_FLOW_SYNTAX",
+            DuplicateKey => "DUPLICATE_KEY",
+            ResourceLimit => "RESOURCE_LIMIT",
+            UnresolvedReference => "UNRESOLVED_REFERENCE",
+            InvalidInterpolation => "INVALID_INTERPOLATION",
+            InvalidPartial => "INVALID_PARTIAL",
+        }
+    }
+
+    fn json_to_lima(v: &Json) -> Option<LimaValue> {
+        match v {
+            Json::Null => Some(LimaValue::Null),
+            Json::Bool(v) => Some(LimaValue::Bool(*v)),
+            Json::Number(v) => {
+                let number = v.as_f64()?;
+                if number.fract() == 0.0 && number.abs() <= 9_007_199_254_740_991.0 {
+                    Some(LimaValue::Int(number as i64))
+                } else {
+                    Some(LimaValue::Float(number))
+                }
+            }
+            Json::String(v) => Some(LimaValue::String(v.clone())),
+            Json::Array(values) => Some(LimaValue::Array(
+                values.iter().map(json_to_lima).collect::<Option<_>>()?,
+            )),
+            Json::Object(values) if !values.contains_key("$type") => Some(LimaValue::Mapping(
+                values
+                    .iter()
+                    .map(|(key, value)| Some((key.clone(), json_to_lima(value)?)))
+                    .collect::<Option<_>>()?,
+            )),
+            Json::Object(value) => match (
+                value.get("$type").and_then(Json::as_str)?,
+                value.get("value").and_then(Json::as_str)?,
+            ) {
+                ("instant", text) => parse_date_utc(text, false, 0)
+                    .ok()
+                    .flatten()
+                    .map(LimaValue::Instant),
+                ("host-number", "nan") => Some(LimaValue::Float(f64::NAN)),
+                ("host-number", "infinity") => Some(LimaValue::Float(f64::INFINITY)),
+                ("host-number", "-infinity") => Some(LimaValue::Float(f64::NEG_INFINITY)),
+                ("host-number", "-0") => Some(LimaValue::Float(-0.0)),
+                ("host-date", "invalid" | "year-overflow") => Some(LimaValue::Instant(Instant {
+                    epoch_seconds: days_from_civil(10_000, 1, 1) * 86_400,
+                })),
+                ("host-date", "year-underflow") => Some(LimaValue::Instant(Instant {
+                    epoch_seconds: days_from_civil(-1, 1, 1) * 86_400,
+                })),
+                _ => None,
+            },
+        }
+    }
+
+    fn value_matches(actual: &LimaValue, expected: &Json) -> bool {
+        match (actual, expected) {
+            (LimaValue::Null, Json::Null) => true,
+            (LimaValue::Bool(a), Json::Bool(e)) => a == e,
+            (LimaValue::Int(a), Json::Number(e)) => e.as_f64() == Some(*a as f64),
+            (LimaValue::Float(a), Json::Number(e)) => e.as_f64() == Some(*a),
+            (LimaValue::String(a), Json::String(e)) => a == e,
+            (LimaValue::Instant(a), Json::Object(e)) => {
+                e.get("$type").and_then(Json::as_str) == Some("instant")
+                    && e.get("value").and_then(Json::as_str) == Some(a.to_iso_string().as_str())
+            }
+            (LimaValue::Array(a), Json::Array(e)) => {
+                a.len() == e.len() && a.iter().zip(e).all(|(a, e)| value_matches(a, e))
+            }
+            (LimaValue::Mapping(a), Json::Object(e)) if !e.contains_key("$type") => {
+                a.len() == e.len()
+                    && e.iter().all(|(key, expected)| {
+                        a.iter()
+                            .find(|(actual, _)| actual == key)
+                            .is_some_and(|(_, actual)| value_matches(actual, expected))
+                    })
+            }
+            _ => false,
+        }
+    }
+
+    fn nested_mappings(params: &Json) -> Option<String> {
+        let depth = params["depth"].as_u64()?;
+        let key = params["key"].as_str().unwrap_or("k");
+        let leaf = params["leafValue"].as_str().unwrap_or("v");
+        let mut lines: Vec<String> = (0..depth)
+            .map(|level| format!("{}{key}:", "  ".repeat(level as usize)))
+            .collect();
+        lines.push(format!("{}{key}: {leaf}", "  ".repeat(depth as usize)));
+        Some(lines.join("\n"))
+    }
+
+    fn resolve_fixture(fixture: &Json) -> Option<(String, Vec<(String, LimaValue)>)> {
+        if let Some(input) = fixture["input"].as_str() {
+            let partials = if let Some(values) = fixture["options"]["partials"].as_object() {
+                values
+                    .iter()
+                    .map(|(key, value)| Some((key.clone(), json_to_lima(value)?)))
+                    .collect::<Option<Vec<_>>>()?
+            } else {
+                Vec::new()
+            };
+            return Some((input.to_owned(), partials));
+        }
+        let generator = &fixture["generator"];
+        let params = &generator["parameters"];
+        match generator["name"].as_str()? {
+            "nested-mappings" => Some((nested_mappings(params)?, Vec::new())),
+            "partial-count" => {
+                let count = params["count"].as_u64()?;
+                let prefix = params["namePrefix"].as_str().unwrap_or("p");
+                Some((
+                    String::new(),
+                    (0..count)
+                        .map(|i| (format!("{prefix}{i}"), LimaValue::String("v".into())))
+                        .collect(),
+                ))
+            }
+            "partial-node-tree" => {
+                let nodes = params["totalNodes"].as_u64()?;
+                let name = params["partialName"].as_str().unwrap_or("big");
+                Some((
+                    String::new(),
+                    vec![(
+                        name.into(),
+                        LimaValue::Array(vec![LimaValue::Int(1); (nodes - 1) as usize]),
+                    )],
+                ))
+            }
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn matches_all_references_1_corpus_cases() {
+        let mut paths: Vec<_> = fs::read_dir(corpus_dir())
+            .unwrap()
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("json"))
+            .collect();
+        paths.sort();
+        assert_eq!(paths.len(), 101, "References 1.0 corpus count changed");
+
+        let mut passed = 0;
+        let mut skipped = 0;
+        let mut failures = Vec::new();
+        for path in paths {
+            let fixture: Json = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
+            let id = fixture["id"].as_str().unwrap_or("<unknown>");
+            let Some((input, partials)) = resolve_fixture(&fixture) else {
+                skipped += 1;
+                continue;
+            };
+            let result = parse_references(
+                &input,
+                ReferencesOptions {
+                    partials,
+                    strict: fixture["options"]["strict"].as_bool().unwrap_or(false),
+                },
+            );
+            if let Some(expected) = fixture["expect"].get("result") {
+                match result {
+                    Ok(actual) if value_matches(&actual, expected) => passed += 1,
+                    Ok(actual) => failures.push(format!(
+                        "{id}: mismatch: got {actual:?}, expected {expected:?}"
+                    )),
+                    Err(error) => failures.push(format!("{id}: unexpected error: {error}")),
+                }
+            } else if let Some(expected) = fixture["expect"]["error"].as_object() {
+                match result {
+                    Err(error)
+                        if expected.get("code").and_then(Json::as_str)
+                            == Some(code_name(error.code)) =>
+                    {
+                        passed += 1;
+                    }
+                    Err(error) => failures.push(format!(
+                        "{id}: got {}, expected {:?}",
+                        code_name(error.code),
+                        expected.get("code")
+                    )),
+                    Ok(_) => failures.push(format!("{id}: expected error, parsing succeeded")),
+                }
+            } else {
+                skipped += 1;
+            }
+        }
+        assert_eq!(skipped, 0, "References 1.0 corpus cases were skipped");
+        assert!(
+            failures.is_empty(),
+            "{} corpus failures:\n{}",
+            failures.len(),
+            failures.join("\n")
+        );
+        assert_eq!(passed, 101);
     }
 }

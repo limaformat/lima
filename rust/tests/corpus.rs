@@ -17,17 +17,19 @@
 
 use lima::errors::LimaDiagnosticCode;
 use lima::value::{days_from_civil, Instant, LimaValue};
-use lima::{parse_core, parse_references, ReferencesOptions};
+#[allow(deprecated)]
+use lima::{parse, parse_core, parse_references, CoreOptions, ParseMode, ParseOptions};
 use serde_json::Value as Json;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 fn corpus_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../corpus/core")
 }
 
 fn references_corpus_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../corpus/references")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../corpus/references-2.0")
 }
 
 fn code_name(code: LimaDiagnosticCode) -> &'static str {
@@ -214,6 +216,7 @@ fn core_matches_conformance_corpus() {
         "expected corpus fixtures under {}",
         corpus_dir().display()
     );
+    assert_eq!(entries.len(), 149, "Core corpus case count changed");
 
     for path in entries {
         let text = fs::read_to_string(&path).unwrap();
@@ -225,7 +228,33 @@ fn core_matches_conformance_corpus() {
         };
         let strict = fixture["options"]["strict"].as_bool().unwrap_or(false);
 
-        let result = parse_core(&input, strict);
+        let warnings = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&warnings);
+        let result = parse_core(
+            &input,
+            CoreOptions {
+                strict,
+                on_warning: Some(Box::new(move |warning| sink.lock().unwrap().push(warning))),
+            },
+        );
+        let actual_warnings = warnings.lock().unwrap();
+        let expected_warnings = fixture["expect"]["warnings"].as_array();
+        if let Some(expected) = expected_warnings {
+            if actual_warnings.len() != expected.len()
+                || actual_warnings.iter().zip(expected).any(|(a, e)| {
+                    e["line"].as_u64() != Some(a.line as u64)
+                        || e["message"].as_str().is_some_and(|m| m != a.message)
+                })
+            {
+                fail.push(format!(
+                    "{id}: warning mismatch — got {actual_warnings:?}, expected {expected:?}"
+                ));
+                continue;
+            }
+        } else if !actual_warnings.is_empty() {
+            fail.push(format!("{id}: unexpected warnings {actual_warnings:?}"));
+            continue;
+        }
 
         if let Some(expected_result) = fixture["expect"].get("result") {
             match result {
@@ -408,6 +437,11 @@ fn references_matches_conformance_corpus() {
         "expected corpus fixtures under {}",
         references_corpus_dir().display()
     );
+    assert_eq!(
+        entries.len(),
+        119,
+        "References 2.0 corpus case count changed"
+    );
 
     for path in entries {
         let text = fs::read_to_string(&path).unwrap();
@@ -419,7 +453,24 @@ fn references_matches_conformance_corpus() {
         };
         let strict = fixture["options"]["strict"].as_bool().unwrap_or(false);
 
-        let result = parse_references(&input, ReferencesOptions { partials, strict });
+        let mode = if fixture["options"]["mode"].as_str() == Some("core") {
+            ParseMode::Core
+        } else {
+            ParseMode::References
+        };
+        let options = ParseOptions {
+            partials: (fixture["options"].get("partials").is_some() || !partials.is_empty())
+                .then_some(partials),
+            strict,
+            mode,
+            on_warning: None,
+        };
+        #[allow(deprecated)]
+        let result = match fixture["api"].as_str() {
+            Some("core") => parse_core(&input, strict),
+            Some("references") => parse_references(&input, options),
+            _ => parse(&input, options),
+        };
 
         if let Some(expected_result) = fixture["expect"].get("result") {
             match result {
@@ -441,14 +492,37 @@ fn references_matches_conformance_corpus() {
                 Ok(_) => fail.push(format!("{id}: expected error, parsing succeeded")),
                 Err(e) => {
                     let expected_code = expected_error.get("code").and_then(Json::as_str);
-                    if expected_code == Some(code_name(e.code)) {
+                    let line_ok = expected_error
+                        .get("line")
+                        .and_then(Json::as_u64)
+                        .is_none_or(|line| e.line == Some(line as u32));
+                    let token_ok = expected_error
+                        .get("token")
+                        .and_then(Json::as_str)
+                        .is_none_or(|token| e.token.as_deref() == Some(token));
+                    let partial_ok = expected_error
+                        .get("partial")
+                        .and_then(Json::as_str)
+                        .is_none_or(|partial| e.partial.as_deref() == Some(partial));
+                    let path_ok = expected_error
+                        .get("path")
+                        .and_then(Json::as_str)
+                        .is_none_or(|path| e.path.as_deref() == Some(path));
+                    let contains_ok = expected_error
+                        .get("contains")
+                        .and_then(Json::as_str)
+                        .is_none_or(|needle| e.message.contains(needle));
+                    if expected_code == Some(code_name(e.code))
+                        && line_ok
+                        && token_ok
+                        && partial_ok
+                        && path_ok
+                        && contains_ok
+                    {
                         pass += 1;
                     } else {
                         fail.push(format!(
-                            "{id}: error code mismatch: got {}, expected {:?}: {}",
-                            code_name(e.code),
-                            expected_code,
-                            e.message,
+                            "{id}: diagnostic mismatch: got {e:?}, expected {expected_error:?}",
                         ));
                     }
                 }

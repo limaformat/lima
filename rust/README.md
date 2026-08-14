@@ -8,55 +8,58 @@ with well-defined types, no surprises, and zero runtime dependencies.
 
 ```toml
 [dependencies]
-lima = "0.1"
+lima = "0.3"
 ```
 
 ```rust
-use lima::{parse_references, ReferencesOptions};
+use lima::{parse, ParseOptions};
 
-let result = parse_references(r#"
+let result = parse(r#"
 title: Hello World
 published: 2024-03-01
 draft: false
 tags:
   - javascript
   - webdev
-"#, ReferencesOptions::default()).unwrap();
+"#, ParseOptions::default()).unwrap();
 
 // LimaValue::Mapping — "title" a String, "published" an Instant
 // (2024-03-01T00:00:00Z), "draft" a Bool, "tags" an Array of Strings.
 ```
 
-`parse_core`/`parse_references` accept the raw content **between** the
+`parse`/`parse_core` accept the raw content **between** the
 frontmatter delimiters (`---`) — stripping them is the caller's job.
 
-Two entry points are exported:
+The public entry points are:
 
-- `parse_core(input, strict)` — the base format only (Lima Core 1.0).
-- `parse_references(input, options)` — adds `($key)` document references
-  and `(%key)` external partials (Lima References 1.0); `options.partials`
-  supplies named values, `options.strict` enables strict mode.
+- `parse(input, options)` — Lima References 2.0 by default: `${key}` reads
+  document values and `$(partial)` reads supplied partials.
+- `parse_core(input, options)` — Lima Core 1.0 only.
+- `parse_references(input, options)` — deprecated References 2.0 alias for
+  `parse`.
+
+`ParseOptions::default()` enables References in non-strict mode. Select
+`ParseMode::Core` for the reference-unaware path. `CoreOptions` and
+`ParseOptions` support an optional duplicate-key warning callback.
 
 Both return `Result<LimaValue, LimaError>` — `LimaError` implements
 `std::error::Error` and carries a stable `.code` field
 (`LimaDiagnosticCode`) for programmatic error handling, alongside a
 human-readable message.
 
-The crate currently implements Lima Core 1.0 and Lima References 1.0. Their
-normative specifications are linked below; the repository's current guide
-describes References 2.0 and therefore does not apply to this crate's
-References API. Rust API docs: **[docs.rs/lima](https://docs.rs/lima)**.
+The crate implements Lima Core 1.0 and Lima References 2.0. Rust API docs:
+**[docs.rs/lima](https://docs.rs/lima)**.
 
 Why Lima exists, the case against YAML, and security rationale:
 **[repository README](https://github.com/limaformat/lima#readme)**.
 
 The [Lima Core 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
-and [Lima References 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-1.0-spec.md)
+and [Lima References 2.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
 specifications are the normative source of truth — this crate implements
 them exactly, verified against the same
-[250-case conformance corpus](https://github.com/limaformat/lima/tree/main/corpus)
-(count pinned by `tests/corpus.rs`) shared with the TypeScript
-implementation.
+[369-case conformance corpus](https://github.com/limaformat/lima/tree/main/corpus)
+(counts pinned by `tests/corpus.rs` and the private References 1.0 unit-test
+module) shared with the TypeScript implementation.
 
 Migrating existing YAML frontmatter:
 [docs/migrating-from-yaml.md](https://github.com/limaformat/lima/blob/main/docs/migrating-from-yaml.md).

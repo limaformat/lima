@@ -2,7 +2,7 @@
 //! `go/bench`. Not a CI gate. Run `cargo bench --bench cross_language --
 //! --json` for machine-readable results.
 use lima::value::LimaValue;
-use lima::{parse_core, parse_references, ReferencesOptions};
+use lima::{parse, parse_core, CoreOptions, ParseOptions};
 use std::{env, hint::black_box, time::Instant};
 const SAMPLES: usize = 7;
 struct R {
@@ -38,10 +38,11 @@ fn bench(name: &str, mut f: impl FnMut(), it: usize) -> R {
         ops: 1e6 / med,
     }
 }
+#[allow(clippy::type_complexity)]
 fn main() {
     let json = env::args().any(|a| a == "--json");
     let typical="title: My Blog Post\nslug: my-blog-post\ndate: 2024-03-01T09:00:00Z\ndraft: false\nauthor: Alice\ntags: [javascript, webdev, tutorial]\nexcerpt: A short excerpt about the post, nothing fancy.\nreadingTime: 4.5\ncategory: Engineering\n";
-    let mut cases:Vec<(String,String,Option<Vec<(String,LimaValue)>>,usize)>=vec![("core typical".into(),typical.into(),None,20000),("references no references".into(),typical.into(),Some(vec![]),20000),("references small document".into(),"siteName: My Site\ntitle: Hello ($siteName)!\nbyline: Written by ($author)\nauthor: Alice\ntagline: (%tagline)\n".into(),Some(vec![("tagline".into(),LimaValue::String("Welcome".into()))]),20000)];
+    let mut cases:Vec<(String,String,Option<Vec<(String,LimaValue)>>,usize)>=vec![("core typical".into(),typical.into(),None,20000),("references no references".into(),typical.into(),Some(vec![]),20000),("references small document".into(),"siteName: My Site\ntitle: Hello ${siteName}!\nbyline: Written by ${author}\nauthor: Alice\ntagline: $(tagline)\n".into(),Some(vec![("tagline".into(),LimaValue::String("Welcome".into()))]),20000)];
     let mut deep = "a:\n".to_string();
     for i in 1..=15 {
         deep += &format!("{}k:\n", "  ".repeat(i))
@@ -64,7 +65,7 @@ fn main() {
     }
     interp += "summary: ";
     for i in 0..20 {
-        interp += &format!("($k{i}) ")
+        interp += &format!("${{k{i}}} ")
     }
     interp += "\n";
     cases.push((
@@ -76,13 +77,53 @@ fn main() {
     let big = LimaValue::Array((0..1999).map(LimaValue::Int).collect());
     let mut pd = String::new();
     for i in 0..16 {
-        pd += &format!("k{i}: (%big)\n")
+        pd += &format!("k{i}: $(big)\n")
     }
     cases.push((
         "references large partial copies".into(),
         pd,
         Some(vec![("big".into(), big)]),
         200,
+    ));
+    cases.push((
+        "references single direct document reference".into(),
+        "base: 42\ncopy: ${base}\n".into(),
+        Some(vec![]),
+        20000,
+    ));
+    cases.push((
+        "references chain at three-edge limit".into(),
+        "a: ${b}\nb: ${c}\nc: ${d}\nd: 42\n".into(),
+        Some(vec![]),
+        20000,
+    ));
+    let mut shared = "target:\n  x: 1\n  y: 2\ncopies:\n".to_string();
+    for i in 0..200 {
+        shared += &format!("  copy{i}: ${{target}}\n");
+    }
+    cases.push((
+        "references shared mapping target cache".into(),
+        shared,
+        Some(vec![]),
+        500,
+    ));
+    cases.push((
+        "references partial mapping path".into(),
+        "city: $(person.address.city)\n".into(),
+        Some(vec![(
+            "person".into(),
+            LimaValue::Mapping(vec![(
+                "address".into(),
+                LimaValue::Mapping(vec![("city".into(), LimaValue::String("London".into()))]),
+            )]),
+        )]),
+        20000,
+    ));
+    cases.push((
+        "references block continuation source spans".into(),
+        "name: Ada\ndescription: |\n  Written by\n  ^^${name} today.\n".into(),
+        Some(vec![]),
+        20000,
     ));
     for n in [100, 200, 400, 800, 1600] {
         let mut d = "root:\n".to_string();
@@ -94,7 +135,7 @@ fn main() {
     for n in [50, 100, 200, 400, 800, 1600, 3200] {
         let mut d = "base: 42\nrefs:\n".to_string();
         for i in 0..n {
-            d += &format!("  k{i}: ($base)\n")
+            d += &format!("  k{i}: ${{base}}\n")
         }
         if d.len() <= 65536 {
             cases.push((
@@ -112,11 +153,12 @@ fn main() {
                 &name,
                 || {
                     black_box(
-                        parse_references(
+                        parse(
                             black_box(&doc),
-                            ReferencesOptions {
-                                partials: p.clone(),
+                            ParseOptions {
+                                partials: Some(p.clone()),
                                 strict: false,
+                                ..Default::default()
                             },
                         )
                         .unwrap(),
@@ -140,6 +182,30 @@ fn main() {
             )
         }
         rs.push(r)
+    }
+    for (name, doc) in [
+        ("core warning callback without duplicates", typical),
+        (
+            "core warning callback with duplicate",
+            "title: First\ntitle: Second\n",
+        ),
+    ] {
+        rs.push(bench(
+            name,
+            || {
+                black_box(
+                    parse_core(
+                        black_box(doc),
+                        CoreOptions {
+                            strict: false,
+                            on_warning: Some(Box::new(|_| {})),
+                        },
+                    )
+                    .unwrap(),
+                );
+            },
+            20000,
+        ));
     }
     if json {
         print!("[");

@@ -114,6 +114,19 @@ pub fn parse_flow_sequence<B: Builder>(
     val: &str,
     strict: bool,
     line: u32,
+    check_duplicates: bool,
+) -> Result<Option<Vec<B::Value>>, LimaError> {
+    if check_duplicates {
+        parse_flow_sequence_checked::<B, true>(val, strict, line)
+    } else {
+        parse_flow_sequence_checked::<B, false>(val, strict, line)
+    }
+}
+
+pub(crate) fn parse_flow_sequence_checked<B: Builder, const CHECK_DUPLICATES: bool>(
+    val: &str,
+    strict: bool,
+    line: u32,
 ) -> Result<Option<Vec<B::Value>>, LimaError> {
     let b = val.as_bytes();
     if b.first() != Some(&b'[') || b.last() != Some(&b']') {
@@ -155,7 +168,9 @@ pub fn parse_flow_sequence<B: Builder>(
             ));
         }
         if ib[0] == b'{' && *ib.last().unwrap() == b'}' {
-            if let Some(nested) = parse_flow_mapping::<B>(item, strict, line)? {
+            if let Some(nested) =
+                parse_flow_mapping_checked::<B, CHECK_DUPLICATES>(item, strict, line)?
+            {
                 items.push(nested);
                 continue;
             }
@@ -168,6 +183,19 @@ pub fn parse_flow_sequence<B: Builder>(
 /// `None` = `val` isn't `{...}`-shaped, or (non-strict only) a malformed
 /// item inside it means the whole thing falls back to scalar parsing.
 pub fn parse_flow_mapping<B: Builder>(
+    val: &str,
+    strict: bool,
+    line: u32,
+    check_duplicates: bool,
+) -> Result<Option<B::Value>, LimaError> {
+    if check_duplicates {
+        parse_flow_mapping_checked::<B, true>(val, strict, line)
+    } else {
+        parse_flow_mapping_checked::<B, false>(val, strict, line)
+    }
+}
+
+pub(crate) fn parse_flow_mapping_checked<B: Builder, const CHECK_DUPLICATES: bool>(
     val: &str,
     strict: bool,
     line: u32,
@@ -219,7 +247,9 @@ pub fn parse_flow_mapping<B: Builder>(
         let key_end = trim_end_at(val, key_start, colon_pos);
         let key = strip_key_quotes(&val[key_start..key_end]);
         check_key_length(&key, line)?;
-        check_duplicate_key(B::m_has_key(&entries, &key), &key, line, strict)?;
+        if CHECK_DUPLICATES {
+            check_duplicate_key(B::m_has_key(&entries, &key), &key, line, strict)?;
+        }
 
         let value_start = trim_start_at(val, colon_pos + 2, item_end);
         let value_end = trim_end_at(val, value_start, item_end);
@@ -243,13 +273,28 @@ pub fn parse_flow_or_scalar_value<B: Builder>(
     raw: &str,
     strict: bool,
     line: u32,
+    check_duplicates: bool,
+) -> Result<B::Value, LimaError> {
+    if check_duplicates {
+        parse_flow_or_scalar_value_checked::<B, true>(raw, strict, line)
+    } else {
+        parse_flow_or_scalar_value_checked::<B, false>(raw, strict, line)
+    }
+}
+
+pub(crate) fn parse_flow_or_scalar_value_checked<B: Builder, const CHECK_DUPLICATES: bool>(
+    raw: &str,
+    strict: bool,
+    line: u32,
 ) -> Result<B::Value, LimaError> {
     match raw.as_bytes().first() {
-        Some(b'[') => match parse_flow_sequence::<B>(raw, strict, line)? {
-            Some(seq) => Ok(B::v_array(seq, line)),
-            None => parse_scalar_value::<B>(raw, strict, line),
-        },
-        Some(b'{') => match parse_flow_mapping::<B>(raw, strict, line)? {
+        Some(b'[') => {
+            match parse_flow_sequence_checked::<B, CHECK_DUPLICATES>(raw, strict, line)? {
+                Some(seq) => Ok(B::v_array(seq, line)),
+                None => parse_scalar_value::<B>(raw, strict, line),
+            }
+        }
+        Some(b'{') => match parse_flow_mapping_checked::<B, CHECK_DUPLICATES>(raw, strict, line)? {
             Some(map) => Ok(map),
             None => parse_scalar_value::<B>(raw, strict, line),
         },
