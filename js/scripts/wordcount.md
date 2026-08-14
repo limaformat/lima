@@ -54,6 +54,17 @@ for the frozen 1.0 conformance suite but are not reachable from the current
 public API (`references2.ts`'s `parse`/`parseReferences`), so they aren't
 part of "the current public implementation" this table measures.
 
+## Current reproduced values
+
+| Measurement | Words |
+|---|---:|
+| Lima Core 1.0 specification | 7,602 |
+| Lima References 2.0 specification | 2,968 |
+| Lima Core implementation code | 6,954 |
+| Lima Core implementation comments | 2,940 |
+| Lima References 2.0 additions code | 3,489 |
+| Lima References 2.0 additions comments | 1,127 |
+
 ## Calibration
 
 No word-count script was ever committed before this one (verified via
@@ -113,9 +124,7 @@ dual-builder split changes shape again.
 
 ## Package size
 
-Not scripted — a `bun run build && npm pack --pack-destination <dir>` for
-Lima (reproducible: the resulting `js/dist` should match the committed one
-exactly — `git status` after rebuilding is the check), and
-`npm pack js-yaml@5.2.3 --dry-run` for the real published js-yaml tarball
-(registry tarballs for a released version are immutable, so this doesn't
-need a local checkout).
+Not scripted — run `bun run build`, then `bun pm pack --destination <dir>`
+for Lima. The resulting 0.3.1 tarball is 42,874 bytes (42.9 KB), and `js/dist`
+must still match the committed output. The published js-yaml 5.2.3 tarball is
+338 KB; registry tarballs for a released version are immutable.
