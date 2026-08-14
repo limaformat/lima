@@ -141,16 +141,23 @@ func mapSet(m *Map, key string, value Value) {
 }
 
 type insertedAt struct {
-	line  int
-	token string
+	line, offset int
+	token        string
 }
+type referenceToken2 struct {
+	token                     string
+	index, offset, line       int
+	documentPath, partialPath string
+}
+type referenceTokens2 []referenceToken2
 type pvalue struct {
-	value    Value
-	line     int
-	quoted   bool
-	inserted *insertedAt
-	array    []*pvalue
-	mapping  []pentry
+	value       Value
+	line        int
+	quoted      bool
+	inserted    *insertedAt
+	references2 *referenceTokens2
+	array       []*pvalue
+	mapping     []pentry
 }
 type pentry struct {
 	key   string

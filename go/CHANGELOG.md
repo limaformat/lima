@@ -11,6 +11,24 @@ and [Lima References
 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-1.0-spec.md)
 are both frozen regardless of what this file shows.
 
+## [0.3.0] — 2026-08-14
+
+### Added
+
+- Full Lima References 2.0 support, including dotted paths, three-edge
+  transitive resolution, cycles, structural copies, canonical interpolation,
+  ordered diagnostics, and final resource validation.
+- Primary `Parse(input, ParseOptions)` entry point and `ParseMode`.
+- Core and References duplicate-key warning callbacks.
+- References 2.0 conformance and performance scenarios.
+
+### Changed
+
+- `ParseReferences` is now the deprecated References 2.0 alias for `Parse`.
+- The complete 369-case corpus is pinned: 149 Core, 101 References 1.0, and
+  119 References 2.0, with zero skipped cases.
+- The release line advances to `go/v0.3.0` to align with TypeScript and Rust.
+
 ## [0.1.0] — 2026-08-07
 
 Initial release, tagged as `go/v0.1.0`.

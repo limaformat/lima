@@ -1,6 +1,6 @@
 # Lima for Go
 
-Zero-dependency Go implementation of Lima Core 1.0 and Lima References 1.0.
+Zero-dependency Go implementation of Lima Core 1.0 and Lima References 2.0.
 
 ## Install
 
@@ -19,21 +19,24 @@ import (
 )
 
 func main() {
-    value, err := lima.ParseReferences(
+    value, err := lima.Parse(
         "title: Hello World\npublished: 2024-03-01\ndraft: false\n",
-        lima.ReferencesOptions{},
+        lima.ParseOptions{},
     )
     if err != nil { panic(err) }
     fmt.Printf("%#v\n", value)
 }
 ```
 
-Use `ParseCore(input, strict)` when references and interpolation must remain
-literal text. Use `ParseReferences(input, options)` for document references,
-partials, interpolation, and two-phase forward-reference resolution. This
-module currently implements Lima References 1.0; the repository's current
-guide describes References 2.0 and does not yet apply to this API.
+`Parse` enables References 2.0 by default: `${key}` reads document values and
+`$(partial)` reads supplied partials. Use `ModeCore` or `ParseCore` when tokens
+must remain literal. `ParseReferences` is retained as a deprecated alias for
+`Parse`. `ParseCoreWithOptions` and `ParseOptions` accept duplicate-key warning
+callbacks.
 
 The returned `Value` has the concrete forms `Null`, `Bool`, `Int64`,
 `Float64`, `String`, `Instant`, `Array`, and insertion-ordered `Map`.
 `LimaError` exposes stable diagnostic fields and works with `errors.As`.
+
+The implementation is verified against all 149 Core, 101 frozen References
+1.0, and 119 References 2.0 corpus cases (369 total, zero skipped).

@@ -14,10 +14,12 @@ import (
 
 type corpusCase struct {
 	ID        string `json:"id"`
+	API       string `json:"api"`
 	Input     string `json:"input"`
 	InputFile string `json:"inputFile"`
 	Options   struct {
 		Strict   bool           `json:"strict"`
+		Mode     ParseMode      `json:"mode"`
 		Partials map[string]any `json:"partials"`
 	} `json:"options"`
 	Generator *struct {
@@ -25,9 +27,105 @@ type corpusCase struct {
 		Parameters map[string]any `json:"parameters"`
 	} `json:"generator"`
 	Expect struct {
-		Result any        `json:"result"`
-		Error  *LimaError `json:"error"`
+		Result   any        `json:"result"`
+		Error    *LimaError `json:"error"`
+		Warnings []struct {
+			Code LimaDiagnosticCode `json:"code"`
+			Line int                `json:"line"`
+			Key  string             `json:"key"`
+		} `json:"warnings"`
 	} `json:"expect"`
+}
+
+type referencesSyntaxVersion uint8
+
+const (
+	referencesSyntaxV1 referencesSyntaxVersion = 1
+	referencesSyntaxV2 referencesSyntaxVersion = 2
+)
+
+func warningsMatch(got []Diagnostic, c corpusCase) bool {
+	if len(got) != len(c.Expect.Warnings) {
+		return false
+	}
+	for i, want := range c.Expect.Warnings {
+		if got[i].Line != want.Line || want.Key != "" && !strings.Contains(got[i].Message, want.Key) {
+			return false
+		}
+	}
+	return true
+}
+
+func references2Input(c corpusCase) (string, map[string]Value, bool) {
+	input, partials, ok := referencesInput(c, referencesSyntaxV2)
+	return input, partials, ok
+}
+
+func TestReferences2Corpus(t *testing.T) {
+	paths, globErr := filepath.Glob("../corpus/references-2.0/*.json")
+	if globErr != nil {
+		t.Fatal(globErr)
+	}
+	sort.Strings(paths)
+	if len(paths) != 119 {
+		t.Fatalf("References 2.0 corpus count changed: %d", len(paths))
+	}
+	pass, skip := 0, 0
+	for _, path := range paths {
+		b, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		var c corpusCase
+		if err := json.Unmarshal(b, &c); err != nil {
+			t.Fatal(err)
+		}
+		input, partials, ok := references2Input(c)
+		if !ok {
+			skip++
+			continue
+		}
+		options := ParseOptions{Mode: c.Options.Mode, Partials: partials, Strict: c.Options.Strict}
+		if c.Options.Partials == nil && len(partials) == 0 {
+			options.Partials = nil
+		}
+		var got Value
+		var err error
+		var warnings []Diagnostic
+		options.OnWarning = func(d Diagnostic) { warnings = append(warnings, d) }
+		switch c.API {
+		case "core":
+			got, err = ParseCoreWithOptions(input, CoreOptions{Strict: c.Options.Strict, OnWarning: options.OnWarning})
+		case "references":
+			got, err = ParseReferences(input, options)
+		default:
+			got, err = Parse(input, options)
+		}
+		if c.Expect.Error != nil {
+			var le *LimaError
+			if err == nil {
+				t.Errorf("%s expected %s", c.ID, c.Expect.Error.Code)
+			} else if !errorAs(err, &le) || !diagnosticMatches(le, c.Expect.Error) {
+				t.Errorf("%s got %#v expected %#v", c.ID, le, c.Expect.Error)
+			} else {
+				pass++
+			}
+		} else if err != nil {
+			t.Errorf("%s unexpected %v", c.ID, err)
+		} else if !equalCorpus(got, c.Expect.Result) {
+			t.Errorf("%s mismatch: %#v != %#v", c.ID, got, c.Expect.Result)
+		} else if !warningsMatch(warnings, c) {
+			t.Errorf("%s warnings mismatch: %#v != %#v", c.ID, warnings, c.Expect.Warnings)
+		} else {
+			pass++
+		}
+	}
+	if skip != 0 {
+		t.Fatalf("References 2.0 corpus skipped %d cases", skip)
+	}
+	if pass != len(paths) {
+		t.Fatalf("References 2.0 corpus: %d/%d", pass, len(paths))
+	}
 }
 
 func corpusInput(c corpusCase, dir string) (string, bool) {
@@ -149,6 +247,9 @@ func TestCoreCorpus(t *testing.T) {
 		t.Fatal(globErr)
 	}
 	sort.Strings(paths)
+	if len(paths) != 149 {
+		t.Fatalf("Core corpus count changed: %d", len(paths))
+	}
 	pass := 0
 	skip := 0
 	for _, path := range paths {
@@ -165,7 +266,8 @@ func TestCoreCorpus(t *testing.T) {
 			skip++
 			continue
 		}
-		got, e := ParseCore(input, c.Options.Strict)
+		var warnings []Diagnostic
+		got, e := ParseCoreWithOptions(input, CoreOptions{Strict: c.Options.Strict, OnWarning: func(d Diagnostic) { warnings = append(warnings, d) }})
 		if c.Expect.Error != nil {
 			var le *LimaError
 			if e == nil {
@@ -179,12 +281,17 @@ func TestCoreCorpus(t *testing.T) {
 			t.Errorf("%s: unexpected %v", c.ID, e)
 		} else if !equalCorpus(got, c.Expect.Result) {
 			t.Errorf("%s: mismatch %#v != %#v", c.ID, got, c.Expect.Result)
+		} else if !warningsMatch(warnings, c) {
+			t.Errorf("%s: warning mismatch %#v != %#v", c.ID, warnings, c.Expect.Warnings)
 		} else {
 			pass++
 		}
 	}
 	if pass+skip != len(paths) {
 		t.Fatalf("core corpus accounting mismatch: %d passed + %d skipped != %d fixtures", pass, skip, len(paths))
+	}
+	if skip != 0 {
+		t.Fatalf("Core corpus skipped %d cases", skip)
 	}
 	t.Logf("core corpus: %d/%d (%d skipped)", pass, len(paths), skip)
 	_ = math.NaN()
@@ -261,7 +368,29 @@ func jsonValue(v any) Value {
 	}
 	return Null{}
 }
-func referencesInput(c corpusCase) (string, map[string]Value, bool) {
+func resultNodeExpansionInput(topLevelKeys, partialNodes int, partialName string, referencesVersion referencesSyntaxVersion) (string, map[string]Value) {
+	var referenceFormat string
+	switch referencesVersion {
+	case referencesSyntaxV1:
+		referenceFormat = "k%d: (%%%s)"
+	case referencesSyntaxV2:
+		referenceFormat = "k%d: $(%s)"
+	default:
+		panic(fmt.Sprintf("unsupported references syntax version %d", referencesVersion))
+	}
+	a := make(Array, partialNodes-1)
+	for i := range a {
+		a[i] = Int64(1)
+	}
+	partials := map[string]Value{partialName: a}
+	lines := make([]string, topLevelKeys)
+	for i := range topLevelKeys {
+		lines[i] = fmt.Sprintf(referenceFormat, i, partialName)
+	}
+	return strings.Join(lines, "\n"), partials
+}
+
+func referencesInput(c corpusCase, referencesVersion referencesSyntaxVersion) (string, map[string]Value, bool) {
 	p := map[string]Value{}
 	for k, v := range c.Options.Partials {
 		p[k] = jsonValue(v)
@@ -303,25 +432,46 @@ func referencesInput(c corpusCase) (string, map[string]Value, bool) {
 		if x, ok := q["partialName"].(string); ok {
 			name = x
 		}
-		a := make(Array, nodes-1)
-		for i := range a {
-			a[i] = Int64(1)
+		input, generatedPartials := resultNodeExpansionInput(n, nodes, name, referencesVersion)
+		for key, value := range generatedPartials {
+			p[key] = value
 		}
-		p[name] = a
-		ls := make([]string, n)
-		for i := range n {
-			ls[i] = fmt.Sprintf("k%d: (%%%s)", i, name)
-		}
-		return strings.Join(ls, "\n"), p, true
+		return input, p, true
 	}
 	return "", nil, false
 }
+
+func TestResultNodeExpansionUsesReferencesVersionSyntax(t *testing.T) {
+	v1, _ := resultNodeExpansionInput(2, 2, "big", referencesSyntaxV1)
+	if v1 != "k0: (%big)\nk1: (%big)" {
+		t.Fatalf("unexpected References 1.0 input: %q", v1)
+	}
+	v2, partials := resultNodeExpansionInput(2, 2, "big", referencesSyntaxV2)
+	if v2 != "k0: $(big)\nk1: $(big)" {
+		t.Fatalf("unexpected References 2.0 input: %q", v2)
+	}
+	if len(partials) != 1 {
+		t.Fatalf("unexpected generated partials: %#v", partials)
+	}
+	t.Run("unsupported version", func(t *testing.T) {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("expected unsupported syntax version to panic")
+			}
+		}()
+		resultNodeExpansionInput(1, 2, "big", referencesSyntaxVersion(3))
+	})
+}
+
 func TestReferencesCorpus(t *testing.T) {
 	paths, globErr := filepath.Glob("../corpus/references/*.json")
 	if globErr != nil {
 		t.Fatal(globErr)
 	}
 	sort.Strings(paths)
+	if len(paths) != 101 {
+		t.Fatalf("References 1.0 corpus count changed: %d", len(paths))
+	}
 	pass := 0
 	skip := 0
 	for _, path := range paths {
@@ -333,12 +483,12 @@ func TestReferencesCorpus(t *testing.T) {
 		if e := json.Unmarshal(b, &c); e != nil {
 			t.Fatal(e)
 		}
-		input, p, ok := referencesInput(c)
+		input, p, ok := referencesInput(c, referencesSyntaxV1)
 		if !ok {
 			skip++
 			continue
 		}
-		got, e := ParseReferences(input, ReferencesOptions{Partials: p, Strict: c.Options.Strict})
+		got, e := parseReferencesV1(input, references1Options{Partials: p, Strict: c.Options.Strict})
 		if c.Expect.Error != nil {
 			var le *LimaError
 			if e == nil {
@@ -358,6 +508,9 @@ func TestReferencesCorpus(t *testing.T) {
 	}
 	if pass+skip != len(paths) {
 		t.Fatalf("references corpus accounting mismatch: %d passed + %d skipped != %d fixtures", pass, skip, len(paths))
+	}
+	if skip != 0 {
+		t.Fatalf("References 1.0 corpus skipped %d cases", skip)
 	}
 	t.Logf("references corpus: %d/%d (%d skipped)", pass, len(paths), skip)
 }

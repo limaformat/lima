@@ -75,7 +75,7 @@ func InternalScenarios() []Scenario {
 	}
 	interp += "summary: "
 	for i := 0; i < 20; i++ {
-		interp += fmt.Sprintf("($k%d) ", i)
+		interp += fmt.Sprintf("${k%d} ", i)
 	}
 	interp += "\n"
 	big := make(lima.Array, 1999)
@@ -84,12 +84,16 @@ func InternalScenarios() []Scenario {
 	}
 	partialDoc := ""
 	for i := 0; i < 16; i++ {
-		partialDoc += fmt.Sprintf("k%d: (%%big)\n", i)
+		partialDoc += fmt.Sprintf("k%d: $(big)\n", i)
 	}
 	return []Scenario{
 		{"core typical", typical, nil}, {"references no references", typical, map[string]lima.Value{}},
-		{"references small document", "siteName: My Site\ntitle: Hello ($siteName)!\nbyline: Written by ($author)\nauthor: Alice\ntagline: (%tagline)\n", map[string]lima.Value{"tagline": lima.String("Welcome")}},
+		{"references small document", "siteName: My Site\ntitle: Hello ${siteName}!\nbyline: Written by ${author}\nauthor: Alice\ntagline: $(tagline)\n", map[string]lima.Value{"tagline": lima.String("Welcome")}},
 		{"core maximum nesting depth", deep, nil}, {"core 128 top-level keys", keys, nil}, {"core wide block array", wide, nil},
 		{"references interpolation-heavy", interp, map[string]lima.Value{}}, {"references large partial copies", partialDoc, map[string]lima.Value{"big": big}},
+		{"references single direct document reference", "base: 42\ncopy: ${base}\n", map[string]lima.Value{}},
+		{"references chain at three-edge limit", "a: ${b}\nb: ${c}\nc: ${d}\nd: 42\n", map[string]lima.Value{}},
+		{"references partial mapping path", "city: $(person.address.city)\n", map[string]lima.Value{"person": lima.Map{{Key: "address", Value: lima.Map{{Key: "city", Value: lima.String("London")}}}}}},
+		{"references block continuation source spans", "name: Ada\ndescription: |\n  Written by\n  ^^${name} today.\n", map[string]lima.Value{}},
 	}
 }

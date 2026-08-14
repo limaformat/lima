@@ -1,4 +1,4 @@
-// Package lima implements Lima Core 1.0 and Lima References 1.0 with only
+// Package lima implements Lima Core 1.0 and Lima References 2.0 with only
 // the Go standard library.
 package lima
 
@@ -77,7 +77,7 @@ func setP(m *[]pentry, key string, v *pvalue) {
 	*m = append(*m, pentry{key, v})
 }
 
-func mergeBlockScalar(lines []sourceLine, key string) string {
+func mergeBlockScalar(lines []sourceLine, key string) (string, []stringSourceSpan) {
 	minIndent := int(^uint(0) >> 1)
 	for _, l := range lines {
 		if trimWhitespace(l.text) != "" && l.indent < minIndent {
@@ -91,6 +91,7 @@ func mergeBlockScalar(lines []sourceLine, key string) string {
 		minIndent = 0
 	}
 	merged := []string{}
+	lineSpans := [][]stringSourceSpan{}
 	for _, l := range lines {
 		text := l.text
 		cut := minIndent
@@ -104,16 +105,37 @@ func mergeBlockScalar(lines []sourceLine, key string) string {
 		}
 		if continuation && len(merged) > 0 {
 			if text != "" {
+				start := len(merged[len(merged)-1]) + 1
 				merged[len(merged)-1] += " " + text
+				lineSpans[len(lineSpans)-1] = append(lineSpans[len(lineSpans)-1], stringSourceSpan{start: start, line: l.number, sourceOffset: cut + 2})
 			}
 		} else {
 			merged = append(merged, text)
+			spans := []stringSourceSpan{}
+			if text != "" {
+				offset := cut
+				if continuation {
+					offset += 2
+				}
+				spans = append(spans, stringSourceSpan{line: l.number, sourceOffset: offset})
+			}
+			lineSpans = append(lineSpans, spans)
 		}
 	}
 	for len(merged) > 0 && merged[len(merged)-1] == "" {
 		merged = merged[:len(merged)-1]
+		lineSpans = lineSpans[:len(lineSpans)-1]
 	}
-	return strings.Join(merged, "\n")
+	spans := []stringSourceSpan{}
+	outputStart := 0
+	for i, line := range merged {
+		for _, span := range lineSpans[i] {
+			span.start += outputStart
+			spans = append(spans, span)
+		}
+		outputStart += len(line) + 1
+	}
+	return strings.Join(merged, "\n"), spans
 }
 
 func spaceBeforeColon(s string) bool {
@@ -142,7 +164,7 @@ func spaceBeforeColon(s string) bool {
 	return false
 }
 
-func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue, error) {
+func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning func(Diagnostic), captureReferences bool) (*pvalue, error) {
 	for *idx < len(lines) && (trimWhitespace(lines[*idx].text) == "" || strings.HasPrefix(trimWhitespace(lines[*idx].text), "#")) {
 		*idx++
 	}
@@ -199,7 +221,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue,
 			}
 			if sep := findSep(rest); sep >= 0 {
 				key := stripKeyQuotes(trimWhitespace(rest[:sep]))
-				v, e := parseFlowOrScalar(trimWhitespace(rest[sep+2:]), strict, l.number)
+				v, e := parseFlowOrScalar(trimWhitespace(rest[sep+2:]), strict, l.number, onWarning, captureReferences)
 				if e != nil {
 					return nil, e
 				}
@@ -213,7 +235,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue,
 						break
 					}
 					ck := stripKeyQuotes(trimWhitespace(cc[:s]))
-					cv, e := parseFlowOrScalar(stripComment(trimWhitespace(cc[s+2:])), strict, cl.number)
+					cv, e := parseFlowOrScalar(stripComment(trimWhitespace(cc[s+2:])), strict, cl.number, onWarning, captureReferences)
 					if e != nil {
 						return nil, e
 					}
@@ -223,7 +245,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue,
 				arr = append(arr, &pvalue{line: l.number, mapping: item})
 				continue
 			}
-			v, e := parseFlowOrScalar(rest, strict, l.number)
+			v, e := parseFlowOrScalar(rest, strict, l.number, onWarning, captureReferences)
 			if e != nil {
 				return nil, e
 			}
@@ -258,7 +280,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue,
 			for _, e := range m {
 				exists = exists || e.key == key
 			}
-			if e := checkDuplicate(exists, key, l.number, strict); e != nil {
+			if e := checkDuplicate(exists, key, l.number, strict, onWarning); e != nil {
 				return nil, e
 			}
 			*idx++
@@ -266,13 +288,13 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue,
 			var e error
 			if bare {
 				if *idx < len(lines) && lineStructuralIndent(lines[*idx]) > indent {
-					v, e = parseBlock(lines, idx, lineStructuralIndent(lines[*idx]), strict)
+					v, e = parseBlock(lines, idx, lineStructuralIndent(lines[*idx]), strict, onWarning, captureReferences)
 				}
 				if v == nil && e == nil {
 					v = pv(Null{}, l.number)
 				}
 			} else {
-				v, e = parseFlowOrScalar(stripComment(trimWhitespace(c[sep+2:])), strict, l.number)
+				v, e = parseFlowOrScalar(stripComment(trimWhitespace(c[sep+2:])), strict, l.number, onWarning, captureReferences)
 			}
 			if e != nil {
 				return nil, e
@@ -286,7 +308,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool) (*pvalue,
 	return &pvalue{line: start, mapping: m}, nil
 }
 
-func parseCorePositioned(input string, strict bool) ([]pentry, error) {
+func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), captureReferences bool) ([]pentry, error) {
 	if len(input) > documentSizeLimit {
 		return nil, limaError(ResourceLimit, 1, fmt.Sprintf("Lima: document exceeds maximum size of %d bytes at line 1", documentSizeLimit))
 	}
@@ -332,7 +354,7 @@ func parseCorePositioned(input string, strict bool) ([]pentry, error) {
 		for _, x := range root {
 			exists = exists || x.key == key
 		}
-		if e := checkDuplicate(exists, key, l.number, strict); e != nil {
+		if e := checkDuplicate(exists, key, l.number, strict, onWarning); e != nil {
 			return nil, e
 		}
 		i++
@@ -347,7 +369,7 @@ func parseCorePositioned(input string, strict bool) ([]pentry, error) {
 				j++
 			}
 			if j < len(lines) && lines[j].indent > 0 {
-				v, e = parseBlock(lines, &i, lines[j].indent, strict)
+				v, e = parseBlock(lines, &i, lines[j].indent, strict, onWarning, captureReferences)
 			}
 			if v == nil && e == nil {
 				v = pv(Null{}, l.number)
@@ -360,9 +382,13 @@ func parseCorePositioned(input string, strict bool) ([]pentry, error) {
 					body = append(body, lines[i])
 					i++
 				}
-				v = pstr(mergeBlockScalar(body, key), l.number, false)
+				text, spans := mergeBlockScalar(body, key)
+				v = pstr(text, l.number+1, false, captureReferences)
+				if captureReferences {
+					setReferenceTokens2(v, scanReferenceTokens2(text, l.number+1, spans))
+				}
 			} else {
-				v, e = parseFlowOrScalar(stripComment(raw), strict, l.number)
+				v, e = parseFlowOrScalar(stripComment(raw), strict, l.number, onWarning, captureReferences)
 			}
 		}
 		if e != nil {
@@ -376,7 +402,18 @@ func parseCorePositioned(input string, strict bool) ([]pentry, error) {
 // ParseCore parses input according to Lima Core 1.0. The returned Value is
 // always a Map. strict enables the specification's strict diagnostics.
 func ParseCore(input string, strict bool) (Value, error) {
-	m, e := parseCorePositioned(input, strict)
+	return ParseCoreWithOptions(input, CoreOptions{Strict: strict})
+}
+
+// CoreOptions configures ParseCoreWithOptions.
+type CoreOptions struct {
+	Strict    bool
+	OnWarning func(Diagnostic)
+}
+
+// ParseCoreWithOptions parses Lima Core 1.0 with warning callbacks.
+func ParseCoreWithOptions(input string, options CoreOptions) (Value, error) {
+	m, e := parseCorePositioned(input, options.Strict, options.OnWarning, false)
 	if e != nil {
 		return nil, e
 	}

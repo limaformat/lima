@@ -20,11 +20,14 @@ func checkKeyLength(key string, line int) error {
 	}
 	return nil
 }
-func checkDuplicate(exists bool, key string, line int, strict bool) error {
+func checkDuplicate(exists bool, key string, line int, strict bool, onWarning func(Diagnostic)) error {
 	if exists && strict {
 		e := limaError(DuplicateKey, line, fmt.Sprintf("Lima: duplicate key %q at line %d — last value wins", key, line))
 		e.Key = key
 		return e
+	}
+	if exists && onWarning != nil {
+		onWarning(Diagnostic{Message: fmt.Sprintf("Lima: duplicate key %q at line %d — last value wins", key, line), Line: line})
 	}
 	return nil
 }

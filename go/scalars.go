@@ -9,8 +9,12 @@ import (
 )
 
 func pv(v Value, line int) *pvalue { return &pvalue{value: v, line: line} }
-func pstr(s string, line int, quoted bool) *pvalue {
-	return &pvalue{value: String(s), line: line, quoted: quoted}
+func pstr(s string, line int, quoted bool, captureReferences bool) *pvalue {
+	p := &pvalue{value: String(s), line: line, quoted: quoted}
+	if captureReferences && !quoted {
+		setReferenceTokens2(p, scanReferenceTokens2(s, line, nil))
+	}
+	return p
 }
 
 func parseDateUTC(s string, strict bool, line int) (*Instant, error) {
@@ -176,7 +180,7 @@ func zeroLiteral(s string) bool {
 	return s != "" && strings.Trim(s, "0") == ""
 }
 
-func buildTyped(s string, strict bool, line int) (*pvalue, error) {
+func buildTyped(s string, strict bool, line int, captureReferences bool) (*pvalue, error) {
 	switch s {
 	case "", "null", "~":
 		return pv(Null{}, line), nil
@@ -189,7 +193,7 @@ func buildTyped(s string, strict bool, line int) (*pvalue, error) {
 		if e := checkStringLimit(s, line); e != nil {
 			return nil, e
 		}
-		return pstr(s, line, false), nil
+		return pstr(s, line, false, captureReferences), nil
 	}
 	if numberGrammar(s) {
 		if strings.ContainsAny(s, ".eE") {
@@ -224,7 +228,7 @@ func buildTyped(s string, strict bool, line int) (*pvalue, error) {
 	if e := checkStringLimit(s, line); e != nil {
 		return nil, e
 	}
-	return pstr(s, line, false), nil
+	return pstr(s, line, false, captureReferences), nil
 }
 
 func unescapeDQ(s string, strict bool, line int) (string, error) {
@@ -326,7 +330,7 @@ func stripComment(s string) string {
 	}
 	return strings.ReplaceAll(s, "\\#", "#")
 }
-func parseScalar(raw string, strict bool, line int, top bool) (*pvalue, error) {
+func parseScalar(raw string, strict bool, line int, top bool, captureReferences bool) (*pvalue, error) {
 	if len(raw) > 0 && (raw[0] == '"' || raw[0] == '\'') {
 		q := raw[0]
 		if raw[len(raw)-1] == q {
@@ -344,7 +348,7 @@ func parseScalar(raw string, strict bool, line int, top bool) (*pvalue, error) {
 			if e = checkStringLimit(v, line); e != nil {
 				return nil, e
 			}
-			return pstr(v, line, true), nil
+			return pstr(v, line, true, captureReferences), nil
 		}
 		if top && strict {
 			return nil, limaError(InvalidQuote, line, fmt.Sprintf("Lima: non-whitespace content after closing quote at line %d", line))
@@ -353,5 +357,5 @@ func parseScalar(raw string, strict bool, line int, top bool) (*pvalue, error) {
 	if utf8.RuneCountInString(raw) > scalarLengthLimit {
 		return nil, checkStringLimit(raw, line)
 	}
-	return buildTyped(raw, strict, line)
+	return buildTyped(raw, strict, line, captureReferences)
 }

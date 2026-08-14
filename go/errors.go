@@ -28,9 +28,11 @@ const (
 	InvalidInterpolation LimaDiagnosticCode = "INVALID_INTERPOLATION"
 	// InvalidPartial reports an invalid external partial name or value.
 	InvalidPartial LimaDiagnosticCode = "INVALID_PARTIAL"
+	// InvalidOption reports an unsupported or incompatible parse option.
+	InvalidOption LimaDiagnosticCode = "INVALID_OPTION"
 )
 
-// LimaError is the structured error returned by ParseCore and ParseReferences.
+// LimaError is the structured error returned by Parse, ParseCore, and ParseReferences.
 // Optional source fields are zero-valued when they do not apply. It is usable
 // with errors.As as either *LimaError or error.
 type LimaError struct {

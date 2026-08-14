@@ -67,8 +67,8 @@ func validatePartial(v Value, name, path string, depth int) (int, error) {
 	return 1, nil
 }
 
-// ReferencesOptions configures ParseReferences.
-type ReferencesOptions struct {
+// references1Options configures the frozen References 1.0 test implementation.
+type references1Options struct {
 	// Partials contains named, deeply copied values available as (%name).
 	Partials map[string]Value
 	// Strict enables strict reference and Core diagnostics.
@@ -159,7 +159,7 @@ func fromValue(v Value, line int) *pvalue {
 		}
 		return &pvalue{line: line, mapping: m}
 	case String:
-		return pstr(string(x), line, true)
+		return pstr(string(x), line, true, false)
 	default:
 		return pv(v, line)
 	}
@@ -217,7 +217,7 @@ func resolve(v *pvalue, lookup, partials []pentry, strict bool) (*pvalue, error)
 			}
 			if target != nil && freeP(target) {
 				c := fromValue(target.plain(), v.line)
-				c.inserted = &insertedAt{v.line, text}
+				c.inserted = &insertedAt{line: v.line, token: text}
 				return c, nil
 			}
 		}
@@ -265,7 +265,7 @@ func resolve(v *pvalue, lookup, partials []pentry, strict bool) (*pvalue, error)
 			if utf8.RuneCountInString(r) > scalarLengthLimit {
 				return nil, limaError(ResourceLimit, v.line, fmt.Sprintf("Lima: scalar exceeds maximum length of %d code points at line %d", scalarLengthLimit, v.line))
 			}
-			return pstr(r, v.line, false), nil
+			return pstr(r, v.line, false, false), nil
 		}
 		if strict && (strings.Contains(text, "($") || strings.Contains(text, "(%")) {
 			return nil, &LimaError{Code: UnresolvedReference, Line: v.line, Token: text, Message: fmt.Sprintf("Lima: unresolved reference %q at line %d", text, v.line)}
@@ -300,8 +300,8 @@ func resolve(v *pvalue, lookup, partials []pentry, strict bool) (*pvalue, error)
 	return v, nil
 }
 
-// ParseReferences parses Lima Core 1.0 and resolves Lima References 1.0.
-func ParseReferences(input string, opts ReferencesOptions) (Value, error) {
+// parseReferencesV1 is retained only for the frozen References 1.0 corpus.
+func parseReferencesV1(input string, opts references1Options) (Value, error) {
 	if len(opts.Partials) > partialCountLimit {
 		return nil, &LimaError{Code: InvalidPartial, Message: "Lima: too many partials (max 128)"}
 	}
@@ -321,7 +321,7 @@ func ParseReferences(input string, opts ReferencesOptions) (Value, error) {
 		}
 		partials = append(partials, pentry{k, fromValue(v, 0)})
 	}
-	root, e := parseCorePositioned(input, opts.Strict)
+	root, e := parseCorePositioned(input, opts.Strict, nil, false)
 	if e != nil {
 		return nil, e
 	}

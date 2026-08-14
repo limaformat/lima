@@ -129,7 +129,7 @@ func main() {
 	for _, n := range []int{50, 100, 200, 400, 800, 1600, 3200} {
 		doc := "base: 42\nrefs:\n"
 		for i := 0; i < n; i++ {
-			doc += fmt.Sprintf("  k%d: ($base)\n", i)
+			doc += fmt.Sprintf("  k%d: ${base}\n", i)
 		}
 		if len(doc) > 65536 {
 			continue

@@ -33,6 +33,12 @@ benchstat before.txt after.txt
 ```
 
 `benchstat` is an optional external developer tool, not a module dependency.
+The JSON runner can additionally enforce the repository thresholds (5 percent
+for Core and 10 percent for References):
+
+```sh
+node regression.mjs before.json after.json
+```
 
 ## JSON and cross-language comparison
 

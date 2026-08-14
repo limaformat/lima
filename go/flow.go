@@ -63,13 +63,13 @@ func findSep(s string) int {
 	}
 	return -1
 }
-func parseFlowOrScalar(raw string, strict bool, line int) (*pvalue, error) {
+func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnostic), captureReferences bool) (*pvalue, error) {
 	if strings.HasPrefix(raw, "[") {
 		if !strings.HasSuffix(raw, "]") {
 			if strict {
 				return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: unclosed flow sequence at line %d", line))
 			}
-			return parseScalar(raw, strict, line, true)
+			return parseScalar(raw, strict, line, true, captureReferences)
 		}
 		inner := trimWhitespace(raw[1 : len(raw)-1])
 		a := []*pvalue{}
@@ -90,7 +90,7 @@ func parseFlowOrScalar(raw string, strict bool, line int) (*pvalue, error) {
 				if strings.HasPrefix(part, "[") {
 					return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow nesting at line %d: %q", line, part))
 				}
-				v, e := parseFlowOrScalar(part, strict, line)
+				v, e := parseFlowOrScalar(part, strict, line, onWarning, captureReferences)
 				if e != nil {
 					return nil, e
 				}
@@ -104,7 +104,7 @@ func parseFlowOrScalar(raw string, strict bool, line int) (*pvalue, error) {
 			if strict {
 				return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: unclosed flow mapping at line %d", line))
 			}
-			return parseScalar(raw, strict, line, true)
+			return parseScalar(raw, strict, line, true, captureReferences)
 		}
 		inner := trimWhitespace(raw[1 : len(raw)-1])
 		m := []pentry{}
@@ -121,7 +121,7 @@ func parseFlowOrScalar(raw string, strict bool, line int) (*pvalue, error) {
 					if strict {
 						return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow mapping item (missing \": \") at line %d: %q", line, part))
 					}
-					return parseScalar(raw, strict, line, true)
+					return parseScalar(raw, strict, line, true, captureReferences)
 				}
 				key := stripKeyQuotes(trimWhitespace(part[:sep]))
 				if e := checkKeyLength(key, line); e != nil {
@@ -133,14 +133,14 @@ func parseFlowOrScalar(raw string, strict bool, line int) (*pvalue, error) {
 						idx = i
 					}
 				}
-				if e := checkDuplicate(idx >= 0, key, line, strict); e != nil {
+				if e := checkDuplicate(idx >= 0, key, line, strict, onWarning); e != nil {
 					return nil, e
 				}
 				rv := trimWhitespace(part[sep+2:])
 				if strings.HasPrefix(rv, "[") || strings.HasPrefix(rv, "{") {
 					return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow nesting at line %d: %q", line, rv))
 				}
-				v, e := parseScalar(rv, strict, line, false)
+				v, e := parseScalar(rv, strict, line, false, captureReferences)
 				if e != nil {
 					return nil, e
 				}
@@ -153,5 +153,5 @@ func parseFlowOrScalar(raw string, strict bool, line int) (*pvalue, error) {
 		}
 		return &pvalue{line: line, mapping: m}, nil
 	}
-	return parseScalar(raw, strict, line, true)
+	return parseScalar(raw, strict, line, true, captureReferences)
 }
