@@ -1,12 +1,13 @@
 # Decision: how should a Lima frontmatter block be recognised?
 
-**Status: proposed, not decided.** This is a recommendation for the
-maintainer to confirm or reject — nothing described here is implemented.
-It does not change [Lima Core 1.0](../lima-core-1.0-spec.md) or [Lima
-References 1.0](../lima-references-1.0-spec.md), both of which define
-Lima's *content* grammar and have nothing to say about how a host document
-signals which parser to use for a `---`-delimited block in the first
-place. That signalling problem is what this document is about.
+**Status: deferred (2026-09-04) — outside the scope of the current
+freeze/review work; revisit separately.** This is a host-integration
+signalling question, not a Core or References conformance issue: it does
+not change [Lima Core 1.0](../lima-core-1.0-spec.md) or [Lima References
+2.0](../lima-references-2.0-spec.md), both of which define Lima's *content*
+grammar and say nothing about how a host document signals which parser to
+use for a `---`-delimited block. The recommendation below (the `---lima`
+tagged fence) stands as the proposed direction when this is picked up.
 
 ## The problem
 

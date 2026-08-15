@@ -40,6 +40,41 @@ jobs:
       - run: bun run run
         working-directory: corpus/runner
 
+  rust:
+    name: rust (fmt, clippy, test + conformance corpus)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # ubuntu-latest ships a current stable Rust toolchain with clippy and
+      # rustfmt already installed; no setup action needed.
+      - run: cargo fmt --check
+        working-directory: rust
+      - run: cargo clippy --all-targets -- -D warnings
+        working-directory: rust
+      # `cargo test` also runs tests/corpus.rs, which loads corpus/core/*.json
+      # and corpus/references-2.0/*.json via CARGO_MANIFEST_DIR/../corpus — the
+      # same shared conformance fixtures the TypeScript runner uses.
+      - run: cargo test
+        working-directory: rust
+
+  go:
+    name: go (vet, test + conformance corpus)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+      - run: go vet ./...
+        working-directory: go
+      # go/corpus_test.go loads ../corpus/{core,references,references-2.0}/*.json
+      # — the shared conformance fixtures — and count-pins each suite.
+      - run: go test ./...
+        working-directory: go
+    # NOTE: unlike the js/corpus/rust jobs, this job was added without a local
+    # Go toolchain to verify it first. If the initial run fails on `go vet`,
+    # fix the reported issue rather than dropping the step.
+
   pack-smoke:
     name: js (pack + import smoke test)
     runs-on: ubuntu-latest

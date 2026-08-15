@@ -1,11 +1,12 @@
 # Decision: how should the conformance corpus assert Int vs. Float?
 
-**Status: proposed, not decided.** This is a recommendation for the
-maintainer to confirm or reject — nothing described here is implemented.
-It does not change [Lima Core 1.0](../lima-core-1.0-spec.md), which already
-defines Integer and Float as distinct value-model types (§6.4). This
-document is about a gap in how the **corpus** verifies that distinction,
-not about the grammar itself.
+**Status: decided (2026-09-04) — option A (`$type: "int"`/`"float"`
+sentinel, scoped to a small number of new targeted fixtures).** Tracked as
+P2 item 8 in
+[`../review-2026-09-followups.md`](../review-2026-09-followups.md). Not yet
+implemented. This does not change [Lima Core 1.0](../lima-core-1.0-spec.md),
+which already defines Integer and Float as distinct value-model types
+(§6.4); it closes a gap in how the **corpus** verifies that distinction.
 
 Discovered during Claude Code's independent review of the Go port
 (`go/`), 2026-08-07. Filed here because fixing it touches shared

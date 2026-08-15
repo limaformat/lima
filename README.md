@@ -150,6 +150,11 @@ The Core 1.0 and References 1.0 specifications are frozen. Further changes to
 those versions will only ship as errata or a 1.0.1 revision, and only on the
 basis of the conformance corpus.
 
+The runnable reference API in every implementation is **Core 1.0 plus
+References 2.0**. References 1.0 is retained as a frozen specification and
+conformance target; its `($key)` / `(%key)` syntax is not exposed as a public
+parsing entry point in any implementation.
+
 References 2.0 is a separate, final major-version conformance target. The
 frozen 1.0 corpus remains independently runnable and is protected by checked-in
 content-hash manifests.

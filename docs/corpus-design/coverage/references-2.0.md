@@ -1,6 +1,6 @@
 # Coverage Matrix: Lima References 2.0
 
-**Status:** final corpus — 117 cases; the TypeScript adapter passes the full
+**Status:** final corpus — 119 cases; the TypeScript adapter passes the full
 suite, while adapters without References 2.0 support may report cases blocked.
 **Normative basis:** `docs/lima-references-2.0-spec.md` Final.
 

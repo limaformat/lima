@@ -1,7 +1,7 @@
 # Lima Conformance Corpus – Design Package
 
 **Status:** implemented — frozen 250-case Core/References 1.0 corpus plus
-a separate 117-case References 2.0 final corpus; counts are pinned by tests.
+a separate 119-case References 2.0 final corpus; counts are pinned by tests.
 Verified from `corpus/runner/` with the suite commands described below. This
 document is the design rationale the corpus was
 built from; §11's "Implementation order" is a historical record of how
@@ -9,7 +9,7 @@ that happened, not an open plan. Where this document and the actual
 corpus disagree, the corpus and its passing tests are authoritative — file
 an issue rather than trusting stale prose here.
 **Normative basis:** Lima Core 1.0, Lima References 1.0, and Lima References
-2.0 Draft as a separate conformance target
+2.0 Final as a separate conformance target
 **First implementation:** TypeScript/Bun (`@limaformat/lima`)
 **Long-term goal:** the same corpus validates TypeScript, Rust, and further implementations
 

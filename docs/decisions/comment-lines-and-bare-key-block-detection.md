@@ -1,10 +1,10 @@
 # Decision: do comment lines end lookahead for a bare key's block?
 
-**Status: proposed, not decided.** This is a recommendation for the
-maintainer to confirm or reject — nothing described here is implemented.
-It does not change [Lima Core 1.0](../lima-core-1.0-spec.md); this
-document is about an apparent conflict between the spec's own text and
-the shared behaviour of two already-published implementations.
+**Status: decided (2026-09-04) — option C (fix all three implementations to
+match the spec text; add a corpus fixture).** Tracked as P1 item 4 in
+[`../review-2026-09-followups.md`](../review-2026-09-followups.md). Not yet
+implemented. The spec text (§4 rule 7 / §6.1.3) stands; the two published
+implementations that diverge from it have a real, shipped conformance gap.
 
 Discovered incidentally while reviewing the Go port's fix for
 [`structural-indentation-unicode-whitespace.md`](structural-indentation-unicode-whitespace.md)

@@ -8,11 +8,14 @@
 
 ## Specifications
 
-- `docs/lima-core-1.0-spec.md` and `docs/lima-references-1.0-spec.md` are
-  normative and authoritative.
-- The specifications are self-contained as of 1.0 Final. No design-history
-  document is part of this repository — do not assume one exists or search
-  for one.
+- `docs/lima-core-1.0-spec.md` and `docs/lima-references-2.0-spec.md` are
+  normative and authoritative for the current implementations.
+- `docs/lima-references-1.0-spec.md` is frozen; it is normative only for the
+  frozen References 1.0 conformance corpus (`corpus/references/`). Its
+  syntax is not a public API in any implementation.
+- The specifications are self-contained as of their Final status. No
+  design-history document is part of this repository — do not assume one
+  exists or search for one.
 - Do not modify specification files unless explicitly requested.
 - Do not change language semantics merely to satisfy the current implementation.
 - Distinguish implementation defects, corpus defects, and specification

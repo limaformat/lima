@@ -1,10 +1,11 @@
 # Decision: nested `|` block scalars don't work in any implementation
 
-**Status: proposed, not decided.** This is a recommendation for the
-maintainer to confirm or reject — nothing described here is implemented.
-Unlike the other two open decision documents, this one isn't a
-spec-ambiguity question: the spec text is unambiguous, and all three
-implementations diverge from it the same way.
+**Status: decided (2026-09-04) — option A (implement in all three
+implementations).** Tracked as P0 item 1 in
+[`../review-2026-09-followups.md`](../review-2026-09-followups.md), bundled
+with the other block-scalar defects the 2026-09 review found. Not yet
+implemented. This one was never a spec-ambiguity question: the spec text is
+unambiguous, and all three implementations diverge from it the same way.
 
 Discovered incidentally during Claude Code's review of the Go port's
 `lineContent` fix (2026-08-07), via an unrelated sanity check. Not
