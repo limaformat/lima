@@ -158,8 +158,11 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				*idx++
 				continue
 			}
-			if sep := findSep(rest); sep >= 0 {
-				key := stripKeyQuotes(trimWhitespace(rest[:sep]))
+			if sep := findSep(rest); sep >= 0 && isValidKey(trimWhitespace(rest[:sep])) {
+				key, e0 := stripKeyQuotes(trimWhitespace(rest[:sep]), strict, l.number)
+				if e0 != nil {
+					return nil, e0
+				}
 				rawVal := trimWhitespace(rest[sep+2:])
 				*idx++
 				var v *pvalue
@@ -178,10 +181,13 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 					cl := lines[*idx]
 					cc := lineContent(cl)
 					s := findSep(cc)
-					if s < 0 {
+					if s < 0 || !isValidKey(trimWhitespace(cc[:s])) {
 						break
 					}
-					ck := stripKeyQuotes(trimWhitespace(cc[:s]))
+					ck, e := stripKeyQuotes(trimWhitespace(cc[:s]), strict, cl.number)
+					if e != nil {
+						return nil, e
+					}
 					cv, e := parseFlowOrScalar(stripComment(trimWhitespace(cc[s+2:])), strict, cl.number, onWarning, captureReferences)
 					if e != nil {
 						return nil, e
@@ -219,7 +225,16 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				*idx++
 				continue
 			}
-			key := stripKeyQuotes(trimWhitespace(c[:sep]))
+			if !isValidKey(trimWhitespace(c[:sep])) {
+				// §5.1: not a usable key — unrecognised line, skipped in both
+				// modes (§10's strict list is closed and does not cover this).
+				*idx++
+				continue
+			}
+			key, e0 := stripKeyQuotes(trimWhitespace(c[:sep]), strict, l.number)
+			if e0 != nil {
+				return nil, e0
+			}
 			if e := checkKeyLength(key, l.number); e != nil {
 				return nil, e
 			}
@@ -291,10 +306,19 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 			i++
 			continue
 		}
+		if !isValidKey(c[:sep]) {
+			// §5.1: not a usable key — unrecognised line, skipped in both
+			// modes (§10's strict list is closed and does not cover this).
+			i++
+			continue
+		}
 		// The top-level scanner preserves non-ASCII leading whitespace as
 		// literal key text. Trimming applies inside recognized block/flow
 		// values, not while deciding top-level structure.
-		key := stripKeyQuotes(c[:sep])
+		key, e0 := stripKeyQuotes(c[:sep], strict, l.number)
+		if e0 != nil {
+			return nil, e0
+		}
 		entryCount++
 		if entryCount > topLevelKeyLimit {
 			return nil, limaError(ResourceLimit, 1, fmt.Sprintf("Lima: too many top-level key entries (max %d) at line 1", topLevelKeyLimit))

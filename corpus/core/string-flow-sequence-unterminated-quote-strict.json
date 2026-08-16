@@ -1,0 +1,12 @@
+{
+  "id": "core.strings.flow-sequence.unterminated-quote.strict",
+  "spec": "core",
+  "section": "10.1 (1.0.1)",
+  "description": "§10.1's \"unterminated quoted string\" strict check applies to a quoted item inside a flow sequence, not only to a top-level inline value.",
+  "input": "v: [\"abc]\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": { "line": 1, "code": "INVALID_QUOTE" }
+  },
+  "tags": ["strict", "error", "strings", "quoted", "flow-sequence"]
+}

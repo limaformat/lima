@@ -1,0 +1,11 @@
+{
+  "id": "core.keys.nested.quoted-with-colon",
+  "spec": "core",
+  "section": "5.1 (1.0.1)",
+  "description": "A quoted key in a nested block mapping may contain `: `; the separator is the first `: ` outside the quotes.",
+  "input": "outer:\n  \"a: b\": value\n",
+  "expect": {
+    "result": { "outer": { "a: b": "value" } }
+  },
+  "tags": ["positive", "keys"]
+}

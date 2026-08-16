@@ -310,6 +310,69 @@ const buildTyped = (str, strict, line, builder) => {
     return builder.string(str, line, false);
 };
 // ─── Scalar / quoting ──────────────────────────────────────────────────────
+/**
+ * Index of the quote that closes a quoted scalar opening at `s[0]`, or -1
+ * if it is never closed. Escape-aware, so `"a\""` closes at its last
+ * character rather than the escaped inner `"`:
+ *   - double quotes: a backslash escapes the next character (§6.1.2);
+ *   - single-quoted *values*: `\'` and `\\` are the only special sequences
+ *     (§6.1.3), so a lone `\` is literal and `\\'` closes after two
+ *     backslashes — pass `singleQuoteEscape = false` for single-quoted
+ *     *keys*, which are fully literal (§5.2), where the first `'` closes.
+ * `s[0]` is assumed to be `'` or `"`.
+ */
+export const closingQuoteIndex = (s, singleQuoteEscape = true) => {
+    const q = s.charCodeAt(0);
+    for (let i = 1; i < s.length; i++) {
+        const c = s.charCodeAt(i);
+        if (q === 34) {
+            if (c === 92) {
+                i++;
+                continue;
+            }
+            if (c === 34)
+                return i;
+        }
+        else {
+            if (singleQuoteEscape && c === 92) {
+                const n = s.charCodeAt(i + 1);
+                if (n === 92 || n === 39) {
+                    i++;
+                    continue;
+                }
+            }
+            if (c === 39)
+                return i;
+        }
+    }
+    return -1;
+};
+/**
+ * Whether `raw` (a key candidate as written, before quote stripping) is a
+ * usable Lima key:
+ *   - a quoted string that is properly closed at its final character, or
+ *   - an unquoted token with no interior ASCII space or tab.
+ *
+ * §5.2 states plainly that a key containing a space must be quoted, so an
+ * unquoted key with a space (`bad key`, `"unterminated`) is not a key and
+ * the caller treats the line/item as unrecognised. Deliberately ASCII-only
+ * (space/tab), not the full Unicode whitespace class: Core §3's structural
+ * indentation is ASCII-space-only, and the top-level/block scanners already
+ * strip *leading* Unicode whitespace via `isTrimWhitespace` before a key
+ * candidate ever reaches here — a Unicode space that survives into a key
+ * (e.g. NBSP after the leading run) is deliberate literal content, not a
+ * separator, matching `docs/decisions/structural-indentation-unicode-whitespace.md`.
+ * Unquoted keys with other non-§5.1 punctuation (`a.b`, `($x)`) are also
+ * *not* rejected here: the frozen 1.0 corpus already relies on flow keys
+ * like `{($a): v}` parsing literally, and tightening that further is a
+ * later errata question, not a bug fix.
+ */
+export const isValidKey = (raw) => {
+    const f = raw.charCodeAt(0);
+    if (f === 34 || f === 39)
+        return closingQuoteIndex(raw, false) === raw.length - 1;
+    return !/[ \t]/.test(raw);
+};
 const ESCAPED_HASH_RE = /\\#/g;
 const ANY_ESCAPE_RE = /\\(u[0-9a-fA-F]{0,4}|U[0-9a-fA-F]{0,8}|x[0-9a-fA-F]{0,2}|.)/gs;
 const SINGLE_CHAR_ESCAPES = '"\\/bfnrt'; // deliberately excludes '0' — Core Appendix A: \0 is unknown, not a null shorthand.
@@ -381,35 +444,45 @@ export const stripComment = (val) => {
     }
     return val.replace(ESCAPED_HASH_RE, '#');
 };
-/** Strips a key's surrounding quotes (unescaping double-quoted keys), or returns it unchanged. */
-export const stripKeyQuotes = (s) => {
+/**
+ * Strips a key's surrounding quotes — unescaping a double-quoted key
+ * (§6.1.2 escapes, strict-checked), taking a single-quoted key literally
+ * (§5.2). Returns `s` unchanged when it is not a properly-closed quoted
+ * string. Callers gate on `isValidKey` first, so an unterminated or
+ * trailing-content key never reaches here as a real key.
+ */
+export const stripKeyQuotes = (s, strict = false, line = 0) => {
     const f = s.charCodeAt(0);
-    if (f === 39 && s.charCodeAt(s.length - 1) === 39)
-        return s.slice(1, -1);
-    if (f === 34 && s.charCodeAt(s.length - 1) === 34)
-        return unescapeDQ(s.slice(1, -1));
+    if ((f === 34 || f === 39) && closingQuoteIndex(s, false) === s.length - 1) {
+        return f === 34 ? unescapeDQ(s.slice(1, -1), strict, line) : s.slice(1, -1);
+    }
     return s;
 };
 /**
  * Quoted-or-typed scalar, shared by every value position (top-level inline
  * values, flow-sequence/flow-mapping items, block-array scalar items).
- * `topLevel` gates two checks that only apply at the outermost resolveValue
- * call site in the legacy parser and are deliberately not extended to flow
- * items here, to keep this a faithful behavioral port: the "unclosed flow
- * bracket" throw and the "non-whitespace after closing quote" strict throw.
+ * §10.1's two quoted-string strict checks — "unterminated quoted string"
+ * and "non-whitespace content after closing quote in an inline value" —
+ * apply in every one of those positions, so they are enforced here rather
+ * than gated to the top level.
  */
-export const parseQuotedOrTyped = (raw, ctx, line, topLevel, builder) => {
+export const parseQuotedOrTyped = (raw, ctx, line, builder) => {
     const first = raw.charCodeAt(0);
     if (first === 34 || first === 39) {
-        if (raw.charCodeAt(raw.length - 1) === first) {
+        const close = closingQuoteIndex(raw);
+        if (close === raw.length - 1) {
             const unquoted = raw.slice(1, -1);
             const value = first === 34 ? unescapeDQ(unquoted, ctx.strict, line) : unquoted.replace(/\\'/g, "'");
             checkStringLimit(value, line);
             return builder.string(value, line, true);
         }
-        if (topLevel && ctx.strict) {
-            throw new LimaError({ code: 'INVALID_QUOTE', line, message: `Lima: non-whitespace content after closing quote at line ${line}` });
+        if (ctx.strict) {
+            throw close === -1
+                ? new LimaError({ code: 'INVALID_QUOTE', line, message: `Lima: unterminated quoted string at line ${line}` })
+                : new LimaError({ code: 'INVALID_QUOTE', line, message: `Lima: non-whitespace content after closing quote at line ${line}` });
         }
+        // Non-strict: §6.1.2/§6.1.3 + §10.1 — the entire value falls back to
+        // a literal string (opening quote included), handled below.
     }
     if (raw !== '' && raw !== 'null' && raw !== '~' && raw !== 'true' && raw !== 'false' &&
         !((first >= 48 && first <= 57) || first === 45 || first === 46)) {
@@ -426,5 +499,5 @@ export const parseScalarValue = (raw, ctx, line, builder) => {
             message: `Lima: unclosed flow ${first === 91 ? 'sequence' : 'mapping'} at line ${line}`,
         });
     }
-    return parseQuotedOrTyped(raw, ctx, line, true, builder);
+    return parseQuotedOrTyped(raw, ctx, line, builder);
 };

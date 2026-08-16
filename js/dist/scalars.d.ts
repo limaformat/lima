@@ -78,17 +78,56 @@ export declare const NO_SPAN_VALUE: unique symbol;
  * handled by the full string-based scalar/flow grammar.
  */
 export declare const parseSimpleScalarSpan: <V, M>(source: string, start: number, end: number, line: number, strict: boolean, builder: ValueBuilder<V, M>) => V | typeof NO_SPAN_VALUE;
+/**
+ * Index of the quote that closes a quoted scalar opening at `s[0]`, or -1
+ * if it is never closed. Escape-aware, so `"a\""` closes at its last
+ * character rather than the escaped inner `"`:
+ *   - double quotes: a backslash escapes the next character (§6.1.2);
+ *   - single-quoted *values*: `\'` and `\\` are the only special sequences
+ *     (§6.1.3), so a lone `\` is literal and `\\'` closes after two
+ *     backslashes — pass `singleQuoteEscape = false` for single-quoted
+ *     *keys*, which are fully literal (§5.2), where the first `'` closes.
+ * `s[0]` is assumed to be `'` or `"`.
+ */
+export declare const closingQuoteIndex: (s: string, singleQuoteEscape?: boolean) => number;
+/**
+ * Whether `raw` (a key candidate as written, before quote stripping) is a
+ * usable Lima key:
+ *   - a quoted string that is properly closed at its final character, or
+ *   - an unquoted token with no interior ASCII space or tab.
+ *
+ * §5.2 states plainly that a key containing a space must be quoted, so an
+ * unquoted key with a space (`bad key`, `"unterminated`) is not a key and
+ * the caller treats the line/item as unrecognised. Deliberately ASCII-only
+ * (space/tab), not the full Unicode whitespace class: Core §3's structural
+ * indentation is ASCII-space-only, and the top-level/block scanners already
+ * strip *leading* Unicode whitespace via `isTrimWhitespace` before a key
+ * candidate ever reaches here — a Unicode space that survives into a key
+ * (e.g. NBSP after the leading run) is deliberate literal content, not a
+ * separator, matching `docs/decisions/structural-indentation-unicode-whitespace.md`.
+ * Unquoted keys with other non-§5.1 punctuation (`a.b`, `($x)`) are also
+ * *not* rejected here: the frozen 1.0 corpus already relies on flow keys
+ * like `{($a): v}` parsing literally, and tightening that further is a
+ * later errata question, not a bug fix.
+ */
+export declare const isValidKey: (raw: string) => boolean;
 export declare const unescapeDQ: (s: string, strict?: boolean, line?: number) => string;
 export declare const stripComment: (val: string) => string;
-/** Strips a key's surrounding quotes (unescaping double-quoted keys), or returns it unchanged. */
-export declare const stripKeyQuotes: (s: string) => string;
+/**
+ * Strips a key's surrounding quotes — unescaping a double-quoted key
+ * (§6.1.2 escapes, strict-checked), taking a single-quoted key literally
+ * (§5.2). Returns `s` unchanged when it is not a properly-closed quoted
+ * string. Callers gate on `isValidKey` first, so an unterminated or
+ * trailing-content key never reaches here as a real key.
+ */
+export declare const stripKeyQuotes: (s: string, strict?: boolean, line?: number) => string;
 /**
  * Quoted-or-typed scalar, shared by every value position (top-level inline
  * values, flow-sequence/flow-mapping items, block-array scalar items).
- * `topLevel` gates two checks that only apply at the outermost resolveValue
- * call site in the legacy parser and are deliberately not extended to flow
- * items here, to keep this a faithful behavioral port: the "unclosed flow
- * bracket" throw and the "non-whitespace after closing quote" strict throw.
+ * §10.1's two quoted-string strict checks — "unterminated quoted string"
+ * and "non-whitespace content after closing quote in an inline value" —
+ * apply in every one of those positions, so they are enforced here rather
+ * than gated to the top level.
  */
-export declare const parseQuotedOrTyped: <V, M>(raw: string, ctx: ParseContext, line: number, topLevel: boolean, builder: ValueBuilder<V, M>) => V;
+export declare const parseQuotedOrTyped: <V, M>(raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>) => V;
 export declare const parseScalarValue: <V, M>(raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>) => V;

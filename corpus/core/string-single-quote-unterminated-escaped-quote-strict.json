@@ -1,0 +1,12 @@
+{
+  "id": "core.strings.single-quote.unterminated-escaped-quote.strict",
+  "spec": "core",
+  "section": "6.1.3 (1.0.1)",
+  "description": "`\\'` is the single-quoted string's escape for a literal quote (§6.1.3), so `'abc\\'` has no closing quote and is unterminated — strict throws.",
+  "input": "v: 'abc\\'\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": { "line": 1, "code": "INVALID_QUOTE" }
+  },
+  "tags": ["strict", "error", "strings", "quoted"]
+}

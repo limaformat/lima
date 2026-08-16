@@ -69,7 +69,7 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 			if strict {
 				return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: unclosed flow sequence at line %d", line))
 			}
-			return parseScalar(raw, strict, line, true, captureReferences)
+			return parseScalar(raw, strict, line, captureReferences)
 		}
 		inner := trimWhitespace(raw[1 : len(raw)-1])
 		a := []*pvalue{}
@@ -104,7 +104,7 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 			if strict {
 				return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: unclosed flow mapping at line %d", line))
 			}
-			return parseScalar(raw, strict, line, true, captureReferences)
+			return parseScalar(raw, strict, line, captureReferences)
 		}
 		inner := trimWhitespace(raw[1 : len(raw)-1])
 		m := []pentry{}
@@ -121,9 +121,19 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 					if strict {
 						return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow mapping item (missing \": \") at line %d: %q", line, part))
 					}
-					return parseScalar(raw, strict, line, true, captureReferences)
+					return parseScalar(raw, strict, line, captureReferences)
 				}
-				key := stripKeyQuotes(trimWhitespace(part[:sep]))
+				keyRaw := trimWhitespace(part[:sep])
+				if !isValidKey(keyRaw) {
+					// §5.1: not a usable key — the item is skipped in both
+					// modes (§10's strict list is closed and does not cover
+					// this), the same as at the top level.
+					continue
+				}
+				key, e := stripKeyQuotes(keyRaw, strict, line)
+				if e != nil {
+					return nil, e
+				}
 				if e := checkKeyLength(key, line); e != nil {
 					return nil, e
 				}
@@ -140,7 +150,7 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 				if strings.HasPrefix(rv, "[") || strings.HasPrefix(rv, "{") {
 					return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow nesting at line %d: %q", line, rv))
 				}
-				v, e := parseScalar(rv, strict, line, false, captureReferences)
+				v, e := parseScalar(rv, strict, line, captureReferences)
 				if e != nil {
 					return nil, e
 				}
@@ -153,5 +163,5 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 		}
 		return &pvalue{line: line, mapping: m}, nil
 	}
-	return parseScalar(raw, strict, line, true, captureReferences)
+	return parseScalar(raw, strict, line, captureReferences)
 }

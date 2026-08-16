@@ -1,0 +1,11 @@
+{
+  "id": "core.keys.array-item.unquoted-space-invalid",
+  "spec": "core",
+  "section": "5.2 (1.0.1)",
+  "description": "An unquoted key with a space inside a block sequence item is not a `key: value` mapping; the item is the literal scalar text instead.",
+  "input": "items:\n  - bad key: value\n",
+  "expect": {
+    "result": { "items": ["bad key: value"] }
+  },
+  "tags": ["positive", "keys", "block-sequence"]
+}

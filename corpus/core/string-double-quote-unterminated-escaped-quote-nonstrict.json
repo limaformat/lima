@@ -1,0 +1,12 @@
+{
+  "id": "core.strings.double-quote.unterminated-escaped-quote.non-strict",
+  "spec": "core",
+  "section": "6.1.2 (1.0.1)",
+  "description": "Non-strict, the same input falls back to a literal string from the opening quote to the end of the line.",
+  "input": "v: \"abc\\\"\n",
+  "expect": {
+    "result": { "v": "\"abc\\\"" }
+  },
+  "notes": "Same input as core.strings.double-quote.unterminated-escaped-quote.strict.",
+  "tags": ["fallback", "strings", "quoted"]
+}

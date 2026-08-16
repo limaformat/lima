@@ -65,6 +65,23 @@ scalar; short key + deep content indent; one-space content indent; nested
 
 ### 2. Centralise key + quote lexing — code (TS + Rust + Go) — M2
 
+**Status: done, all three languages (Core 1.0.2).** Shared `closingQuoteIndex`
+(`js/src/scalars.ts`, `rust/src/scalars.rs`, `go/scalars.go` — escape-aware
+quote termination); the top-level/nested/flow-mapping separator searches
+skip past the closing quote; unquoted keys with interior ASCII space/tab
+are rejected in nested/flow the way they already were at the top level;
+double-quoted key escapes are strict-checked in every mapping context.
+Corpus cases C-225–C-233 (`since: "1.0.2"`), all three implementations pass.
+**Decision (2026-09-04):** a malformed unquoted key is an unrecognised
+line/item in *both* modes — §10's strict list stays closed. Only an ASCII
+space/tab is rejected — deliberately not the full Unicode whitespace class,
+to avoid regressing each port's own Unicode-structural-indentation handling
+(`docs/decisions/structural-indentation-unicode-whitespace.md`; caught by
+Go's existing `TestUnicodeWhitespaceIsNotStructuralIndentation` test during
+the port). `a.b` / `($x)` unquoted keys are still accepted in nested/flow
+(the frozen 1.0 corpus relies on `{($a): v}`), and a newline in a quoted
+key is still accepted (P2 #11).
+
 Top-level, block-nested and flow mappings each enforce a different, weaker
 notion of where a key ends. Concrete cases:
 
@@ -82,15 +99,22 @@ strict-mode threaded through), used by all three mapping contexts.
 
 ### 3. Strict quoted-string recognition: escape-aware and context-independent — code (TS + Rust + Go) — M3
 
+**Status: done, all three languages, shipped together with #2** (same
+`closingQuoteIndex` primitive). `parseQuotedOrTyped` (and its Rust/Go
+equivalents) enforce §10.1's "unterminated quoted string" and "content
+after closing quote" checks in every value position — top level, flow
+sequence, flow mapping, block sequence item. Corpus cases C-225–C-228.
+
 - `v: "abc\"` — the only closing quote is escaped, so the string is
   unterminated → §10.1 "Unterminated quoted string" must throw in strict.
-  It does not (the check is only "first char == last char").
+  It did not (the check was only "first char == last char"). Fixed.
 - Flow: `v: ["abc]` (unterminated) and `v: ["x" trailing]` (content after
-  the closing quote) pass in strict; §10.1 requires a throw.
-- *Not* a bug: `'abc\'` is a valid literal single-quoted string `abc\`
-  (single quotes do no escape processing).
+  the closing quote) passed in strict; §10.1 requires a throw. Fixed.
+- **Corrected from the original finding:** `'abc\'` is *also* unterminated —
+  `\'` is the single-quote escape (§6.1.3), so there is no closing quote.
+  Strict now throws (C-226).
 - Still to verify: the single-quote / `#` / backslash interaction in the
-  comment stripper (M3 part C) — plausible, not reproduced.
+  comment stripper (M3 part C) — plausible, not reproduced. → P2 #11.
 
 ### 4. Comment line before a nested block — code (TS + Rust + Go) + corpus — M4 — decision: option C
 

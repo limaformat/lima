@@ -263,7 +263,7 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
         for (let i = 0; i < keyCount; i++) {
             const m = matches[i];
             const rawDQ = m.doubleQuotedRaw;
-            const key = m.unquoted ?? m.singleQuoted ?? (rawDQ !== undefined ? unescapeDQ(rawDQ) : undefined);
+            const key = m.unquoted ?? m.singleQuoted ?? (rawDQ !== undefined ? unescapeDQ(rawDQ, strict, m.line) : undefined);
             if (key !== undefined)
                 parseEntry(key, m.line, m.rawStart, m.isBlock, m.inlineEnd, i + 1 < keyCount ? matches[i + 1].matchStart : frontMatter.length);
         }

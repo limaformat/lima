@@ -1,0 +1,12 @@
+{
+  "id": "core.keys.nested.unquoted-space-invalid",
+  "spec": "core",
+  "section": "5.2 (1.0.1)",
+  "description": "§5.2: a key containing a space must be quoted. An unquoted key with a space in a nested mapping is an unrecognised line, skipped in both modes — the same as at the top level (§10's strict list is closed and does not cover a malformed key).",
+  "input": "outer:\n  bad key: value\n",
+  "options": { "strict": true },
+  "expect": {
+    "result": { "outer": null }
+  },
+  "tags": ["strict", "keys"]
+}

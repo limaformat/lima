@@ -5,7 +5,9 @@
 use crate::chars::is_trim_whitespace;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
 use crate::normalize::{check_duplicate_key, check_key_length};
-use crate::scalars::{parse_quoted_or_typed, parse_scalar_value, strip_key_quotes};
+use crate::scalars::{
+    closing_quote_index, is_valid_key, parse_quoted_or_typed, parse_scalar_value, strip_key_quotes,
+};
 use crate::value::Builder;
 
 fn trim_start_at(source: &str, mut start: usize, end: usize) -> usize {
@@ -175,9 +177,28 @@ pub(crate) fn parse_flow_sequence_checked<B: Builder, const CHECK_DUPLICATES: bo
                 continue;
             }
         }
-        items.push(parse_quoted_or_typed::<B>(item, strict, line, false)?);
+        items.push(parse_quoted_or_typed::<B>(item, strict, line)?);
     }
     Ok(Some(items))
+}
+
+/// Index of the key/value `: ` separator within a flow-mapping item — the
+/// first `: ` that is not inside a quoted key (§5.1). `None` when the item
+/// has no separator (or its quoted key is never closed).
+fn flow_item_separator(val: &str, start: usize, end: usize) -> Option<usize> {
+    let b = val.as_bytes();
+    let mut scan = start;
+    if b.get(start) == Some(&b'"') || b.get(start) == Some(&b'\'') {
+        // §5.2: a single-quoted key is literal, so its first `'` closes.
+        let close = closing_quote_index(&val[start..end], false)?;
+        scan = start + close + 1;
+    }
+    let sep = val[scan..end].find(": ").map(|p| p + scan)?;
+    if sep >= end {
+        None
+    } else {
+        Some(sep)
+    }
 }
 
 /// `None` = `val` isn't `{...}`-shaped, or (non-strict only) a malformed
@@ -225,7 +246,6 @@ pub(crate) fn parse_flow_mapping_checked<B: Builder, const CHECK_DUPLICATES: boo
             }
             continue;
         }
-        let colon_pos = val[item_start..].find(": ").map(|p| p + item_start);
         let malformed = || -> Result<Option<B::Value>, LimaError> {
             if strict {
                 Err(LimaError::new(
@@ -236,16 +256,20 @@ pub(crate) fn parse_flow_mapping_checked<B: Builder, const CHECK_DUPLICATES: boo
                 Ok(None)
             }
         };
-        let Some(colon_pos) = colon_pos else {
+        let Some(colon_pos) = flow_item_separator(val, item_start, item_end) else {
             return malformed();
         };
-        if colon_pos >= item_end {
-            return malformed();
-        }
 
         let key_start = trim_start_at(val, item_start, colon_pos);
         let key_end = trim_end_at(val, key_start, colon_pos);
-        let key = strip_key_quotes(&val[key_start..key_end]);
+        let key_raw = &val[key_start..key_end];
+        if !is_valid_key(key_raw) {
+            // §5.1: not a usable key — the item is skipped in both modes
+            // (§10's strict list is closed and does not cover this),
+            // the same as at the top level.
+            continue;
+        }
+        let key = strip_key_quotes(key_raw, strict, line)?;
         check_key_length(&key, line)?;
         if CHECK_DUPLICATES {
             check_duplicate_key(B::m_has_key(&entries, &key), &key, line, strict)?;
@@ -261,7 +285,7 @@ pub(crate) fn parse_flow_mapping_checked<B: Builder, const CHECK_DUPLICATES: boo
                 format!("Lima: invalid flow nesting at line {line}: \"{raw_val}\""),
             ));
         }
-        let v = parse_quoted_or_typed::<B>(raw_val, strict, line, false)?;
+        let v = parse_quoted_or_typed::<B>(raw_val, strict, line)?;
         B::m_set(&mut entries, key, v);
     }
     Ok(Some(B::v_mapping(entries, line)))
@@ -298,6 +322,6 @@ pub(crate) fn parse_flow_or_scalar_value_checked<B: Builder, const CHECK_DUPLICA
             Some(map) => Ok(map),
             None => parse_scalar_value::<B>(raw, strict, line),
         },
-        _ => parse_quoted_or_typed::<B>(raw, strict, line, true),
+        _ => parse_quoted_or_typed::<B>(raw, strict, line),
     }
 }

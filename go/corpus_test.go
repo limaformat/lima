@@ -242,9 +242,9 @@ func equalCorpus(v Value, e any) bool {
 	return false
 }
 
-// frozenManifestCaseCount reads the pinned case count from a frozen manifest
-// (baseline + any errata additions), so the corpus test count-pins against
-// the manifest rather than a hard-coded number.
+// frozenManifestCaseCount reads the pinned case count from a frozen
+// manifest (baseline + any errata additions), so the corpus test
+// count-pins against the manifest rather than a hard-coded number.
 func frozenManifestCaseCount(t *testing.T, manifestPath string) int {
 	t.Helper()
 	b, err := os.ReadFile(manifestPath)

@@ -23,7 +23,7 @@ use crate::normalize::{
     begin_warning_collection, check_duplicate_key, check_key_length, finish_warning_collection,
     DOCUMENT_SIZE_LIMIT, NESTING_DEPTH_LIMIT, TOP_LEVEL_KEY_LIMIT,
 };
-use crate::scalars::{strip_comment, strip_key_quotes};
+use crate::scalars::{is_valid_key, strip_comment, strip_key_quotes};
 use crate::value::{Builder, LimaValue, PlainBuilder, PositionedBuilder, PositionedValue};
 
 /// One discovered top-level `key:`/`key: value` line.
@@ -78,11 +78,12 @@ fn find_key_sep(s: &str) -> Option<usize> {
 }
 
 /// Finds every `key:`/`key: value` line starting at column 0 (no leading
-/// whitespace). Any other line — blank, comment, indented, or matching no
-/// key pattern at all — is simply never visited here, which is *why* it's
-/// tolerated even in strict mode (Core §10.1's closed list has nothing to
-/// say about text the top-level scan never looks at).
-fn scan_top_keys(source: &str) -> Vec<TopKey> {
+/// whitespace). Any other line — blank, comment, indented, matching no key
+/// pattern, or an unquoted key candidate with interior whitespace (§5.2) —
+/// is simply never visited here, which is *why* it's tolerated even in
+/// strict mode (Core §10.1's closed list has nothing to say about text the
+/// top-level scan never looks at).
+fn scan_top_keys(source: &str, strict: bool) -> Result<Vec<TopKey>, LimaError> {
     let mut result = Vec::new();
     let bytes = source.as_bytes();
     let mut pos = 0usize;
@@ -95,17 +96,20 @@ fn scan_top_keys(source: &str) -> Vec<TopKey> {
         let line = &source[pos..line_end];
         if !line.is_empty() && !line.starts_with([' ', '\t', '#']) {
             if let Some(colon_pos) = find_key_sep(line) {
-                let key = strip_key_quotes(&line[..colon_pos]);
-                result.push(TopKey {
-                    line: line_no,
-                    key_start: pos,
-                    value_start: pos + colon_pos + 2,
-                    is_block: false,
-                    key,
-                });
+                let key_raw = &line[..colon_pos];
+                if is_valid_key(key_raw) {
+                    let key = strip_key_quotes(key_raw, strict, line_no)?;
+                    result.push(TopKey {
+                        line: line_no,
+                        key_start: pos,
+                        value_start: pos + colon_pos + 2,
+                        is_block: false,
+                        key,
+                    });
+                }
             } else if let Some(key_part) = line.strip_suffix(':') {
-                if !key_part.is_empty() {
-                    let key = strip_key_quotes(key_part);
+                if !key_part.is_empty() && is_valid_key(key_part) {
+                    let key = strip_key_quotes(key_part, strict, line_no)?;
                     let value_start = if line_end < bytes.len() {
                         line_end + 1
                     } else {
@@ -127,7 +131,7 @@ fn scan_top_keys(source: &str) -> Vec<TopKey> {
         pos = line_end + 1;
         line_no += 1;
     }
-    result
+    Ok(result)
 }
 
 /// Core §6.1.6: does this quoted-key line have whitespace between the
@@ -265,7 +269,7 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
         }
     }
 
-    let top_keys = scan_top_keys(front_matter);
+    let top_keys = scan_top_keys(front_matter, strict)?;
     if top_keys.len() > TOP_LEVEL_KEY_LIMIT {
         return Err(LimaError::new(
             Code::ResourceLimit,

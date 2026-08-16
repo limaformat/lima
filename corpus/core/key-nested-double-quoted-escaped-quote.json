@@ -1,0 +1,11 @@
+{
+  "id": "core.keys.nested.double-quoted-escaped-quote",
+  "spec": "core",
+  "section": "5.2 (1.0.1)",
+  "description": "§5.2: a double-quoted key decodes the same escapes as a double-quoted value. A nested `\"say \\\"hi\\\"\"` key decodes to `say \"hi\"` — the escaped inner quotes do not end the key.",
+  "input": "outer:\n  \"say \\\"hi\\\"\": value\n",
+  "expect": {
+    "result": { "outer": { "say \"hi\"": "value" } }
+  },
+  "tags": ["positive", "keys"]
+}

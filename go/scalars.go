@@ -293,15 +293,85 @@ func unescapeDQ(s string, strict bool, line int) (string, error) {
 	}
 	return b.String(), nil
 }
-func stripKeyQuotes(s string) string {
-	if len(s) >= 2 && s[0] == '\'' && s[len(s)-1] == '\'' {
-		return s[1 : len(s)-1]
+
+// closingQuoteIndex returns the byte index of the quote that closes a
+// quoted scalar opening at s[0], or -1 if it is never closed. Escape-aware,
+// so `"a\""` closes at its last byte rather than the escaped inner `"`:
+//   - double quotes: a backslash escapes the next byte (§6.1.2);
+//   - single-quoted *values*: `\'` and `\\` are the only special sequences
+//     (§6.1.3), so a lone `\` is literal and `\\'` closes after two
+//     backslashes — pass singleQuoteEscape = false for single-quoted
+//     *keys*, which are fully literal (§5.2), where the first `'` closes.
+//
+// s[0] is assumed to be `'` or `"`. Byte-indexed: safe because `'`, `"`,
+// `\` are all single-byte ASCII and never a UTF-8 continuation byte.
+func closingQuoteIndex(s string, singleQuoteEscape bool) int {
+	q := s[0]
+	i := 1
+	for i < len(s) {
+		c := s[i]
+		if q == '"' {
+			if c == '\\' {
+				i += 2
+				continue
+			}
+			if c == '"' {
+				return i
+			}
+		} else {
+			if singleQuoteEscape && c == '\\' && i+1 < len(s) && (s[i+1] == '\\' || s[i+1] == '\'') {
+				i += 2
+				continue
+			}
+			if c == '\'' {
+				return i
+			}
+		}
+		i++
 	}
-	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
-		v, _ := unescapeDQ(s[1:len(s)-1], false, 0)
-		return v
+	return -1
+}
+
+// isValidKey reports whether raw (a key candidate as written, before quote
+// stripping) is a usable Lima key: a properly-closed quoted string, or an
+// unquoted token with no interior ASCII space or tab.
+//
+// §5.2 states plainly that a key containing a space must be quoted, so an
+// unquoted key with a space (`bad key`, `"unterminated`) is not a key and
+// the caller treats the line/item as unrecognised. Deliberately ASCII-only
+// (space/tab), not the full Unicode whitespace class: this port's
+// structural indentation is ASCII-space-only (docs/decisions/structural-
+// indentation-unicode-whitespace.md), so a Unicode space that survives
+// into a key candidate is deliberate literal content there, not a
+// separator — e.g. a line indented with NBSP is not structurally indented
+// at all, and the NBSP remains part of the key text. Unquoted keys with
+// other non-§5.1 punctuation (`a.b`, `($x)`) are also *not* rejected here:
+// the frozen 1.0 corpus already relies on flow keys like `{($a): v}`
+// parsing literally, and tightening that further is a later errata
+// question, not a bug fix.
+func isValidKey(raw string) bool {
+	if raw == "" {
+		return false
 	}
-	return s
+	if raw[0] == '"' || raw[0] == '\'' {
+		return closingQuoteIndex(raw, false) == len(raw)-1
+	}
+	return !strings.ContainsAny(raw, " \t")
+}
+
+// stripKeyQuotes strips a key's surrounding quotes — unescaping a
+// double-quoted key (§6.1.2 escapes, strict-checked), taking a
+// single-quoted key literally (§5.2). Returns s unchanged when it is not a
+// properly-closed quoted string. Callers gate on isValidKey first, so an
+// unterminated or trailing-content key never reaches here as a real key.
+func stripKeyQuotes(s string, strict bool, line int) (string, error) {
+	if len(s) >= 1 && (s[0] == '\'' || s[0] == '"') && closingQuoteIndex(s, false) == len(s)-1 {
+		if s[0] == '"' {
+			return unescapeDQ(s[1:len(s)-1], strict, line)
+		}
+		return s[1 : len(s)-1], nil
+	}
+	return s, nil
 }
 func stripComment(s string) string {
 	q := byte(0)
@@ -330,10 +400,18 @@ func stripComment(s string) string {
 	}
 	return strings.ReplaceAll(s, "\\#", "#")
 }
-func parseScalar(raw string, strict bool, line int, top bool, captureReferences bool) (*pvalue, error) {
+
+// parseScalar is the shared quoted-or-typed scalar parser — every value
+// position (top-level inline values, flow items, block-array/map scalar
+// items) builds on this. §10.1's two quoted-string strict checks —
+// "unterminated quoted string" and "non-whitespace content after closing
+// quote in an inline value" — apply in every one of those positions, so
+// they are enforced here unconditionally rather than gated to the top level.
+func parseScalar(raw string, strict bool, line int, captureReferences bool) (*pvalue, error) {
 	if len(raw) > 0 && (raw[0] == '"' || raw[0] == '\'') {
 		q := raw[0]
-		if raw[len(raw)-1] == q {
+		close := closingQuoteIndex(raw, true)
+		if close == len(raw)-1 {
 			inner := raw[1 : len(raw)-1]
 			var v string
 			var e error
@@ -350,9 +428,14 @@ func parseScalar(raw string, strict bool, line int, top bool, captureReferences 
 			}
 			return pstr(v, line, true, captureReferences), nil
 		}
-		if top && strict {
+		if strict {
+			if close < 0 {
+				return nil, limaError(InvalidQuote, line, fmt.Sprintf("Lima: unterminated quoted string at line %d", line))
+			}
 			return nil, limaError(InvalidQuote, line, fmt.Sprintf("Lima: non-whitespace content after closing quote at line %d", line))
 		}
+		// Non-strict: §6.1.2/§6.1.3 + §10.1 — the entire value falls back to
+		// a literal string (opening quote included), handled below.
 	}
 	if utf8.RuneCountInString(raw) > scalarLengthLimit {
 		return nil, checkStringLimit(raw, line)

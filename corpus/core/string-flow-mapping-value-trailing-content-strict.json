@@ -1,0 +1,12 @@
+{
+  "id": "core.strings.flow-mapping-value.trailing-content.strict",
+  "spec": "core",
+  "section": "10.1 (1.0.1)",
+  "description": "§10.1's \"non-whitespace content after closing quote\" strict check applies to a quoted value inside a flow mapping.",
+  "input": "m: {k: \"a\" x}\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": { "line": 1, "code": "INVALID_QUOTE" }
+  },
+  "tags": ["strict", "error", "strings", "quoted", "flow-mapping"]
+}

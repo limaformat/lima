@@ -1,7 +1,7 @@
 /** Core §15.8 flow collections: `[...]` sequences and `{...}` mappings. */
 
 import { checkKeyLength, checkDuplicateKey, type ParseContext } from './normalize.js'
-import { parseQuotedOrTyped, parseScalarValue, stripKeyQuotes } from './scalars.js'
+import { parseQuotedOrTyped, parseScalarValue, stripKeyQuotes, closingQuoteIndex, isValidKey } from './scalars.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
 import { isTrimWhitespace } from './chars.js'
@@ -82,9 +82,26 @@ export const parseFlowSequence = <V, M>(val: string, ctx: ParseContext, line: nu
 			const nested = parseFlowMapping(item, ctx, line, builder)
 			if (nested !== null) { items.push(nested); continue }
 		}
-		items.push(parseQuotedOrTyped(item, ctx, line, false, builder))
+		items.push(parseQuotedOrTyped(item, ctx, line, builder))
 	}
 	return items
+}
+
+/**
+ * Index of the key/value `: ` separator within a flow-mapping item — the
+ * first `: ` that is not inside a quoted key (§5.1). Returns -1 when the
+ * item has no separator.
+ */
+const flowItemSeparator = (val: string, start: number, end: number): number => {
+	let scan = start
+	if (val.charCodeAt(start) === 34 || val.charCodeAt(start) === 39) {
+		// §5.2: a single-quoted key is literal, so its first `'` closes.
+		const close = closingQuoteIndex(val.slice(start, end), false)
+		if (close === -1) return -1
+		scan = start + close + 1
+	}
+	const sep = val.indexOf(': ', scan)
+	return sep === -1 || sep >= end ? -1 : sep
 }
 
 export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>): V | null => {
@@ -101,8 +118,8 @@ export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: num
 			if (ctx.strict) throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `Lima: empty element in flow mapping at line ${line}` })
 			continue
 		}
-		const colonPos = val.indexOf(': ', itemStart)
-		if (colonPos === -1 || colonPos >= itemEnd) {
+		const colonPos = flowItemSeparator(val, itemStart, itemEnd)
+		if (colonPos === -1) {
 			if (ctx.strict) throw new LimaError({
 				code: 'INVALID_FLOW_SYNTAX', line,
 				message: `Lima: invalid flow mapping item (missing ": ") at line ${line}: "${item}"`,
@@ -111,7 +128,14 @@ export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: num
 		}
 		const keyStart = trimStart(val, itemStart, colonPos)
 		const keyEnd = trimEnd(val, keyStart, colonPos)
-		const key = stripKeyQuotes(val.slice(keyStart, keyEnd))
+		const keyRaw = val.slice(keyStart, keyEnd)
+		if (!isValidKey(keyRaw)) {
+			// §5.1: an unquoted key with a space/dot, or a malformed quoted
+			// key, is not a key. Skip the item in both modes (§10's strict
+			// list is closed and does not cover this — same as the top level).
+			continue
+		}
+		const key = stripKeyQuotes(keyRaw, ctx.strict, line)
 		checkKeyLength(key, () => line)
 		if (ctx.strict || ctx.onWarning !== undefined) {
 			checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
@@ -122,7 +146,7 @@ export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: num
 		if (isNestedFlowConstruct(rawVal)) {
 			throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `Lima: invalid flow nesting at line ${line}: "${rawVal}"` })
 		}
-		builder.setMapping(entries, key, parseQuotedOrTyped(rawVal, ctx, line, false, builder))
+		builder.setMapping(entries, key, parseQuotedOrTyped(rawVal, ctx, line, builder))
 	}
 	return builder.mapping(entries, line)
 }
@@ -141,5 +165,5 @@ export const parseFlowOrScalarValue = <V, M>(
 		if (mapping !== null) return mapping
 		return parseScalarValue(raw, ctx, line, builder)
 	}
-	return parseQuotedOrTyped(raw, ctx, line, true, builder)
+	return parseQuotedOrTyped(raw, ctx, line, builder)
 }

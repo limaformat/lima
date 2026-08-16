@@ -148,15 +148,28 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-222 | §6.1.5 (1.0.1) | Block scalar | `\|` introduced by a nested key is a block scalar | pair | both |
 | C-223 | §6.1.5 (1.0.1) | Block scalar | A sibling key at the nested key's column resumes normally after the scalar | positive | both |
 | C-224 | §6.1.5 (1.0.1) | Block scalar | `\|` introduced by a key inside a block sequence item is a block scalar | positive | both |
+| C-225 | §6.1.2/§10.1 (1.0.1) | Strings | An escaped closing quote (`"a\""`) leaves the string unterminated — strict throws, non-strict falls back to a literal | pair | both |
+| C-226 | §6.1.3/§10.1 (1.0.1) | Strings | `'a\''` is unterminated — `\'` is the single-quote escape, not a close | error | strict |
+| C-227 | §10.1 (1.0.1) | Strings | "Unterminated quoted string" strict check applies to a quoted flow-sequence item | error | strict |
+| C-228 | §10.1 (1.0.1) | Strings | "Content after closing quote" strict check applies to a quoted flow-sequence item and a flow-mapping value | error | strict |
+| C-229 | §5.2 (1.0.1) | Keys | An unquoted key with a space is not a key in a nested or flow mapping (skipped in both modes), matching the top level | positive | both |
+| C-230 | §5.1 (1.0.1) | Keys | The `: ` separator is found outside a quoted key, so a quoted nested/flow key may contain `: ` | positive | both |
+| C-231 | §5.2 (1.0.1) | Keys | A double-quoted nested key decodes `\"` escapes; the inner quotes do not end the key | positive | both |
+| C-232 | §5.2/§10.1 (1.0.1) | Keys | An unknown escape in a double-quoted key throws in strict mode, at the top level and nested | error | strict |
+| C-233 | §5.2 (1.0.1) | Keys | An unquoted key with a space in a block sequence item is not a mapping; the item is a literal scalar | positive | both |
 
 **Scope:** 132 substantive check points (plus the 1.0.1 errata rows below). A check point can produce multiple concrete cases.
 
 ## Core 1.0.1 errata (2026-09)
 
-C-218 through C-224 were added for the block-scalar defects the 2026-09
-independent review found (`docs/review-2026-09-followups.md` P0 #1). The
-§6.1.5 text is unchanged — these cover behaviour it always specified but
-no 1.0.0 fixture exercised:
+All 1.0.1 rows were added for defects the 2026-09 independent review found
+(`docs/review-2026-09-followups.md`). No spec text changed — these cover
+behaviour Core always specified but no 1.0.0 fixture exercised. No 1.0.0
+case changed result. The `since: "1.0.1"` marker in
+`corpus/manifests/core-1.0.json` records each addition; the 149-case
+1.0.0 baseline stays byte-frozen.
+
+### Block scalars — C-218–C-224 (P0 #1)
 
 - **Extent.** The top-level `|` path absorbed any dedented line up to the
   next top-level key, so a dedented comment (the §6.1.5 example verbatim)
@@ -171,9 +184,30 @@ no 1.0.0 fixture exercised:
   `core.ts` and `block.ts`), matching §6.1.5's depth-agnostic wording and
   closing `docs/decisions/nested-block-scalars-not-supported.md`.
 
-No 1.0.0 case changed result. The `since: "1.0.1"` marker in
-`corpus/manifests/core-1.0.json` records the addition; the 149-case
-1.0.0 baseline stays byte-frozen.
+### Key and quote lexing — C-225–C-233 (P1 #2/#3)
+
+- **Escape-aware quoted termination.** "Is this quoted scalar closed at its
+  final character?" is now escape-aware everywhere (`closingQuoteIndex`),
+  so `"a\""` / `'a\''` are correctly unterminated. §10.1's "unterminated
+  quoted string" and "non-whitespace content after closing quote" strict
+  checks apply in every value position — top-level, flow sequence, flow
+  mapping, block sequence item — not only the top level.
+- **Key separator.** `findKeySep` / the flow-mapping separator search skip
+  past the (escape-aware) closing quote first, so `{"a: b": v}` and
+  `"say \"hi\"": v` parse as one key.
+- **Key escapes.** A double-quoted key's escapes are strict-checked through
+  every mapping context, not only the top level.
+- **Malformed unquoted keys.** An unquoted key with interior whitespace is
+  treated as an unrecognised line/item in nested and flow mappings, the
+  same as at the top level (§5.2). §10's strict list is closed and does
+  not cover this, so it is skipped in both modes, not thrown.
+- **Deliberately not tightened.** An unquoted key with other non-§5.1
+  punctuation (`a.b`, `($x)`) is still accepted in nested/flow contexts;
+  the frozen 1.0 `references.unsupported.references-in-keys-remain-literal`
+  case relies on a flow key `{($a): v}` parsing literally, so fully
+  enforcing §5.1 there is a future errata question, not this fix. Likewise
+  a literal newline inside a top-level quoted key is still accepted
+  (`docs/review-2026-09-followups.md` P2 #11).
 
 ## Known implementation gaps
 

@@ -1,0 +1,12 @@
+{
+  "id": "core.keys.nested.double-quoted-unknown-escape.strict",
+  "spec": "core",
+  "section": "5.2 (1.0.1)",
+  "description": "The double-quoted-key escape check is threaded through nested block mappings too, not only the top level.",
+  "input": "outer:\n  \"bad\\q\": value\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": { "line": 2, "code": "INVALID_ESCAPE" }
+  },
+  "tags": ["strict", "error", "keys"]
+}

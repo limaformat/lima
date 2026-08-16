@@ -526,18 +526,95 @@ pub fn unescape_dq(s: &str, strict: bool, line: u32) -> Result<String, LimaError
     Ok(out)
 }
 
-/// Strips a key's surrounding quotes (unescaping a double-quoted key), or
-/// returns it unchanged. Never fails: `strict=false` disables every throwing
-/// branch in `unescape_dq`.
-pub fn strip_key_quotes(s: &str) -> String {
+/// Index of the quote that closes a quoted scalar opening at `s[0]`, or
+/// `None` if it is never closed. Escape-aware, so `"a\""` closes at its
+/// last byte rather than the escaped inner `"`:
+///   - double quotes: a backslash escapes the next byte (§6.1.2);
+///   - single-quoted *values*: `\'` and `\\` are the only special sequences
+///     (§6.1.3), so a lone `\` is literal and `\\'` closes after two
+///     backslashes — pass `single_quote_escape = false` for single-quoted
+///     *keys*, which are fully literal (§5.2), where the first `'` closes.
+///
+/// `s[0]` is assumed to be `'` or `"`. Byte-indexed: safe because `'`, `"`,
+/// `\` are all single-byte ASCII and never a UTF-8 continuation byte.
+pub fn closing_quote_index(s: &str, single_quote_escape: bool) -> Option<usize> {
     let b = s.as_bytes();
-    if b.len() >= 2 && b[0] == b'\'' && b[b.len() - 1] == b'\'' {
-        return s[1..s.len() - 1].to_string();
+    let q = b[0];
+    let mut i = 1;
+    while i < b.len() {
+        let c = b[i];
+        if q == b'"' {
+            if c == b'\\' {
+                i += 2;
+                continue;
+            }
+            if c == b'"' {
+                return Some(i);
+            }
+        } else {
+            if single_quote_escape && c == b'\\' {
+                if let Some(&n) = b.get(i + 1) {
+                    if n == b'\\' || n == b'\'' {
+                        i += 2;
+                        continue;
+                    }
+                }
+            }
+            if c == b'\'' {
+                return Some(i);
+            }
+        }
+        i += 1;
     }
-    if b.len() >= 2 && b[0] == b'"' && b[b.len() - 1] == b'"' {
-        return unescape_dq(&s[1..s.len() - 1], false, 0).expect("strict=false never errors");
+    None
+}
+
+/// Whether `raw` (a key candidate as written, before quote stripping) is a
+/// usable Lima key:
+///   - a quoted string that is properly closed at its final byte, or
+///   - an unquoted token with no interior whitespace.
+///
+/// §5.2 states plainly that a key containing a space must be quoted, so an
+/// unquoted key with a space (`bad key`, `"unterminated`) is not a key and
+/// the caller treats the line/item as unrecognised. Deliberately ASCII-only
+/// (space/tab), not the full Unicode whitespace class: Core structural
+/// indentation is ASCII-space-only, and a Unicode space that survives into
+/// a key candidate is deliberate literal content there, not a separator —
+/// see `docs/decisions/structural-indentation-unicode-whitespace.md`.
+/// Unquoted keys with other non-§5.1 punctuation (`a.b`, `($x)`) are also
+/// *not* rejected here: the frozen 1.0 corpus already relies on flow keys
+/// like `{($a): v}` parsing literally, and tightening that further is a
+/// later errata question, not a bug fix.
+pub fn is_valid_key(raw: &str) -> bool {
+    let b = raw.as_bytes();
+    if b.is_empty() {
+        return false;
     }
-    s.to_string()
+    if b[0] == b'"' || b[0] == b'\'' {
+        return closing_quote_index(raw, false) == Some(b.len() - 1);
+    }
+    !b.iter().any(|&c| c == b' ' || c == b'\t')
+}
+
+/// Strips a key's surrounding quotes — unescaping a double-quoted key
+/// (§6.1.2 escapes, strict-checked), taking a single-quoted key literally
+/// (§5.2). Returns `s` unchanged when it is not a properly-closed quoted
+/// string. Callers gate on `is_valid_key` first, so an unterminated or
+/// trailing-content key never reaches here as a real key.
+pub fn strip_key_quotes(s: &str, strict: bool, line: u32) -> Result<String, LimaError> {
+    let b = s.as_bytes();
+    if !b.is_empty()
+        && (b[0] == b'\'' || b[0] == b'"')
+        && closing_quote_index(s, false) == Some(b.len() - 1)
+    {
+        let inner = &s[1..s.len() - 1];
+        return if b[0] == b'"' {
+            unescape_dq(inner, strict, line)
+        } else {
+            Ok(inner.to_string())
+        };
+    }
+    Ok(s.to_string())
 }
 
 /// Reads the escape token immediately after a `\` at `chars[start]` — one of
@@ -566,20 +643,20 @@ fn read_escape(chars: &[char], start: usize) -> (String, usize) {
 
 /// Shared quoted-or-typed scalar parser — every value position (top-level
 /// inline values, flow items, block-array/map scalar items) builds on this.
-/// `top_level` gates two strict-only checks (unterminated quote / trailing
-/// content after a closing quote) that apply only at the outermost call
-/// site, not to flow items — kept as a faithful behavioral port of the TS
-/// source rather than extended to flow (which doesn't exist here yet).
+/// §10.1's two quoted-string strict checks — "unterminated quoted string"
+/// and "non-whitespace content after closing quote in an inline value" —
+/// apply in every one of those positions, so they are enforced here
+/// unconditionally rather than gated to the top level.
 pub fn parse_quoted_or_typed<B: Builder>(
     raw: &str,
     strict: bool,
     line: u32,
-    top_level: bool,
 ) -> Result<B::Value, LimaError> {
     let bytes = raw.as_bytes();
     if !bytes.is_empty() && (bytes[0] == b'"' || bytes[0] == b'\'') {
         let quote = bytes[0];
-        if bytes.last() == Some(&quote) {
+        let close = closing_quote_index(raw, true);
+        if close == Some(bytes.len() - 1) {
             let inner = &raw[1..raw.len() - 1];
             let value = if quote == b'"' {
                 unescape_dq(inner, strict, line)?
@@ -591,13 +668,16 @@ pub fn parse_quoted_or_typed<B: Builder>(
             // marked `quoted` — never a reference site for References.
             return Ok(B::v_string(value, line, true));
         }
-        if top_level && strict {
-            return Err(LimaError::new(
-                Code::InvalidQuote,
-                line,
-                format!("Lima: non-whitespace content after closing quote at line {line}"),
-            ));
+        if strict {
+            let message = if close.is_none() {
+                format!("Lima: unterminated quoted string at line {line}")
+            } else {
+                format!("Lima: non-whitespace content after closing quote at line {line}")
+            };
+            return Err(LimaError::new(Code::InvalidQuote, line, message));
         }
+        // Non-strict: §6.1.2/§6.1.3 + §10.1 — the entire value falls back to
+        // a literal string (opening quote included), handled below.
     }
 
     if !raw.is_empty() && raw != "null" && raw != "~" && raw != "true" && raw != "false" {
@@ -658,7 +738,7 @@ pub fn parse_scalar_value<B: Builder>(
             }
         }
     }
-    parse_quoted_or_typed::<B>(raw, strict, line, true)
+    parse_quoted_or_typed::<B>(raw, strict, line)
 }
 
 #[cfg(test)]

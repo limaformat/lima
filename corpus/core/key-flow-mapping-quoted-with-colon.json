@@ -1,0 +1,11 @@
+{
+  "id": "core.keys.flow-mapping.quoted-with-colon",
+  "spec": "core",
+  "section": "5.1 (1.0.1)",
+  "description": "§5.1: the key/value `: ` separator is the first one not inside a quoted key. A quoted flow-mapping key may contain `: `.",
+  "input": "m: {\"a: b\": value}\n",
+  "expect": {
+    "result": { "m": { "a: b": "value" } }
+  },
+  "tags": ["positive", "keys", "flow-mapping"]
+}

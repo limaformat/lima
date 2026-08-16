@@ -1,0 +1,12 @@
+{
+  "id": "core.strings.flow-sequence.trailing-content.strict",
+  "spec": "core",
+  "section": "10.1 (1.0.1)",
+  "description": "§10.1's \"non-whitespace content after closing quote\" strict check applies to a quoted item inside a flow sequence.",
+  "input": "v: [\"x\" trailing]\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": { "line": 1, "code": "INVALID_QUOTE" }
+  },
+  "tags": ["strict", "error", "strings", "quoted", "flow-sequence"]
+}

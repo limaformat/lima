@@ -1,0 +1,12 @@
+{
+  "id": "core.strings.double-quote.unterminated-escaped-quote.strict",
+  "spec": "core",
+  "section": "6.1.2 (1.0.1)",
+  "description": "When the only closing quote is itself escaped (`\\\"`), the string is unterminated — strict mode throws rather than treating the final character as a close.",
+  "input": "v: \"abc\\\"\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": { "line": 1, "code": "INVALID_QUOTE" }
+  },
+  "tags": ["strict", "error", "strings", "quoted"]
+}

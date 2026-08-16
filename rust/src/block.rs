@@ -11,7 +11,9 @@ use crate::chars::is_trim_whitespace;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
 use crate::flow::{parse_flow_mapping_checked, parse_flow_or_scalar_value_checked};
 use crate::normalize::{check_duplicate_key, check_key_length, NESTING_DEPTH_LIMIT};
-use crate::scalars::{parse_quoted_or_typed, strip_comment, strip_key_quotes};
+use crate::scalars::{
+    closing_quote_index, is_valid_key, parse_quoted_or_typed, strip_comment, strip_key_quotes,
+};
 use crate::value::Builder;
 
 /// A key's inline value text. If it is exactly `|`, consume the following
@@ -48,19 +50,16 @@ fn inline_or_block_scalar<'a, B: Builder, const CHECK_DUPLICATES: bool>(
 
 /// Finds the key/value separator: the first unquoted `: `, or (for a
 /// quoted key) the `: ` immediately after the matching closing quote.
-/// Not escape-aware — mirrors `findKeySep`'s own naive same-quote scan
-/// exactly; malformed quoted keys are a strict-mode error elsewhere, not
-/// something this function tries to recover from.
+/// §5.1: the separator must sit outside the quoted key, so this scans past
+/// its (escape-aware) closing quote first. Double-quoted keys honour `\"`;
+/// a single-quoted key is literal (§5.2), so its first `'` closes.
 fn find_key_sep(s: &str) -> Option<usize> {
     let b = s.as_bytes();
     let first = *b.first()?;
     if first == b'\'' || first == b'"' {
-        let mut i = 1;
-        while i < b.len() && b[i] != first {
-            i += 1;
-        }
-        if b.get(i + 1) == Some(&b':') && b.get(i + 2) == Some(&b' ') {
-            return Some(i + 1);
+        let close = closing_quote_index(s, false)?;
+        if b.get(close + 1) == Some(&b':') && b.get(close + 2) == Some(&b' ') {
+            return Some(close + 1);
         }
         return None;
     }
@@ -136,8 +135,19 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
         if indent > base_indent {
             let trimmed = cursor_content(cursor);
             if let (true, Some(pending)) = (items.is_some(), pending_item.as_mut()) {
-                if let Some(colon_pos) = find_key_sep(trimmed) {
-                    let key = strip_key_quotes(trim_slice(trimmed, 0, colon_pos));
+                let colon_pos = find_key_sep(trimmed);
+                let key_raw = match colon_pos {
+                    Some(c) => trim_slice(trimmed, 0, c),
+                    None => match trimmed.strip_suffix(':') {
+                        Some(_) => trim_slice(trimmed, 0, trimmed.len() - 1),
+                        None => "",
+                    },
+                };
+                if !key_raw.is_empty() && !is_valid_key(key_raw) {
+                    // §5.1: not a usable key — skipped in both modes, as at the top level.
+                    cursor.next();
+                } else if let Some(colon_pos) = colon_pos {
+                    let key = strip_key_quotes(key_raw, strict, line)?;
                     check_key_length(&key, line)?;
                     let raw = trim_slice(trimmed, colon_pos + 2, trimmed.len());
                     let raw = if raw != "|" && raw.contains('#') {
@@ -150,8 +160,8 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                         &raw, key_indent, line, cursor, strict,
                     )?;
                     B::m_set(pending, key, value);
-                } else if let Some(key_part) = trimmed.strip_suffix(':') {
-                    let key = strip_key_quotes(trim_slice(key_part, 0, key_part.len()));
+                } else if trimmed.ends_with(':') {
+                    let key = strip_key_quotes(key_raw, strict, line)?;
                     check_key_length(&key, line)?;
                     cursor.next();
                     while cursor.valid && cursor.empty() {
@@ -223,12 +233,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 && !after_dash.contains(": ")
                 && !after_dash.ends_with(':')
             {
-                items.push(parse_quoted_or_typed::<B>(
-                    &after_dash,
-                    strict,
-                    line,
-                    false,
-                )?);
+                items.push(parse_quoted_or_typed::<B>(&after_dash, strict, line)?);
                 cursor.next();
                 continue;
             }
@@ -260,8 +265,9 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     }
                     cursor.next();
                 }
-            } else if let Some(colon_pos) = colon_pos {
-                let key = strip_key_quotes(trim_slice(&after_dash, 0, colon_pos));
+            } else if colon_pos.is_some_and(|c| is_valid_key(trim_slice(&after_dash, 0, c))) {
+                let colon_pos = colon_pos.unwrap();
+                let key = strip_key_quotes(trim_slice(&after_dash, 0, colon_pos), strict, line)?;
                 check_key_length(&key, line)?;
                 let value_start = colon_pos + 2;
                 let raw = trim_slice(&after_dash, value_start, after_dash.len());
@@ -277,23 +283,25 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 while cursor.valid && cursor.indent > base_indent {
                     let continuation_line = (base_line as i64 + cursor.line_index) as u32;
                     let ckey_indent = cursor.ascii_indent;
-                    let start = cursor.content_start;
-                    let end = cursor.line_end;
-                    let cfirst = cursor.source.as_bytes()[start];
-                    if matches!(cfirst, b'"' | b'\'' | b'#') {
+                    let cfirst = cursor.source.as_bytes()[cursor.content_start];
+                    if cfirst == b'#' {
                         break;
                     }
-                    let Some(sep) = cursor.source[start..end].find(": ").map(|p| p + start) else {
+                    let cont_line =
+                        trim_slice(cursor.source, cursor.content_start, cursor.line_end);
+                    let Some(csep) = find_key_sep(cont_line) else {
                         break;
                     };
-                    let ckey = trim_slice(cursor.source, start, sep);
+                    let ckey_raw = trim_slice(cont_line, 0, csep);
+                    if !is_valid_key(ckey_raw) {
+                        break;
+                    }
+                    let ckey = strip_key_quotes(ckey_raw, strict, continuation_line)?;
                     if ckey.is_empty() {
                         break;
                     }
-                    let ckey = ckey.to_string();
                     check_key_length(&ckey, continuation_line)?;
-                    let value_start = sep + 2;
-                    let cvalue = trim_slice(cursor.source, value_start, end);
+                    let cvalue = trim_slice(cont_line, csep + 2, cont_line.len());
                     let cvalue = if cvalue != "|" && cvalue.contains('#') {
                         strip_comment(cvalue)
                     } else {
@@ -309,8 +317,10 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     B::m_set(&mut item, ckey, cvalue);
                 }
                 pending_item = Some(item);
-            } else if let Some(key_part) = after_dash.strip_suffix(':') {
-                let key = strip_key_quotes(trim_slice(key_part, 0, key_part.len()));
+            } else if colon_pos.is_none() && after_dash.strip_suffix(':').is_some_and(is_valid_key)
+            {
+                let key_part = after_dash.strip_suffix(':').unwrap();
+                let key = strip_key_quotes(trim_slice(key_part, 0, key_part.len()), strict, line)?;
                 check_key_length(&key, line)?;
                 cursor.next();
                 while cursor.valid && cursor.empty() {
@@ -329,24 +339,9 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 };
                 pending_item = Some(B::m_create_with(key, value));
             } else {
-                let b = after_dash.as_bytes();
-                if b.len() >= 2 && (b[0] == b'"' || b[0] == b'\'') && b[b.len() - 1] == b[0] {
-                    let inner = &after_dash[1..after_dash.len() - 1];
-                    let value = if b[0] == b'"' {
-                        crate::scalars::unescape_dq(inner, strict, line)?
-                    } else {
-                        inner.replace("\\'", "'")
-                    };
-                    crate::scalars::check_string_limit(&value, line)?;
-                    items.push(B::v_string(value, line, true));
-                } else {
-                    items.push(parse_quoted_or_typed::<B>(
-                        &after_dash,
-                        strict,
-                        line,
-                        false,
-                    )?);
-                }
+                // A quoted-or-typed scalar item — parse_quoted_or_typed enforces
+                // §10.1's unterminated / trailing-content strict checks.
+                items.push(parse_quoted_or_typed::<B>(&after_dash, strict, line)?);
                 cursor.next();
             }
         } else {
@@ -364,9 +359,17 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 cursor.next();
                 continue;
             }
-            if let Some(colon_pos) = find_key_sep(&trimmed) {
+            let colon_pos = find_key_sep(&trimmed);
+            let key_attempt: Option<&str> = colon_pos
+                .map(|c| trim_slice(&trimmed, 0, c))
+                .or_else(|| trimmed.strip_suffix(':').filter(|k| !k.is_empty()));
+            if key_attempt.is_some_and(|k| !is_valid_key(k)) {
+                // §5.1: not a usable key — unrecognised line, skipped in both
+                // modes (§10's strict list is closed and does not cover this).
+                cursor.next();
+            } else if let Some(colon_pos) = colon_pos {
                 let entries = entries.get_or_insert_with(B::m_create);
-                let key = strip_key_quotes(trim_slice(&trimmed, 0, colon_pos));
+                let key = strip_key_quotes(trim_slice(&trimmed, 0, colon_pos), strict, line)?;
                 check_key_length(&key, line)?;
                 if CHECK_DUPLICATES {
                     check_duplicate_key(B::m_has_key(entries, &key), &key, line, strict)?;
@@ -386,7 +389,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 )?;
                 B::m_set(entries, key, value);
             } else if let Some(key_part) = trimmed.strip_suffix(':') {
-                let key = strip_key_quotes(trim_slice(key_part, 0, key_part.len()));
+                let key = strip_key_quotes(trim_slice(key_part, 0, key_part.len()), strict, line)?;
                 check_key_length(&key, line)?;
                 {
                     let entries_ref = entries.get_or_insert_with(B::m_create);

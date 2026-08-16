@@ -3,8 +3,8 @@
   "frozen": true,
   "baselineVersion": "1.0.0",
   "baselineCaseCount": 149,
-  "specVersion": "1.0.1",
-  "caseCount": 157,
+  "specVersion": "1.0.2",
+  "caseCount": 171,
   "cases": [
     {
       "path": "core/api-parse-core-never-resolves-references.json",
@@ -625,6 +625,54 @@
       "since": "1.0.0"
     },
     {
+      "path": "core/key-array-item-unquoted-space-invalid.json",
+      "id": "core.keys.array-item.unquoted-space-invalid",
+      "sha256": "aaf275dd9b7ea86894a861d2b1e623a7e9a82cc08128091612d082b4e863162d",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/key-double-quoted-unknown-escape-strict.json",
+      "id": "core.keys.double-quoted.unknown-escape.strict",
+      "sha256": "bf7a91d5cf314b5bb811e6d7e9095543e7d71a77f5b8b4daa5158190bd70ac9d",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/key-flow-mapping-quoted-with-colon.json",
+      "id": "core.keys.flow-mapping.quoted-with-colon",
+      "sha256": "398c61c5490561f38a6f85b4622cb1bebad8e2f1fec7df2406dd07baa75ee5ac",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/key-flow-mapping-unquoted-space-invalid.json",
+      "id": "core.keys.flow-mapping.unquoted-space-invalid",
+      "sha256": "5cafee4f0ce0dceee43fcc63aa8b474c1ab658b79d36fe07bfcc3cd28d722020",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/key-nested-double-quoted-escaped-quote.json",
+      "id": "core.keys.nested.double-quoted-escaped-quote",
+      "sha256": "83c768a88cc0504c856f4ea7e5d74fa68493460b343e87bf3716a8867fe7f88e",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/key-nested-double-quoted-unknown-escape-strict.json",
+      "id": "core.keys.nested.double-quoted-unknown-escape.strict",
+      "sha256": "40ada0cb2328251b7fd7adea1d5bf816a6494fd6d0dcbe03eb6524ba68e8aec3",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/key-nested-quoted-with-colon.json",
+      "id": "core.keys.nested.quoted-with-colon",
+      "sha256": "70712471cdd421e9ac2f73f1f94f19059f70d0fff4408a34d6f25afa6dafb486",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/key-nested-unquoted-space-invalid.json",
+      "id": "core.keys.nested.unquoted-space-invalid",
+      "sha256": "ad77a628012cd93ca1cf1eb27b5e9a42200c02d1aaa590301320867606ae66df",
+      "since": "1.0.2"
+    },
+    {
       "path": "core/key-separator-first-colon-space.json",
       "id": "core.keys.separator.first-colon-space-outside-quotes",
       "sha256": "184cdb7b1e3d0689ec7c4c6c818d5c2849a831fddd4aba730ab182aff53251c3",
@@ -845,6 +893,42 @@
       "id": "core.strict-list.is-closed",
       "sha256": "4e5e6a14e6ee5be87530f8f67174c93b339cec3379d3b0b4947f8ff30082b9a8",
       "since": "1.0.0"
+    },
+    {
+      "path": "core/string-double-quote-unterminated-escaped-quote-nonstrict.json",
+      "id": "core.strings.double-quote.unterminated-escaped-quote.non-strict",
+      "sha256": "aeb775ba153c33fb3a2e97f3197c87b1ccb3a818bc7ca62fc9567954f0424f50",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/string-double-quote-unterminated-escaped-quote-strict.json",
+      "id": "core.strings.double-quote.unterminated-escaped-quote.strict",
+      "sha256": "e247a5ce26bfaec0762e9a36fd7085a71b86413c1f9eff2440a8d00047b89bb8",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/string-flow-mapping-value-trailing-content-strict.json",
+      "id": "core.strings.flow-mapping-value.trailing-content.strict",
+      "sha256": "12bb776d518d95c1b4558c59a8dfa3c4603f88642c949a89ba7c604cc33c5a59",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/string-flow-sequence-trailing-content-strict.json",
+      "id": "core.strings.flow-sequence.trailing-content.strict",
+      "sha256": "7f1937190eb8d45fa7013fdb1026b5ee0cf23f1b0e817d0d0de70fb45be4b122",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/string-flow-sequence-unterminated-quote-strict.json",
+      "id": "core.strings.flow-sequence.unterminated-quote.strict",
+      "sha256": "d557474ebca47220dfeac018501f9e5b29f5fffc281f11fa42cf2ec116d648f9",
+      "since": "1.0.2"
+    },
+    {
+      "path": "core/string-single-quote-unterminated-escaped-quote-strict.json",
+      "id": "core.strings.single-quote.unterminated-escaped-quote.strict",
+      "sha256": "c1aafe17e175401a45336afbd0c2cef44651df0e4a7df14b2b96da9160f067a9",
+      "since": "1.0.2"
     },
     {
       "path": "core/tabs-in-scalar.json",

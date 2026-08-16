@@ -1,0 +1,12 @@
+{
+  "id": "core.keys.double-quoted.unknown-escape.strict",
+  "spec": "core",
+  "section": "5.2 (1.0.1)",
+  "description": "§5.2: a double-quoted key decodes the same escapes as a double-quoted value, so an unknown escape sequence in the key throws in strict mode (§10.1), at the top level.",
+  "input": "\"bad\\q\": value\n",
+  "options": { "strict": true },
+  "expect": {
+    "error": { "line": 1, "code": "INVALID_ESCAPE" }
+  },
+  "tags": ["strict", "error", "keys"]
+}

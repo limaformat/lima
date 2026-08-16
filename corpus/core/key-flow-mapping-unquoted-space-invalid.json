@@ -1,0 +1,12 @@
+{
+  "id": "core.keys.flow-mapping.unquoted-space-invalid",
+  "spec": "core",
+  "section": "5.2 (1.0.1)",
+  "description": "An unquoted flow-mapping key containing a space is not a key; the item is skipped in both modes.",
+  "input": "m: {bad key: value}\n",
+  "options": { "strict": true },
+  "expect": {
+    "result": { "m": {} }
+  },
+  "tags": ["strict", "keys", "flow-mapping"]
+}
