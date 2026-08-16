@@ -16,12 +16,40 @@ import {
 	parseQuotedOrTyped,
 } from './scalars.js'
 import { parseFlowMapping, parseFlowOrScalarValue } from './flow.js'
+import { buildBlockScalar } from './block-scalar.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
 import { isTrimWhitespace } from './chars.js'
 import { BlockCursor } from './block-cursor.js'
 
 const DASH_PREFIX_RE = /^-\s+/
+
+/**
+ * A key's inline value text. If it is exactly `|`, consume the following
+ * physical lines belonging to the Core §6.1.5 block scalar introduced by a
+ * key at `keyIndent` and return the scalar; the cursor is left on the first
+ * line past the scalar. Otherwise parse `raw` as an ordinary inline value
+ * and advance one line. §6.1.5 places no top-level restriction on block
+ * scalars, so this is the same primitive `core.ts` uses at the top level.
+ */
+const inlineOrBlockScalar = <V, M>(
+	raw: string, keyIndent: number, keyLine: number,
+	cursor: BlockCursor, ctx: ParseContext, builder: ValueBuilder<V, M>,
+): V => {
+	if (raw !== '|') {
+		const value = parseFlowOrScalarValue(raw, ctx, keyLine, builder)
+		cursor.next()
+		return value
+	}
+	cursor.next() // past the `key: |` line
+	const bodyLines: string[] = []
+	while (cursor.valid) {
+		if (!cursor.empty && cursor.asciiIndent <= keyIndent) break
+		bodyLines.push(cursor.source.slice(cursor.lineStart, cursor.lineEnd))
+		cursor.next()
+	}
+	return buildBlockScalar(bodyLines, keyIndent, keyLine, ctx, builder).value
+}
 
 export const findKeySep = (s: string): number => {
 	const first = s.charCodeAt(0)
@@ -93,9 +121,8 @@ const parseCursorBlock = <V, M>(
 					const key = stripKeyQuotes(trimSlice(trimmed, 0, colonPos))
 					checkKeyLength(key, () => line)
 					let raw = trimSlice(trimmed, colonPos + 2, trimmed.length)
-					if (raw.includes('#')) raw = stripComment(raw)
-					builder.setMapping(pendingItem, key, parseFlowOrScalarValue(raw, ctx, line, builder))
-					cursor.next()
+					if (raw !== '|' && raw.includes('#')) raw = stripComment(raw)
+					builder.setMapping(pendingItem, key, inlineOrBlockScalar(raw, indent, line, cursor, ctx, builder))
 				} else if (trimmed.endsWith(':')) {
 					const key = stripKeyQuotes(trimSlice(trimmed, 0, trimmed.length - 1))
 					checkKeyLength(key, () => line)
@@ -162,10 +189,12 @@ const parseCursorBlock = <V, M>(
 				const valueLast = afterDash.charCodeAt(afterDash.length - 1)
 				const raw = valueFirst > 0x20 && valueFirst < 0x7f && valueLast > 0x20 && valueLast < 0x7f
 					? afterDash.slice(valueStart) : trimSlice(afterDash, valueStart, afterDash.length)
-				pendingItem = builder.createMappingWith(key, parseFlowOrScalarValue(raw, ctx, line, builder))
-				cursor.next()
+				// The key sits after `- `, two columns past the dash.
+				pendingItem = builder.createMappingWith(key,
+					inlineOrBlockScalar(raw, baseIndent + 2, line, cursor, ctx, builder))
 				while (cursor.valid && cursor.indent > baseIndent) {
 					const continuationLine = baseLine + cursor.lineIndex
+					const ckeyIndent = cursor.asciiIndent
 					const start = cursor.contentStart, end = cursor.lineEnd
 					const cfirst = cursor.source.charCodeAt(start)
 					if (cfirst === 34 || cfirst === 39 || cfirst === 35) break
@@ -181,10 +210,9 @@ const parseCursorBlock = <V, M>(
 					const valueLast = cursor.source.charCodeAt(end - 1)
 					let value = valueFirst > 0x20 && valueFirst < 0x7f && valueLast > 0x20 && valueLast < 0x7f
 						? cursor.source.slice(valueStart, end) : trimSlice(cursor.source, valueStart, end)
-					if (value.includes('#')) value = stripComment(value)
+					if (value !== '|' && value.includes('#')) value = stripComment(value)
 					builder.setMapping(pendingItem, ckey,
-						parseFlowOrScalarValue(value, ctx, continuationLine, builder))
-					cursor.next()
+						inlineOrBlockScalar(value, ckeyIndent, continuationLine, cursor, ctx, builder))
 				}
 			} else if (afterDash.endsWith(':')) {
 				const key = stripKeyQuotes(trimSlice(afterDash, 0, afterDash.length - 1))
@@ -220,9 +248,8 @@ const parseCursorBlock = <V, M>(
 				if (ctx.strict || ctx.onWarning !== undefined)
 					checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
 				let raw = trimSlice(trimmed, colonPos + 2, trimmed.length)
-				if (raw.includes('#')) raw = stripComment(raw)
-				builder.setMapping(entries, key, parseFlowOrScalarValue(raw, ctx, line, builder))
-				cursor.next()
+				if (raw !== '|' && raw.includes('#')) raw = stripComment(raw)
+				builder.setMapping(entries, key, inlineOrBlockScalar(raw, baseIndent, line, cursor, ctx, builder))
 			} else if (trimmed.endsWith(':')) {
 				if (entries === null) entries = builder.createMapping()
 				const key = stripKeyQuotes(trimSlice(trimmed, 0, trimmed.length - 1))

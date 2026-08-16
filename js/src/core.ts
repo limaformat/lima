@@ -19,9 +19,9 @@
  * and mappings) — this file is the orchestrator that ties them together.
  */
 
-import { type LimaValue, LString } from './value.js'
+import { type LimaValue } from './value.js'
 import {
-	type ParseContext, type Diagnostic, checkKeyLength, checkScalarLimit, byteLength,
+	type ParseContext, type Diagnostic, checkKeyLength, byteLength,
 	DOCUMENT_SIZE_LIMIT, TOP_LEVEL_KEY_LIMIT, NESTING_DEPTH_LIMIT,
 } from './normalize.js'
 import {
@@ -30,9 +30,10 @@ import {
 } from './scalars.js'
 import { parseFlowOrScalarValue } from './flow.js'
 import { parseBlockRange, type BlockDepthRisk } from './block.js'
+import { buildBlockScalar } from './block-scalar.js'
 import { LimaError, type LimaDiagnostic } from './errors.js'
 import { KeyCursor, scanKeys } from './scanner.js'
-import type { StringSourceSpan, ValueBuilder } from './builder.js'
+import type { ValueBuilder } from './builder.js'
 
 export type { Diagnostic, ParseContext } from './normalize.js'
 export { NESTING_DEPTH_LIMIT, SCALAR_LENGTH_LIMIT } from './normalize.js'
@@ -81,19 +82,6 @@ const depthOfNative = (v: NativeValue): number => {
 }
 
 const SPACE_BEFORE_COLON_RE = /^(?:'[^']*'|"(?:[^"\\]|\\.)*")[ \t]+:/
-
-const leadingSpaces = (line: string): number => {
-	let i = 0
-	while (i < line.length && line.charCodeAt(i) === 32) i++
-	return i
-}
-
-/** Index right after the last non-space character — the `trimEnd()` boundary, without allocating. */
-const trailingSpaceEnd = (line: string): number => {
-	let i = line.length
-	while (i > 0 && line.charCodeAt(i - 1) === 32) i--
-	return i
-}
 
 const lineAt = (s: string, pos: number): number => {
 	let n = 1
@@ -251,70 +239,13 @@ const parseCoreGeneric = <V, M>(
 				return
 			}
 
-			// Multi-line string (`|` literal block scalar).
+			// Multi-line string (`|` literal block scalar). The introducing key
+			// is at column 0 here; `buildBlockScalar` finds the scalar's own
+			// extent within the range (which runs to the next top-level key),
+			// so a dedented comment or dedented freetext before that key ends
+			// the scalar rather than being absorbed into it.
 			const bodyLines = raw.slice(raw.indexOf('\n') + 1).split('\n')
-
-			// Avoids trim()/trimStart()/trimEnd() — each allocates a whole new
-			// string just to measure or strip whitespace. leadingSpaces/
-			// trailingSpaceEnd compute the same boundaries by scanning char
-			// codes, and dedent+continuation-strip+trailing-trim collapse
-			// into a single final slice() per line instead of up to three.
-			let minIndent = Infinity
-			for (const bodyLine of bodyLines) {
-				const indent = leadingSpaces(bodyLine)
-				if (indent === bodyLine.length) continue // blank (all spaces, or empty)
-				if (indent < minIndent) minIndent = indent
-			}
-			minIndent = Math.min(minIndent, key.length + 2)
-			const trimAmt = minIndent > 1 && isFinite(minIndent) ? minIndent : 0
-
-			const mergedLines: string[] = []
-			const mergedLineSpans: StringSourceSpan[][] | undefined = builder.tracksStringSourcePositions ? [] : undefined
-			for (let bodyIndex = 0; bodyIndex < bodyLines.length; bodyIndex++) {
-				const bodyLine = bodyLines[bodyIndex]
-				const lineLen = bodyLine.length
-				let start = trimAmt < lineLen ? trimAmt : lineLen
-				const isContinuation = bodyLine.charCodeAt(start) === 94 && bodyLine.charCodeAt(start + 1) === 94 // ^^
-				if (isContinuation) start += 2
-				let end = trailingSpaceEnd(bodyLine)
-				if (end < start) end = start
-				const content = bodyLine.slice(start, end)
-				if (isContinuation) {
-					if (mergedLines.length > 0) {
-						if (content) {
-							const outputStart = mergedLines[mergedLines.length - 1].length + 1
-							mergedLines[mergedLines.length - 1] += ' ' + content
-							mergedLineSpans?.[mergedLineSpans.length - 1].push({
-								start: outputStart, line: line + 1 + bodyIndex, sourceOffset: start,
-							})
-						}
-					} else {
-						mergedLines.push(content)
-						mergedLineSpans?.push(content ? [{ start: 0, line: line + 1 + bodyIndex, sourceOffset: start }] : [])
-					}
-				} else {
-					mergedLines.push(content)
-					mergedLineSpans?.push(content ? [{ start: 0, line: line + 1 + bodyIndex, sourceOffset: start }] : [])
-				}
-			}
-
-			while (mergedLines.length > 0 && mergedLines[mergedLines.length - 1] === '') {
-				mergedLines.pop()
-				mergedLineSpans?.pop()
-			}
-
-			const joined = mergedLines.join('\n')
-			let sourceSpans: StringSourceSpan[] | undefined
-			if (mergedLineSpans) {
-				sourceSpans = []
-				let outputStart = 0
-				for (let i = 0; i < mergedLines.length; i++) {
-					for (const span of mergedLineSpans[i]) sourceSpans.push({ ...span, start: outputStart + span.start })
-					outputStart += mergedLines[i].length + 1
-				}
-			}
-			checkScalarLimit(LString(joined), line)
-			builder.setMapping(root, key, builder.string(joined, line + 1, false, sourceSpans))
+			builder.setMapping(root, key, buildBlockScalar(bodyLines, 0, line, ctx, builder).value)
 		}
 	}
 

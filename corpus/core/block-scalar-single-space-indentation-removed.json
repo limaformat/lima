@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.single-space-indentation-removed",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "A content indentation of a single space is still removed uniformly: a line belongs to the scalar when its indentation is strictly greater than the key's (zero here), and one space is greater than zero.",
+  "input": "a: |\n one\n two\n",
+  "expect": {
+    "result": { "a": "one\ntwo" }
+  },
+  "tags": ["positive", "block-scalar"]
+}

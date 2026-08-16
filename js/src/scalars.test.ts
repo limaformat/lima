@@ -427,21 +427,18 @@ describe('type coercion', () => {
 
 describe('multi-line edge cases', () => {
 	/**
-	 * The key-length cap: trimIndent() never removes more than keyLen + 2 spaces.
-	 * If the pipe-block content is indented deeper than the key column, the excess
-	 * spaces are preserved in the parsed value.
-	 *
-	 * Here 'key' (3 chars) + 2 = cap of 5. Content is indented 8 spaces.
-	 * → 8 - 5 = 3 spaces remain on each line.
+	 * Core §6.1.5: the content indentation is the smallest number of leading
+	 * spaces among all non-empty content lines, and exactly that amount is
+	 * removed from every line — there is no cap tied to the key's length.
+	 * Content indented 8 spaces has all 8 removed.
 	 */
-	it('pipe block: preserves indentation beyond the key-length cap', () => {
+	it('pipe block: removes the full common indentation regardless of key length', () => {
 		const result = parse(`
 			key: |
 			        line1
 			        line2
 		`)
-		// 'key' = 3 chars, cap = 5. Content indent = 8. Remaining = 3 spaces.
-		expect(result.key).toBe('   line1\n   line2')
+		expect(result.key).toBe('line1\nline2')
 	})
 
 	/**

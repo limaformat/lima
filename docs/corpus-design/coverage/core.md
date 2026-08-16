@@ -141,8 +141,39 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-215 | Appendix A | Unsupported | Negative year never matches the date grammar | fallback | both |
 | C-216 | Appendix A | Unsupported | `\0` is an unknown escape, not a null shorthand | pair | both |
 | C-217 | Appendix A | Unsupported | `parseCore` ignores an unsupported `partials` option entirely | api | both |
+| C-218 | §6.1.5 (1.0.1) | Block scalar | A dedented comment line ends the scalar; the `#` line is not absorbed | positive | both |
+| C-219 | §6.1.5 (1.0.1) | Block scalar | A dedented non-key, non-comment line ends the scalar and is dropped | positive | both |
+| C-220 | §6.1.5 (1.0.1) | Block scalar | Full common indentation is removed; no cap tied to the key's length | positive | both |
+| C-221 | §6.1.5 (1.0.1) | Block scalar | A single-space content indentation is still removed uniformly | positive | both |
+| C-222 | §6.1.5 (1.0.1) | Block scalar | `\|` introduced by a nested key is a block scalar | pair | both |
+| C-223 | §6.1.5 (1.0.1) | Block scalar | A sibling key at the nested key's column resumes normally after the scalar | positive | both |
+| C-224 | §6.1.5 (1.0.1) | Block scalar | `\|` introduced by a key inside a block sequence item is a block scalar | positive | both |
 
-**Scope:** 132 substantive check points. A check point can produce multiple concrete cases.
+**Scope:** 132 substantive check points (plus the 1.0.1 errata rows below). A check point can produce multiple concrete cases.
+
+## Core 1.0.1 errata (2026-09)
+
+C-218 through C-224 were added for the block-scalar defects the 2026-09
+independent review found (`docs/review-2026-09-followups.md` P0 #1). The
+§6.1.5 text is unchanged — these cover behaviour it always specified but
+no 1.0.0 fixture exercised:
+
+- **Extent.** The top-level `|` path absorbed any dedented line up to the
+  next top-level key, so a dedented comment (the §6.1.5 example verbatim)
+  or dedented freetext landed in the scalar. It now ends at the first
+  non-blank line indented to the key's column or less.
+- **Indentation trimming.** The removed amount was capped at `key.length
+  + 2`, and a one-space indent was removed as zero. Now it is exactly the
+  smallest leading-space count among the non-empty content lines.
+- **Nesting.** `|` was only recognised from the top-level key scan;
+  introduced by a nested key it stayed the literal string `"|"`. It is
+  now handled at any depth (`js/src/block-scalar.ts`, shared by
+  `core.ts` and `block.ts`), matching §6.1.5's depth-agnostic wording and
+  closing `docs/decisions/nested-block-scalars-not-supported.md`.
+
+No 1.0.0 case changed result. The `since: "1.0.1"` marker in
+`corpus/manifests/core-1.0.json` records the addition; the 149-case
+1.0.0 baseline stays byte-frozen.
 
 ## Known implementation gaps
 

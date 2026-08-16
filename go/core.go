@@ -77,67 +77,6 @@ func setP(m *[]pentry, key string, v *pvalue) {
 	*m = append(*m, pentry{key, v})
 }
 
-func mergeBlockScalar(lines []sourceLine, key string) (string, []stringSourceSpan) {
-	minIndent := int(^uint(0) >> 1)
-	for _, l := range lines {
-		if trimWhitespace(l.text) != "" && l.indent < minIndent {
-			minIndent = l.indent
-		}
-	}
-	if minIndent > len([]rune(key))+2 {
-		minIndent = len([]rune(key)) + 2
-	}
-	if minIndent <= 1 || minIndent == int(^uint(0)>>1) {
-		minIndent = 0
-	}
-	merged := []string{}
-	lineSpans := [][]stringSourceSpan{}
-	for _, l := range lines {
-		text := l.text
-		cut := minIndent
-		if cut > len(text) {
-			cut = len(text)
-		}
-		text = strings.TrimRight(text[cut:], " ")
-		continuation := strings.HasPrefix(text, "^^")
-		if continuation {
-			text = text[2:]
-		}
-		if continuation && len(merged) > 0 {
-			if text != "" {
-				start := len(merged[len(merged)-1]) + 1
-				merged[len(merged)-1] += " " + text
-				lineSpans[len(lineSpans)-1] = append(lineSpans[len(lineSpans)-1], stringSourceSpan{start: start, line: l.number, sourceOffset: cut + 2})
-			}
-		} else {
-			merged = append(merged, text)
-			spans := []stringSourceSpan{}
-			if text != "" {
-				offset := cut
-				if continuation {
-					offset += 2
-				}
-				spans = append(spans, stringSourceSpan{line: l.number, sourceOffset: offset})
-			}
-			lineSpans = append(lineSpans, spans)
-		}
-	}
-	for len(merged) > 0 && merged[len(merged)-1] == "" {
-		merged = merged[:len(merged)-1]
-		lineSpans = lineSpans[:len(lineSpans)-1]
-	}
-	spans := []stringSourceSpan{}
-	outputStart := 0
-	for i, line := range merged {
-		for _, span := range lineSpans[i] {
-			span.start += outputStart
-			spans = append(spans, span)
-		}
-		outputStart += len(line) + 1
-	}
-	return strings.Join(merged, "\n"), spans
-}
-
 func spaceBeforeColon(s string) bool {
 	if len(s) < 3 || (s[0] != '"' && s[0] != '\'') {
 		return false
@@ -221,12 +160,20 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 			}
 			if sep := findSep(rest); sep >= 0 {
 				key := stripKeyQuotes(trimWhitespace(rest[:sep]))
-				v, e := parseFlowOrScalar(trimWhitespace(rest[sep+2:]), strict, l.number, onWarning, captureReferences)
+				rawVal := trimWhitespace(rest[sep+2:])
+				*idx++
+				var v *pvalue
+				var e error
+				// The key sits after `- `, two columns past the dash.
+				if bv, ok, be := blockScalarValue(rawVal, indent+2, l.number, lines, idx, captureReferences); ok {
+					v, e = bv, be
+				} else {
+					v, e = parseFlowOrScalar(rawVal, strict, l.number, onWarning, captureReferences)
+				}
 				if e != nil {
 					return nil, e
 				}
 				item := []pentry{{key, v}}
-				*idx++
 				for *idx < len(lines) && lineStructuralIndent(lines[*idx]) > indent {
 					cl := lines[*idx]
 					cc := lineContent(cl)
@@ -294,7 +241,12 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 					v = pv(Null{}, l.number)
 				}
 			} else {
-				v, e = parseFlowOrScalar(stripComment(trimWhitespace(c[sep+2:])), strict, l.number, onWarning, captureReferences)
+				raw := trimWhitespace(c[sep+2:])
+				if bv, ok, be := blockScalarValue(raw, indent, l.number, lines, idx, captureReferences); ok {
+					v, e = bv, be
+				} else {
+					v, e = parseFlowOrScalar(stripComment(raw), strict, l.number, onWarning, captureReferences)
+				}
 			}
 			if e != nil {
 				return nil, e
@@ -376,17 +328,8 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 			}
 		} else {
 			raw := trimWhitespace(c[sep+2:])
-			if raw == "|" {
-				var body []sourceLine
-				for i < len(lines) && (lines[i].indent > 0 || trimWhitespace(lines[i].text) == "") {
-					body = append(body, lines[i])
-					i++
-				}
-				text, spans := mergeBlockScalar(body, key)
-				v = pstr(text, l.number+1, false, captureReferences)
-				if captureReferences {
-					setReferenceTokens2(v, scanReferenceTokens2(text, l.number+1, spans))
-				}
+			if bv, ok, be := blockScalarValue(raw, 0, l.number, lines, &i, captureReferences); ok {
+				v, e = bv, be
 			} else {
 				v, e = parseFlowOrScalar(stripComment(raw), strict, l.number, onWarning, captureReferences)
 			}

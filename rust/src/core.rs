@@ -15,6 +15,7 @@
 //! case never pays for a full tree walk just to find depth 0.
 
 use crate::block::parse_block_range_checked;
+use crate::block_scalar::build_block_scalar;
 use crate::chars::is_trim_whitespace;
 use crate::errors::{Diagnostic, LimaDiagnosticCode as Code, LimaError};
 use crate::flow::parse_flow_or_scalar_value_checked;
@@ -22,10 +23,8 @@ use crate::normalize::{
     begin_warning_collection, check_duplicate_key, check_key_length, finish_warning_collection,
     DOCUMENT_SIZE_LIMIT, NESTING_DEPTH_LIMIT, TOP_LEVEL_KEY_LIMIT,
 };
-use crate::scalars::{check_string_limit, strip_comment, strip_key_quotes};
-use crate::value::{
-    Builder, LimaValue, PlainBuilder, PositionedBuilder, PositionedValue, StringSourceSpan,
-};
+use crate::scalars::{strip_comment, strip_key_quotes};
+use crate::value::{Builder, LimaValue, PlainBuilder, PositionedBuilder, PositionedValue};
 
 /// One discovered top-level `key:`/`key: value` line.
 struct TopKey {
@@ -171,98 +170,6 @@ fn has_space_before_colon(line: &str) -> bool {
 
 fn line_at(source: &str, byte_pos: usize) -> u32 {
     1 + source[..byte_pos].bytes().filter(|&c| c == b'\n').count() as u32
-}
-
-/// `|` literal block scalar body: dedent to the minimum common indentation
-/// (ASCII-space-only, capped defensively at `key.len() + 2`), apply `^^`
-/// continuation-line joining (one space, no marker on an empty line adds
-/// nothing), strip trailing blank lines.
-fn merge_block_scalar(body: &str, key: &str, first_line: u32) -> (String, Vec<StringSourceSpan>) {
-    let body_lines: Vec<&str> = body.split('\n').collect();
-
-    let mut min_indent = usize::MAX;
-    for line in &body_lines {
-        let indent = line.len() - line.trim_start_matches(' ').len();
-        if indent == line.len() {
-            continue;
-        } // blank
-        min_indent = min_indent.min(indent);
-    }
-    min_indent = min_indent.min(key.chars().count() + 2);
-    let trim_amt = if min_indent > 1 && min_indent != usize::MAX {
-        min_indent
-    } else {
-        0
-    };
-
-    let mut merged: Vec<String> = Vec::new();
-    let mut line_spans: Vec<Vec<StringSourceSpan>> = Vec::new();
-    for (body_index, line) in body_lines.iter().enumerate() {
-        let b = line.as_bytes();
-        let mut start = trim_amt.min(line.len());
-        let is_continuation = b.get(start) == Some(&b'^') && b.get(start + 1) == Some(&b'^');
-        if is_continuation {
-            start += 2;
-        }
-        let mut end = line.len();
-        while end > start && b[end - 1] == b' ' {
-            end -= 1;
-        }
-        if end < start {
-            end = start;
-        }
-        let content = &line[start..end];
-        if is_continuation {
-            if let Some(last) = merged.last_mut() {
-                if !content.is_empty() {
-                    let output_start = last.len() + 1;
-                    last.push(' ');
-                    last.push_str(content);
-                    line_spans.last_mut().unwrap().push(StringSourceSpan {
-                        start: output_start,
-                        line: first_line + body_index as u32,
-                        source_offset: start,
-                    });
-                }
-            } else {
-                merged.push(content.to_string());
-                line_spans.push(if content.is_empty() {
-                    Vec::new()
-                } else {
-                    vec![StringSourceSpan {
-                        start: 0,
-                        line: first_line + body_index as u32,
-                        source_offset: start,
-                    }]
-                });
-            }
-        } else {
-            merged.push(content.to_string());
-            line_spans.push(if content.is_empty() {
-                Vec::new()
-            } else {
-                vec![StringSourceSpan {
-                    start: 0,
-                    line: first_line + body_index as u32,
-                    source_offset: start,
-                }]
-            });
-        }
-    }
-    while merged.last().is_some_and(String::is_empty) {
-        merged.pop();
-        line_spans.pop();
-    }
-    let mut spans = Vec::new();
-    let mut output_start = 0;
-    for (line, mut pieces) in merged.iter().zip(line_spans) {
-        for span in &mut pieces {
-            span.start += output_start;
-        }
-        spans.extend(pieces);
-        output_start += line.len() + 1;
-    }
-    (merged.join("\n"), spans)
 }
 
 /// Expands tabs to two spaces, but only within each line's *leading*
@@ -437,9 +344,13 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                             )?
                         }
                     } else {
-                        let body = &front_matter[nl + 1..span_end];
-                        let (joined, spans) = merge_block_scalar(body, &tk.key, tk.line + 1);
-                        check_string_limit(&joined, tk.line)?;
+                        // The introducing key is at column 0 here; the range
+                        // runs to the next top-level key, so `build_block_scalar`
+                        // finds the scalar's own extent within it — a dedented
+                        // comment or freetext before that key ends the scalar
+                        // instead of being absorbed.
+                        let body: Vec<&str> = front_matter[nl + 1..span_end].split('\n').collect();
+                        let (joined, spans, _) = build_block_scalar(&body, 0, tk.line)?;
                         B::v_block_string(joined, tk.line + 1, spans)
                     }
                 }

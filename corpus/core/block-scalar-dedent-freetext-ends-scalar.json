@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.dedent-freetext-ends-scalar",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "Any line dedented to the introducing key's column ends the block scalar, not only a comment or the next key. The dedented line here is neither a key nor a comment, so it is unrecognised top-level content and is dropped.",
+  "input": "note: |\n  kept\nloose freetext\nafter: value\n",
+  "expect": {
+    "result": { "note": "kept", "after": "value" }
+  },
+  "tags": ["positive", "block-scalar"]
+}

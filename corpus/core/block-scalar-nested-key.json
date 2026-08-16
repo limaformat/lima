@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.nested-key",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "Block scalar extent is defined relative to the introducing key at any depth — §6.1.5 places no top-level restriction. A `|` introduced by a key nested one level deep is a block scalar, with content indented relative to that key.",
+  "input": "parent:\n  child: |\n    line one\n    line two\n",
+  "expect": {
+    "result": { "parent": { "child": "line one\nline two" } }
+  },
+  "tags": ["positive", "block-scalar"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.nested-key-followed-by-sibling",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "A line dedented to the nested key's own column ends the nested block scalar; a sibling key at that column is parsed normally.",
+  "input": "parent:\n  text: |\n    body line\n  other: value\n",
+  "expect": {
+    "result": { "parent": { "text": "body line", "other": "value" } }
+  },
+  "tags": ["positive", "block-scalar"]
+}

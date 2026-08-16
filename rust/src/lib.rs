@@ -33,6 +33,7 @@
 
 pub mod block;
 mod block_cursor;
+mod block_scalar;
 mod chars;
 pub mod core;
 pub mod errors;

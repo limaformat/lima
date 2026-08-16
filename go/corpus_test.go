@@ -241,14 +241,33 @@ func equalCorpus(v Value, e any) bool {
 	}
 	return false
 }
+
+// frozenManifestCaseCount reads the pinned case count from a frozen manifest
+// (baseline + any errata additions), so the corpus test count-pins against
+// the manifest rather than a hard-coded number.
+func frozenManifestCaseCount(t *testing.T, manifestPath string) int {
+	t.Helper()
+	b, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m struct {
+		CaseCount int `json:"caseCount"`
+	}
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatal(err)
+	}
+	return m.CaseCount
+}
+
 func TestCoreCorpus(t *testing.T) {
 	paths, globErr := filepath.Glob("../corpus/core/*.json")
 	if globErr != nil {
 		t.Fatal(globErr)
 	}
 	sort.Strings(paths)
-	if len(paths) != 149 {
-		t.Fatalf("Core corpus count changed: %d", len(paths))
+	if manifestCount := frozenManifestCaseCount(t, "../corpus/manifests/core-1.0.json"); len(paths) != manifestCount {
+		t.Fatalf("Core corpus count does not match the manifest: %d != %d", len(paths), manifestCount)
 	}
 	pass := 0
 	skip := 0

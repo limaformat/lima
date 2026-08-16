@@ -91,5 +91,14 @@ whitespace/indentation work is unrelated and already large). Until
 resourced, option B's minimum — a documentation note — costs little and
 prevents silent surprises in the meantime.
 
-**Not implemented pending maintainer confirmation.** No code in this
-repository has been changed as a result of this document.
+## Resolution (2026-09)
+
+Option A, as part of the Core 1.0.1 block-scalar errata
+([`../review-2026-09-followups.md`](../review-2026-09-followups.md) P0 #1).
+In each implementation the block-scalar reader is now a single shared
+primitive, called by both the top-level key path and the nested block
+path, so `|` is recognised at any depth: `js/src/block-scalar.ts`
+(`core.ts` + `block.ts`), `rust/src/block_scalar.rs` (`core.rs` +
+`block.rs`), `go/block_scalar.go` (`parseCorePositioned` + `parseBlock`).
+Corpus cases C-222–C-224 cover it; all three implementations pass the full
+Core 1.0.1 suite (157 cases).

@@ -18,6 +18,14 @@ BLOCKER/MAJOR numbering.
 
 ### 1. Rebuild the block-scalar path — code (TS + Rust + Go) — B1
 
+**Status: done (Core 1.0.1).** Each implementation now has one shared
+block-scalar primitive called by both the top-level and the nested path
+(`js/src/block-scalar.ts`, `rust/src/block_scalar.rs`,
+`go/block_scalar.go`). Corpus cases C-218–C-224; Core suite 149 → 157;
+`corpus/manifests/core-1.0.json` carries per-entry `since` markers with the
+149-case 1.0.0 baseline frozen. All three implementations pass the full
+157-case suite.
+
 The top-level `key: |` path in `js/src/core.ts` (`parseEntry`, ~L254–318)
 does its own ad-hoc block-scalar slurping and gets three independent things
 wrong:

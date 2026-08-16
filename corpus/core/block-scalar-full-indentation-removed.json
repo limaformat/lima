@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.full-indentation-removed",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "The content indentation is the smallest number of leading spaces among all non-empty content lines, measured from column 0, and exactly that amount is removed — there is no cap tied to the introducing key's length. A one-character key with content indented eight spaces still has all eight removed.",
+  "input": "a: |\n        deep one\n        deep two\n",
+  "expect": {
+    "result": { "a": "deep one\ndeep two" }
+  },
+  "tags": ["positive", "block-scalar"]
+}

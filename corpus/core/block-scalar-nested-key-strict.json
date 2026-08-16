@@ -1,0 +1,13 @@
+{
+  "id": "core.block-scalar.nested-key.strict",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "A block scalar introduced by a nested key is recognised identically in strict mode; the deeper-indented content lines are the scalar body, not an indentation error.",
+  "input": "parent:\n  child: |\n    line one\n    line two\n",
+  "options": { "strict": true },
+  "expect": {
+    "result": { "parent": { "child": "line one\nline two" } }
+  },
+  "notes": "Same input as core.block-scalar.nested-key, asserting strict/non-strict parity.",
+  "tags": ["strict", "block-scalar"]
+}

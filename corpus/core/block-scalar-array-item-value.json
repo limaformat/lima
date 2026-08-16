@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.array-item-value",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "A `|` introduced by a key inside a block sequence item's mapping is a block scalar; its content is indented relative to that key.",
+  "input": "items:\n  - entry: |\n      first\n      second\n",
+  "expect": {
+    "result": { "items": [ { "entry": "first\nsecond" } ] }
+  },
+  "tags": ["positive", "block-scalar"]
+}

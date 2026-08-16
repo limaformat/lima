@@ -216,7 +216,24 @@ fn core_matches_conformance_corpus() {
         "expected corpus fixtures under {}",
         corpus_dir().display()
     );
-    assert_eq!(entries.len(), 149, "Core corpus case count changed");
+
+    // Count-pin against the frozen manifest (149 baseline + any errata
+    // additions) rather than a hard-coded number.
+    let manifest: Json = serde_json::from_str(
+        &fs::read_to_string(
+            corpus_dir()
+                .join("..")
+                .join("manifests")
+                .join("core-1.0.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        entries.len(),
+        manifest["caseCount"].as_u64().unwrap() as usize,
+        "Core corpus case count does not match the manifest",
+    );
 
     for path in entries {
         let text = fs::read_to_string(&path).unwrap();

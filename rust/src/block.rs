@@ -6,12 +6,45 @@
 //! module doc.
 
 use crate::block_cursor::BlockCursor;
+use crate::block_scalar::build_block_scalar;
 use crate::chars::is_trim_whitespace;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
 use crate::flow::{parse_flow_mapping_checked, parse_flow_or_scalar_value_checked};
 use crate::normalize::{check_duplicate_key, check_key_length, NESTING_DEPTH_LIMIT};
 use crate::scalars::{parse_quoted_or_typed, strip_comment, strip_key_quotes};
 use crate::value::Builder;
+
+/// A key's inline value text. If it is exactly `|`, consume the following
+/// physical lines belonging to the Core §6.1.5 block scalar introduced by a
+/// key at `key_indent` and return the scalar; the cursor is left on the
+/// first line past it. Otherwise parse `raw` as an ordinary inline value
+/// and advance one line. §6.1.5 places no top-level restriction on block
+/// scalars, so this is the same primitive `core.rs` uses at the top level.
+fn inline_or_block_scalar<'a, B: Builder, const CHECK_DUPLICATES: bool>(
+    raw: &str,
+    key_indent: usize,
+    key_line: u32,
+    cursor: &mut BlockCursor<'a>,
+    strict: bool,
+) -> Result<B::Value, LimaError> {
+    if raw != "|" {
+        let value =
+            parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(raw, strict, key_line)?;
+        cursor.next();
+        return Ok(value);
+    }
+    cursor.next(); // past the `key: |` line
+    let mut body_lines: Vec<&'a str> = Vec::new();
+    while cursor.valid {
+        if !cursor.empty() && cursor.ascii_indent <= key_indent {
+            break;
+        }
+        body_lines.push(&cursor.source[cursor.line_start..cursor.line_end]);
+        cursor.next();
+    }
+    let (joined, spans, _) = build_block_scalar(&body_lines, key_indent, key_line)?;
+    Ok(B::v_block_string(joined, key_line + 1, spans))
+}
 
 /// Finds the key/value separator: the first unquoted `: `, or (for a
 /// quoted key) the `: ` immediately after the matching closing quote.
@@ -107,16 +140,16 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     let key = strip_key_quotes(trim_slice(trimmed, 0, colon_pos));
                     check_key_length(&key, line)?;
                     let raw = trim_slice(trimmed, colon_pos + 2, trimmed.len());
-                    let raw = if raw.contains('#') {
+                    let raw = if raw != "|" && raw.contains('#') {
                         strip_comment(raw)
                     } else {
                         raw.to_string()
                     };
-                    let value = parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                        &raw, strict, line,
+                    let key_indent = cursor.ascii_indent;
+                    let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
+                        &raw, key_indent, line, cursor, strict,
                     )?;
                     B::m_set(pending, key, value);
-                    cursor.next();
                 } else if let Some(key_part) = trimmed.strip_suffix(':') {
                     let key = strip_key_quotes(trim_slice(key_part, 0, key_part.len()));
                     check_key_length(&key, line)?;
@@ -232,12 +265,18 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 check_key_length(&key, line)?;
                 let value_start = colon_pos + 2;
                 let raw = trim_slice(&after_dash, value_start, after_dash.len());
-                let value =
-                    parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(raw, strict, line)?;
+                // The key sits after `- `, two columns past the dash.
+                let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
+                    raw,
+                    base_indent + 2,
+                    line,
+                    cursor,
+                    strict,
+                )?;
                 let mut item = B::m_create_with(key, value);
-                cursor.next();
                 while cursor.valid && cursor.indent > base_indent {
                     let continuation_line = (base_line as i64 + cursor.line_index) as u32;
+                    let ckey_indent = cursor.ascii_indent;
                     let start = cursor.content_start;
                     let end = cursor.line_end;
                     let cfirst = cursor.source.as_bytes()[start];
@@ -255,18 +294,19 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     check_key_length(&ckey, continuation_line)?;
                     let value_start = sep + 2;
                     let cvalue = trim_slice(cursor.source, value_start, end);
-                    let cvalue = if cvalue.contains('#') {
+                    let cvalue = if cvalue != "|" && cvalue.contains('#') {
                         strip_comment(cvalue)
                     } else {
                         cvalue.to_string()
                     };
-                    let cvalue = parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                    let cvalue = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                         &cvalue,
-                        strict,
+                        ckey_indent,
                         continuation_line,
+                        cursor,
+                        strict,
                     )?;
                     B::m_set(&mut item, ckey, cvalue);
-                    cursor.next();
                 }
                 pending_item = Some(item);
             } else if let Some(key_part) = after_dash.strip_suffix(':') {
@@ -332,15 +372,19 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     check_duplicate_key(B::m_has_key(entries, &key), &key, line, strict)?;
                 }
                 let raw = trim_slice(&trimmed, colon_pos + 2, trimmed.len());
-                let raw = if raw.contains('#') {
+                let raw = if raw != "|" && raw.contains('#') {
                     strip_comment(raw)
                 } else {
                     raw.to_string()
                 };
-                let value =
-                    parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(&raw, strict, line)?;
+                let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
+                    &raw,
+                    base_indent,
+                    line,
+                    cursor,
+                    strict,
+                )?;
                 B::m_set(entries, key, value);
-                cursor.next();
             } else if let Some(key_part) = trimmed.strip_suffix(':') {
                 let key = strip_key_quotes(trim_slice(key_part, 0, key_part.len()));
                 check_key_length(&key, line)?;
