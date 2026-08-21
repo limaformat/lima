@@ -1,0 +1,11 @@
+{
+  "id": "core.document.comment-before-nested-block-is-skipped",
+  "spec": "core",
+  "section": "4 (1.0.3)",
+  "description": "§4 rule 7 / §6.1.3: a comment line does not affect base indentation and is skipped — including in the lookahead that decides whether a bare key has any nested block at all. A comment between a bare key and its real nested content does not lose that content.",
+  "input": "key:\n# comment\n  nested: value\n",
+  "expect": {
+    "result": { "key": { "nested": "value" } }
+  },
+  "tags": ["positive", "keys", "comments"]
+}

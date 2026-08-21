@@ -157,17 +157,20 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-231 | §5.2 (1.0.1) | Keys | A double-quoted nested key decodes `\"` escapes; the inner quotes do not end the key | positive | both |
 | C-232 | §5.2/§10.1 (1.0.1) | Keys | An unknown escape in a double-quoted key throws in strict mode, at the top level and nested | error | strict |
 | C-233 | §5.2 (1.0.1) | Keys | An unquoted key with a space in a block sequence item is not a mapping; the item is a literal scalar | positive | both |
+| C-234 | §4/§6.1.3 (1.0.3) | Comments | A comment line does not end the lookahead for whether a bare key has a nested block | positive | both |
+| C-235 | §4/§6.1.3 (1.0.3) | Comments | The comment-skip applies to a bare key at any depth, not only the top level | positive | both |
+| C-236 | §4/§6.1.3 (1.0.3) | Comments | Skipping a comment does not manufacture content: a bare key followed only by a dedented sibling after the comment is still `null` | positive | both |
 
-**Scope:** 132 substantive check points (plus the 1.0.1 errata rows below). A check point can produce multiple concrete cases.
+**Scope:** 132 substantive check points (plus the 1.0.x errata rows below). A check point can produce multiple concrete cases.
 
-## Core 1.0.1 errata (2026-09)
+## Core 1.0.x errata (2026-09)
 
-All 1.0.1 rows were added for defects the 2026-09 independent review found
+All 1.0.x rows were added for defects the 2026-09 independent review found
 (`docs/review-2026-09-followups.md`). No spec text changed — these cover
 behaviour Core always specified but no 1.0.0 fixture exercised. No 1.0.0
-case changed result. The `since: "1.0.1"` marker in
-`corpus/manifests/core-1.0.json` records each addition; the 149-case
-1.0.0 baseline stays byte-frozen.
+case changed result. The `since` marker in `corpus/manifests/core-1.0.json`
+records each addition's revision; the 149-case 1.0.0 baseline stays
+byte-frozen.
 
 ### Block scalars — C-218–C-224 (P0 #1)
 
@@ -208,6 +211,27 @@ case changed result. The `since: "1.0.1"` marker in
   enforcing §5.1 there is a future errata question, not this fix. Likewise
   a literal newline inside a top-level quoted key is still accepted
   (`docs/review-2026-09-followups.md` P2 #11).
+
+### Comment lines before a nested block — C-234–C-236 (P1 #4)
+
+`docs/decisions/comment-lines-and-bare-key-block-detection.md`, decided
+2026-09-04, option C. §4 rule 7 / §6.1.3 state that a comment line does not
+affect base indentation and is skipped; the lookahead that decides whether
+a **bare key** (`key:` with no inline value) has a nested block only
+skipped blank lines, so a comment between the key and its real nested
+content ended the lookahead early and the content was lost (`{key: null}`
+instead of the nested mapping). Fixed at every bare-key lookahead site —
+top level, nested mapping. Go additionally had this same gap for a plain
+*blank* line at the nested-mapping site (not only comments) — its
+lookahead there had no skip loop at all, unlike the top level's.
+
+Not fixed in this batch (a separate, unrelated gap found incidentally
+while porting): Go's block-sequence branch (`- key:`) does not support a
+bare key with a nested block at all, in either the first-item or
+continuation-key position — `items:\n  - key:\n      nested: value`
+parses `key:` as a literal string item instead of `{key: {nested: value}}`.
+TypeScript and Rust handle this correctly. Tracked as a new item in
+`docs/review-2026-09-followups.md`.
 
 ## Known implementation gaps
 

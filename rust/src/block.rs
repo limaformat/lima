@@ -74,6 +74,20 @@ fn cursor_content<'a>(cursor: &BlockCursor<'a>) -> &'a str {
     &cursor.source[cursor.content_start..cursor.line_end]
 }
 
+/// Core §4 rule 7 / §6.1.3: comment lines (first non-whitespace character
+/// `#`) do not affect base indentation and are skipped — including in the
+/// lookahead that decides whether a bare key (`key:` with no inline value)
+/// has any nested block at all. Advancing past a comment here, not only a
+/// blank line, keeps that pre-check consistent with the same skip already
+/// applied once inside an established block (`parse_cursor_block`'s own
+/// `cursor.empty() || cursor.first_byte() == b'#'` check at the top of its
+/// loop).
+fn skip_empty_and_comment_lines(cursor: &mut BlockCursor) {
+    while cursor.valid && (cursor.empty() || cursor.first_byte() == b'#') {
+        cursor.next();
+    }
+}
+
 /// The text after `- ` (dash + whitespace). If the character right after
 /// the dash is *not* whitespace, the whole line (dash included) is treated
 /// as an ordinary scalar starting with a literal `-` — not a sequence item.
@@ -164,9 +178,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     let key = strip_key_quotes(key_raw, strict, line)?;
                     check_key_length(&key, line)?;
                     cursor.next();
-                    while cursor.valid && cursor.empty() {
-                        cursor.next();
-                    }
+                    skip_empty_and_comment_lines(cursor);
                     let value = if cursor.valid && cursor.indent > indent {
                         parse_cursor_block::<B, CHECK_DUPLICATES>(
                             cursor,
@@ -323,9 +335,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 let key = strip_key_quotes(trim_slice(key_part, 0, key_part.len()), strict, line)?;
                 check_key_length(&key, line)?;
                 cursor.next();
-                while cursor.valid && cursor.empty() {
-                    cursor.next();
-                }
+                skip_empty_and_comment_lines(cursor);
                 let value = if cursor.valid && cursor.indent > base_indent {
                     parse_cursor_block::<B, CHECK_DUPLICATES>(
                         cursor,
@@ -398,9 +408,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     }
                 }
                 cursor.next();
-                while cursor.valid && cursor.empty() {
-                    cursor.next();
-                }
+                skip_empty_and_comment_lines(cursor);
                 let value = if cursor.valid && cursor.indent > base_indent {
                     parse_cursor_block::<B, CHECK_DUPLICATES>(
                         cursor,
@@ -472,9 +480,7 @@ pub(crate) fn parse_block_range_checked<B: Builder, const CHECK_DUPLICATES: bool
     if !cursor.next() {
         return Ok(None);
     }
-    while cursor.valid && cursor.empty() {
-        cursor.next();
-    }
+    skip_empty_and_comment_lines(&mut cursor);
     if !cursor.valid {
         return Ok(None);
     }

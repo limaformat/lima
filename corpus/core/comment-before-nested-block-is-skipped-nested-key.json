@@ -1,0 +1,11 @@
+{
+  "id": "core.document.comment-before-nested-block-is-skipped.nested-key",
+  "spec": "core",
+  "section": "4 (1.0.3)",
+  "description": "The same comment-skip in the bare-key lookahead applies when the bare key is itself nested, not only at the top level.",
+  "input": "outer:\n  key:\n  # comment\n    nested: value\n",
+  "expect": {
+    "result": { "outer": { "key": { "nested": "value" } } }
+  },
+  "tags": ["positive", "keys", "comments"]
+}

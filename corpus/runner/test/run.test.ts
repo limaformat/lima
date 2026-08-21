@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(272)
+		expect(outcomes).toHaveLength(275)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -444,7 +444,7 @@ describe('runCorpus', () => {
 	 * that import `parseCore` directly and bypass the type constraint —
 	 * see `coverage/core.md`'s C-217 entry for the full reasoning. Still
 	 * open: the References Appendix "host-language types in partials" row.
-	 * 250 → 272: the Core 1.0.1 errata (docs/review-2026-09-followups.md).
+	 * 250 → 275: the Core 1.0.1-1.0.3 errata (docs/review-2026-09-followups.md).
 	 * P0 #1 added 8 block-scalar cases — a dedented comment or freetext
 	 * ending a block scalar, full common-indentation removal with no
 	 * key-length cap, single-space indentation, and `|` introduced by a
@@ -453,7 +453,10 @@ describe('runCorpus', () => {
 	 * value position, including flow), quote-aware key separator detection,
 	 * escaped quotes and unknown escapes in double-quoted keys, and an
 	 * unquoted key with a space rejected in nested/flow the way it already
-	 * was at the top level. All pass; no prior case changed classification.
+	 * was at the top level. P1 #4 added 3 cases — a comment line no longer
+	 * ends the lookahead that decides whether a bare key has a nested block
+	 * (it did, incorrectly; only a blank line should). All pass; no prior
+	 * case changed classification.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -462,7 +465,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 272, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 275, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

@@ -118,12 +118,15 @@ sequence, flow mapping, block sequence item. Corpus cases C-225–C-228.
 
 ### 4. Comment line before a nested block — code (TS + Rust + Go) + corpus — M4 — decision: option C
 
-`key:\n# comment\n  nested: value` currently yields `{key: null}` — the
-nested content is silently lost. Core §4 rule 7 / §6.1.3: comment lines are
-skipped, including in the pre-check that decides *whether* a bare key has a
-nested block. Fix in all three implementations, add a corpus fixture. See
-`decisions/comment-lines-and-bare-key-block-detection.md` (option C — fix
-to match the spec rather than amend the spec).
+**Status: done, all three languages (Core 1.0.3).** `key:\n# comment\n
+nested: value` used to yield `{key: null}` — the nested content silently
+lost. Core §4 rule 7 / §6.1.3: comment lines are skipped, including in the
+lookahead that decides *whether* a bare key has a nested block at all — now
+true at every such site (top level, nested mapping) in all three
+implementations. Go's nested-mapping lookahead had no skip loop at all
+before this (not even for a blank line) — a strictly worse instance of the
+same bug, found during the port. Corpus cases C-234–C-236, `since:
+"1.0.3"`. See `decisions/comment-lines-and-bare-key-block-detection.md`.
 
 ### 5. References 2.0 error provenance: source-based — code (TS: `reference-tokens2.ts`, `references2.ts`) — M1
 
@@ -152,11 +155,26 @@ fixture files, not which entry point a frozen case exercises).
 
 ### 7. Clarify the References 1.0 status — docs
 
-`README.md` presents "101 frozen References 1.0 cases … passed by …" and
-"250 cases, content-hash protected" as a live property, though the language
-feature never shipped in the public API. Reframe as frozen history.
-`AGENTS.md` lists only Core 1.0 + References 1.0 as normative — add
-References 2.0 and state the References 1.0 status precisely.
+**Status: done.** `README.md` presented "101 frozen References 1.0 cases …
+passed by …" and "250 cases, content-hash protected" as a live property,
+though the language feature never shipped in the public API — now states
+the runnable reference API is Core 1.0 + References 2.0, References 1.0 is
+frozen history. `AGENTS.md` listed only Core 1.0 + References 1.0 as
+normative — now names References 2.0 and states the References 1.0 status
+precisely.
+
+### 12. Go: bare key with a nested block unsupported in a block sequence — code (Go)
+
+Found incidentally while fixing #4. `items:\n  - key:\n      nested:
+value` parses `key:` as a literal string item (`["key:"]`) instead of
+`[{key: {nested: value}}]`, in both the first-item and continuation-key
+position of a block-sequence item's mapping. TypeScript and Rust handle
+this correctly — Go's `parseBlock` array branch (`go/core.go`) never
+attempts the bare-key-with-nested-block case at all, only `key: value`
+(via `findSep`). Needs a `bare`-key branch added to both the first-item
+`- key:` case and the continuation-key loop, mirroring the existing
+nested-mapping bare-key handling in the same file. No corpus case yet
+(would fail Go until fixed); add one alongside the fix.
 
 ---
 

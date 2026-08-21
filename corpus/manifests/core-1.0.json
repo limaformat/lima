@@ -3,8 +3,8 @@
   "frozen": true,
   "baselineVersion": "1.0.0",
   "baselineCaseCount": 149,
-  "specVersion": "1.0.2",
-  "caseCount": 171,
+  "specVersion": "1.0.3",
+  "caseCount": 174,
   "cases": [
     {
       "path": "core/api-parse-core-never-resolves-references.json",
@@ -221,6 +221,24 @@
       "id": "core.values.coercion-order",
       "sha256": "e0b03895d1c41a30bed1ab67423cfbe7ca463add61bdc7bb1d773e60fb385bb3",
       "since": "1.0.0"
+    },
+    {
+      "path": "core/comment-before-nested-block-is-skipped-nested-key.json",
+      "id": "core.document.comment-before-nested-block-is-skipped.nested-key",
+      "sha256": "74031688bfd1f4678d96421e6b472dbbe648f1a9e845e8ffe294bbaa976cb880",
+      "since": "1.0.3"
+    },
+    {
+      "path": "core/comment-before-nested-block-is-skipped.json",
+      "id": "core.document.comment-before-nested-block-is-skipped",
+      "sha256": "d6440e69028359dd85db0dec1bd57ddfa4ee4810ec56d043bcfefb7f48ecbcfe",
+      "since": "1.0.3"
+    },
+    {
+      "path": "core/comment-before-nested-block-no-content-follows.json",
+      "id": "core.document.comment-before-nested-block.no-content-follows",
+      "sha256": "aa3989f10a4c04ecfdeb49711b79c91bdc6082290e1d670372263fafaa08d1b5",
+      "since": "1.0.3"
     },
     {
       "path": "core/comments-at-every-mapping-level.json",

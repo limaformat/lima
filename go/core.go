@@ -249,8 +249,17 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 			var v *pvalue
 			var e error
 			if bare {
-				if *idx < len(lines) && lineStructuralIndent(lines[*idx]) > indent {
-					v, e = parseBlock(lines, idx, lineStructuralIndent(lines[*idx]), strict, onWarning, captureReferences)
+				// Core §4 rule 7 / §6.1.3: comment lines (and blank lines)
+				// do not affect base indentation and are skipped when
+				// deciding whether this bare key has any nested block at
+				// all. parseBlock re-skips the same lines from *idx once
+				// it is called, so this lookahead only peeks, never mutates.
+				j := *idx
+				for j < len(lines) && (trimWhitespace(lines[j].text) == "" || strings.HasPrefix(trimWhitespace(lines[j].text), "#")) {
+					j++
+				}
+				if j < len(lines) && lineStructuralIndent(lines[j]) > indent {
+					v, e = parseBlock(lines, idx, lineStructuralIndent(lines[j]), strict, onWarning, captureReferences)
 				}
 				if v == nil && e == nil {
 					v = pv(Null{}, l.number)
@@ -338,10 +347,12 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 		var e error
 		if bare {
 			j := i
-			// Empty lines do not establish a block baseline. Comments do: their
-			// ASCII indent is structural even though parseBlock later ignores
-			// their content. This mirrors Rust's parse_block_range initialization.
-			for j < len(lines) && trimWhitespace(lines[j].text) == "" {
+			// Core §4 rule 7 / §6.1.3: comment lines do not affect base
+			// indentation and are skipped — including here, in the lookahead
+			// that decides whether this bare key has any nested block at all.
+			// Neither a blank nor a comment line establishes the baseline;
+			// parseBlock re-skips the same lines from i once it is called.
+			for j < len(lines) && (trimWhitespace(lines[j].text) == "" || strings.HasPrefix(trimWhitespace(lines[j].text), "#")) {
 				j++
 			}
 			if j < len(lines) && lines[j].indent > 0 {

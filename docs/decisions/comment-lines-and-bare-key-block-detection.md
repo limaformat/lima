@@ -1,10 +1,23 @@
 # Decision: do comment lines end lookahead for a bare key's block?
 
-**Status: decided (2026-09-04) — option C (fix all three implementations to
-match the spec text; add a corpus fixture).** Tracked as P1 item 4 in
-[`../review-2026-09-followups.md`](../review-2026-09-followups.md). Not yet
-implemented. The spec text (§4 rule 7 / §6.1.3) stands; the two published
-implementations that diverge from it have a real, shipped conformance gap.
+**Status: resolved (2026-09-04) — option C, implemented in all three
+implementations.** Tracked as P1 item 4 in
+[`../review-2026-09-followups.md`](../review-2026-09-followups.md). The
+spec text (§4 rule 7 / §6.1.3) stands; the bare-key lookahead in every
+implementation now skips comment lines (not only blank lines) at every
+site that decides whether a bare key has a nested block — see
+[`../corpus-design/coverage/core.md`](../corpus-design/coverage/core.md)'s
+"Comment lines before a nested block" section (corpus cases C-234–C-236,
+`since: "1.0.3"`). Go's nested-mapping lookahead additionally had no skip
+loop at all before this fix, so a plain blank line broke it there too, not
+only a comment — a strictly worse instance of the same bug, found and
+fixed during the port.
+
+Found incidentally while fixing this: Go's block-sequence branch (`- key:`)
+does not support a bare key with a nested block at all, in either the
+first-item or continuation-key position. Unrelated to the comment-lookahead
+question this document is about — not fixed here, tracked as a new item in
+`../review-2026-09-followups.md`.
 
 Discovered incidentally while reviewing the Go port's fix for
 [`structural-indentation-unicode-whitespace.md`](structural-indentation-unicode-whitespace.md)

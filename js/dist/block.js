@@ -77,6 +77,19 @@ const trimSlice = (source, start, end) => {
     return source.slice(start, end);
 };
 const cursorContent = (cursor) => cursor.source.slice(cursor.contentStart, cursor.lineEnd);
+/**
+ * Core §4 rule 7 / §6.1.3: comment lines (first non-whitespace character
+ * `#`) do not affect base indentation and are skipped — including in the
+ * lookahead that decides whether a bare key (`key:` with no inline value)
+ * has any nested block at all. Advancing past a comment here, not only a
+ * blank line, keeps that pre-check consistent with the same skip already
+ * applied once inside an established block (`parseCursorBlock`'s own
+ * `cursor.empty || cursor.firstCode === 35` check at the top of its loop).
+ */
+const skipEmptyAndCommentLines = (cursor) => {
+    while (cursor.valid && (cursor.empty || cursor.firstCode === 35))
+        cursor.next();
+};
 const cursorAfterDash = (cursor) => {
     const start = cursor.contentStart;
     const end = cursor.lineEnd;
@@ -127,8 +140,7 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
                     const key = stripKeyQuotes(keyRaw, ctx.strict, line);
                     checkKeyLength(key, () => line);
                     cursor.next();
-                    while (cursor.valid && cursor.empty)
-                        cursor.next();
+                    skipEmptyAndCommentLines(cursor);
                     if (cursor.valid && cursor.indent > indent) {
                         const nested = parseCursorBlock(cursor, cursor.indent, ctx, baseLine, builder);
                         builder.setMapping(pendingItem, key, nested ?? builder.null(line));
@@ -235,8 +247,7 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
                 const key = stripKeyQuotes(trimSlice(afterDash, 0, afterDash.length - 1), ctx.strict, line);
                 checkKeyLength(key, () => line);
                 cursor.next();
-                while (cursor.valid && cursor.empty)
-                    cursor.next();
+                skipEmptyAndCommentLines(cursor);
                 if (cursor.valid && cursor.indent > baseIndent) {
                     const nested = parseCursorBlock(cursor, cursor.indent, ctx, baseLine, builder);
                     pendingItem = builder.createMappingWith(key, nested ?? builder.null(line));
@@ -289,8 +300,7 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
                 if (ctx.strict || ctx.onWarning !== undefined)
                     checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx);
                 cursor.next();
-                while (cursor.valid && cursor.empty)
-                    cursor.next();
+                skipEmptyAndCommentLines(cursor);
                 if (cursor.valid && cursor.indent > baseIndent) {
                     const nested = parseCursorBlock(cursor, cursor.indent, ctx, baseLine, builder);
                     builder.setMapping(entries, key, nested ?? builder.null(line));
@@ -315,8 +325,7 @@ export const parseBlockRange = (source, start, end, ctx, baseLine, builder, dept
     const cursor = new BlockCursor(source, start, end);
     if (!cursor.next())
         return null;
-    while (cursor.valid && cursor.empty)
-        cursor.next();
+    skipEmptyAndCommentLines(cursor);
     if (!cursor.valid)
         return null;
     const baseIndent = cursor.asciiIndent;

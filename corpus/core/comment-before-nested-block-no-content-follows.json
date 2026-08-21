@@ -1,0 +1,11 @@
+{
+  "id": "core.document.comment-before-nested-block.no-content-follows",
+  "spec": "core",
+  "section": "4 (1.0.3)",
+  "description": "Skipping a comment in the bare-key lookahead does not manufacture content where none exists: if only a dedented key follows the (skipped) comment, the bare key's value is still null.",
+  "input": "key:\n  # comment\nnext: value\n",
+  "expect": {
+    "result": { "key": null, "next": "value" }
+  },
+  "tags": ["positive", "keys", "comments"]
+}
