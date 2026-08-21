@@ -168,6 +168,15 @@ describe('validateCase — structural rules', () => {
 		const result = validateCase({ ...baseCase, tags: ['limit', 'limit'] })
 		expect(result.valid).toBe(false)
 	})
+
+	it('accepts a spec: "core" case with an explicit api: "core"', () => {
+		expect(validateCase({ ...baseCase, api: 'core' }).valid).toBe(true)
+	})
+
+	it('rejects a spec: "core" case with api: "parse" or api: "references"', () => {
+		expect(validateCase({ ...baseCase, api: 'parse' }).valid).toBe(false)
+		expect(validateCase({ ...baseCase, api: 'references' }).valid).toBe(false)
+	})
 })
 
 describe('validateCase — real corpus fixtures', () => {

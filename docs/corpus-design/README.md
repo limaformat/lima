@@ -126,19 +126,37 @@ For readability, these defaults apply:
 strict = false
 partials = {}
 warnings = []
-api = "references"  # frozen 1.0 suites
+api = "core"        # spec: "core" cases
+api = "references"  # spec: "references", frozen 1.0
+api = "parse"       # spec: "references", 2.0
 ```
 
 Default values should not be spelled out in sidecars.
 
 Every case in a newly versioned suite declares `specVersion` explicitly.
 
-`api` selects the entry point a case runs against. Frozen 1.0 cases default to
-`"references"`; References 2.0 cases default to `"parse"`. In 2.0,
-`"references"` explicitly exercises the deprecated `parseReferences` alias,
-while `"core"` calls `parseCore` directly. Core cases may not set `partials` or
-`mode`. Only set `api` when the entry-point distinction is itself under
-test.
+`api` selects the entry point a case runs against, and defaults from
+`spec`/`specVersion`: a `spec: "core"` case always defaults to `"core"`
+(`parseCore`) — Core cases are reference-unaware by construction, so
+there is never a reason to route one through a References resolver — a
+frozen 1.0 `spec: "references"` case defaults to `"references"`
+(the internal, frozen References 1.0 resolver — never a public API), and
+a References 2.0 case defaults to `"parse"`. In 2.0, `"references"`
+explicitly exercises the deprecated `parseReferences` alias, while
+`"core"` calls `parseCore` directly. Core cases may not set `partials` or
+`mode`, and a `spec: "core"` case may not set `api` to anything but
+`"core"`. Only set `api` explicitly when the entry-point distinction is
+itself under test (e.g. the References 1.0/2.0 entry-point-equivalence
+pair, R-120/C-210).
+
+Every passing `spec: "core"` case is additionally cross-checked against
+`parse` (References 2.0) by the runner itself, not just `parseCore` — see
+`corpus/runner/src/run.ts`'s `crossCheckAgainstParse`. This is not
+configurable per case; it is how the corpus verifies that Core's native
+builder and the References layer's positioned builder agree on
+referenceless input, closing a gap where nearly every Core case used to
+run only through the internal References 1.0 resolver instead of any
+public entry point (`docs/review-2026-09-followups.md` P1 #6).
 
 ## 5. Language-neutral values
 

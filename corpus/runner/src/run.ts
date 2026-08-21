@@ -99,6 +99,32 @@ function invokeParser(c: LoadedCase): {
 	}
 }
 
+/**
+ * Core is reference-unaware by construction (Appendix B): for a
+ * referenceless document, `parseCore` and `parse` (References 2.0) must
+ * produce an identical value. Cross-checking every passing `spec: "core"`
+ * case against `parse` too, not only `parseCore`, is what actually
+ * exercises the public References entry point on Core input — the two
+ * builders (`nativeBuilder` in core.ts, `positionedBuilder` used by
+ * references2.ts) are independent code paths that a Core-only run could
+ * never catch drifting apart. See docs/review-2026-09-followups.md P1 #6.
+ */
+function crossCheckAgainstParse(c: LoadedCase, coreValue: unknown): string[] {
+	try {
+		const value = parse(c.input, {
+			...(c.options.partialsSupplied ? { partials: c.options.partials } : {}),
+			strict: c.options.strict,
+		})
+		return diffCorpusValues(value, coreValue).map(
+			(m) => `parse() diverges from parseCore() on this referenceless input — ${m}`,
+		)
+	} catch (error) {
+		const adapted = classify(error)
+		const detail = adapted.mapped ? `${adapted.diagnostic.code}: ${adapted.diagnostic.message}` : adapted.rawMessage
+		return [`parseCore() succeeded but parse() threw on the same referenceless input: ${detail}`]
+	}
+}
+
 function runCase(c: LoadedCase): CaseOutcome {
 	const { result, warnings, unmappedWarnings } = invokeParser(c)
 	const notes =
@@ -129,6 +155,10 @@ function runCase(c: LoadedCase): CaseOutcome {
 					reasons.push(`warnings[${i}].${m.field}: expected ${JSON.stringify(m.expected)}, got ${JSON.stringify(m.actual)}`)
 				}
 			})
+		}
+
+		if (reasons.length === 0 && c.spec === 'core' && c.api === 'core') {
+			reasons.push(...crossCheckAgainstParse(c, result.value))
 		}
 
 		return {

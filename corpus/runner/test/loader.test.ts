@@ -126,4 +126,10 @@ describe('loadCorpus', () => {
 		expect(cases.find((c) => c.id === 'references-2.api.parse-references.deprecated-alias')?.api).toBe('references')
 		expect(new Set(cases.map((c) => c.id)).size).toBe(119)
 	})
+
+	it('defaults every spec: "core" case to api: "core" — the public parseCore entry point, not a References resolver', () => {
+		const { cases } = loadCorpus(corpusRoot, ['core-1.0'])
+		expect(cases.length).toBeGreaterThan(0)
+		expect(cases.every((c) => c.api === 'core')).toBe(true)
+	})
 })

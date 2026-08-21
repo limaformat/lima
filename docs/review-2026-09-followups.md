@@ -144,14 +144,22 @@ offset).
 
 ### 6. Point the Core corpus gate at the public API — corpus infra (`corpus/runner/`) — M6
 
-`loader.ts` dispatches Core cases (specVersion 1.0, no `api` field) to
-`parseReferencesV1` — the References 1.0 resolver, which never shipped in
-the public API. Only 1 of 149 Core cases sets `api: "core"`.
-
-**Fix:** run Core cases against `parseCore` **and** `parse` (2.0); make
-`api` explicit or derive it from `spec`; freeze/version the runner dispatch
-semantics alongside the corpus (the manifest hashes protect only the
-fixture files, not which entry point a frozen case exercises).
+**Status: done.** `loader.ts` defaulted every `spec: "core"` case with no
+explicit `api` to `references` — dispatching it to `parseReferencesV1`,
+the internal References 1.0 resolver, which never shipped in the public
+API. 173 of 174 Core cases had no explicit `api` and so ran through it.
+Fixed: the default is now spec-aware (`spec === 'core'` → `core`); the
+schema rejects an explicit `api: "parse"`/`"references"` on a `spec:
+"core"` case as nonsensical. Every passing `spec: "core"` case is now
+*also* cross-checked against `parse` (References 2.0) — Core is
+reference-unaware by construction, so the two builders (`nativeBuilder`,
+`positionedBuilder`) must agree exactly on referenceless input; this is
+the part of the fix that actually exercises the public References entry
+point on Core input, not only `parseCore`. Full corpus re-run clean: all
+174 cases pass through `parseCore`, and all 174 cross-checks against
+`parse` agree — no divergence between the two builders. Rust and Go
+needed no change: both already call the public Core entry point directly
+for `corpus/core/*.json`, never routed through an `api` field.
 
 ### 7. Clarify the References 1.0 status — docs
 

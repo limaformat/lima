@@ -162,6 +162,13 @@ export function validateCase(doc: unknown): ValidationResult {
 		if (doc.api === 'core' && isPlainObject(doc.options) && ('partials' in doc.options || 'mode' in doc.options)) {
 			fail(errors, 'options', 'parseCore has no partials or mode option')
 		}
+		// A `spec: "core"` case tests Core grammar only, never reference
+		// resolution — `parse`/`parseReferences` (the References entry
+		// points) make no sense as its explicit api. The default is already
+		// `core`; an explicit override only exists to be wrong here.
+		if (doc.spec === 'core' && doc.api !== 'core') {
+			fail(errors, 'api', 'a spec: "core" case must use api: "core" (or omit api)')
+		}
 	}
 	if ('section' in doc && (typeof doc.section !== 'string' || doc.section.length < 1)) {
 		fail(errors, 'section', 'must be a non-empty string')

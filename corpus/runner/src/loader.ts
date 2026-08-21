@@ -121,7 +121,15 @@ export function loadCase(jsonPath: string): LoadResult {
 			section: d.section,
 			description: d.description,
 			input,
-			api: d.api ?? (d.specVersion === '2.0' ? 'parse' : 'references'),
+			// A `spec: "core"` case always defaults to the public `parseCore`
+			// entry point — Core cases never involve reference resolution, so
+			// there is no reason to route them through a References resolver
+			// at all (previously every Core case without an explicit `api`
+			// defaulted to `references`, running through the frozen internal
+			// References 1.0 resolver instead of the public API it claims to
+			// test — see docs/review-2026-09-followups.md P1 #6). Only a
+			// `spec: "references"` case's default depends on `specVersion`.
+			api: d.api ?? (d.spec === 'core' ? 'core' : d.specVersion === '2.0' ? 'parse' : 'references'),
 			options,
 			expectation,
 			tags: d.tags ?? [],
