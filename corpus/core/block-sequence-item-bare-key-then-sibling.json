@@ -1,0 +1,11 @@
+{
+  "id": "core.block-sequence.item-bare-key-then-sibling",
+  "spec": "core",
+  "section": "7.2 (1.0.4)",
+  "description": "A sibling key after a bare key's nested block resumes as a further continuation key of the same item, not as a new item or as content of the nested block.",
+  "input": "items:\n  - key:\n      nested: value\n    sibling: y\n",
+  "expect": {
+    "result": { "items": [ { "key": { "nested": "value" }, "sibling": "y" } ] }
+  },
+  "tags": ["positive", "block-sequence", "keys"]
+}

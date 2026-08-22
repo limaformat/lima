@@ -1,0 +1,11 @@
+{
+  "id": "core.block-sequence.item-bare-key-no-content",
+  "spec": "core",
+  "section": "7.2 (1.0.4)",
+  "description": "A bare key as a block sequence item's key with nothing more indented following it is null, the same as a bare key anywhere else with an empty block.",
+  "input": "items:\n  - key:\n",
+  "expect": {
+    "result": { "items": [ { "key": null } ] }
+  },
+  "tags": ["positive", "block-sequence", "keys"]
+}

@@ -173,16 +173,20 @@ precisely.
 
 ### 12. Go: bare key with a nested block unsupported in a block sequence — code (Go)
 
-Found incidentally while fixing #4. `items:\n  - key:\n      nested:
-value` parses `key:` as a literal string item (`["key:"]`) instead of
-`[{key: {nested: value}}]`, in both the first-item and continuation-key
-position of a block-sequence item's mapping. TypeScript and Rust handle
-this correctly — Go's `parseBlock` array branch (`go/core.go`) never
-attempts the bare-key-with-nested-block case at all, only `key: value`
-(via `findSep`). Needs a `bare`-key branch added to both the first-item
-`- key:` case and the continuation-key loop, mirroring the existing
-nested-mapping bare-key handling in the same file. No corpus case yet
-(would fail Go until fixed); add one alongside the fix.
+**Status: done.** Found incidentally while fixing #4. `items:\n  -
+key:\n      nested: value` used to parse `key:` as a literal string item
+(`["key:"]`) instead of `[{key: {nested: value}}]`, in both the
+first-item and continuation-key position of a block-sequence item's
+mapping — TypeScript and Rust already handled this correctly; Go's
+`parseBlock` array branch never attempted the bare-key case at all, only
+`key: value` (via `findSep`). Fixed with two new helpers in `go/core.go`,
+`bareNestedValue` and `parseArrayItemContinuationKeys` (see
+`docs/corpus-design/coverage/core.md`'s "Bare keys in block sequence
+items" section). Corpus cases C-237–C-240, `since: "1.0.4"`. Verified
+against a sibling key resuming after the nested block, and the
+same-column-as-key edge case (content indented no deeper than the key
+itself still nests under it, matching TypeScript's existing behaviour
+exactly, not just "some deeper indent works").
 
 ---
 

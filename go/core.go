@@ -103,6 +103,73 @@ func spaceBeforeColon(s string) bool {
 	return false
 }
 
+// bareNestedValue looks ahead (skipping blank/comment lines, per Core §4
+// rule 7 / §6.1.3) for a nested block at deeper indentation than indent —
+// the array item's own base — for a bare key (one with no inline value)
+// inside a block-sequence item's mapping. *idx must already point at the
+// first line after the bare key's own line. Returns null when no such
+// block follows.
+func bareNestedValue(indent, keyLine int, lines []sourceLine, idx *int, strict bool, onWarning func(Diagnostic), captureReferences bool) (*pvalue, error) {
+	j := *idx
+	for j < len(lines) && (trimWhitespace(lines[j].text) == "" || strings.HasPrefix(trimWhitespace(lines[j].text), "#")) {
+		j++
+	}
+	if j >= len(lines) || lineStructuralIndent(lines[j]) <= indent {
+		return pv(Null{}, keyLine), nil
+	}
+	v, e := parseBlock(lines, idx, lineStructuralIndent(lines[j]), strict, onWarning, captureReferences)
+	if e != nil {
+		return nil, e
+	}
+	if v == nil {
+		return pv(Null{}, keyLine), nil
+	}
+	return v, nil
+}
+
+// parseArrayItemContinuationKeys consumes the key/value lines following a
+// block-sequence item's first key, at any indentation deeper than the
+// item's own base (indent) — mirroring the top-level/nested-mapping key
+// grammar, including a bare key (§4 rule 7 / §6.1.3 comment-skip, nested
+// block) alongside an ordinary key: value pair. Stops at the first line
+// that is not a valid continuation key, leaving *idx there.
+func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int, indent int, strict bool, onWarning func(Diagnostic), captureReferences bool) error {
+	for *idx < len(lines) && lineStructuralIndent(lines[*idx]) > indent {
+		cl := lines[*idx]
+		cc := lineContent(cl)
+		s := findSep(cc)
+		bare := false
+		keyEnd := s
+		if s < 0 {
+			if !strings.HasSuffix(cc, ":") || len(cc) < 2 {
+				break
+			}
+			keyEnd = len(cc) - 1
+			bare = true
+		}
+		ckRaw := trimWhitespace(cc[:keyEnd])
+		if !isValidKey(ckRaw) {
+			break
+		}
+		ck, e := stripKeyQuotes(ckRaw, strict, cl.number)
+		if e != nil {
+			return e
+		}
+		*idx++
+		var cv *pvalue
+		if bare {
+			cv, e = bareNestedValue(indent, cl.number, lines, idx, strict, onWarning, captureReferences)
+		} else {
+			cv, e = parseFlowOrScalar(stripComment(trimWhitespace(cc[s+2:])), strict, cl.number, onWarning, captureReferences)
+		}
+		if e != nil {
+			return e
+		}
+		setP(item, ck, cv)
+	}
+	return nil
+}
+
 func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning func(Diagnostic), captureReferences bool) (*pvalue, error) {
 	for *idx < len(lines) && (trimWhitespace(lines[*idx].text) == "" || strings.HasPrefix(trimWhitespace(lines[*idx].text), "#")) {
 		*idx++
@@ -177,23 +244,25 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 					return nil, e
 				}
 				item := []pentry{{key, v}}
-				for *idx < len(lines) && lineStructuralIndent(lines[*idx]) > indent {
-					cl := lines[*idx]
-					cc := lineContent(cl)
-					s := findSep(cc)
-					if s < 0 || !isValidKey(trimWhitespace(cc[:s])) {
-						break
-					}
-					ck, e := stripKeyQuotes(trimWhitespace(cc[:s]), strict, cl.number)
-					if e != nil {
-						return nil, e
-					}
-					cv, e := parseFlowOrScalar(stripComment(trimWhitespace(cc[s+2:])), strict, cl.number, onWarning, captureReferences)
-					if e != nil {
-						return nil, e
-					}
-					setP(&item, ck, cv)
-					*idx++
+				if e := parseArrayItemContinuationKeys(&item, lines, idx, indent, strict, onWarning, captureReferences); e != nil {
+					return nil, e
+				}
+				arr = append(arr, &pvalue{line: l.number, mapping: item})
+				continue
+			}
+			if keyPart, ok := strings.CutSuffix(rest, ":"); ok && keyPart != "" && isValidKey(trimWhitespace(keyPart)) {
+				key, e0 := stripKeyQuotes(trimWhitespace(keyPart), strict, l.number)
+				if e0 != nil {
+					return nil, e0
+				}
+				*idx++
+				v, e := bareNestedValue(indent, l.number, lines, idx, strict, onWarning, captureReferences)
+				if e != nil {
+					return nil, e
+				}
+				item := []pentry{{key, v}}
+				if e := parseArrayItemContinuationKeys(&item, lines, idx, indent, strict, onWarning, captureReferences); e != nil {
+					return nil, e
 				}
 				arr = append(arr, &pvalue{line: l.number, mapping: item})
 				continue

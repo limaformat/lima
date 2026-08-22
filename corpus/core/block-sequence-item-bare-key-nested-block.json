@@ -1,0 +1,11 @@
+{
+  "id": "core.block-sequence.item-bare-key-nested-block",
+  "spec": "core",
+  "section": "7.2 (1.0.4)",
+  "description": "A bare key (no inline value) as a block sequence item's first key has a nested block, the same as a bare key anywhere else.",
+  "input": "items:\n  - key:\n      nested: value\n",
+  "expect": {
+    "result": { "items": [ { "key": { "nested": "value" } } ] }
+  },
+  "tags": ["positive", "block-sequence", "keys"]
+}

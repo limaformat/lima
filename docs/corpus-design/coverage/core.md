@@ -160,6 +160,10 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-234 | §4/§6.1.3 (1.0.3) | Comments | A comment line does not end the lookahead for whether a bare key has a nested block | positive | both |
 | C-235 | §4/§6.1.3 (1.0.3) | Comments | The comment-skip applies to a bare key at any depth, not only the top level | positive | both |
 | C-236 | §4/§6.1.3 (1.0.3) | Comments | Skipping a comment does not manufacture content: a bare key followed only by a dedented sibling after the comment is still `null` | positive | both |
+| C-237 | §7.2 (1.0.4) | Block sequence | A bare key as a block sequence item's first key has a nested block | positive | both |
+| C-238 | §7.2 (1.0.4) | Block sequence | A bare key as a block sequence item's continuation key also has a nested block | positive | both |
+| C-239 | §7.2 (1.0.4) | Block sequence | A sibling key after a bare key's nested block resumes as a further continuation key of the same item | positive | both |
+| C-240 | §7.2 (1.0.4) | Block sequence | A bare key with nothing more indented following it is `null`, the same as a bare key anywhere else | positive | both |
 
 **Scope:** 132 substantive check points (plus the 1.0.x errata rows below). A check point can produce multiple concrete cases.
 
@@ -230,8 +234,25 @@ while porting): Go's block-sequence branch (`- key:`) does not support a
 bare key with a nested block at all, in either the first-item or
 continuation-key position — `items:\n  - key:\n      nested: value`
 parses `key:` as a literal string item instead of `{key: {nested: value}}`.
-TypeScript and Rust handle this correctly. Tracked as a new item in
-`docs/review-2026-09-followups.md`.
+TypeScript and Rust handle this correctly. Tracked as item 12 in
+`docs/review-2026-09-followups.md`; closed below.
+
+### Bare keys in block sequence items — C-237–C-240 (item 12)
+
+TypeScript and Rust already supported a bare key (no inline value) as a
+block sequence item's first key or a later continuation key, with a
+nested block looked ahead for the same way as anywhere else. Go's
+`parseBlock` array branch never attempted this at all — only `key: value`
+(via `findSep`) — so `- key:` fell through to being parsed as the literal
+scalar `"key:"`, and a bare continuation key broke out of the
+continuation loop entirely, silently dropping the key (non-strict) or
+throwing a confusing "mixed array and map entries" error (strict).
+Fixed in `go/core.go` with two new helpers, `bareNestedValue` (the same
+blank/comment-skipping lookahead as the top-level and nested-mapping
+bare-key sites) and `parseArrayItemContinuationKeys` (replacing the old
+value-only inline loop, now handling both forms). Verified byte-for-byte
+against TypeScript's behaviour for the sibling-after-nested-block and
+same-column-as-key edge cases, not only the straightforward form.
 
 ## Known implementation gaps
 

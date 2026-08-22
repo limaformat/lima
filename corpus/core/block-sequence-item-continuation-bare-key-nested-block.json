@@ -1,0 +1,11 @@
+{
+  "id": "core.block-sequence.item-continuation-bare-key-nested-block",
+  "spec": "core",
+  "section": "7.2 (1.0.4)",
+  "description": "A bare key as a block sequence item's continuation key (after its first key: value pair) also has a nested block.",
+  "input": "items:\n  - a: 1\n    key:\n      nested: value\n",
+  "expect": {
+    "result": { "items": [ { "a": 1, "key": { "nested": "value" } } ] }
+  },
+  "tags": ["positive", "block-sequence", "keys"]
+}

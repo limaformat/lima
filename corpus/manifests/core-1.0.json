@@ -3,8 +3,8 @@
   "frozen": true,
   "baselineVersion": "1.0.0",
   "baselineCaseCount": 149,
-  "specVersion": "1.0.3",
-  "caseCount": 174,
+  "specVersion": "1.0.4",
+  "caseCount": 178,
   "cases": [
     {
       "path": "core/api-parse-core-never-resolves-references.json",
@@ -173,6 +173,30 @@
       "id": "core.block-scalar.trailing-blank-lines-stripped",
       "sha256": "7cd971bc1188bee78d3ba8503b6ad484f1a9004e95ca5d414cbc9778a1894a33",
       "since": "1.0.0"
+    },
+    {
+      "path": "core/block-sequence-item-bare-key-nested-block.json",
+      "id": "core.block-sequence.item-bare-key-nested-block",
+      "sha256": "2943ae3790be459dcab3c72a19cc5d0b712a1db9182658068e38b14e177753b4",
+      "since": "1.0.4"
+    },
+    {
+      "path": "core/block-sequence-item-bare-key-no-content.json",
+      "id": "core.block-sequence.item-bare-key-no-content",
+      "sha256": "86a14ed838da5cda5ac88e2b6ef717218a910dd07b054fb530bd496c9b3cbca4",
+      "since": "1.0.4"
+    },
+    {
+      "path": "core/block-sequence-item-bare-key-then-sibling.json",
+      "id": "core.block-sequence.item-bare-key-then-sibling",
+      "sha256": "0f7a0dc1088e70f060dd20d0600632f4b19b380a598fec7b48622cb1f5823d5f",
+      "since": "1.0.4"
+    },
+    {
+      "path": "core/block-sequence-item-continuation-bare-key-nested-block.json",
+      "id": "core.block-sequence.item-continuation-bare-key-nested-block",
+      "sha256": "80bc868fd8926dd6f4b063b4dab2cda8c3bb3dacea480ed8710efaab8374c754",
+      "since": "1.0.4"
     },
     {
       "path": "core/block-sequence-nested-sequence-nonstrict.json",
