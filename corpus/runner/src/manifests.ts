@@ -33,6 +33,40 @@ export interface SuiteManifest {
 const directoryFor = (suite: SuiteManifest['suite']): string =>
 	suite === 'core-1.0' ? 'core' : 'references'
 
+/**
+ * SHA-256 over the baseline set — every entry whose `since` equals
+ * `baselineVersion` — as `path \t id \t sha256` lines, ordered by path.
+ *
+ * This is the independent anchor the freeze rests on. `regenerateManifest`
+ * carries baseline entries forward verbatim and cannot alter them; a
+ * hand-edit of the manifest that changes a baseline path, id, or content
+ * hash therefore also changes this fingerprint, and `verifyFrozenManifest`
+ * checks the recomputed fingerprint against `BASELINE_DIGESTS` below — a
+ * constant that lives in source, not in the regenerable manifest. Moving
+ * the baseline now takes a third, deliberate edit right next to this note.
+ */
+export function baselineFingerprint(
+	cases: readonly ManifestEntry[],
+	baselineVersion: string,
+): string {
+	const lines = cases
+		.filter((entry) => entry.since === baselineVersion)
+		.map((entry) => ({ ...entry }))
+		.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+		.map((entry) => `${entry.path}\t${entry.id}\t${entry.sha256}`)
+	return createHash('sha256').update(lines.join('\n')).digest('hex')
+}
+
+/**
+ * The frozen baseline fingerprint of each 1.0 suite. Set once when the
+ * baseline is declared; changing a value here is the same act as breaking
+ * the freeze, and must be reviewed as such.
+ */
+export const BASELINE_DIGESTS: Record<SuiteManifest['suite'], string> = {
+	'core-1.0': '35957b2f1803b76eeb328b687b3dd9231d192523598c1ada46b47c914b48cd68',
+	'references-1.0': '30297b357407cabad225b5e38d5167367680023da03e5df75ee7d435a7c93915',
+}
+
 interface ScannedCase {
 	path: string
 	id: string
@@ -54,12 +88,18 @@ export function scanSuiteFiles(corpusRoot: string, suite: SuiteManifest['suite']
 }
 
 /**
- * Regenerates a suite manifest from disk, carrying `since` forward for every
- * case the prior manifest already listed and stamping `newVersion` on any
- * case the prior manifest did not. The baseline (`baselineVersion` /
- * `baselineCaseCount`) is carried through untouched. If the prior manifest
- * predates the `since` mechanism, every one of its cases is adopted as the
- * baseline.
+ * Regenerates a suite manifest from disk. Errata cases the prior manifest
+ * already listed keep their `since`; new files are stamped `newVersion`.
+ *
+ * Baseline entries — `since === baselineVersion` — are **not** re-read from
+ * disk: their `path`, `id`, and `sha256` are carried forward from the prior
+ * manifest verbatim. If a baseline case file has since been edited or
+ * removed, regeneration throws rather than absorbing the change, and the
+ * recomputed baseline fingerprint is checked against `BASELINE_DIGESTS`.
+ * Regeneration is an add-only operation over the baseline.
+ *
+ * If the prior manifest predates the `since` mechanism, every one of its
+ * cases is adopted as the baseline (one-time migration).
  */
 export function regenerateManifest(
 	corpusRoot: string,
@@ -72,22 +112,62 @@ export function regenerateManifest(
 	const baselineVersion = legacy
 		? (/^\d+\.\d+$/.test(prior.specVersion) ? `${prior.specVersion}.0` : prior.specVersion)
 		: prior.baselineVersion
-	const priorSince = new Map(
-		prior.cases.map((entry) => [entry.path, 'since' in entry ? entry.since : baselineVersion]),
+	const priorByPath = new Map(
+		prior.cases.map((entry) => [
+			entry.path,
+			{ ...entry, since: 'since' in entry ? entry.since : baselineVersion },
+		]),
 	)
-	const cases: ManifestEntry[] = scanSuiteFiles(corpusRoot, prior.suite).map((scanned) => ({
-		...scanned,
-		since: priorSince.get(scanned.path) ?? newVersion,
-	}))
-	const baselineCaseCount = legacy
-		? prior.cases.length
-		: prior.baselineCaseCount
+	const scanned = scanSuiteFiles(corpusRoot, prior.suite)
+	const scannedByPath = new Map(scanned.map((entry) => [entry.path, entry]))
+
+	const cases: ManifestEntry[] = scanned.map((entry): ManifestEntry => {
+		const priorEntry = priorByPath.get(entry.path)
+		const since = priorEntry?.since ?? newVersion
+		if (since !== baselineVersion) return { ...entry, since }
+		// Baseline case: carry the prior manifest's record forward untouched,
+		// and refuse to regenerate over an edited baseline file.
+		if (priorEntry === undefined) {
+			throw new Error(`${entry.path}: new file cannot join the frozen ${baselineVersion} baseline`)
+		}
+		if (entry.sha256 !== priorEntry.sha256 || entry.id !== priorEntry.id) {
+			throw new Error(
+				`${entry.path}: baseline case changed on disk (id/content hash) — the ` +
+				`${baselineVersion} baseline is frozen and cannot be regenerated`,
+			)
+		}
+		return { path: priorEntry.path, id: priorEntry.id, sha256: priorEntry.sha256, since }
+	})
+
+	for (const entry of priorByPath.values()) {
+		if (entry.since === baselineVersion && !scannedByPath.has(entry.path)) {
+			throw new Error(`${entry.path}: baseline case removed — the ${baselineVersion} baseline is frozen`)
+		}
+	}
+
+	const baselineCaseCount = legacy ? prior.cases.length : prior.baselineCaseCount
+	const fingerprint = baselineFingerprint(cases, baselineVersion)
+	if (!legacy && fingerprint !== BASELINE_DIGESTS[prior.suite]) {
+		throw new Error(
+			`${prior.suite}: baseline fingerprint ${fingerprint} does not match the ` +
+			`pinned digest — the prior manifest's baseline has been tampered with`,
+		)
+	}
+
+	// `specVersion` is the highest revision actually represented in `cases`,
+	// not whatever `newVersion` a caller passed: regenerating an errata-free
+	// suite with an unrelated version number must not bump it.
+	const specVersion = cases.reduce(
+		(hi, entry) => (entry.since.localeCompare(hi, undefined, { numeric: true }) > 0 ? entry.since : hi),
+		baselineVersion,
+	)
+
 	return {
 		suite: prior.suite,
 		frozen: true,
 		baselineVersion,
 		baselineCaseCount,
-		specVersion: newVersion,
+		specVersion,
 		caseCount: cases.length,
 		cases,
 	}
@@ -120,6 +200,15 @@ export function verifyFrozenManifest(
 		errors.push(
 			`baseline: expected ${manifest.baselineCaseCount} cases at ${manifest.baselineVersion}, ` +
 			`manifest lists ${baseline.length}`,
+		)
+	}
+
+	const pinned = BASELINE_DIGESTS[manifest.suite]
+	const fingerprint = baselineFingerprint(manifest.cases, manifest.baselineVersion)
+	if (fingerprint !== pinned) {
+		errors.push(
+			`baseline fingerprint ${fingerprint} does not match the pinned digest ${pinned} — ` +
+			`a frozen ${manifest.baselineVersion} case's path, id, or content has been altered`,
 		)
 	}
 

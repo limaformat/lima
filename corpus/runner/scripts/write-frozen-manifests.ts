@@ -5,9 +5,12 @@
  *   bun scripts/write-frozen-manifests.ts <newVersion> [suite...]
  *
  * `newVersion` (e.g. `1.0.1`) is stamped as `since` on every case the prior
- * manifest did not already list. Baseline cases are carried through with
- * their existing `since` and hashes untouched; `verifyFrozenManifest` then
- * enforces that the baseline set never changed.
+ * manifest did not already list. Baseline cases (`since === baselineVersion`)
+ * are carried through verbatim — regeneration throws rather than absorbing an
+ * edited or removed baseline file, and re-checks the baseline fingerprint
+ * against the pinned `BASELINE_DIGESTS`. `specVersion` follows the highest
+ * revision actually present, so passing a Core version here does not bump an
+ * errata-free References manifest.
  *
  * With no suite arguments, every manifest under `corpus/manifests/` is
  * regenerated.
