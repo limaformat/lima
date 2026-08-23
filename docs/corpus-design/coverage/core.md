@@ -164,6 +164,12 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-238 | §7.2 (1.0.4) | Block sequence | A bare key as a block sequence item's continuation key also has a nested block | positive | both |
 | C-239 | §7.2 (1.0.4) | Block sequence | A sibling key after a bare key's nested block resumes as a further continuation key of the same item | positive | both |
 | C-240 | §7.2 (1.0.4) | Block sequence | A bare key with nothing more indented following it is `null`, the same as a bare key anywhere else | positive | both |
+| C-241 | §5.1 (1.0.5) | Keys | A dotted unquoted key is not a key at the top level; the line is skipped and strict does not throw (not in §10) | positive | strict |
+| C-242 | §5.1 (1.0.5) | Keys | A dotted unquoted key is not a key in a nested mapping; the bare outer key is left with no child | positive | strict |
+| C-243 | §5.1 (1.0.5) | Keys | A dotted unquoted key is not a key in a flow mapping; the entry is dropped | positive | strict |
+| C-244 | §5.1 (1.0.5) | Keys | A dotted unquoted key in a block sequence item is not a mapping; the item is a literal scalar | positive | both |
+| C-245 | §5.1 (1.0.5) | Keys | A key beginning with NBSP is not an unquoted key in any implementation, independent of the Unicode-indentation decision | positive | both |
+| C-246 | §5.1 (1.0.5) | Keys | `:`, `-`, leading `_`, and trailing digits stay valid unquoted-key characters in nested and flow mappings, not only at the top level | positive | both |
 
 **Scope:** 132 substantive check points (plus the 1.0.x errata rows below). A check point can produce multiple concrete cases.
 
@@ -207,13 +213,10 @@ byte-frozen.
 - **Malformed unquoted keys.** An unquoted key with interior whitespace is
   treated as an unrecognised line/item in nested and flow mappings, the
   same as at the top level (§5.2). §10's strict list is closed and does
-  not cover this, so it is skipped in both modes, not thrown.
-- **Deliberately not tightened.** An unquoted key with other non-§5.1
-  punctuation (`a.b`, `($x)`) is still accepted in nested/flow contexts;
-  the frozen 1.0 `references.unsupported.references-in-keys-remain-literal`
-  case relies on a flow key `{($a): v}` parsing literally, so fully
-  enforcing §5.1 there is a future errata question, not this fix. Likewise
-  a literal newline inside a top-level quoted key is still accepted
+  not cover this, so it is skipped in both modes, not thrown. This step
+  rejected only interior ASCII space/tab; the full §5.1 grammar is
+  enforced by C-241–C-246 (1.0.5).
+- A literal newline inside a top-level quoted key is still accepted
   (`docs/review-2026-09-followups.md` P2 #11).
 
 ### Comment lines before a nested block — C-234–C-236 (P1 #4)
@@ -236,6 +239,37 @@ continuation-key position — `items:\n  - key:\n      nested: value`
 parses `key:` as a literal string item instead of `{key: {nested: value}}`.
 TypeScript and Rust handle this correctly. Tracked as item 12 in
 `docs/review-2026-09-followups.md`; closed below.
+
+### Key grammar §5.1 — C-241–C-246 (Core 1.0.5, Codex re-review MAJOR 1)
+
+The P1 #2/#3 step centralised *where a key ends* but only rejected an
+unquoted key with an interior ASCII space/tab. The §5.1 pattern
+`[a-zA-Z0-9_][a-zA-Z0-9_:\-]*` was still enforced only by the top-level
+scanner (`js/src/scanner.ts`), not in the block-nested or flow contexts,
+and not at all in the Rust or Go top-level scanners — so `a.b`, `/x`,
+`($x)`, `${x}`, and a leading-NBSP key were accepted as Core syntax in
+some contexts and languages but not others. `isValidKey`
+(`scalars.{ts,rs}` / `scalars.go`) now enforces the full §5.1 grammar for
+unquoted keys, shared by all three mapping contexts in all three
+languages. A non-conforming unquoted key is an unrecognised line/item,
+skipped in both modes (§4; §10's list stays closed).
+
+Two existing cases changed expectation, not classification:
+`references(-2).unsupported.references-in-keys-remain-literal` — the
+unquoted flow key `{($a): v}` / `{${a}: v}` is now dropped (`m: {}`); each
+case's quoted-key half still demonstrates the token staying literal. The
+frozen References 1.0 case was amended once, with its manifest `sha256`
+and `corpus/runner/src/manifests.ts`'s `BASELINE_DIGESTS` re-pinned in the
+same commit — the deliberate, reviewable baseline-amendment path that the
+BLOCKER 1 fix established.
+
+`docs/decisions/structural-indentation-unicode-whitespace.md` is
+unaffected: it governs whether Unicode whitespace is *indentation*, not
+whether it may appear in a key. TypeScript still treats NBSP as
+indentation and so still differs from Rust/Go on
+`parent:\n  a:\n\u00a0\u00a0b: value` (where `b` reparents under `parent`
+in TS but the line is dropped in Rust/Go) — but all three now agree that
+`\u00a0key` is not a key.
 
 ### Bare keys in block sequence items — C-237–C-240 (item 12)
 

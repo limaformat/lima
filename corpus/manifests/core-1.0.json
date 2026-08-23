@@ -3,8 +3,8 @@
   "frozen": true,
   "baselineVersion": "1.0.0",
   "baselineCaseCount": 149,
-  "specVersion": "1.0.4",
-  "caseCount": 178,
+  "specVersion": "1.0.5",
+  "caseCount": 184,
   "cases": [
     {
       "path": "core/api-parse-core-never-resolves-references.json",
@@ -667,6 +667,12 @@
       "since": "1.0.0"
     },
     {
+      "path": "core/key-array-item-dot-invalid.json",
+      "id": "core.keys.array-item.dot-invalid",
+      "sha256": "5e68cc4167f6e183714ab1ee82bc5e26fe01b5ec0c13e32c907fe13300dcf8d8",
+      "since": "1.0.5"
+    },
+    {
       "path": "core/key-array-item-unquoted-space-invalid.json",
       "id": "core.keys.array-item.unquoted-space-invalid",
       "sha256": "aaf275dd9b7ea86894a861d2b1e623a7e9a82cc08128091612d082b4e863162d",
@@ -679,6 +685,12 @@
       "since": "1.0.2"
     },
     {
+      "path": "core/key-flow-mapping-dot-invalid.json",
+      "id": "core.keys.flow-mapping.dot-invalid",
+      "sha256": "a6bb6209acdcb74dc87d98c5e7f2c79c5f630ff8a62d9545dae5fc538550abaa",
+      "since": "1.0.5"
+    },
+    {
       "path": "core/key-flow-mapping-quoted-with-colon.json",
       "id": "core.keys.flow-mapping.quoted-with-colon",
       "sha256": "398c61c5490561f38a6f85b4622cb1bebad8e2f1fec7df2406dd07baa75ee5ac",
@@ -689,6 +701,18 @@
       "id": "core.keys.flow-mapping.unquoted-space-invalid",
       "sha256": "5cafee4f0ce0dceee43fcc63aa8b474c1ab658b79d36fe07bfcc3cd28d722020",
       "since": "1.0.2"
+    },
+    {
+      "path": "core/key-leading-nbsp-invalid.json",
+      "id": "core.keys.top-level.leading-nbsp-invalid",
+      "sha256": "b56e0c3d479dfc5893e7e9603023d3fdf14d40214a0789cac28dfb95ed904514",
+      "since": "1.0.5"
+    },
+    {
+      "path": "core/key-nested-dot-invalid.json",
+      "id": "core.keys.nested.dot-invalid",
+      "sha256": "49e93b1db94a9aa48a228689ca74b78bcdc073b2a1dbfb70c6b7751fd73b3e05",
+      "since": "1.0.5"
     },
     {
       "path": "core/key-nested-double-quoted-escaped-quote.json",
@@ -715,10 +739,22 @@
       "since": "1.0.2"
     },
     {
+      "path": "core/key-section-5-1-punctuation-valid.json",
+      "id": "core.keys.section-5-1-punctuation-valid",
+      "sha256": "f4a2cf6d2771ffd1acc191e790ec21c0f75e55a96f1aeba0e2436aa696e8a09d",
+      "since": "1.0.5"
+    },
+    {
       "path": "core/key-separator-first-colon-space.json",
       "id": "core.keys.separator.first-colon-space-outside-quotes",
       "sha256": "184cdb7b1e3d0689ec7c4c6c818d5c2849a831fddd4aba730ab182aff53251c3",
       "since": "1.0.0"
+    },
+    {
+      "path": "core/key-top-level-dot-invalid.json",
+      "id": "core.keys.top-level.dot-invalid",
+      "sha256": "f8da87fd82224d5a2b94da896e28ce09c4ac7b31241efc527e4da90bb4e07b8b",
+      "since": "1.0.5"
     },
     {
       "path": "core/leading-tabs.json",

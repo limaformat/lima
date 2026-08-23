@@ -190,6 +190,73 @@ exactly, not just "some deeper indent works").
 
 ---
 
+## Codex re-review — 2026-09-07
+
+Independent re-review of the batch above (`cbc2701..9fcc88d`) by Codex,
+cross-checked against the code. Findings `CR-B1`, `CR-M1` … below.
+
+### CR-B1. The frozen manifest did not actually freeze the baseline — corpus infra
+
+**Status: done, commit `10ba6c6`.** `verifyFrozenManifest` only ever
+compared the corpus against the committed manifest, and `regenerateManifest`
+re-read every file and adopted its current id/hash — so editing a 1.0.0
+case and re-running `write-frozen-manifests.ts` absorbed the change
+silently. Fixed: `regenerateManifest` carries baseline entries
+(`since === baselineVersion`) forward verbatim and throws on an edited /
+added / removed baseline file; new `BASELINE_DIGESTS` constant in
+`manifests.ts` (SHA-256 over the sorted baseline `(path, id, sha256)`
+tuples, in source, not in the regenerable manifest) is re-checked by both
+functions. `specVersion` now follows the highest revision actually present.
+6 new runner tests.
+
+### CR-M1. §5.1 unquoted-key grammar not enforced — code (TS + Rust + Go) + corpus
+
+**Status: done (Core 1.0.5), decision: option 1a.** §5.1's pattern
+`[a-zA-Z0-9_][a-zA-Z0-9_:\-]*` was enforced only by the TS top-level
+scanner — the block-nested and flow contexts (all languages) and the
+Rust/Go top-level scanners accepted `a.b`, `/x`, `($x)`, `${x}`, and a
+leading-NBSP key. `isValidKey` (`scalars.{ts,rs}` / `scalars.go`) now
+enforces the full grammar, shared across all three mapping contexts in all
+three languages; a non-conforming unquoted key is an unrecognised
+line/item, skipped in both modes. Corpus C-241–C-246 (`since: "1.0.5"`),
+Core suite 178 → 184. Two cases changed expectation:
+`references(-2).unsupported.references-in-keys-remain-literal` now yield
+`m: {}` for the unquoted flow-key half; the frozen References 1.0 case was
+amended once with its manifest hash and `BASELINE_DIGESTS['references-1.0']`
+re-pinned (the CR-B1 baseline-amendment path). Closes the M2 table's dot
+row, which the P1 #2/#3 step left open.
+
+### CR-M2. First bare key in a block sequence item over-nests same-column content — code (TS + Rust + Go)
+
+**Open.** Per §7.1 rule 3 / §7.2, content at the column of an item's first
+key is a sibling, not a nested block. All three implementations wrongly
+nest it for the *first* item (`items:\n  - key:\n    nested: value` →
+`[{key: {nested: value}}]` instead of `[{key: null, nested: value}]`);
+TS and Go handle the *continuation* position and the plain nested-mapping
+case correctly. Item 12's Go port matched the incorrect first-item TS
+behaviour. Fix all three + a regression pair per position; the C-237–C-240
+fixtures use correct deeper indentation and are unaffected.
+
+### CR-M3. Unicode-whitespace key handling diverged across languages — partly resolved by CR-M1
+
+CR-M1 makes ` key` a rejected key in all three (TS already did). The
+residual divergence — TS counts NBSP as *indentation* and reparents a
+deeper NBSP-prefixed line, Rust/Go drop it — is
+`docs/decisions/structural-indentation-unicode-whitespace.md`, a
+deliberate pre-existing decision. Re-confirm the decision (likely a doc
+clarification only); no further code expected.
+
+### CR-M4. `crossCheckAgainstParse` skips expected-error cases — corpus infra
+
+**Open.** `run.ts` calls it only in the `expectation.kind === 'result'`
+branch, so Core cases expecting a throw — including the new §10.1 strict
+cases — are not cross-checked against `parse()`. Small fix: also run
+`parse()` in the error branch and assert it throws compatibly. The
+"every `spec: "core"` case" claim in P1 #6 above should be read as
+"every passing result case" until this lands.
+
+---
+
 ## P2 — should fix
 
 ### 8. Int vs Float sentinel in the corpus — corpus infra + 3 runners — M7 — decision: option A

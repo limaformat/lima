@@ -1,0 +1,12 @@
+{
+  "id": "core.keys.nested.dot-invalid",
+  "spec": "core",
+  "section": "5.1 (1.0.5)",
+  "description": "§5.1: a dotted unquoted key is not a key in a nested mapping either — skipped in both modes, the same as at the top level. The bare outer key is left with no valid child.",
+  "input": "outer:\n  a.b: value\n",
+  "options": { "strict": true },
+  "expect": {
+    "result": { "outer": null }
+  },
+  "tags": ["strict", "keys"]
+}

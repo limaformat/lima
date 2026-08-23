@@ -1,0 +1,11 @@
+{
+  "id": "core.keys.top-level.leading-nbsp-invalid",
+  "spec": "core",
+  "section": "5.1 (1.0.5)",
+  "description": "§5.1's key grammar is ASCII: a key beginning with U+00A0 (NBSP) is not an unquoted key in any implementation, independent of whether that implementation treats Unicode whitespace as structural indentation (structural-indentation-unicode-whitespace.md). The line is unrecognised and skipped in both modes.",
+  "input": " key: value\n",
+  "expect": {
+    "result": {}
+  },
+  "tags": ["keys", "unicode"]
+}

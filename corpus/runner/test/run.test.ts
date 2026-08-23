@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(279)
+		expect(outcomes).toHaveLength(285)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -462,6 +462,21 @@ describe('runCorpus', () => {
 	 * (out of scope for this TS-only corpus, but the fixtures cover it for
 	 * every implementation going forward). All pass; no prior case changed
 	 * classification.
+	 * 279 → 285: the Core 1.0.5 errata (§5.1 unquoted-key grammar, Codex
+	 * re-review MAJOR 1). `isValidKey` now enforces
+	 * `[a-zA-Z0-9_][a-zA-Z0-9_:-]*` in the block-nested and flow contexts
+	 * (top level already did, via the scanner), in all three languages —
+	 * a dotted / punctuation / NBSP-leading unquoted key is unrecognised
+	 * and skipped in both modes. 6 cases: dotted key rejected at top
+	 * level / nested / flow / block-sequence-item, a leading-NBSP key
+	 * rejected regardless of the Unicode-indentation decision, and a
+	 * positive guard that `:`, `-`, `_`, and trailing digits stay valid in
+	 * nested/flow. Two prior cases changed expectation, not classification:
+	 * references(.../references-2).unsupported.references-in-keys-remain-literal
+	 * — the unquoted `{($a): v}` / `{${a}: v}` flow key is now dropped
+	 * (`m: {}`); the quoted-key half of each case still shows the token
+	 * staying literal. The frozen References 1.0 baseline case was amended
+	 * once, with its manifest hash and BASELINE_DIGESTS re-pinned.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -470,7 +485,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 279, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 285, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

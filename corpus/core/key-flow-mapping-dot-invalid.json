@@ -1,0 +1,12 @@
+{
+  "id": "core.keys.flow-mapping.dot-invalid",
+  "spec": "core",
+  "section": "5.1 (1.0.5)",
+  "description": "§5.1: a dotted unquoted key is not a key in a flow mapping — the entry is unrecognised and dropped, matching the block-nested and top-level contexts.",
+  "input": "m: {a.b: value}\n",
+  "options": { "strict": true },
+  "expect": {
+    "result": { "m": {} }
+  },
+  "tags": ["strict", "keys"]
+}

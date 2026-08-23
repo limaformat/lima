@@ -64,7 +64,13 @@ export function baselineFingerprint(
  */
 export const BASELINE_DIGESTS: Record<SuiteManifest['suite'], string> = {
 	'core-1.0': '35957b2f1803b76eeb328b687b3dd9231d192523598c1ada46b47c914b48cd68',
-	'references-1.0': '30297b357407cabad225b5e38d5167367680023da03e5df75ee7d435a7c93915',
+	// References 1.0 baseline amended once, 2026-09: the §5.1 key-grammar fix
+	// (MAJOR 1) drops the unquoted `{($a): v}` flow key in
+	// references/unsupported-references-in-keys-remain-literal.json — a case
+	// that encoded pre-fix lenient key lexing. References 1.0 never shipped as
+	// a public API; this is a documented historical correction, not a
+	// compatibility break.
+	'references-1.0': '1a4e653d253b02bbf8661bcdbcb16b9746c4385f056dfc7a626e80945bcd11d8',
 }
 
 interface ScannedCase {

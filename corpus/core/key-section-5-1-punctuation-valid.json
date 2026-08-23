@@ -1,0 +1,11 @@
+{
+  "id": "core.keys.section-5-1-punctuation-valid",
+  "spec": "core",
+  "section": "5.1 (1.0.5)",
+  "description": "§5.1 tightening does not over-reach: a colon, hyphen, leading underscore, and trailing digit are all in the unquoted-key grammar and still parse as keys in nested and flow mappings, not only at the top level.",
+  "input": "outer:\n  og:title: A\n  a-b-c: B\nm: {_priv: C, h1: D}\n",
+  "expect": {
+    "result": { "outer": { "og:title": "A", "a-b-c": "B" }, "m": { "_priv": "C", "h1": "D" } }
+  },
+  "tags": ["positive", "keys"]
+}

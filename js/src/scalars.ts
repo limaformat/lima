@@ -349,29 +349,32 @@ export const closingQuoteIndex = (s: string, singleQuoteEscape = true): number =
 }
 
 /**
+ * The unquoted-key grammar of Core §5.1: `[a-zA-Z0-9_][a-zA-Z0-9_:\-]*`.
+ * Kept byte-for-byte identical to `scanner.ts`'s `isKeyStartChar` /
+ * `isKeyContinueChar`, which enforce the same grammar at the top level.
+ * Anchored, no backtracking — RE2-representable (see README).
+ */
+const UNQUOTED_KEY_RE = /^[A-Za-z0-9_][A-Za-z0-9_:-]*$/
+
+/**
  * Whether `raw` (a key candidate as written, before quote stripping) is a
  * usable Lima key:
  *   - a quoted string that is properly closed at its final character, or
- *   - an unquoted token with no interior ASCII space or tab.
+ *   - an unquoted token matching the Core §5.1 grammar.
  *
- * §5.2 states plainly that a key containing a space must be quoted, so an
- * unquoted key with a space (`bad key`, `"unterminated`) is not a key and
- * the caller treats the line/item as unrecognised. Deliberately ASCII-only
- * (space/tab), not the full Unicode whitespace class: Core §3's structural
- * indentation is ASCII-space-only, and the top-level/block scanners already
- * strip *leading* Unicode whitespace via `isTrimWhitespace` before a key
- * candidate ever reaches here — a Unicode space that survives into a key
- * (e.g. NBSP after the leading run) is deliberate literal content, not a
- * separator, matching `docs/decisions/structural-indentation-unicode-whitespace.md`.
- * Unquoted keys with other non-§5.1 punctuation (`a.b`, `($x)`) are also
- * *not* rejected here: the frozen 1.0 corpus already relies on flow keys
- * like `{($a): v}` parsing literally, and tightening that further is a
- * later errata question, not a bug fix.
+ * §5.1 is a closed pattern: a key with a space, a dot, a slash, a paren, or
+ * any other character outside `[a-zA-Z0-9_:\-]` (a surviving NBSP included)
+ * is not an unquoted key. Per §4, such a line/item is unrecognised and
+ * skipped in *both* modes — §10's strict error list stays closed. The three
+ * mapping contexts (top level, block-nested, flow) now share this one
+ * check; `docs/decisions/structural-indentation-unicode-whitespace.md`
+ * governs only whether Unicode whitespace counts as *indentation*, not
+ * whether it may appear in a key.
  */
 export const isValidKey = (raw: string): boolean => {
 	const f = raw.charCodeAt(0)
 	if (f === 34 || f === 39) return closingQuoteIndex(raw, false) === raw.length - 1
-	return !/[ \t]/.test(raw)
+	return UNQUOTED_KEY_RE.test(raw)
 }
 
 const ESCAPED_HASH_RE = /\\#/g

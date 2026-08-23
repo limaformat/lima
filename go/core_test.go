@@ -17,6 +17,11 @@ func TestMultipleLeadingTabsAreExpanded(t *testing.T) {
 }
 
 func TestUnicodeWhitespaceIsNotStructuralIndentation(t *testing.T) {
+	// The leading Unicode space is not ASCII structural indentation, so the
+	// line is not a nested child of `parent`. It is also not a valid §5.1
+	// unquoted key (§5.1's grammar is ASCII), so it is an unrecognised
+	// top-level line, skipped in both modes — matching the TypeScript
+	// reference. `parent` is left a bare key with no child.
 	for _, tc := range []struct{ name, space string }{{"NBSP", "\u00a0"}, {"BOM", "\ufeff"}, {"line separator", "\u2028"}, {"paragraph separator", "\u2029"}} {
 		t.Run(tc.name, func(t *testing.T) {
 			input := "parent:\n" + tc.space + "child: value\n"
@@ -24,7 +29,7 @@ func TestUnicodeWhitespaceIsNotStructuralIndentation(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			want := Map{{Key: "parent", Value: Null{}}, {Key: tc.space + "child", Value: String("value")}}
+			want := Map{{Key: "parent", Value: Null{}}}
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("got %#v, want %#v", got, want)
 			}
@@ -33,11 +38,17 @@ func TestUnicodeWhitespaceIsNotStructuralIndentation(t *testing.T) {
 }
 
 func TestUnicodeWhitespaceDoesNotBecomeIndentationAtDepth(t *testing.T) {
+	// `\u00a0\u00a0b` is neither an ASCII-indented child nor a valid §5.1
+	// key, so the line is dropped and `parent.a` stays a bare key. (This
+	// port deliberately does not treat Unicode whitespace as indentation —
+	// see structural-indentation-unicode-whitespace.md — so unlike the
+	// TypeScript reference it does not reparent `b` under `parent`; both
+	// agree the odd key itself is not produced.)
 	got, err := ParseCore("parent:\n  a:\n\u00a0\u00a0b: value\n", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Map{{Key: "parent", Value: Map{{Key: "a", Value: Null{}}}}, {Key: "\u00a0\u00a0b", Value: String("value")}}
+	want := Map{{Key: "parent", Value: Map{{Key: "a", Value: Null{}}}}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %#v, want %#v", got, want)
 	}
@@ -58,12 +69,15 @@ func TestUnicodeWhitespaceAfterASCIIIndentIsNotAcceptedAsNestedKey(t *testing.T)
 	}
 }
 
-func TestLeadingUnicodeWhitespaceKeyIsPreserved(t *testing.T) {
+func TestLeadingUnicodeWhitespaceKeyIsRejected(t *testing.T) {
+	// \u00a75.1's unquoted-key grammar is ASCII; a key beginning with NBSP is
+	// not a key. The line is unrecognised and skipped in both modes,
+	// matching the TypeScript reference (corpus C: key-leading-nbsp-invalid).
 	got, err := ParseCore("\u00a0key: value\n", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Map{{Key: "\u00a0key", Value: String("value")}}
+	want := Map{}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %#v, want %#v", got, want)
 	}

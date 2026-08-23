@@ -549,7 +549,7 @@
     {
       "path": "references/unsupported-references-in-keys-remain-literal.json",
       "id": "references.unsupported.references-in-keys-remain-literal",
-      "sha256": "100c82d951880266c481cdb9ea056a88ebd084785314525abc9929625665b23a",
+      "sha256": "0ad0f06c5c9d30a0fde2aa3d0312654d2ab7e93f1328ce9bebe1dbb38ec8f08c",
       "since": "1.0.0"
     },
     {

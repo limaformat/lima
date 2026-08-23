@@ -120,6 +120,16 @@ Unicode-prefixed line from the preceding block before `BlockCursor` ever
 observes it, so the reference is real but not structurally load-bearing
 for the cases this document covers.
 
+**2026-09-07 (Codex re-review CR-M3):** this decision governs whether
+Unicode whitespace is *structural indentation*, not whether it may appear
+*inside a key*. The latter is settled by Core §5.1 independently: an
+unquoted key is `[a-zA-Z0-9_][a-zA-Z0-9_:\-]*`, ASCII, so ` key` is
+not a key in any implementation (enforced in `isValidKey` across TS/Rust/Go
+as of Core 1.0.5). The two implementations still legitimately differ on a
+*deeper* NBSP-prefixed line — TS reparents it via Unicode-whitespace
+indent-stripping, Rust/Go drop it — which is exactly the divergence this
+document accepts.
+
 Unrelated to
 [`corpus-int-float-type-assertion.md`](corpus-int-float-type-assertion.md),
 [`comment-lines-and-bare-key-block-detection.md`](comment-lines-and-bare-key-block-detection.md),

@@ -572,28 +572,30 @@ pub fn closing_quote_index(s: &str, single_quote_escape: bool) -> Option<usize> 
 /// Whether `raw` (a key candidate as written, before quote stripping) is a
 /// usable Lima key:
 ///   - a quoted string that is properly closed at its final byte, or
-///   - an unquoted token with no interior whitespace.
+///   - an unquoted token matching the Core §5.1 grammar
+///     `[a-zA-Z0-9_][a-zA-Z0-9_:\-]*`.
 ///
-/// §5.2 states plainly that a key containing a space must be quoted, so an
-/// unquoted key with a space (`bad key`, `"unterminated`) is not a key and
-/// the caller treats the line/item as unrecognised. Deliberately ASCII-only
-/// (space/tab), not the full Unicode whitespace class: Core structural
-/// indentation is ASCII-space-only, and a Unicode space that survives into
-/// a key candidate is deliberate literal content there, not a separator —
-/// see `docs/decisions/structural-indentation-unicode-whitespace.md`.
-/// Unquoted keys with other non-§5.1 punctuation (`a.b`, `($x)`) are also
-/// *not* rejected here: the frozen 1.0 corpus already relies on flow keys
-/// like `{($a): v}` parsing literally, and tightening that further is a
-/// later errata question, not a bug fix.
+/// §5.1 is a closed pattern: a key with a space, a dot, a slash, a paren, or
+/// any other byte outside `[a-zA-Z0-9_:\-]` (a surviving NBSP included) is
+/// not an unquoted key. Per §4 such a line/item is unrecognised and skipped
+/// in *both* modes — §10's strict list stays closed. The three mapping
+/// contexts (top level, block-nested, flow) share this one check;
+/// `docs/decisions/structural-indentation-unicode-whitespace.md` governs
+/// only whether Unicode whitespace counts as *indentation*, not whether it
+/// may appear in a key.
 pub fn is_valid_key(raw: &str) -> bool {
     let b = raw.as_bytes();
-    if b.is_empty() {
+    let Some(&first) = b.first() else {
         return false;
-    }
-    if b[0] == b'"' || b[0] == b'\'' {
+    };
+    if first == b'"' || first == b'\'' {
         return closing_quote_index(raw, false) == Some(b.len() - 1);
     }
-    !b.iter().any(|&c| c == b' ' || c == b'\t')
+    let head_ok = first.is_ascii_alphanumeric() || first == b'_';
+    let tail_ok = b[1..]
+        .iter()
+        .all(|&c| c.is_ascii_alphanumeric() || matches!(c, b'_' | b':' | b'-'));
+    head_ok && tail_ok
 }
 
 /// Strips a key's surrounding quotes — unescaping a double-quoted key

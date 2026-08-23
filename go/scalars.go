@@ -334,21 +334,16 @@ func closingQuoteIndex(s string, singleQuoteEscape bool) int {
 
 // isValidKey reports whether raw (a key candidate as written, before quote
 // stripping) is a usable Lima key: a properly-closed quoted string, or an
-// unquoted token with no interior ASCII space or tab.
+// unquoted token matching the Core §5.1 grammar
+// [a-zA-Z0-9_][a-zA-Z0-9_:\-]*.
 //
-// §5.2 states plainly that a key containing a space must be quoted, so an
-// unquoted key with a space (`bad key`, `"unterminated`) is not a key and
-// the caller treats the line/item as unrecognised. Deliberately ASCII-only
-// (space/tab), not the full Unicode whitespace class: this port's
-// structural indentation is ASCII-space-only (docs/decisions/structural-
-// indentation-unicode-whitespace.md), so a Unicode space that survives
-// into a key candidate is deliberate literal content there, not a
-// separator — e.g. a line indented with NBSP is not structurally indented
-// at all, and the NBSP remains part of the key text. Unquoted keys with
-// other non-§5.1 punctuation (`a.b`, `($x)`) are also *not* rejected here:
-// the frozen 1.0 corpus already relies on flow keys like `{($a): v}`
-// parsing literally, and tightening that further is a later errata
-// question, not a bug fix.
+// §5.1 is a closed pattern: a key with a space, a dot, a slash, a paren, or
+// any other byte outside [a-zA-Z0-9_:\-] (a surviving NBSP included) is not
+// an unquoted key. Per §4 such a line/item is unrecognised and skipped in
+// both modes — §10's strict list stays closed. The three mapping contexts
+// (top level, block-nested, flow) share this one check; docs/decisions/
+// structural-indentation-unicode-whitespace.md governs only whether Unicode
+// whitespace counts as indentation, not whether it may appear in a key.
 func isValidKey(raw string) bool {
 	if raw == "" {
 		return false
@@ -356,7 +351,17 @@ func isValidKey(raw string) bool {
 	if raw[0] == '"' || raw[0] == '\'' {
 		return closingQuoteIndex(raw, false) == len(raw)-1
 	}
-	return !strings.ContainsAny(raw, " \t")
+	for i := 0; i < len(raw); i++ {
+		c := raw[i]
+		ok := c == '_' || (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+		if i > 0 {
+			ok = ok || c == ':' || c == '-'
+		}
+		if !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // stripKeyQuotes strips a key's surrounding quotes — unescaping a

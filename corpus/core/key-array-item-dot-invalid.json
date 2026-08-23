@@ -1,0 +1,11 @@
+{
+  "id": "core.keys.array-item.dot-invalid",
+  "spec": "core",
+  "section": "5.1 (1.0.5)",
+  "description": "§5.1: a dotted unquoted key in a block sequence item is not a mapping key; with no valid key the item is a literal scalar, the same as the interior-space case.",
+  "input": "items:\n  - a.b: value\n",
+  "expect": {
+    "result": { "items": ["a.b: value"] }
+  },
+  "tags": ["keys"]
+}
