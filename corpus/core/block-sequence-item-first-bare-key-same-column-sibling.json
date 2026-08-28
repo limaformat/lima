@@ -1,0 +1,12 @@
+{
+  "id": "core.block-sequence.first-bare-key-same-column-sibling",
+  "spec": "core",
+  "section": "7.2 (1.0.6)",
+  "description": "§7.1 rule 3 / §7.2: a block sequence item's sibling keys align at the column of the first key after `- `. A line at that same column following a bare first key is the next sibling key, not a nested block — so the bare key is null. Matches the continuation-key position and a plain nested mapping. Strict does not throw.",
+  "input": "items:\n  - key:\n    nested: value\n",
+  "options": { "strict": true },
+  "expect": {
+    "result": { "items": [{ "key": null, "nested": "value" }] }
+  },
+  "tags": ["strict", "block-sequence"]
+}

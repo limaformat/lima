@@ -3,8 +3,8 @@
   "frozen": true,
   "baselineVersion": "1.0.0",
   "baselineCaseCount": 149,
-  "specVersion": "1.0.5",
-  "caseCount": 184,
+  "specVersion": "1.0.6",
+  "caseCount": 186,
   "cases": [
     {
       "path": "core/api-parse-core-never-resolves-references.json",
@@ -197,6 +197,18 @@
       "id": "core.block-sequence.item-continuation-bare-key-nested-block",
       "sha256": "80bc868fd8926dd6f4b063b4dab2cda8c3bb3dacea480ed8710efaab8374c754",
       "since": "1.0.4"
+    },
+    {
+      "path": "core/block-sequence-item-first-bare-key-same-column-sibling-with-value.json",
+      "id": "core.block-sequence.first-bare-key-same-column-sibling-with-value",
+      "sha256": "685921b970126001a702301fd0582c0a608f2e66492116a5aa9b45a3183e8d3e",
+      "since": "1.0.6"
+    },
+    {
+      "path": "core/block-sequence-item-first-bare-key-same-column-sibling.json",
+      "id": "core.block-sequence.first-bare-key-same-column-sibling",
+      "sha256": "5f54ca2fcc2f1fece5a8b321619b7be10aefce9dcb561407311bc48a54af94c1",
+      "since": "1.0.6"
     },
     {
       "path": "core/block-sequence-nested-sequence-nonstrict.json",

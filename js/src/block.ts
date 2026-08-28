@@ -230,9 +230,17 @@ const parseCursorBlock = <V, M>(
 			} else if (afterDash.endsWith(':') && isValidKey(trimSlice(afterDash, 0, afterDash.length - 1))) {
 				const key = stripKeyQuotes(trimSlice(afterDash, 0, afterDash.length - 1), ctx.strict, line)
 				checkKeyLength(key, () => line)
+				// §7.1 rule 3 / §7.2: sibling keys of an object item align at
+				// the column of the first key *after* `- `; a nested block
+				// must be indented deeper than that column, not merely deeper
+				// than the item's dash. A line at the key's own column is the
+				// next sibling key, so the bare key is `null`.
+				let keyColumn = cursor.contentStart + 1
+				while (keyColumn < cursor.lineEnd && isTrimWhitespace(cursor.source.charCodeAt(keyColumn))) keyColumn++
+				keyColumn -= cursor.lineStart
 				cursor.next()
 				skipEmptyAndCommentLines(cursor)
-				if (cursor.valid && cursor.indent > baseIndent) {
+				if (cursor.valid && cursor.indent > keyColumn) {
 					const nested = parseCursorBlock(cursor, cursor.indent, ctx, baseLine, builder)
 					pendingItem = builder.createMappingWith(key, nested ?? builder.null(line))
 				} else pendingItem = builder.createMappingWith(key, builder.null(line))

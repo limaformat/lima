@@ -1,0 +1,11 @@
+{
+  "id": "core.block-sequence.first-bare-key-same-column-sibling-with-value",
+  "spec": "core",
+  "section": "7.2 (1.0.6)",
+  "description": "A sibling key carrying an inline value, at the first key's column after a bare first key, is a continuation key of the same item — not the bare key's nested block.",
+  "input": "items:\n  - k1:\n    k2: v\n",
+  "expect": {
+    "result": { "items": [{ "k1": null, "k2": "v" }] }
+  },
+  "tags": ["block-sequence"]
+}

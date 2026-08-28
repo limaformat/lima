@@ -104,17 +104,19 @@ func spaceBeforeColon(s string) bool {
 }
 
 // bareNestedValue looks ahead (skipping blank/comment lines, per Core §4
-// rule 7 / §6.1.3) for a nested block at deeper indentation than indent —
-// the array item's own base — for a bare key (one with no inline value)
-// inside a block-sequence item's mapping. *idx must already point at the
-// first line after the bare key's own line. Returns null when no such
+// rule 7 / §6.1.3) for a nested block belonging to a bare key (one with no
+// inline value) inside a block-sequence item's mapping. keyColumn is the
+// column of the bare key itself; §7.1 rule 3 / §7.2 require a nested block
+// to be indented deeper than that — a line at the key's own column is the
+// next sibling key, not the key's value. *idx must already point at the
+// first line after the bare key's own line. Returns null when no deeper
 // block follows.
-func bareNestedValue(indent, keyLine int, lines []sourceLine, idx *int, strict bool, onWarning func(Diagnostic), captureReferences bool) (*pvalue, error) {
+func bareNestedValue(keyColumn, keyLine int, lines []sourceLine, idx *int, strict bool, onWarning func(Diagnostic), captureReferences bool) (*pvalue, error) {
 	j := *idx
 	for j < len(lines) && (trimWhitespace(lines[j].text) == "" || strings.HasPrefix(trimWhitespace(lines[j].text), "#")) {
 		j++
 	}
-	if j >= len(lines) || lineStructuralIndent(lines[j]) <= indent {
+	if j >= len(lines) || lineStructuralIndent(lines[j]) <= keyColumn {
 		return pv(Null{}, keyLine), nil
 	}
 	v, e := parseBlock(lines, idx, lineStructuralIndent(lines[j]), strict, onWarning, captureReferences)
@@ -158,7 +160,7 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 		*idx++
 		var cv *pvalue
 		if bare {
-			cv, e = bareNestedValue(indent, cl.number, lines, idx, strict, onWarning, captureReferences)
+			cv, e = bareNestedValue(lineStructuralIndent(cl), cl.number, lines, idx, strict, onWarning, captureReferences)
 		} else {
 			cv, e = parseFlowOrScalar(stripComment(trimWhitespace(cc[s+2:])), strict, cl.number, onWarning, captureReferences)
 		}
@@ -255,8 +257,12 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				if e0 != nil {
 					return nil, e0
 				}
+				// §7.2: the item's sibling keys align at the first key's
+				// column, after `- `; a nested block must be deeper than that.
+				afterDash := c[1:]
+				keyColumn := lineStructuralIndent(l) + 1 + (len(afterDash) - len(trimLeftWhitespace(afterDash)))
 				*idx++
-				v, e := bareNestedValue(indent, l.number, lines, idx, strict, onWarning, captureReferences)
+				v, e := bareNestedValue(keyColumn, l.number, lines, idx, strict, onWarning, captureReferences)
 				if e != nil {
 					return nil, e
 				}

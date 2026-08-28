@@ -91,6 +91,21 @@ fn skip_empty_and_comment_lines(cursor: &mut BlockCursor) {
 /// The text after `- ` (dash + whitespace). If the character right after
 /// the dash is *not* whitespace, the whole line (dash included) is treated
 /// as an ordinary scalar starting with a literal `-` — not a sequence item.
+/// The column of the first key after `- ` on the cursor's current line —
+/// the base indentation for the item's sibling keys (§7.2).
+fn dash_key_column(cursor: &BlockCursor) -> usize {
+    let end = cursor.line_end;
+    let mut pos = cursor.content_start + 1;
+    while pos < end {
+        let ch = cursor.source[pos..end].chars().next().unwrap();
+        if !is_trim_whitespace(ch) {
+            break;
+        }
+        pos += ch.len_utf8();
+    }
+    pos - cursor.line_start
+}
+
 fn cursor_after_dash<'a>(cursor: &BlockCursor<'a>) -> &'a str {
     let start = cursor.content_start;
     let end = cursor.line_end;
@@ -334,9 +349,14 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 let key_part = after_dash.strip_suffix(':').unwrap();
                 let key = strip_key_quotes(trim_slice(key_part, 0, key_part.len()), strict, line)?;
                 check_key_length(&key, line)?;
+                // §7.1 rule 3 / §7.2: a nested block must be indented deeper
+                // than the first key's column (after `- `), not merely deeper
+                // than the item's dash. A line at the key's own column is the
+                // next sibling key, so the bare key is null.
+                let key_column = dash_key_column(cursor);
                 cursor.next();
                 skip_empty_and_comment_lines(cursor);
-                let value = if cursor.valid && cursor.indent > base_indent {
+                let value = if cursor.valid && cursor.indent > key_column {
                     parse_cursor_block::<B, CHECK_DUPLICATES>(
                         cursor,
                         cursor.indent,

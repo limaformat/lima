@@ -170,6 +170,8 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-244 | §5.1 (1.0.5) | Keys | A dotted unquoted key in a block sequence item is not a mapping; the item is a literal scalar | positive | both |
 | C-245 | §5.1 (1.0.5) | Keys | A key beginning with NBSP is not an unquoted key in any implementation, independent of the Unicode-indentation decision | positive | both |
 | C-246 | §5.1 (1.0.5) | Keys | `:`, `-`, leading `_`, and trailing digits stay valid unquoted-key characters in nested and flow mappings, not only at the top level | positive | both |
+| C-247 | §7.2 (1.0.6) | Block sequence | A line at a bare *first* key's own column is the next sibling key, not the key's nested block — the bare key is `null`; strict does not throw | positive | strict |
+| C-248 | §7.2 (1.0.6) | Block sequence | The same for a sibling key that carries an inline value | positive | both |
 
 **Scope:** 132 substantive check points (plus the 1.0.x errata rows below). A check point can produce multiple concrete cases.
 
@@ -284,9 +286,27 @@ throwing a confusing "mixed array and map entries" error (strict).
 Fixed in `go/core.go` with two new helpers, `bareNestedValue` (the same
 blank/comment-skipping lookahead as the top-level and nested-mapping
 bare-key sites) and `parseArrayItemContinuationKeys` (replacing the old
-value-only inline loop, now handling both forms). Verified byte-for-byte
-against TypeScript's behaviour for the sibling-after-nested-block and
-same-column-as-key edge cases, not only the straightforward form.
+value-only inline loop, now handling both forms). Verified against the
+sibling-after-nested-block form as well as the straightforward one.
+
+The same-column-as-key case, matched byte-for-byte against TypeScript at
+the time, turned out to be a shared bug — see C-247/C-248 below.
+
+### Block-sequence first bare key over-nested same-column content — C-247–C-248 (Core 1.0.6, Codex re-review CR-M2)
+
+The *first* bare key of a block-sequence object item chose its nested
+block by comparing the next line's indentation against the item's dash
+column, not against the key's own column (the key sits after `- `, at
+least two columns deeper). A line at the key's own column — the next
+sibling key per §7.1 rule 3 / §7.2 — was wrongly absorbed as the key's
+nested block. All three implementations had this; the item-12 Go port
+reproduced it from TypeScript. The *continuation*-key position and a
+plain nested mapping were already correct. Now every bare-key site
+compares against the key's column: `block.ts` computes it from the cursor,
+`block.rs` gains `dash_key_column`, `core.go`'s `bareNestedValue` takes
+the key column as its threshold (the dash-relative offset for a first key,
+`lineStructuralIndent` for a continuation key). The C-237–C-240 fixtures
+use correct deeper indentation and are unaffected.
 
 ## Known implementation gaps
 

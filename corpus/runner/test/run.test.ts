@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(285)
+		expect(outcomes).toHaveLength(287)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -477,6 +477,14 @@ describe('runCorpus', () => {
 	 * (`m: {}`); the quoted-key half of each case still shows the token
 	 * staying literal. The frozen References 1.0 baseline case was amended
 	 * once, with its manifest hash and BASELINE_DIGESTS re-pinned.
+	 * 285 → 287: the Core 1.0.6 errata (Codex re-review CR-M2). A block
+	 * sequence item's *first* bare key over-nested a following line at the
+	 * key's own column as its nested block (§7.1 rule 3 / §7.2: that line
+	 * is the next sibling key); all three implementations, and Go inherited
+	 * it via item 12. Now the nested-block check is against the key's
+	 * column, matching the continuation-key position and a plain nested
+	 * mapping. 2 cases: same-column sibling after a bare first key (bare),
+	 * and the same with an inline value on the sibling.
 	 * This snapshot is a regression trip-wire: update it deliberately (with
 	 * a written reason) if this ever regresses, never to silently "make the
 	 * test pass".
@@ -485,7 +493,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 285, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 287, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

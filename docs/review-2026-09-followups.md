@@ -228,14 +228,16 @@ row, which the P1 #2/#3 step left open.
 
 ### CR-M2. First bare key in a block sequence item over-nests same-column content — code (TS + Rust + Go)
 
-**Open.** Per §7.1 rule 3 / §7.2, content at the column of an item's first
-key is a sibling, not a nested block. All three implementations wrongly
-nest it for the *first* item (`items:\n  - key:\n    nested: value` →
-`[{key: {nested: value}}]` instead of `[{key: null, nested: value}]`);
-TS and Go handle the *continuation* position and the plain nested-mapping
-case correctly. Item 12's Go port matched the incorrect first-item TS
-behaviour. Fix all three + a regression pair per position; the C-237–C-240
-fixtures use correct deeper indentation and are unaffected.
+**Status: done (Core 1.0.6), commit `48e5f20`.** Per §7.1 rule 3 / §7.2,
+content at the column of an item's first key is a sibling, not a nested
+block. All three implementations chose the nested block by comparing the
+next line against the item's *dash* column, not the key's column (the key
+sits after `- `). Fixed at every bare-key site to compare against the
+key's own column — `block.ts` computes it inline, `block.rs` gains
+`dash_key_column`, `core.go`'s `bareNestedValue` takes the key column as
+its threshold. The continuation-key position and plain nested mappings
+were already correct and are unchanged. Corpus C-247–C-248
+(`since: "1.0.6"`), Core suite 184 → 186; C-237–C-240 unaffected.
 
 ### CR-M3. Unicode-whitespace key handling diverged across languages — partly resolved by CR-M1
 
