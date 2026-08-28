@@ -30,6 +30,20 @@ describe('runCorpus', () => {
 		expect(outcomes.filter((outcome) => outcome.classification === 'FAIL')).toHaveLength(0)
 	})
 
+	it('cross-checks every Core case against parse() — success value and error alike (CR-M4)', () => {
+		// Core is reference-unaware (Appendix B): parseCore and parse must
+		// agree on referenceless input in both directions. A result case is
+		// diffed value-for-value; an error case must throw the same
+		// diagnostic code at the same line through parse() too. A regression
+		// surfaces as a FAIL whose reason starts with "parse()".
+		const { outcomes } = runCorpus(corpusRoot, ['core-1.0'])
+		const crossCheckFailures = outcomes.filter(
+			(o) => o.classification === 'FAIL' && o.reasons.some((r) => r.startsWith('parse()')),
+		)
+		expect(crossCheckFailures).toEqual([])
+		expect(outcomes.every((o) => o.classification === 'PASS')).toBe(true)
+	})
+
 	/**
 	 * Phase-2 baseline (docs/corpus-design/README.md §11), progressively
 	 * updated as confirmed deviations are fixed in js/src/index.ts and as
@@ -477,6 +491,12 @@ describe('runCorpus', () => {
 	 * (`m: {}`); the quoted-key half of each case still shows the token
 	 * staying literal. The frozen References 1.0 baseline case was amended
 	 * once, with its manifest hash and BASELINE_DIGESTS re-pinned.
+	 * (no case count change) — Codex re-review CR-M4: the parse() cross-check
+	 * for `spec:"core" api:"core"` cases now also runs in the error branch,
+	 * not only the result branch. All 44 Core error cases throw the same
+	 * diagnostic code at the same line through parse() (References 2.0) as
+	 * through parseCore() — no divergence. `crossCheckAgainstParse` split
+	 * into `crossCheckResultAgainstParse` / `crossCheckErrorAgainstParse`.
 	 * 285 → 287: the Core 1.0.6 errata (Codex re-review CR-M2). A block
 	 * sequence item's *first* bare key over-nested a following line at the
 	 * key's own column as its nested block (§7.1 rule 3 / §7.2: that line

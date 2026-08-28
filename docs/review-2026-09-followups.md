@@ -150,14 +150,15 @@ the internal References 1.0 resolver, which never shipped in the public
 API. 173 of 174 Core cases had no explicit `api` and so ran through it.
 Fixed: the default is now spec-aware (`spec === 'core'` → `core`); the
 schema rejects an explicit `api: "parse"`/`"references"` on a `spec:
-"core"` case as nonsensical. Every passing `spec: "core"` case is now
-*also* cross-checked against `parse` (References 2.0) — Core is
-reference-unaware by construction, so the two builders (`nativeBuilder`,
-`positionedBuilder`) must agree exactly on referenceless input; this is
-the part of the fix that actually exercises the public References entry
-point on Core input, not only `parseCore`. Full corpus re-run clean: all
-174 cases pass through `parseCore`, and all 174 cross-checks against
-`parse` agree — no divergence between the two builders. Rust and Go
+"core"` case as nonsensical. Every `spec: "core"` case is now *also*
+cross-checked against `parse` (References 2.0) — Core is reference-unaware
+by construction, so the two builders (`nativeBuilder`, `positionedBuilder`)
+must agree exactly on referenceless input: the same value on success, and
+(since CR-M4) the same diagnostic code and line on error. This is the part
+of the fix that actually exercises the public References entry point on
+Core input, not only `parseCore`. Full corpus re-run clean, every case
+through `parseCore` and cross-checked against `parse` with no divergence.
+Rust and Go
 needed no change: both already call the public Core entry point directly
 for `corpus/core/*.json`, never routed through an `api` field.
 
@@ -248,14 +249,17 @@ deeper NBSP-prefixed line, Rust/Go drop it — is
 deliberate pre-existing decision. Re-confirm the decision (likely a doc
 clarification only); no further code expected.
 
-### CR-M4. `crossCheckAgainstParse` skips expected-error cases — corpus infra
+### CR-M4. `crossCheckAgainstParse` skipped expected-error cases — corpus infra
 
-**Open.** `run.ts` calls it only in the `expectation.kind === 'result'`
-branch, so Core cases expecting a throw — including the new §10.1 strict
-cases — are not cross-checked against `parse()`. Small fix: also run
-`parse()` in the error branch and assert it throws compatibly. The
-"every `spec: "core"` case" claim in P1 #6 above should be read as
-"every passing result case" until this lands.
+**Status: done, commit `d270809`.** `run.ts` cross-checked only the
+`expectation.kind === 'result'` branch. Now the error branch does too: for
+a `spec:"core" api:"core"` case that expects a throw, `parse()` (References
+2.0) must throw the same diagnostic `code` at the same `line` on the same
+referenceless input — otherwise the case FAILs with a `parse() …` reason.
+`crossCheckAgainstParse` split into `crossCheckResultAgainstParse` /
+`crossCheckErrorAgainstParse`. All 44 Core error cases agree — no
+divergence. P1 #6's "every passing `spec: "core"` case" claim now holds for
+error cases too.
 
 ---
 

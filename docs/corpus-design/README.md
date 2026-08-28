@@ -149,14 +149,16 @@ explicitly exercises the deprecated `parseReferences` alias, while
 itself under test (e.g. the References 1.0/2.0 entry-point-equivalence
 pair, R-120/C-210).
 
-Every passing `spec: "core"` case is additionally cross-checked against
-`parse` (References 2.0) by the runner itself, not just `parseCore` — see
-`corpus/runner/src/run.ts`'s `crossCheckAgainstParse`. This is not
-configurable per case; it is how the corpus verifies that Core's native
-builder and the References layer's positioned builder agree on
-referenceless input, closing a gap where nearly every Core case used to
-run only through the internal References 1.0 resolver instead of any
-public entry point (`docs/review-2026-09-followups.md` P1 #6).
+Every `spec: "core"` case is additionally cross-checked against `parse`
+(References 2.0) by the runner itself, not just `parseCore` — see
+`corpus/runner/src/run.ts`'s `crossCheckResultAgainstParse` /
+`crossCheckErrorAgainstParse`. This is not configurable per case; it is how
+the corpus verifies that Core's native builder and the References layer's
+positioned builder agree on referenceless input — the same value on
+success, the same diagnostic code and line on error. It closed a gap where
+nearly every Core case used to run only through the internal References 1.0
+resolver instead of any public entry point
+(`docs/review-2026-09-followups.md` P1 #6, CR-M4).
 
 ## 5. Language-neutral values
 

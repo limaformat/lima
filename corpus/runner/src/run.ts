@@ -102,20 +102,22 @@ function invokeParser(c: LoadedCase): {
 /**
  * Core is reference-unaware by construction (Appendix B): for a
  * referenceless document, `parseCore` and `parse` (References 2.0) must
- * produce an identical value. Cross-checking every passing `spec: "core"`
- * case against `parse` too, not only `parseCore`, is what actually
- * exercises the public References entry point on Core input — the two
- * builders (`nativeBuilder` in core.ts, `positionedBuilder` used by
- * references2.ts) are independent code paths that a Core-only run could
- * never catch drifting apart. See docs/review-2026-09-followups.md P1 #6.
+ * agree — the same value on success, and the same failure on error. Every
+ * passing `spec: "core" api: "core"` case is cross-checked against `parse`
+ * too, in both directions, because `parse` runs an independent code path
+ * (the positioned builder + References layer) over the same Core grammar
+ * that a Core-only run could never catch drifting apart. See
+ * docs/review-2026-09-followups.md P1 #6 and CR-M4.
  */
-function crossCheckAgainstParse(c: LoadedCase, coreValue: unknown): string[] {
+const parseReferenceless = (c: LoadedCase): unknown =>
+	parse(c.input, {
+		...(c.options.partialsSupplied ? { partials: c.options.partials } : {}),
+		strict: c.options.strict,
+	})
+
+function crossCheckResultAgainstParse(c: LoadedCase, coreValue: unknown): string[] {
 	try {
-		const value = parse(c.input, {
-			...(c.options.partialsSupplied ? { partials: c.options.partials } : {}),
-			strict: c.options.strict,
-		})
-		return diffCorpusValues(value, coreValue).map(
+		return diffCorpusValues(parseReferenceless(c), coreValue).map(
 			(m) => `parse() diverges from parseCore() on this referenceless input — ${m}`,
 		)
 	} catch (error) {
@@ -123,6 +125,34 @@ function crossCheckAgainstParse(c: LoadedCase, coreValue: unknown): string[] {
 		const detail = adapted.mapped ? `${adapted.diagnostic.code}: ${adapted.diagnostic.message}` : adapted.rawMessage
 		return [`parseCore() succeeded but parse() threw on the same referenceless input: ${detail}`]
 	}
+}
+
+function crossCheckErrorAgainstParse(c: LoadedCase, coreDiagnostic: LimaDiagnostic): string[] {
+	let parseError: unknown
+	try {
+		parseReferenceless(c)
+		return [`parseCore() threw ${coreDiagnostic.code} on this referenceless input, but parse() succeeded`]
+	} catch (error) {
+		parseError = error
+	}
+	const adapted = classify(parseError)
+	if (!adapted.mapped) {
+		return [
+			`parseCore() threw ${coreDiagnostic.code}, but parse() threw an error the adapter could not classify: ${adapted.rawMessage}`,
+		]
+	}
+	const reasons: string[] = []
+	if (adapted.diagnostic.code !== coreDiagnostic.code) {
+		reasons.push(
+			`parse() threw ${adapted.diagnostic.code} where parseCore() threw ${coreDiagnostic.code} on the same referenceless input`,
+		)
+	}
+	if (adapted.diagnostic.line !== coreDiagnostic.line) {
+		reasons.push(
+			`parse() reports the error at line ${adapted.diagnostic.line}, parseCore() at line ${coreDiagnostic.line}`,
+		)
+	}
+	return reasons
 }
 
 function runCase(c: LoadedCase): CaseOutcome {
@@ -158,7 +188,7 @@ function runCase(c: LoadedCase): CaseOutcome {
 		}
 
 		if (reasons.length === 0 && c.spec === 'core' && c.api === 'core') {
-			reasons.push(...crossCheckAgainstParse(c, result.value))
+			reasons.push(...crossCheckResultAgainstParse(c, result.value))
 		}
 
 		return {
@@ -202,6 +232,13 @@ function runCase(c: LoadedCase): CaseOutcome {
 				(m) => `${m.field}: expected ${JSON.stringify(m.expected)}, got ${JSON.stringify(m.actual)}`
 			),
 			notes,
+		}
+	}
+
+	if (c.spec === 'core' && c.api === 'core') {
+		const crossReasons = crossCheckErrorAgainstParse(c, adapted.diagnostic)
+		if (crossReasons.length > 0) {
+			return { id: c.id, sourceFile: c.sourceFile, classification: 'FAIL', reasons: crossReasons, notes }
 		}
 	}
 
