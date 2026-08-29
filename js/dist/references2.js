@@ -3,8 +3,7 @@ import { canonicalString, codepointLength, countNodes, ingestPartialValue, PARTI
 import { NESTING_DEPTH_LIMIT, parseCore, parseCoreWithPositions, toPlainValue, } from './core.js';
 import { hasActiveReferences2 } from './scalars.js';
 import { LimaError } from './errors.js';
-import { collectAllParticipants, deepCopyPositioned, earliestParticipant, finalizePositioned, partialToPositioned, } from './references.js';
-const emptyMapping = () => Object.create(null);
+import { collectAllParticipants, deepCopyPositioned, earliestParticipant, emptyMapping, finalizePositioned, partialToPositioned, } from './positioned-tree.js';
 const PARTIAL_NAME = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*';
 const PARTIAL_NAME_RE = new RegExp(`^${PARTIAL_NAME}$`);
 const MAX_EDGES = 3;

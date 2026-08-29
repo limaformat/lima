@@ -11,13 +11,12 @@ import {
 import { hasActiveReferences2 } from './scalars.js'
 import { LimaError, type LimaDiagnostic } from './errors.js'
 import {
-	collectAllParticipants, deepCopyPositioned, earliestParticipant,
+	collectAllParticipants, deepCopyPositioned, earliestParticipant, emptyMapping,
 	finalizePositioned, partialToPositioned,
-} from './references.js'
+} from './positioned-tree.js'
 import { type ReferenceToken2 } from './reference-tokens2.js'
 
 type Meta = Record<string, unknown>
-const emptyMapping = (): Meta => Object.create(null)
 
 const PARTIAL_NAME = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*'
 const PARTIAL_NAME_RE = new RegExp(`^${PARTIAL_NAME}$`)
