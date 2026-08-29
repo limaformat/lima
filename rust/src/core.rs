@@ -23,8 +23,10 @@ use crate::normalize::{
     begin_warning_collection, check_duplicate_key, check_key_length, finish_warning_collection,
     DOCUMENT_SIZE_LIMIT, NESTING_DEPTH_LIMIT, TOP_LEVEL_KEY_LIMIT,
 };
-use crate::scalars::{is_valid_key, strip_comment, strip_key_quotes};
-use crate::value::{Builder, LimaValue, PlainBuilder, PositionedBuilder, PositionedValue};
+use crate::scalars::{is_valid_key, physical_raw, strip_comment, strip_key_quotes};
+use crate::value::{
+    Builder, LimaValue, PlainBuilder, PositionedBuilder, PositionedValue, ReferenceSource,
+};
 
 /// One discovered top-level `key:`/`key: value` line.
 struct TopKey {
@@ -176,10 +178,30 @@ fn line_at(source: &str, byte_pos: usize) -> u32 {
     1 + source[..byte_pos].bytes().filter(|&c| c == b'\n').count() as u32
 }
 
+thread_local! {
+    /// Per-line (0-based) count of columns added by leading-tab expansion,
+    /// for reporting a References 2.0 token at its *original* column (§2.4).
+    /// `None` when the document had no tabs.
+    static TAB_ADJUST: std::cell::RefCell<Option<Vec<usize>>> = const { std::cell::RefCell::new(None) };
+}
+
+pub(crate) fn tab_adjust_slice(from_line: u32, count: usize) -> Option<Vec<usize>> {
+    TAB_ADJUST.with(|t| {
+        t.borrow().as_ref().map(|v| {
+            let start = from_line.saturating_sub(1) as usize;
+            (0..count)
+                .map(|i| v.get(start + i).copied().unwrap_or(0))
+                .collect()
+        })
+    })
+}
+
 /// Expands tabs to two spaces, but only within each line's *leading*
-/// whitespace run — a tab anywhere else in the line is left alone.
+/// whitespace run — a tab anywhere else in the line is left alone. Records
+/// the per-line column growth in `TAB_ADJUST` when any tab is present.
 fn expand_leading_tabs(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
+    let mut adjust: Vec<usize> = Vec::new();
     for (i, line) in s.split('\n').enumerate() {
         if i > 0 {
             out.push('\n');
@@ -188,7 +210,9 @@ fn expand_leading_tabs(s: &str) -> String {
             .find(|c: char| c != ' ' && c != '\t')
             .unwrap_or(line.len());
         let (leading, rest) = line.split_at(leading_end);
-        if leading.contains('\t') {
+        let tabs = leading.chars().filter(|&c| c == '\t').count();
+        adjust.push(tabs); // each tab: 2 expanded cols - 1 original col = +1
+        if tabs > 0 {
             for c in leading.chars() {
                 if c == '\t' {
                     out.push_str("  ");
@@ -201,6 +225,7 @@ fn expand_leading_tabs(s: &str) -> String {
         }
         out.push_str(rest);
     }
+    TAB_ADJUST.with(|t| *t.borrow_mut() = Some(adjust));
     out
 }
 
@@ -232,6 +257,7 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             format!("Lima: document exceeds maximum size of {DOCUMENT_SIZE_LIMIT} bytes at line 1"),
         ));
     }
+    TAB_ADJUST.with(|t| *t.borrow_mut() = None);
     let mut owned = front_matter.to_string();
     if owned.contains('\r') {
         owned = owned.replace("\r\n", "\n").replace('\r', "\n");
@@ -306,30 +332,60 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             let first_newline = front_matter[tk.value_start..span_end]
                 .find('\n')
                 .map(|p| p + tk.value_start);
+            // Physical codepoint column of the value's first char (References §2.4).
+            let value_line_start = front_matter[..tk.value_start]
+                .rfind('\n')
+                .map_or(0, |p| p + 1);
+            let value_col = front_matter[value_line_start..tk.value_start]
+                .chars()
+                .count();
+            // `raw` keeps `\#` (so it does not shift a token's reported
+            // column) but drops a trailing comment (whose `${…}`-shaped text
+            // is not part of the value and must not be scanned) — §2.4.
+            let inline_src = |raw: &str| {
+                B::POSITIONED.then(|| ReferenceSource {
+                    raw: Some(physical_raw(raw)),
+                    line: tk.line,
+                    col: value_col,
+                    tab_adjust: tab_adjust_slice(tk.line, 1),
+                })
+            };
             match first_newline {
                 None => {
                     let val = &front_matter[tk.value_start..span_end];
                     if val.contains('#') {
-                        let val = strip_comment(val);
+                        let stripped = strip_comment(val);
                         parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                            &val, strict, tk.line,
+                            &stripped,
+                            strict,
+                            tk.line,
+                            inline_src(val),
                         )?
                     } else {
                         parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                            val, strict, tk.line,
+                            val,
+                            strict,
+                            tk.line,
+                            inline_src(val),
                         )?
                     }
                 }
                 Some(nl) if nl == span_end.saturating_sub(1) => {
                     let val = &front_matter[tk.value_start..nl];
                     if val.contains('#') {
-                        let val = strip_comment(val);
+                        let stripped = strip_comment(val);
                         parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                            &val, strict, tk.line,
+                            &stripped,
+                            strict,
+                            tk.line,
+                            inline_src(val),
                         )?
                     } else {
                         parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                            val, strict, tk.line,
+                            val,
+                            strict,
+                            tk.line,
+                            inline_src(val),
                         )?
                     }
                 }
@@ -338,13 +394,19 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                     let line0_trimmed = line0.trim_matches(is_trim_whitespace);
                     if line0_trimmed != "|" {
                         if line0.contains('#') {
-                            let val = strip_comment(line0);
+                            let stripped = strip_comment(line0);
                             parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                                &val, strict, tk.line,
+                                &stripped,
+                                strict,
+                                tk.line,
+                                inline_src(line0),
                             )?
                         } else {
                             parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                                line0, strict, tk.line,
+                                line0,
+                                strict,
+                                tk.line,
+                                inline_src(line0),
                             )?
                         }
                     } else {
@@ -354,8 +416,17 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                         // comment or freetext before that key ends the scalar
                         // instead of being absorbed.
                         let body: Vec<&str> = front_matter[nl + 1..span_end].split('\n').collect();
-                        let (joined, spans, _) = build_block_scalar(&body, 0, tk.line)?;
-                        B::v_block_string(joined, tk.line + 1, spans)
+                        let (joined, raw_body, consumed) = build_block_scalar(&body, 0, tk.line)?;
+                        B::v_string_src(
+                            joined,
+                            tk.line + 1,
+                            ReferenceSource {
+                                raw: Some(raw_body),
+                                line: tk.line + 1,
+                                col: 0,
+                                tab_adjust: tab_adjust_slice(tk.line + 1, consumed),
+                            },
+                        )
                     }
                 }
             }

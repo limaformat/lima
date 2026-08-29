@@ -8,7 +8,25 @@ use crate::normalize::{check_duplicate_key, check_key_length};
 use crate::scalars::{
     closing_quote_index, is_valid_key, parse_quoted_or_typed, parse_scalar_value, strip_key_quotes,
 };
-use crate::value::Builder;
+use crate::value::{Builder, ReferenceSource};
+
+/// `ReferenceSource` for a flow element starting at byte `byte_start` within
+/// the container `val` — the container column plus the codepoint distance to
+/// the element, so References 2.0 error ordering uses real positions.
+fn element_source(
+    source: Option<&ReferenceSource>,
+    val: &str,
+    byte_start: usize,
+) -> Option<ReferenceSource> {
+    source.map(|s| ReferenceSource {
+        raw: None,
+        line: s.line,
+        col: s.col + val[..byte_start].chars().count(),
+        // A flow collection is one physical line, so the container's
+        // leading-tab adjustment applies to every element.
+        tab_adjust: s.tab_adjust.clone(),
+    })
+}
 
 fn trim_start_at(source: &str, mut start: usize, end: usize) -> usize {
     while start < end {
@@ -119,16 +137,20 @@ pub fn parse_flow_sequence<B: Builder>(
     check_duplicates: bool,
 ) -> Result<Option<Vec<B::Value>>, LimaError> {
     if check_duplicates {
-        parse_flow_sequence_checked::<B, true>(val, strict, line)
+        parse_flow_sequence_checked::<B, true>(val, strict, line, None)
     } else {
-        parse_flow_sequence_checked::<B, false>(val, strict, line)
+        parse_flow_sequence_checked::<B, false>(val, strict, line, None)
     }
 }
 
+/// `source` is the flow container's own physical position; each element's
+/// tokens are anchored at the container column plus the element's offset
+/// within it (References 2.0 §5).
 pub(crate) fn parse_flow_sequence_checked<B: Builder, const CHECK_DUPLICATES: bool>(
     val: &str,
     strict: bool,
     line: u32,
+    source: Option<ReferenceSource>,
 ) -> Result<Option<Vec<B::Value>>, LimaError> {
     let b = val.as_bytes();
     if b.first() != Some(&b'[') || b.last() != Some(&b']') {
@@ -170,14 +192,22 @@ pub(crate) fn parse_flow_sequence_checked<B: Builder, const CHECK_DUPLICATES: bo
             ));
         }
         if ib[0] == b'{' && *ib.last().unwrap() == b'}' {
-            if let Some(nested) =
-                parse_flow_mapping_checked::<B, CHECK_DUPLICATES>(item, strict, line)?
-            {
+            if let Some(nested) = parse_flow_mapping_checked::<B, CHECK_DUPLICATES>(
+                item,
+                strict,
+                line,
+                element_source(source.as_ref(), val, start),
+            )? {
                 items.push(nested);
                 continue;
             }
         }
-        items.push(parse_quoted_or_typed::<B>(item, strict, line)?);
+        items.push(parse_quoted_or_typed::<B>(
+            item,
+            strict,
+            line,
+            element_source(source.as_ref(), val, start),
+        )?);
     }
     Ok(Some(items))
 }
@@ -210,9 +240,9 @@ pub fn parse_flow_mapping<B: Builder>(
     check_duplicates: bool,
 ) -> Result<Option<B::Value>, LimaError> {
     if check_duplicates {
-        parse_flow_mapping_checked::<B, true>(val, strict, line)
+        parse_flow_mapping_checked::<B, true>(val, strict, line, None)
     } else {
-        parse_flow_mapping_checked::<B, false>(val, strict, line)
+        parse_flow_mapping_checked::<B, false>(val, strict, line, None)
     }
 }
 
@@ -220,6 +250,7 @@ pub(crate) fn parse_flow_mapping_checked<B: Builder, const CHECK_DUPLICATES: boo
     val: &str,
     strict: bool,
     line: u32,
+    source: Option<ReferenceSource>,
 ) -> Result<Option<B::Value>, LimaError> {
     let b = val.as_bytes();
     if b.first() != Some(&b'{') || b.last() != Some(&b'}') {
@@ -285,7 +316,12 @@ pub(crate) fn parse_flow_mapping_checked<B: Builder, const CHECK_DUPLICATES: boo
                 format!("Lima: invalid flow nesting at line {line}: \"{raw_val}\""),
             ));
         }
-        let v = parse_quoted_or_typed::<B>(raw_val, strict, line)?;
+        let v = parse_quoted_or_typed::<B>(
+            raw_val,
+            strict,
+            line,
+            element_source(source.as_ref(), val, value_start),
+        )?;
         B::m_set(&mut entries, key, v);
     }
     Ok(Some(B::v_mapping(entries, line)))
@@ -300,9 +336,9 @@ pub fn parse_flow_or_scalar_value<B: Builder>(
     check_duplicates: bool,
 ) -> Result<B::Value, LimaError> {
     if check_duplicates {
-        parse_flow_or_scalar_value_checked::<B, true>(raw, strict, line)
+        parse_flow_or_scalar_value_checked::<B, true>(raw, strict, line, None)
     } else {
-        parse_flow_or_scalar_value_checked::<B, false>(raw, strict, line)
+        parse_flow_or_scalar_value_checked::<B, false>(raw, strict, line, None)
     }
 }
 
@@ -310,18 +346,31 @@ pub(crate) fn parse_flow_or_scalar_value_checked<B: Builder, const CHECK_DUPLICA
     raw: &str,
     strict: bool,
     line: u32,
+    source: Option<ReferenceSource>,
 ) -> Result<B::Value, LimaError> {
     match raw.as_bytes().first() {
         Some(b'[') => {
-            match parse_flow_sequence_checked::<B, CHECK_DUPLICATES>(raw, strict, line)? {
+            match parse_flow_sequence_checked::<B, CHECK_DUPLICATES>(
+                raw,
+                strict,
+                line,
+                source.clone(),
+            )? {
                 Some(seq) => Ok(B::v_array(seq, line)),
-                None => parse_scalar_value::<B>(raw, strict, line),
+                None => parse_scalar_value::<B>(raw, strict, line, source),
             }
         }
-        Some(b'{') => match parse_flow_mapping_checked::<B, CHECK_DUPLICATES>(raw, strict, line)? {
-            Some(map) => Ok(map),
-            None => parse_scalar_value::<B>(raw, strict, line),
-        },
-        _ => parse_quoted_or_typed::<B>(raw, strict, line),
+        Some(b'{') => {
+            match parse_flow_mapping_checked::<B, CHECK_DUPLICATES>(
+                raw,
+                strict,
+                line,
+                source.clone(),
+            )? {
+                Some(map) => Ok(map),
+                None => parse_scalar_value::<B>(raw, strict, line, source),
+            }
+        }
+        _ => parse_quoted_or_typed::<B>(raw, strict, line, source),
     }
 }

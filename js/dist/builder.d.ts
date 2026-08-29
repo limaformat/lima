@@ -24,14 +24,19 @@
  * is compile-time-only: generics are erased, so the emitted JS — and
  * therefore performance — is identical either way, verified by benchmark.
  */
+import type { ReferenceSource } from './reference-tokens2.js';
 export interface ValueBuilder<V, M = Map<string, V>> {
-    /** Opt-in for References' annotated builder; native Core avoids source-map work. */
-    readonly tracksStringSourcePositions?: boolean;
     null(line: number): V;
     bool(value: boolean, line: number): V;
     int(value: number, line: number): V;
     float(value: number, line: number): V;
-    string(value: string, line: number, quoted: boolean, sourceSpans?: StringSourceSpan[]): V;
+    /**
+     * `source` (when given, for unquoted strings that may hold References 2.0
+     * tokens) carries the physical position needed to attribute those tokens
+     * to a real `(line, offset)` in the source text (§2.4). `nativeBuilder`
+     * ignores it.
+     */
+    string(value: string, line: number, quoted: boolean, source?: ReferenceSource): V;
     instant(value: Date, line: number): V;
     array(items: V[], line: number): V;
     createMapping(): M;
@@ -41,9 +46,3 @@ export interface ValueBuilder<V, M = Map<string, V>> {
     mappingMaxDepth(entries: M, depthOf: (value: V) => number): number;
     mapping(entries: M, line: number): V;
 }
-/** Maps a span in a decoded scalar back to its physical source line/column. */
-export type StringSourceSpan = {
-    start: number;
-    line: number;
-    sourceOffset: number;
-};

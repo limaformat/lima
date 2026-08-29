@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-position.continuation-key-unicode-space",
+  "spec": "references",
+  "section": "2.4",
+  "description": "A block-sequence item's continuation key whose value begins, after the ASCII space, with U+0085 (NEXT LINE) before the reference token. Lima does not treat U+0085 as value whitespace, so it is part of the scalar and the token's physical column is 9. The raw token scan that fixes \u00a72.4 positions must use the same whitespace boundary as value decoding in every implementation (a host trim that also strips U+0085 would report 8).",
+  "input": "items:\n  - a: 1\n    b: \u0085${missing}\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 3,
+      "token": "${missing}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 9
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

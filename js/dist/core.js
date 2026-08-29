@@ -19,7 +19,7 @@
  * and mappings) — this file is the orchestrator that ties them together.
  */
 import { checkKeyLength, byteLength, DOCUMENT_SIZE_LIMIT, TOP_LEVEL_KEY_LIMIT, NESTING_DEPTH_LIMIT, } from './normalize.js';
-import { unescapeDQ, stripComment, positionedBuilder, NO_SPAN_VALUE, parseSimpleScalarSpan, } from './scalars.js';
+import { unescapeDQ, stripComment, stripCommentKeepEscapes, positionedBuilder, NO_SPAN_VALUE, parseSimpleScalarSpan, } from './scalars.js';
 import { parseFlowOrScalarValue } from './flow.js';
 import { parseBlockRange } from './block.js';
 import { buildBlockScalar } from './block-scalar.js';
@@ -123,7 +123,14 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
     if (frontMatter.includes('\r'))
         frontMatter = frontMatter.replace(/\r\n|\r/g, '\n');
     if (frontMatter.includes('\t')) {
-        frontMatter = frontMatter.replace(/^([ \t]*)/gm, (leading) => (leading.includes('\t') ? leading.replace(/\t/g, '  ') : leading));
+        // Record how many columns each line's leading whitespace grew, so a
+        // References 2.0 token can be reported at its *original* column (§2.4).
+        ctx.tabAdjust = [];
+        frontMatter = frontMatter.replace(/^([ \t]*)/gm, (leading) => {
+            const expanded = leading.includes('\t') ? leading.replace(/\t/g, '  ') : leading;
+            ctx.tabAdjust.push(expanded.length - leading.length);
+            return expanded;
+        });
     }
     if (frontMatter.includes(' \n') || frontMatter.endsWith(' ')) {
         // Capture-and-reinsert instead of a lookahead: `( +)(\n|$)` replaced
@@ -165,6 +172,14 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
         }
         const firstNewline = inlineEnd ?? frontMatter.indexOf('\n', rawStart);
         const newlineInRange = firstNewline < nextStart;
+        // Physical codepoint column of the value's first character in its
+        // source line — the anchor for References 2.0 token positions (§2.4).
+        // References 2.0 token positions (§2.4): only build the source anchor
+        // for the annotated builder; `parseCore` (native) discards it.
+        const wantSource = builder === positionedBuilder;
+        const valueLineStart = wantSource ? frontMatter.lastIndexOf('\n', rawStart - 1) + 1 : 0;
+        const valueCol = wantSource ? [...frontMatter.slice(valueLineStart, rawStart)].length : 0;
+        const lineTabAdjust = wantSource && ctx.tabAdjust ? [ctx.tabAdjust[line - 1] ?? 0] : undefined;
         // Typical frontmatter uses one inline scalar per key. Avoid building
         // and filling a temporary lines array for that overwhelmingly common
         // case; the scanner-delimited raw slice contains at most its terminal
@@ -177,8 +192,12 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
                 return;
             }
             const val = frontMatter.slice(rawStart, valueEnd);
-            const uncommented = val.includes('#') ? stripComment(val) : val;
-            builder.setMapping(root, key, parseFlowOrScalarValue(uncommented, ctx, line, builder));
+            const hasHash = val.includes('#');
+            const uncommented = hasHash ? stripComment(val) : val;
+            // The physical anchor keeps `\#` but drops a real comment, so a
+            // `${…}`-shaped token inside a trailing comment is not scanned (§2.4).
+            const rawSource = wantSource && hasHash ? stripCommentKeepEscapes(val) : val;
+            builder.setMapping(root, key, parseFlowOrScalarValue(uncommented, ctx, line, builder, { raw: rawSource, line, col: valueCol, tabAdjust: lineTabAdjust }));
             return;
         }
         if (isBlock) {
@@ -204,8 +223,10 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
             const line0Trimmed = lines[0].trim();
             if (lines.length === 1 || line0Trimmed !== '|') {
                 const line0 = lines[0];
-                const val = line0.includes('#') ? stripComment(line0) : line0;
-                builder.setMapping(root, key, parseFlowOrScalarValue(val, ctx, line, builder));
+                const hasHash = line0.includes('#');
+                const val = hasHash ? stripComment(line0) : line0;
+                const rawSource = wantSource && hasHash ? stripCommentKeepEscapes(line0) : line0;
+                builder.setMapping(root, key, parseFlowOrScalarValue(val, ctx, line, builder, { raw: rawSource, line, col: valueCol, tabAdjust: lineTabAdjust }));
                 return;
             }
             // Multi-line string (`|` literal block scalar). The introducing key

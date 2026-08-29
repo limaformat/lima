@@ -9,10 +9,10 @@ import (
 )
 
 func pv(v Value, line int) *pvalue { return &pvalue{value: v, line: line} }
-func pstr(s string, line int, quoted bool, captureReferences bool) *pvalue {
+func pstr(s string, line int, quoted bool, captureReferences bool, src *referenceSource) *pvalue {
 	p := &pvalue{value: String(s), line: line, quoted: quoted}
 	if captureReferences && !quoted {
-		setReferenceTokens2(p, scanReferenceTokens2(s, line, nil))
+		setReferenceTokens2(p, scanReferenceTokens2(s, line, src))
 	}
 	return p
 }
@@ -180,7 +180,7 @@ func zeroLiteral(s string) bool {
 	return s != "" && strings.Trim(s, "0") == ""
 }
 
-func buildTyped(s string, strict bool, line int, captureReferences bool) (*pvalue, error) {
+func buildTyped(s string, strict bool, line int, captureReferences bool, src *referenceSource) (*pvalue, error) {
 	switch s {
 	case "", "null", "~":
 		return pv(Null{}, line), nil
@@ -193,7 +193,7 @@ func buildTyped(s string, strict bool, line int, captureReferences bool) (*pvalu
 		if e := checkStringLimit(s, line); e != nil {
 			return nil, e
 		}
-		return pstr(s, line, false, captureReferences), nil
+		return pstr(s, line, false, captureReferences, src), nil
 	}
 	if numberGrammar(s) {
 		if strings.ContainsAny(s, ".eE") {
@@ -228,7 +228,7 @@ func buildTyped(s string, strict bool, line int, captureReferences bool) (*pvalu
 	if e := checkStringLimit(s, line); e != nil {
 		return nil, e
 	}
-	return pstr(s, line, false, captureReferences), nil
+	return pstr(s, line, false, captureReferences, src), nil
 }
 
 func unescapeDQ(s string, strict bool, line int) (string, error) {
@@ -379,6 +379,16 @@ func stripKeyQuotes(s string, strict bool, line int) (string, error) {
 	return s, nil
 }
 func stripComment(s string) string {
+	return strings.ReplaceAll(stripCommentKeepEscapes(s), "\\#", "#")
+}
+
+// stripCommentKeepEscapes removes a trailing `#` comment but leaves `\#`
+// escapes as written — the physical form a References 2.0 token's column
+// is measured against (§2.4). The comment is not part of the value (so its
+// `${…}`-shaped text must not be scanned as a token), but a `\#` before a
+// token still occupies its two source columns. Mirrors
+// js/src/scalars.ts's stripCommentKeepEscapes.
+func stripCommentKeepEscapes(s string) string {
 	q := byte(0)
 	esc := false
 	for i := 0; i < len(s); i++ {
@@ -400,10 +410,19 @@ func stripComment(s string) string {
 		} else if c == '\\' && i+1 < len(s) && s[i+1] == '#' {
 			i++
 		} else if c == '#' {
-			return strings.ReplaceAll(strings.TrimRight(s[:i], " \t"), "\\#", "#")
+			return strings.TrimRight(s[:i], " \t")
 		}
 	}
-	return strings.ReplaceAll(s, "\\#", "#")
+	return s
+}
+
+// physicalRaw is the physical `raw` form for a References 2.0 token's
+// column: a trailing comment removed, `\#` kept. Mirrors js physicalRaw.
+func physicalRaw(s string) string {
+	if strings.ContainsRune(s, '#') {
+		return stripCommentKeepEscapes(s)
+	}
+	return s
 }
 
 // parseScalar is the shared quoted-or-typed scalar parser — every value
@@ -412,7 +431,7 @@ func stripComment(s string) string {
 // "unterminated quoted string" and "non-whitespace content after closing
 // quote in an inline value" — apply in every one of those positions, so
 // they are enforced here unconditionally rather than gated to the top level.
-func parseScalar(raw string, strict bool, line int, captureReferences bool) (*pvalue, error) {
+func parseScalar(raw string, strict bool, line int, captureReferences bool, src *referenceSource) (*pvalue, error) {
 	if len(raw) > 0 && (raw[0] == '"' || raw[0] == '\'') {
 		q := raw[0]
 		close := closingQuoteIndex(raw, true)
@@ -431,7 +450,7 @@ func parseScalar(raw string, strict bool, line int, captureReferences bool) (*pv
 			if e = checkStringLimit(v, line); e != nil {
 				return nil, e
 			}
-			return pstr(v, line, true, captureReferences), nil
+			return pstr(v, line, true, captureReferences, nil), nil
 		}
 		if strict {
 			if close < 0 {
@@ -445,5 +464,5 @@ func parseScalar(raw string, strict bool, line int, captureReferences bool) (*pv
 	if utf8.RuneCountInString(raw) > scalarLengthLimit {
 		return nil, checkStringLimit(raw, line)
 	}
-	return buildTyped(raw, strict, line, captureReferences)
+	return buildTyped(raw, strict, line, captureReferences, src)
 }

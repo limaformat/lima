@@ -87,8 +87,8 @@ bench('16 refs to a ~2000-node partial (~32K result nodes)', () => parseReferenc
 // dotted mapping-path traversal into a partial (References §3.1, new in
 // 2.0), and a block scalar whose reference sits after a `^^` continuation
 // line (Core §6.1.6), which is the one shape that pays for the
-// StringSourceSpan bookkeeping in the annotated builder (js/src/scalars.ts,
-// js/src/core.ts) — parseCore's native builder never computes spans.
+// raw+decoded reference-token zip in the annotated builder (js/src/scalars.ts,
+// js/src/reference-tokens2.ts) — parseCore's native builder never scans it.
 
 const directRefBaseline = 'source: 42\ncopy: source\n'
 const directRef = 'source: 42\ncopy: ${source}\n'

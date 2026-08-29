@@ -20,6 +20,13 @@ export type Diagnostic = {
 export type ParseContext = {
     strict: boolean;
     onWarning?: (diagnostic: Diagnostic) => void;
+    /**
+     * Per-line (0-based) count of columns added by Core §3 leading-tab
+     * expansion — subtracted from a References 2.0 token's column so it
+     * reports its position in the *original* source (§2.4), not the
+     * tab-expanded one. Absent when the document had no tabs.
+     */
+    tabAdjust?: number[];
 };
 export declare const DOCUMENT_SIZE_LIMIT = 65536;
 export declare const KEY_LENGTH_LIMIT = 128;

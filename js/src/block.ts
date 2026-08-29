@@ -11,13 +11,14 @@
 
 import { type ParseContext, checkKeyLength, checkDuplicateKey, NESTING_DEPTH_LIMIT } from './normalize.js'
 import {
-	stripKeyQuotes, stripComment,
+	stripKeyQuotes, stripComment, stripCommentKeepEscapes,
 	parseQuotedOrTyped, closingQuoteIndex, isValidKey,
 } from './scalars.js'
 import { parseFlowMapping, parseFlowOrScalarValue } from './flow.js'
 import { buildBlockScalar } from './block-scalar.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
+import type { ReferenceSource } from './reference-tokens2.js'
 import { isTrimWhitespace } from './chars.js'
 import { BlockCursor } from './block-cursor.js'
 
@@ -31,12 +32,42 @@ const DASH_PREFIX_RE = /^-\s+/
  * and advance one line. §6.1.5 places no top-level restriction on block
  * scalars, so this is the same primitive `core.ts` uses at the top level.
  */
+/** Length of the `- ` (dash + whitespace) prefix on the cursor's current line. */
+const dashPrefixLen = (cursor: BlockCursor): number => {
+	const start = cursor.contentStart, end = cursor.lineEnd
+	if (start + 1 === end) return 1
+	let content = start + 1
+	while (content < end && isTrimWhitespace(cursor.source.charCodeAt(content))) content++
+	return content - start
+}
+
+/** Codepoints of leading whitespace on `s` — for a value's column within its line. */
+const leadingWsLen = (s: string): number => s.length - s.trimStart().length
+
+/** A value's physical `raw` for References 2.0 token positions: a trailing
+ * `#` comment removed (its `${…}`-shaped text is not part of the value, so
+ * must not be scanned), but `\#` kept as written (§2.4 — a `\#` before a
+ * token still occupies two source columns). */
+const physicalRaw = (s: string): string => (s.includes('#') ? stripCommentKeepEscapes(s) : s)
+
+/** The `ReferenceSource` for an inline value on line `keyLine` at column
+ * `valueCol`; `rawUndecoded` is the value text before comment stripping /
+ * `\#` collapse (so a `\#` before a token doesn't shift its column). */
+const inlineSource = (
+	ctx: ParseContext, keyLine: number, valueCol: number, rawUndecoded: string,
+): ReferenceSource => ({
+	raw: physicalRaw(rawUndecoded), line: keyLine, col: valueCol,
+	tabAdjust: ctx.tabAdjust ? [ctx.tabAdjust[keyLine - 1] ?? 0] : undefined,
+})
+
 const inlineOrBlockScalar = <V, M>(
-	raw: string, keyIndent: number, keyLine: number,
+	raw: string, keyIndent: number, keyLine: number, valueCol: number, rawUndecoded: string,
 	cursor: BlockCursor, ctx: ParseContext, builder: ValueBuilder<V, M>,
 ): V => {
 	if (raw !== '|') {
-		const value = parseFlowOrScalarValue(raw, ctx, keyLine, builder)
+		const value = parseFlowOrScalarValue(
+			raw, ctx, keyLine, builder, inlineSource(ctx, keyLine, valueCol, rawUndecoded),
+		)
 		cursor.next()
 		return value
 	}
@@ -140,9 +171,11 @@ const parseCursorBlock = <V, M>(
 				} else if (colonPos !== -1) {
 					const key = stripKeyQuotes(keyRaw, ctx.strict, line)
 					checkKeyLength(key, () => line)
-					let raw = trimSlice(trimmed, colonPos + 2, trimmed.length)
+					const rawUndecoded = trimSlice(trimmed, colonPos + 2, trimmed.length)
+					let raw = rawUndecoded
 					if (raw !== '|' && raw.includes('#')) raw = stripComment(raw)
-					builder.setMapping(pendingItem, key, inlineOrBlockScalar(raw, indent, line, cursor, ctx, builder))
+					const valueCol = cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2))
+					builder.setMapping(pendingItem, key, inlineOrBlockScalar(raw, indent, line, valueCol, rawUndecoded, cursor, ctx, builder))
 				} else if (trimmed.endsWith(':')) {
 					const key = stripKeyQuotes(keyRaw, ctx.strict, line)
 					checkKeyLength(key, () => line)
@@ -176,15 +209,19 @@ const parseCursorBlock = <V, M>(
 				cursor.next(); continue
 			}
 
-			let afterDash = cursorAfterDash(cursor)
+			const afterDashRaw = cursorAfterDash(cursor)
+			let afterDash = afterDashRaw
 			if (afterDash.includes('#')) afterDash = stripComment(afterDash)
+			const dashPfx = dashPrefixLen(cursor) // `- ` prefix, all ASCII
+			const afterDashCol = cursor.indent + dashPfx
+			const afterDashTab = ctx.tabAdjust ? [ctx.tabAdjust[line - 1] ?? 0] : undefined
 			const first = afterDash.charCodeAt(0)
 			if (first !== 34 && first !== 39 && first !== 45 && first !== 123 &&
 				afterDash.indexOf(': ') === -1 && !afterDash.endsWith(':')) {
-				items.push(parseQuotedOrTyped(afterDash, ctx, line, builder))
+				items.push(parseQuotedOrTyped(afterDash, ctx, line, builder, { raw: physicalRaw(afterDashRaw), line, col: afterDashCol, tabAdjust: afterDashTab }))
 				cursor.next(); continue
 			}
-			const flowMap = parseFlowMapping(afterDash, ctx, line, builder)
+			const flowMap = parseFlowMapping(afterDash, ctx, line, builder, { raw: physicalRaw(afterDashRaw), line, col: afterDashCol, tabAdjust: afterDashTab })
 			const colonPos = findKeySep(afterDash)
 			if (flowMap !== null) {
 				items.push(flowMap); cursor.next()
@@ -207,8 +244,9 @@ const parseCursorBlock = <V, M>(
 				const raw = valueFirst > 0x20 && valueFirst < 0x7f && valueLast > 0x20 && valueLast < 0x7f
 					? afterDash.slice(valueStart) : trimSlice(afterDash, valueStart, afterDash.length)
 				// The key sits after `- `, two columns past the dash.
+				const valueCol = afterDashCol + valueStart + leadingWsLen(afterDash.slice(valueStart))
 				pendingItem = builder.createMappingWith(key,
-					inlineOrBlockScalar(raw, baseIndent + 2, line, cursor, ctx, builder))
+					inlineOrBlockScalar(raw, baseIndent + 2, line, valueCol, afterDashRaw.slice(valueStart), cursor, ctx, builder))
 				while (cursor.valid && cursor.indent > baseIndent) {
 					const continuationLine = baseLine + cursor.lineIndex
 					const ckeyIndent = cursor.asciiIndent
@@ -222,10 +260,14 @@ const parseCursorBlock = <V, M>(
 					const ckey = stripKeyQuotes(ckeyRaw, ctx.strict, continuationLine)
 					if (!ckey) break
 					checkKeyLength(ckey, () => continuationLine)
-					let value = trimSlice(contLine, csep + 2, contLine.length)
+					const valueUndecoded = trimSlice(contLine, csep + 2, contLine.length)
+					let value = valueUndecoded
 					if (value !== '|' && value.includes('#')) value = stripComment(value)
+					// contLine starts exactly at contentStart (no leading trim), so
+					// the value's column is the indent plus its offset in contLine.
+					const cValueCol = cursor.indent + csep + 2 + leadingWsLen(contLine.slice(csep + 2))
 					builder.setMapping(pendingItem, ckey,
-						inlineOrBlockScalar(value, ckeyIndent, continuationLine, cursor, ctx, builder))
+						inlineOrBlockScalar(value, ckeyIndent, continuationLine, cValueCol, valueUndecoded, cursor, ctx, builder))
 				}
 			} else if (afterDash.endsWith(':') && isValidKey(trimSlice(afterDash, 0, afterDash.length - 1))) {
 				const key = stripKeyQuotes(trimSlice(afterDash, 0, afterDash.length - 1), ctx.strict, line)
@@ -247,7 +289,7 @@ const parseCursorBlock = <V, M>(
 			} else {
 				// A quoted-or-typed scalar item — parseQuotedOrTyped enforces
 				// §10.1's unterminated / trailing-content strict checks.
-				items.push(parseQuotedOrTyped(afterDash, ctx, line, builder))
+				items.push(parseQuotedOrTyped(afterDash, ctx, line, builder, { raw: physicalRaw(afterDashRaw), line, col: afterDashCol, tabAdjust: afterDashTab }))
 				cursor.next()
 			}
 		} else {
@@ -271,9 +313,11 @@ const parseCursorBlock = <V, M>(
 				checkKeyLength(key, () => line)
 				if (ctx.strict || ctx.onWarning !== undefined)
 					checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
-				let raw = trimSlice(trimmed, colonPos + 2, trimmed.length)
+				const rawUndecoded = trimSlice(trimmed, colonPos + 2, trimmed.length)
+				let raw = rawUndecoded
 				if (raw !== '|' && raw.includes('#')) raw = stripComment(raw)
-				builder.setMapping(entries, key, inlineOrBlockScalar(raw, baseIndent, line, cursor, ctx, builder))
+				const valueCol = cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2))
+				builder.setMapping(entries, key, inlineOrBlockScalar(raw, baseIndent, line, valueCol, rawUndecoded, cursor, ctx, builder))
 			} else if (trimmed.endsWith(':')) {
 				if (entries === null) entries = builder.createMapping()
 				const key = stripKeyQuotes(keyRaw, ctx.strict, line)

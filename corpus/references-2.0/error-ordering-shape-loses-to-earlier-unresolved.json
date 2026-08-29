@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-ordering.shape-loses-to-earlier-unresolved",
+  "spec": "references",
+  "section": "5",
+  "description": "An invalid-array-shape error (a pure reference resolving to an array used as a sequence item) is checked inline during resolution; an unresolved reference only in the final pass. When both are in one flow sequence on the same line and the unresolved token is physically first, \u00a75's unified position sort reports the unresolved reference, not the shape error.",
+  "input": "t:\n  - 1\n  - 2\narr: [${gone}, ${t}]\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 4,
+      "token": "${gone}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 7
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "references-2.activity.comment-after-sequence-item-reference-not-scanned",
+  "spec": "references",
+  "section": "2.4",
+  "description": "As with a mapping value, a trailing `#` comment after a block-sequence item's reference value is not scanned for tokens. The item resolves to the value of `a`; the `${b}` in the comment is inert.",
+  "input": "a: 1\nitems:\n  - ${a} # ${b}\n",
+  "options": {
+    "strict": false
+  },
+  "expect": {
+    "result": {
+      "a": 1,
+      "items": [
+        1
+      ]
+    }
+  },
+  "tags": [
+    "activity"
+  ],
+  "specVersion": "2.0"
+}

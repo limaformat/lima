@@ -5,7 +5,7 @@ use crate::core::{parse_core, parse_core_with_positions_options, CoreOptions};
 use crate::errors::{Diagnostic, LimaDiagnosticCode as Code, LimaError};
 use crate::normalize::{begin_warning_collection, finish_warning_collection, NESTING_DEPTH_LIMIT};
 use crate::scalars::SCALAR_LENGTH_LIMIT;
-use crate::value::{InsertedAt, LimaValue, PositionedValue, StringSourceSpan};
+use crate::value::{InsertedAt, LimaValue, PositionedValue, ReferenceSource};
 use std::collections::{HashMap, HashSet};
 
 const MAX_EDGES: u8 = 3;
@@ -79,47 +79,34 @@ fn scan_path(bytes: &[u8], mut i: usize, partial: bool) -> Option<usize> {
     Some(i)
 }
 
-fn scan_tokens(
-    value: &str,
-    first_line: u32,
-    source_spans: Option<&[StringSourceSpan]>,
-) -> Vec<Token> {
-    let bytes = value.as_bytes();
-    let mut result = Vec::new();
+/// One `${…}` / `$(…)` match: byte start within the scanned string, text, path.
+struct RawMatch {
+    start: usize,
+    text: String,
+    path: String,
+    partial: bool,
+}
+
+fn scan_matches(s: &str) -> Vec<RawMatch> {
+    let bytes = s.as_bytes();
+    let mut out = Vec::new();
     let mut i = 0;
-    let mut line = first_line;
-    let mut line_start = 0;
     while i < bytes.len() {
-        if bytes[i] == b'\n' {
-            line += 1;
-            line_start = i + 1;
-            i += 1;
-            continue;
-        }
         let (body, close, partial) = if bytes.get(i..i + 2) == Some(b"${") {
             (i + 2, b'}', false)
         } else if bytes.get(i..i + 2) == Some(b"$(") {
             (i + 2, b')', true)
         } else {
-            i += value[i..].chars().next().unwrap().len_utf8();
+            i += s[i..].chars().next().unwrap().len_utf8();
             continue;
         };
         if let Some(end) = scan_path(bytes, body, partial) {
             if bytes.get(end) == Some(&close) {
-                let path = value[body..end].to_string();
-                let text = value[i..=end].to_string();
-                let source =
-                    source_spans.and_then(|spans| spans.iter().rev().find(|span| span.start <= i));
-                result.push(Token {
-                    text,
+                out.push(RawMatch {
                     start: i,
-                    line: source.map_or(line, |s| s.line),
-                    offset: source.map_or_else(
-                        || value[line_start..i].chars().count(),
-                        |s| s.source_offset + value[s.start..i].chars().count(),
-                    ),
-                    document_path: (!partial).then_some(path.clone()),
-                    partial_path: partial.then_some(path),
+                    text: s[i..=end].to_string(),
+                    path: s[body..end].to_string(),
+                    partial,
                 });
                 i = end + 1;
                 continue;
@@ -127,7 +114,71 @@ fn scan_tokens(
         }
         i += 1;
     }
-    result
+    out
+}
+
+/// Reference tokens with `start` a byte offset into the *decoded* `value`
+/// (splice point) and `line` / `offset` the token's physical codepoint
+/// position, read from `source.raw` (§2.4) — or from `value` when no
+/// physical anchor is available (synthetic / partial-side scalars).
+fn scan_tokens(value: &str, first_line: u32, source: Option<&ReferenceSource>) -> Vec<Token> {
+    let decoded = scan_matches(value);
+    if decoded.is_empty() {
+        return Vec::new();
+    }
+    let (raw, first_line, first_col, tab_adjust) = match source {
+        Some(s) => (
+            s.raw.as_deref().unwrap_or(value),
+            s.line,
+            s.col,
+            s.tab_adjust.as_deref(),
+        ),
+        None => (value, first_line, 0, None),
+    };
+    let physical = scan_matches(raw);
+    // Internal invariant — the raw and decoded scans see the same tokens in
+    // the same order (`\#` collapse and `^^` merge never add or remove a
+    // `${…}` / `$(…)`). A hard check, not `debug_assert`: a mismatch would
+    // silently misreport positions in a release build.
+    assert_eq!(
+        physical.len(),
+        decoded.len(),
+        "Lima internal: raw and decoded reference-token scans disagree",
+    );
+    // Physical (line, codepoint offset) for each match, in order.
+    let mut positions = Vec::with_capacity(physical.len());
+    let mut scanned = 0usize;
+    let mut line = first_line;
+    let mut col = first_col;
+    let mut line_index = 0usize;
+    for m in &physical {
+        for ch in raw[scanned..m.start].chars() {
+            if ch == '\n' {
+                line += 1;
+                col = 0;
+                line_index += 1;
+            } else {
+                col += 1;
+            }
+        }
+        scanned = m.start;
+        let adj = tab_adjust
+            .and_then(|t| t.get(line_index).copied())
+            .unwrap_or(0);
+        positions.push((line, col.saturating_sub(adj)));
+    }
+    decoded
+        .into_iter()
+        .zip(positions)
+        .map(|(m, (line, offset))| Token {
+            text: m.text,
+            start: m.start,
+            line,
+            offset,
+            document_path: (!m.partial).then(|| m.path.clone()),
+            partial_path: m.partial.then_some(m.path),
+        })
+        .collect()
 }
 
 fn get_mapping<'a>(
@@ -341,8 +392,16 @@ fn resolve_node(
                 if matches!(item, PositionedValue::String { quoted: false, .. })
                     && matches!(value, PositionedValue::Array { .. })
                 {
-                    let token = if let PositionedValue::String { value, line, .. } = item {
-                        scan_tokens(value, *line, None).into_iter().next()
+                    let token = if let PositionedValue::String {
+                        value,
+                        line,
+                        ref_source,
+                        ..
+                    } = item
+                    {
+                        scan_tokens(value, *line, ref_source.as_ref())
+                            .into_iter()
+                            .next()
                     } else {
                         None
                     };
@@ -399,10 +458,10 @@ fn resolve_node(
             value,
             line,
             quoted: false,
-            source_spans,
+            ref_source,
             inserted_at,
         } => {
-            let tokens = scan_tokens(value, *line, source_spans.as_deref());
+            let tokens = scan_tokens(value, *line, ref_source.as_ref());
             let pure =
                 tokens.len() == 1 && tokens[0].start == 0 && tokens[0].text.len() == value.len();
             if pure {
@@ -527,7 +586,7 @@ fn resolve_node(
                         value: output,
                         line: *line,
                         quoted: false,
-                        source_spans: source_spans.clone(),
+                        ref_source: ref_source.clone(),
                         inserted_at: inserted_at.clone(),
                     },
                     complete,
@@ -688,7 +747,7 @@ fn positioned(v: &LimaValue) -> PositionedValue {
             value: value.clone(),
             line: 0,
             quoted: true,
-            source_spans: None,
+            ref_source: None,
             inserted_at: None,
         },
         LimaValue::Instant(value) => PositionedValue::Instant {
@@ -1048,14 +1107,14 @@ mod tests {
     fn strict_position_survives_earlier_interpolation_length_change() {
         let error = strict_error("a: 12345\nx: value ${a} then ${missing}");
         assert_eq!(error.line, Some(2));
-        assert_eq!(error.column, Some(17));
+        assert_eq!(error.column, Some(20)); // physical column: "x: value ${a} then " = 19 codepoints
         assert_eq!(error.token.as_deref(), Some("${missing}"));
     }
 
     #[test]
     fn token_columns_count_unicode_code_points() {
         let error = strict_error("x: café ${missing}");
-        assert_eq!(error.column, Some(6));
+        assert_eq!(error.column, Some(9)); // physical: "x: café " = 8 codepoints
         assert_eq!(error.token.as_deref(), Some("${missing}"));
     }
 

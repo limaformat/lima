@@ -8,30 +8,43 @@
 use crate::block_cursor::BlockCursor;
 use crate::block_scalar::build_block_scalar;
 use crate::chars::is_trim_whitespace;
+use crate::core::tab_adjust_slice;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
 use crate::flow::{parse_flow_mapping_checked, parse_flow_or_scalar_value_checked};
 use crate::normalize::{check_duplicate_key, check_key_length, NESTING_DEPTH_LIMIT};
 use crate::scalars::{
-    closing_quote_index, is_valid_key, parse_quoted_or_typed, strip_comment, strip_key_quotes,
+    closing_quote_index, is_valid_key, parse_quoted_or_typed, physical_raw, strip_comment,
+    strip_key_quotes,
 };
-use crate::value::Builder;
+use crate::value::{Builder, ReferenceSource};
 
 /// A key's inline value text. If it is exactly `|`, consume the following
 /// physical lines belonging to the Core §6.1.5 block scalar introduced by a
 /// key at `key_indent` and return the scalar; the cursor is left on the
 /// first line past it. Otherwise parse `raw` as an ordinary inline value
-/// and advance one line. §6.1.5 places no top-level restriction on block
-/// scalars, so this is the same primitive `core.rs` uses at the top level.
+/// and advance one line. `value_col` is the physical codepoint column of
+/// `raw`'s first character (References §2.4). §6.1.5 places no top-level
+/// restriction on block scalars, so this is the same primitive `core.rs`
+/// uses at the top level.
 fn inline_or_block_scalar<'a, B: Builder, const CHECK_DUPLICATES: bool>(
     raw: &str,
     key_indent: usize,
     key_line: u32,
+    value_col: usize,
+    raw_undecoded: &str,
     cursor: &mut BlockCursor<'a>,
     strict: bool,
 ) -> Result<B::Value, LimaError> {
     if raw != "|" {
-        let value =
-            parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(raw, strict, key_line)?;
+        let source = B::POSITIONED.then(|| ReferenceSource {
+            raw: Some(physical_raw(raw_undecoded)),
+            line: key_line,
+            col: value_col,
+            tab_adjust: tab_adjust_slice(key_line, 1),
+        });
+        let value = parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+            raw, strict, key_line, source,
+        )?;
         cursor.next();
         return Ok(value);
     }
@@ -44,8 +57,17 @@ fn inline_or_block_scalar<'a, B: Builder, const CHECK_DUPLICATES: bool>(
         body_lines.push(&cursor.source[cursor.line_start..cursor.line_end]);
         cursor.next();
     }
-    let (joined, spans, _) = build_block_scalar(&body_lines, key_indent, key_line)?;
-    Ok(B::v_block_string(joined, key_line + 1, spans))
+    let (joined, raw_body, consumed) = build_block_scalar(&body_lines, key_indent, key_line)?;
+    Ok(B::v_string_src(
+        joined,
+        key_line + 1,
+        ReferenceSource {
+            raw: Some(raw_body),
+            line: key_line + 1,
+            col: 0,
+            tab_adjust: tab_adjust_slice(key_line + 1, consumed),
+        },
+    ))
 }
 
 /// Finds the key/value separator: the first unquoted `: `, or (for a
@@ -92,7 +114,9 @@ fn skip_empty_and_comment_lines(cursor: &mut BlockCursor) {
 /// the dash is *not* whitespace, the whole line (dash included) is treated
 /// as an ordinary scalar starting with a literal `-` — not a sequence item.
 /// The column of the first key after `- ` on the cursor's current line —
-/// the base indentation for the item's sibling keys (§7.2).
+/// the base indentation for the item's sibling keys (§7.2). Codepoints, so
+/// a multi-byte space after the dash counts as one column (matching the
+/// TypeScript reference).
 fn dash_key_column(cursor: &BlockCursor) -> usize {
     let end = cursor.line_end;
     let mut pos = cursor.content_start + 1;
@@ -103,7 +127,26 @@ fn dash_key_column(cursor: &BlockCursor) -> usize {
         }
         pos += ch.len_utf8();
     }
-    pos - cursor.line_start
+    cursor.source[cursor.line_start..pos].chars().count()
+}
+
+/// Codepoints of leading whitespace on `s` — for a value's column in its line.
+fn leading_ws_len(s: &str) -> usize {
+    s.chars().take_while(|c| is_trim_whitespace(*c)).count()
+}
+
+/// Length (codepoints) of the `- ` (dash + whitespace) prefix on the current line.
+fn dash_prefix_len(cursor: &BlockCursor) -> usize {
+    let end = cursor.line_end;
+    let mut pos = cursor.content_start + 1;
+    while pos < end {
+        let ch = cursor.source[pos..end].chars().next().unwrap();
+        if !is_trim_whitespace(ch) {
+            break;
+        }
+        pos += ch.len_utf8();
+    }
+    cursor.source[cursor.content_start..pos].chars().count()
 }
 
 fn cursor_after_dash<'a>(cursor: &BlockCursor<'a>) -> &'a str {
@@ -178,15 +221,25 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 } else if let Some(colon_pos) = colon_pos {
                     let key = strip_key_quotes(key_raw, strict, line)?;
                     check_key_length(&key, line)?;
-                    let raw = trim_slice(trimmed, colon_pos + 2, trimmed.len());
-                    let raw = if raw != "|" && raw.contains('#') {
-                        strip_comment(raw)
+                    let raw_undecoded = trim_slice(trimmed, colon_pos + 2, trimmed.len());
+                    let raw = if raw_undecoded != "|" && raw_undecoded.contains('#') {
+                        strip_comment(raw_undecoded)
                     } else {
-                        raw.to_string()
+                        raw_undecoded.to_string()
                     };
                     let key_indent = cursor.ascii_indent;
+                    let value_col = cursor.ascii_indent
+                        + colon_pos
+                        + 2
+                        + leading_ws_len(&trimmed[colon_pos + 2..]);
                     let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
-                        &raw, key_indent, line, cursor, strict,
+                        &raw,
+                        key_indent,
+                        line,
+                        value_col,
+                        raw_undecoded,
+                        cursor,
+                        strict,
                     )?;
                     B::m_set(pending, key, value);
                 } else if trimmed.ends_with(':') {
@@ -249,24 +302,41 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 continue;
             }
 
-            let after_dash = cursor_after_dash(cursor);
-            let after_dash = if after_dash.contains('#') {
-                strip_comment(after_dash)
+            let after_dash_raw = cursor_after_dash(cursor);
+            let after_dash = if after_dash_raw.contains('#') {
+                strip_comment(after_dash_raw)
             } else {
-                after_dash.to_string()
+                after_dash_raw.to_string()
+            };
+            let dash_src = |col: usize| {
+                B::POSITIONED.then(|| ReferenceSource {
+                    raw: Some(physical_raw(after_dash_raw)),
+                    line,
+                    col,
+                    tab_adjust: tab_adjust_slice(line, 1),
+                })
             };
             let first = after_dash.as_bytes().first().copied();
             if !matches!(first, Some(b'"') | Some(b'\'') | Some(b'-') | Some(b'{'))
                 && !after_dash.contains(": ")
                 && !after_dash.ends_with(':')
             {
-                items.push(parse_quoted_or_typed::<B>(&after_dash, strict, line)?);
+                items.push(parse_quoted_or_typed::<B>(
+                    &after_dash,
+                    strict,
+                    line,
+                    dash_src(cursor.indent + dash_prefix_len(cursor)),
+                )?);
                 cursor.next();
                 continue;
             }
 
-            let flow_map =
-                parse_flow_mapping_checked::<B, CHECK_DUPLICATES>(&after_dash, strict, line)?;
+            let flow_map = parse_flow_mapping_checked::<B, CHECK_DUPLICATES>(
+                &after_dash,
+                strict,
+                line,
+                dash_src(cursor.indent + dash_prefix_len(cursor)),
+            )?;
             let colon_pos = find_key_sep(&after_dash);
             if let Some(flow_map) = flow_map {
                 items.push(flow_map);
@@ -298,11 +368,17 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 check_key_length(&key, line)?;
                 let value_start = colon_pos + 2;
                 let raw = trim_slice(&after_dash, value_start, after_dash.len());
-                // The key sits after `- `, two columns past the dash.
+                // The key sits after `- `, so the value column is dash prefix + `key: `.
+                let value_col = cursor.indent
+                    + dash_prefix_len(cursor)
+                    + value_start
+                    + leading_ws_len(&after_dash[value_start..]);
                 let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                     raw,
                     base_indent + 2,
                     line,
+                    value_col,
+                    after_dash_raw.get(value_start..).unwrap_or(raw),
                     cursor,
                     strict,
                 )?;
@@ -328,16 +404,20 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                         break;
                     }
                     check_key_length(&ckey, continuation_line)?;
-                    let cvalue = trim_slice(cont_line, csep + 2, cont_line.len());
-                    let cvalue = if cvalue != "|" && cvalue.contains('#') {
-                        strip_comment(cvalue)
+                    let cvalue_undecoded = trim_slice(cont_line, csep + 2, cont_line.len());
+                    let cvalue = if cvalue_undecoded != "|" && cvalue_undecoded.contains('#') {
+                        strip_comment(cvalue_undecoded)
                     } else {
-                        cvalue.to_string()
+                        cvalue_undecoded.to_string()
                     };
+                    let cvalue_col =
+                        cursor.indent + csep + 2 + leading_ws_len(&cont_line[csep + 2..]);
                     let cvalue = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                         &cvalue,
                         ckey_indent,
                         continuation_line,
+                        cvalue_col,
+                        cvalue_undecoded,
                         cursor,
                         strict,
                     )?;
@@ -371,7 +451,12 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
             } else {
                 // A quoted-or-typed scalar item — parse_quoted_or_typed enforces
                 // §10.1's unterminated / trailing-content strict checks.
-                items.push(parse_quoted_or_typed::<B>(&after_dash, strict, line)?);
+                items.push(parse_quoted_or_typed::<B>(
+                    &after_dash,
+                    strict,
+                    line,
+                    dash_src(cursor.indent + dash_prefix_len(cursor)),
+                )?);
                 cursor.next();
             }
         } else {
@@ -404,16 +489,20 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 if CHECK_DUPLICATES {
                     check_duplicate_key(B::m_has_key(entries, &key), &key, line, strict)?;
                 }
-                let raw = trim_slice(&trimmed, colon_pos + 2, trimmed.len());
-                let raw = if raw != "|" && raw.contains('#') {
-                    strip_comment(raw)
+                let raw_undecoded = trim_slice(&trimmed, colon_pos + 2, trimmed.len());
+                let raw = if raw_undecoded != "|" && raw_undecoded.contains('#') {
+                    strip_comment(raw_undecoded)
                 } else {
-                    raw.to_string()
+                    raw_undecoded.to_string()
                 };
+                let value_col =
+                    cursor.ascii_indent + colon_pos + 2 + leading_ws_len(&trimmed[colon_pos + 2..]);
                 let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                     &raw,
                     base_indent,
                     line,
+                    value_col,
+                    raw_undecoded,
                     cursor,
                     strict,
                 )?;

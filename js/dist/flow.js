@@ -3,6 +3,17 @@ import { checkKeyLength, checkDuplicateKey } from './normalize.js';
 import { parseQuotedOrTyped, parseScalarValue, stripKeyQuotes, closingQuoteIndex, isValidKey } from './scalars.js';
 import { LimaError } from './errors.js';
 import { isTrimWhitespace } from './chars.js';
+/**
+ * The `ReferenceSource` for a flow element starting at UTF-16 index
+ * `utf16Start` within the container text `val`. The element's physical
+ * column is the container's column plus the *codepoint* distance to the
+ * element's start — so References §5 ordering across a flow collection's
+ * elements uses real left-to-right positions, consistently across
+ * implementations.
+ */
+const elementSource = (source, val, utf16Start) => source === undefined
+    ? undefined
+    : { line: source.line, col: source.col + [...val.slice(0, utf16Start)].length, tabAdjust: source.tabAdjust };
 const trimStart = (source, start, end) => {
     while (start < end && isTrimWhitespace(source.charCodeAt(start)))
         start++;
@@ -61,7 +72,7 @@ class FlowCursor {
 }
 const isNestedFlowConstruct = (item) => (item.charCodeAt(0) === 91 && item.charCodeAt(item.length - 1) === 93) ||
     (item.charCodeAt(0) === 123 && item.charCodeAt(item.length - 1) === 125);
-export const parseFlowSequence = (val, ctx, line, builder) => {
+export const parseFlowSequence = (val, ctx, line, builder, source) => {
     if (val.charCodeAt(0) !== 91 || val.charCodeAt(val.length - 1) !== 93)
         return null;
     const innerStart = trimStart(val, 1, val.length - 1);
@@ -90,13 +101,13 @@ export const parseFlowSequence = (val, ctx, line, builder) => {
             });
         }
         if (item.charCodeAt(0) === 123 && item.charCodeAt(item.length - 1) === 125) {
-            const nested = parseFlowMapping(item, ctx, line, builder);
+            const nested = parseFlowMapping(item, ctx, line, builder, elementSource(source, val, start));
             if (nested !== null) {
                 items.push(nested);
                 continue;
             }
         }
-        items.push(parseQuotedOrTyped(item, ctx, line, builder));
+        items.push(parseQuotedOrTyped(item, ctx, line, builder, elementSource(source, val, start)));
     }
     return items;
 };
@@ -117,7 +128,7 @@ const flowItemSeparator = (val, start, end) => {
     const sep = val.indexOf(': ', scan);
     return sep === -1 || sep >= end ? -1 : sep;
 };
-export const parseFlowMapping = (val, ctx, line, builder) => {
+export const parseFlowMapping = (val, ctx, line, builder, source) => {
     if (val.charCodeAt(0) !== 123 || val.charCodeAt(val.length - 1) !== 125)
         return null;
     const innerStart = trimStart(val, 1, val.length - 1);
@@ -163,24 +174,24 @@ export const parseFlowMapping = (val, ctx, line, builder) => {
         if (isNestedFlowConstruct(rawVal)) {
             throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `Lima: invalid flow nesting at line ${line}: "${rawVal}"` });
         }
-        builder.setMapping(entries, key, parseQuotedOrTyped(rawVal, ctx, line, builder));
+        builder.setMapping(entries, key, parseQuotedOrTyped(rawVal, ctx, line, builder, elementSource(source, val, valueStart)));
     }
     return builder.mapping(entries, line);
 };
 /** Parses a value that may be a flow collection, without probing both flow parsers for ordinary scalars. */
-export const parseFlowOrScalarValue = (raw, ctx, line, builder) => {
+export const parseFlowOrScalarValue = (raw, ctx, line, builder, source) => {
     const first = raw.charCodeAt(0);
     if (first === 91) {
-        const sequence = parseFlowSequence(raw, ctx, line, builder);
+        const sequence = parseFlowSequence(raw, ctx, line, builder, source);
         if (sequence !== null)
             return builder.array(sequence, line);
-        return parseScalarValue(raw, ctx, line, builder);
+        return parseScalarValue(raw, ctx, line, builder, source);
     }
     else if (first === 123) {
-        const mapping = parseFlowMapping(raw, ctx, line, builder);
+        const mapping = parseFlowMapping(raw, ctx, line, builder, source);
         if (mapping !== null)
             return mapping;
-        return parseScalarValue(raw, ctx, line, builder);
+        return parseScalarValue(raw, ctx, line, builder, source);
     }
-    return parseQuotedOrTyped(raw, ctx, line, builder);
+    return parseQuotedOrTyped(raw, ctx, line, builder, source);
 };

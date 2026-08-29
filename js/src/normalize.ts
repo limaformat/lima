@@ -19,7 +19,17 @@ export type Diagnostic = { message: string; line: number }
  * (currently just duplicate-key detection) without growing every
  * function's parameter list further as new warning types are added.
  */
-export type ParseContext = { strict: boolean; onWarning?: (diagnostic: Diagnostic) => void }
+export type ParseContext = {
+	strict: boolean
+	onWarning?: (diagnostic: Diagnostic) => void
+	/**
+	 * Per-line (0-based) count of columns added by Core §3 leading-tab
+	 * expansion — subtracted from a References 2.0 token's column so it
+	 * reports its position in the *original* source (§2.4), not the
+	 * tab-expanded one. Absent when the document had no tabs.
+	 */
+	tabAdjust?: number[]
+}
 
 // Core §9 resource limits. All are hard errors in both modes.
 export const DOCUMENT_SIZE_LIMIT = 65536

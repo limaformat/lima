@@ -66,50 +66,104 @@ func scanPath2(s string, i int, partial bool) (int, bool) {
 	return i, true
 }
 
-type stringSourceSpan struct{ start, line, sourceOffset int }
+// referenceSource is where a scalar begins in the source: physical 1-based
+// line and 0-based codepoint column of its first character. A token's
+// position is this anchor plus its codepoint offset within the value
+// (References 2.0 §2.4). raw is set only for a block scalar (the original
+// body lines joined with "\n"), so a token's line is read from there and
+// not from the ^^-merged string; "" means "use value". Mirrors
+// js/src/reference-tokens2.ts.
+type referenceSource struct {
+	raw       string
+	line, col int
+	// tabAdjust[i] = columns Core §3 added to physical line line+i by
+	// leading-tab expansion; subtracted so the reported column is the
+	// original-source column (§2.4).
+	tabAdjust []int
+}
 
-func scanReferenceTokens2(value string, firstLine int, spans []stringSourceSpan) []referenceToken2 {
-	if !strings.Contains(value, "${") && !strings.Contains(value, "$(") {
-		return nil
-	}
-	var out []referenceToken2
-	line, lineStart := firstLine, 0
-	for i := 0; i < len(value); {
-		if value[i] == '\n' {
-			line++
-			lineStart = i + 1
-			i++
-			continue
-		}
+type rawMatch struct {
+	start   int
+	text    string
+	path    string
+	partial bool
+}
+
+func scanMatches2(s string) []rawMatch {
+	var out []rawMatch
+	for i := 0; i < len(s); {
 		partial, close, body := false, byte('}'), i+2
-		if strings.HasPrefix(value[i:], "$(") {
+		if strings.HasPrefix(s[i:], "$(") {
 			partial, close = true, ')'
-		} else if !strings.HasPrefix(value[i:], "${") {
-			_, size := utf8.DecodeRuneInString(value[i:])
+		} else if !strings.HasPrefix(s[i:], "${") {
+			_, size := utf8.DecodeRuneInString(s[i:])
 			i += size
 			continue
 		}
-		end, ok := scanPath2(value, body, partial)
-		if !ok || end >= len(value) || value[end] != close {
+		end, ok := scanPath2(s, body, partial)
+		if !ok || end >= len(s) || s[end] != close {
 			i++
 			continue
 		}
-		t := referenceToken2{token: value[i : end+1], index: i, line: line}
-		path := value[body:end]
-		if partial {
-			t.partialPath = path
-		} else {
-			t.documentPath = path
+		out = append(out, rawMatch{start: i, text: s[i : end+1], path: s[body:end], partial: partial})
+		i = end + 1
+	}
+	return out
+}
+
+func scanReferenceTokens2(value string, firstLine int, source *referenceSource) []referenceToken2 {
+	if !strings.Contains(value, "${") && !strings.Contains(value, "$(") {
+		return nil
+	}
+	decoded := scanMatches2(value)
+	if len(decoded) == 0 {
+		return nil
+	}
+	raw, line, col := value, firstLine, 0
+	var tabAdjust []int
+	if source != nil {
+		line, col, tabAdjust = source.line, source.col, source.tabAdjust
+		if source.raw != "" {
+			raw = source.raw
 		}
-		start := lineStart
-		for _, span := range spans {
-			if span.start <= i {
-				t.line, t.offset, start = span.line, span.sourceOffset, span.start
+	}
+	physical := scanMatches2(raw)
+	// Internal invariant — the raw and decoded scans see the same tokens in
+	// the same order (\# collapse and ^^ merge never add or remove a
+	// ${…} / $(…)). A hard check: a mismatch would silently misreport.
+	if len(physical) != len(decoded) {
+		panic("Lima internal: raw and decoded reference-token scans disagree")
+	}
+	out := make([]referenceToken2, len(decoded))
+	scanned := 0
+	lineIndex := 0
+	for k, m := range physical {
+		for _, r := range raw[scanned:m.start] {
+			if r == '\n' {
+				line++
+				col = 0
+				lineIndex++
+			} else {
+				col++
 			}
 		}
-		t.offset += utf8.RuneCountInString(value[start:i])
-		out = append(out, t)
-		i = end + 1
+		scanned = m.start
+		adj := 0
+		if lineIndex < len(tabAdjust) {
+			adj = tabAdjust[lineIndex]
+		}
+		off := col - adj
+		if off < 0 {
+			off = 0
+		}
+		d := decoded[k]
+		t := referenceToken2{token: d.text, index: d.start, line: line, offset: off}
+		if d.partial {
+			t.partialPath = d.path
+		} else {
+			t.documentPath = d.path
+		}
+		out[k] = t
 	}
 	return out
 }

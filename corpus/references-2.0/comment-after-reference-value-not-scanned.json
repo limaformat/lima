@@ -1,0 +1,20 @@
+{
+  "id": "references-2.activity.comment-after-reference-value-not-scanned",
+  "spec": "references",
+  "section": "2.4",
+  "description": "A trailing `#` comment after a reference value is not part of the value, so a `${…}`-shaped sequence inside that comment is not a reference token. `x` resolves to the value of `a`; the `${b}` in the comment is inert. The token scan that fixes physical positions (§2.4) must measure against the value text with the comment removed, not the raw line.",
+  "input": "a: 1\nx: ${a} # ${b}\n",
+  "options": {
+    "strict": false
+  },
+  "expect": {
+    "result": {
+      "a": 1,
+      "x": 1
+    }
+  },
+  "tags": [
+    "activity"
+  ],
+  "specVersion": "2.0"
+}

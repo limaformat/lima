@@ -11,7 +11,7 @@
 
 import { LString } from './value.js'
 import { type ParseContext, checkScalarLimit } from './normalize.js'
-import type { StringSourceSpan, ValueBuilder } from './builder.js'
+import type { ValueBuilder } from './builder.js'
 
 /** Leading U+0020 count. "Indentation" in §6.1.5 is spaces, measured from column 0. */
 export const leadingSpaces = (line: string): number => {
@@ -73,7 +73,6 @@ export const buildBlockScalar = <V, M>(
 	// single slice() per line. leadingSpaces/trailingSpaceEnd avoid the
 	// temporary strings trim()/trimStart()/trimEnd() would allocate.
 	const merged: string[] = []
-	const mergedSpans: StringSourceSpan[][] | undefined = builder.tracksStringSourcePositions ? [] : undefined
 	for (let i = 0; i < lines.length; i++) {
 		const l = lines[i]
 		const lineLen = l.length
@@ -84,33 +83,26 @@ export const buildBlockScalar = <V, M>(
 		if (end < start) end = start
 		const content = l.slice(start, end)
 		if (isContinuation && merged.length > 0) {
-			if (content) {
-				const outputStart = merged[merged.length - 1].length + 1
-				merged[merged.length - 1] += ' ' + content
-				mergedSpans?.[mergedSpans.length - 1].push({ start: outputStart, line: pipeLine + 1 + i, sourceOffset: start })
-			}
+			if (content) merged[merged.length - 1] += ' ' + content
 		} else {
 			merged.push(content)
-			mergedSpans?.push(content ? [{ start: 0, line: pipeLine + 1 + i, sourceOffset: start }] : [])
 		}
 	}
 
 	// Trailing content (§6.1.5): all trailing empty lines are stripped.
-	while (merged.length > 0 && merged[merged.length - 1] === '') {
-		merged.pop()
-		mergedSpans?.pop()
-	}
+	while (merged.length > 0 && merged[merged.length - 1] === '') merged.pop()
 
 	const joined = merged.join('\n')
-	let sourceSpans: StringSourceSpan[] | undefined
-	if (mergedSpans) {
-		sourceSpans = []
-		let outputStart = 0
-		for (let i = 0; i < merged.length; i++) {
-			for (const span of mergedSpans[i]) sourceSpans.push({ ...span, start: outputStart + span.start })
-			outputStart += merged[i].length + 1
-		}
-	}
 	checkScalarLimit(LString(joined), pipeLine)
-	return { value: builder.string(joined, pipeLine + 1, false, sourceSpans), consumed }
+	// A token's physical `(line, offset)` is read from the original body
+	// lines (column-0 form), not reconstructed from the dedented/`^^`-merged
+	// `joined` string — References 2.0 §2.4. `lines` are at physical lines
+	// `pipeLine + 1 .. pipeLine + consumed` (0-based indices `pipeLine ..`).
+	return {
+		value: builder.string(joined, pipeLine + 1, false, {
+			raw: lines.join('\n'), line: pipeLine + 1, col: 0,
+			tabAdjust: ctx.tabAdjust?.slice(pipeLine, pipeLine + consumed),
+		}),
+		consumed,
+	}
 }

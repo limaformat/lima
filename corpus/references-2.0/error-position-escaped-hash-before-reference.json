@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-position.escaped-hash-before-reference",
+  "spec": "references",
+  "section": "2.4",
+  "description": "An escaped `\\#` ahead of a reference token on the same line collapses to a single `#` in the decoded scalar, but §2.4 fixes a token's character offset to its physical position in the original source text. The `$` sits at column 9 of the source line; a column read from the collapsed decoded string would report 8.",
+  "input": "x: a\\#b ${missing}\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "${missing}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 9
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

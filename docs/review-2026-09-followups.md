@@ -128,19 +128,71 @@ before this (not even for a blank line) — a strictly worse instance of the
 same bug, found during the port. Corpus cases C-234–C-236, `since:
 "1.0.3"`. See `decisions/comment-lines-and-bare-key-block-detection.md`.
 
-### 5. References 2.0 error provenance: source-based — code (TS: `reference-tokens2.ts`, `references2.ts`) — M1
+### 5. References 2.0 error provenance: source-based — code (TS + Rust + Go) — M1
 
-- **1A:** token offsets are local scalar offsets, not physical source
-  offsets. `items: [prefix ${missing1}, ${missing2}]` in strict mode
-  reports the *later* token. Every active token must carry its real
-  physical `(line, offset)` from parse time.
-- **1B:** different diagnostic kinds are not given uniform provenance, so a
-  later invalid-shape error can beat a physically earlier unresolved
-  reference. Every throw site and the final scan must carry `(line,
-  offset)` and sort globally.
+**Status: done, all three languages.** A three-language issue, not TS-only
+(References 2.0 ships in all three); Codex's second re-review escalated the
+first, container-relative attempt to a full **§2.4 physical position,
+codepoint-based, cross-language-identical, exposed as `column`**:
 
-Ordering rule: §5 (earliest source position wins — line, then character
-offset).
+- **Physical `(line, offset)`.** Every reference token now carries its real
+  1-based source line and 0-based **codepoint** offset within that line
+  (`x: café ${m}` → offset 8, not a scalar-local 5). The offset is read by
+  scanning the *raw* value text — for a block scalar, the original body
+  lines, so a `^^`-continuation token keeps its real line (§2.4's explicit
+  "MUST NOT be reconstructed from the merged string"). `ReferenceSource`
+  (`{raw?, line, col}` in TS / `ReferenceSource`/`referenceSource` in
+  Rust/Go) is threaded from every value-parse site — `core`, `block`,
+  `flow`, `block-scalar` — carrying the value's physical column;
+  `scanReferenceTokens2` / `scan_tokens` zip a raw-source scan (line/offset)
+  with the decoded scan (splice index). The old `StringSourceSpan` /
+  per-line-span machinery is gone.
+- **1A** (flow-element ordering) falls out of the above: each element's
+  tokens are anchored at the element's real column within the container.
+- **1B** `INVALID_REFERENCE_SHAPE` carries the token's offset; TS's
+  `InsertedAt` gained `offset` and `earliestParticipant` an offset
+  tie-break (Rust/Go already had both). TS now sets `LimaError.column`
+  (`offset + 1`) on References throws — Rust/Go already did.
+
+Corpus R2-064 (4 cases), now asserting `expect.error.column`; TS/Rust/Go
+produce byte-identical `(line, column)`. References 2.0 suite 119 → 123.
+
+Ordering rule: §5 (earliest source position wins — line, then codepoint).
+
+**Original-source position (Codex CR3 MAJOR 1, now fixed):** §2.4 fixes a
+token's column to its physical position in the *original* source text,
+before Core normalization. Two normalizations previously shifted a later
+token's reported column:
+
+- a `\#` escape immediately before a token on the same line (collapses to
+  `#` in the decoded value); and
+- Core §3 leading-tab expansion (tab → two spaces), inline, nested, and
+  inside a block scalar.
+
+Both are fixed: the value text with a trailing comment removed but `\#`
+left intact (`stripCommentKeepEscapes` / `physicalRaw`) is threaded to the
+reference scan as `source.raw`, and a per-physical-line `tabAdjust` count
+(columns added by tab expansion) is subtracted from each token's column.
+Verified identical across TS/Rust/Go. Corpus R2-065 (4 `error-position-*`
+cases) plus 2 comment-scan guard cases; References 2.0 suite 123 → 129.
+
+**Zip invariant now hard-enforced (Codex CR3 MINOR 1):** the raw-vs-decoded
+reference-token scan length mismatch throws (`Error` / `panic!` /
+`assert_eq!`) in all three, not just TS.
+
+**`parseCore` skips source construction (Codex CR3 MINOR 2):** the
+positioned source anchor is built only for the positioned builder
+(`builder === positionedBuilder` / `B::POSITIONED` / `captureReferences`);
+`parseCore`'s native builder discards it, so it is no longer computed.
+
+### 5b. Key column must be codepoint-based — code (Rust + Go) — Codex CR-M2 follow-up
+
+**Status: done.** The §7.2 sibling-column check (CR-M2) computed the key's
+column after `- ` in UTF-8 bytes (`dash_key_column` / `core.go`), so a
+multi-byte space after the dash (`- <NBSP>key:`) put the column one past
+where TypeScript (UTF-16 units) placed it, and the same following line was
+treated as a nested block in TS but a sibling key in Rust/Go. Both now
+count codepoints.
 
 ### 6. Point the Core corpus gate at the public API — corpus infra (`corpus/runner/`) — M6
 
@@ -260,6 +312,65 @@ referenceless input — otherwise the case FAILs with a `parse() …` reason.
 `crossCheckErrorAgainstParse`. All 44 Core error cases agree — no
 divergence. P1 #6's "every passing `spec: "core"` case" claim now holds for
 error cases too.
+
+---
+
+## Codex re-reviews 2 & 3 — 2026-09-07
+
+Two further independent re-review rounds on the M1 error-provenance work.
+
+### CR2-M1 / CR2-M2. M1 offset was container-relative, not physical; TS did not set `LimaError.column`
+
+**Status: done (option A rewrite).** The first M1 pass anchored a token at
+an offset *local to its flow element / scalar* and carried it on a
+`StringSourceSpan`. Replaced wholesale with a raw+decoded token *zip*:
+`scanReferenceTokens2` / `scan_tokens` scans the raw (undecoded) text for
+each `${…}`/`$(…)`'s physical `(line, offset)` and the decoded value for
+its splice index, then zips the two (invariant: same tokens, same order).
+The result is a true physical codepoint `(line, column)`, identical across
+TS/Rust/Go, surfaced as `LimaError.column` in all three. See item 5.
+
+### CR2-M3. CR-M2 key column measured in bytes in Rust/Go
+
+**Status: done.** See item 5b — `dash_key_column` / `core.go` now count
+codepoints, matching TS.
+
+### CR3-M1. Position must be the *original* source column (`\#`, leading tabs)
+
+**Status: done (option A for both).** See item 5's "Original-source
+position" note: comment-stripped-but-escape-preserving text threaded as
+`source.raw`; per-line `tabAdjust` subtracted. Corpus R2-065 + the
+comment-scan guard cases, suite 123 → 129.
+
+**Follow-up fix (found in review-4 prep, commit after `a62dfb6`):** the
+first cut of CR3-M1 threaded the *pristine* pre-`stripComment` value text
+as `source.raw`. That reintroduced comment text into the raw token scan:
+`x: ${a} # ${b}` made the raw scan see two `${…}` and the decoded value
+one — the raw/decoded zip length check (CR3-MINOR-1) then threw / panicked
+/ asserted in all three languages. Fixed by threading
+`stripCommentKeepEscapes(raw)` (new shared helper; `stripComment` is now
+`stripCommentKeepEscapes(v).replace(\#→#)`) via a `physicalRaw` wrapper —
+a trailing comment removed, `\#` kept. Two corpus guard cases
+(`comment-after-*-reference-*-not-scanned`).
+
+**Review 4 (Codex, `d3e9f50..HEAD`): one MAJOR, now fixed.** Go's
+sequence continuation-key path (`core.go`, `parseArrayItemContinuationKeys`)
+built the raw anchor with `strings.TrimSpace` (Go's Unicode whitespace,
+which eats U+0085) while the decoded side used the project's ECMAScript
+`trimWhitespace` (which does not). For a continuation-key value with
+U+0085 before the token, Go reported column 8 where TS/Rust reported 9 —
+a §2.4 violation and a cross-language divergence, in the review diff.
+Fixed: the raw anchor now slices from `cl.text[valueByte:]` with
+`valueByte` computed via `leadingWsBytes` (the project boundary), matching
+every other call site. Corpus R2-067
+(`error-position-continuation-key-unicode-space`, asserts column 9 in all
+three). Review 4 verdict: Ship after fixes → this was the only fix.
+
+### CR3-MINOR-1 / CR3-MINOR-2. Zip invariant not hard-enforced outside TS; `parseCore` still built source metadata
+
+**Status: done.** See item 5 — the length-mismatch check now throws /
+panics / asserts in all three, and the positioned source anchor is built
+only for the positioned builder.
 
 ---
 

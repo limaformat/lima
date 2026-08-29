@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-ordering.flow-sequence-token-offset",
+  "spec": "references",
+  "section": "5",
+  "description": "Two unresolved references in different elements of one flow sequence on the same line. \u00a75 orders by physical character offset, so the earlier element's token wins \u2014 even though it sits further into its own element's text (offset 7) than the later element's token sits into its (offset 0). A token offset local to each scalar would report ${missB}.",
+  "input": "items: [prefix ${missA}, ${missB}]\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "${missA}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 16
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

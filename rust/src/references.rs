@@ -243,7 +243,7 @@ fn partial_to_positioned(v: &LimaValue, line: u32) -> PositionedValue {
             value: s.clone(),
             line,
             quoted: true,
-            source_spans: None,
+            ref_source: None,
             inserted_at: None,
         },
         LimaValue::Instant(i) => PositionedValue::Instant {
@@ -487,7 +487,7 @@ fn resolve_tree(
                 value: replaced,
                 line,
                 quoted: false,
-                source_spans: None,
+                ref_source: None,
                 inserted_at: None,
             };
         }
@@ -792,7 +792,7 @@ pub fn parse_references(
                             value: text.clone(),
                             line,
                             quoted: false,
-                            source_spans: None,
+                            ref_source: None,
                             inserted_at: None,
                         },
                     )

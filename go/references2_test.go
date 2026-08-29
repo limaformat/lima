@@ -24,7 +24,7 @@ func TestParseOptionErrorsAreStructured(t *testing.T) {
 func TestReferences2StrictPositionSurvivesEarlierInterpolation(t *testing.T) {
 	_, err := Parse("a: 12345\nx: value ${a} then ${missing}", ParseOptions{Strict: true})
 	le, ok := err.(*LimaError)
-	if !ok || le.Line != 2 || le.Column != 17 || le.Token != "${missing}" {
+	if !ok || le.Line != 2 || le.Column != 20 || le.Token != "${missing}" { // physical column: "x: value ${a} then " = 19 codepoints
 		t.Fatalf("unexpected diagnostic: %#v", err)
 	}
 }
@@ -32,7 +32,7 @@ func TestReferences2StrictPositionSurvivesEarlierInterpolation(t *testing.T) {
 func TestReferences2ColumnsCountUnicodeCodePoints(t *testing.T) {
 	_, err := Parse("x: café ${missing}", ParseOptions{Strict: true})
 	le, ok := err.(*LimaError)
-	if !ok || le.Column != 6 || le.Token != "${missing}" {
+	if !ok || le.Column != 9 || le.Token != "${missing}" { // physical: "x: café " = 8 codepoints
 		t.Fatalf("unexpected diagnostic: %#v", err)
 	}
 }

@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-ordering.flow-mapping-token-offset",
+  "spec": "references",
+  "section": "5",
+  "description": "As with a flow sequence: two unresolved references in different values of one flow mapping on the same line order by physical character offset, so the earlier value's token wins despite its larger offset within its own value text.",
+  "input": "m: {k: text ${missA}, j: ${missB}}\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "${missA}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 13
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

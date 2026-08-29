@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-ordering.flow-mixed-kinds-by-offset",
+  "spec": "references",
+  "section": "5",
+  "description": "Different error kinds across flow elements on one line sort into a single ordered set by physical offset: an unresolved reference in the first element beats a mapping-in-interpolation error in the second, even though the interpolation error is raised first during traversal.",
+  "input": "obj:\n  a: 1\ng: [${missing} x, ${obj}]\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 3,
+      "token": "${missing}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 5
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

@@ -67,7 +67,7 @@ func TestReferences2Corpus(t *testing.T) {
 		t.Fatal(globErr)
 	}
 	sort.Strings(paths)
-	if len(paths) != 119 {
+	if len(paths) != 130 {
 		t.Fatalf("References 2.0 corpus count changed: %d", len(paths))
 	}
 	pass, skip := 0, 0

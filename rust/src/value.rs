@@ -92,11 +92,22 @@ pub struct InsertedAt {
     pub token: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct StringSourceSpan {
-    pub start: usize,
+/// Where a scalar begins in the source: physical 1-based `line` and 0-based
+/// codepoint column `col` of its first character. A References 2.0 token's
+/// position is this anchor plus its codepoint offset within the value
+/// (§2.4). `raw` is the value text a token's position is read from, before
+/// comment stripping / `\#` collapse (and for a block scalar the original
+/// body lines joined with `\n`, so a token's line is not reconstructed from
+/// the `^^`-merged string); `None` means it equals the decoded value.
+/// `tab_adjust[i]` is the columns Core §3 added to physical line `line + i`
+/// by leading-tab expansion, subtracted so the reported column is the
+/// original-source column. Mirrors `js/src/reference-tokens2.ts`.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct ReferenceSource {
+    pub raw: Option<String>,
     pub line: u32,
-    pub source_offset: usize,
+    pub col: usize,
+    pub tab_adjust: Option<Vec<usize>>,
 }
 
 /// The annotated tree Core produces internally and References resolves —
@@ -136,7 +147,7 @@ pub enum PositionedValue {
         value: String,
         line: u32,
         quoted: bool,
-        source_spans: Option<Vec<StringSourceSpan>>,
+        ref_source: Option<ReferenceSource>,
         inserted_at: Option<InsertedAt>,
     },
     Instant {
@@ -229,6 +240,9 @@ impl PositionedValue {
 /// matching the TS object literals — implemented as associated functions
 /// on a zero-sized marker type rather than trait methods needing `&self`.
 pub trait Builder {
+    /// The positioned builder tracks References 2.0 token source positions;
+    /// the plain one does not, so callers skip building the anchor for it.
+    const POSITIONED: bool = false;
     type Value: Clone;
     type Mapping;
 
@@ -237,11 +251,9 @@ pub trait Builder {
     fn v_int(value: i64, line: u32) -> Self::Value;
     fn v_float(value: f64, line: u32) -> Self::Value;
     fn v_string(value: String, line: u32, quoted: bool) -> Self::Value;
-    fn v_block_string(
-        value: String,
-        line: u32,
-        _source_spans: Vec<StringSourceSpan>,
-    ) -> Self::Value {
+    /// An unquoted string carrying its physical source, for References 2.0
+    /// token attribution (§2.4). `PlainBuilder` discards the source.
+    fn v_string_src(value: String, line: u32, _source: ReferenceSource) -> Self::Value {
         Self::v_string(value, line, false)
     }
     fn v_instant(value: Instant, line: u32) -> Self::Value;
@@ -313,6 +325,7 @@ impl Builder for PlainBuilder {
 pub struct PositionedBuilder;
 
 impl Builder for PositionedBuilder {
+    const POSITIONED: bool = true;
     type Value = PositionedValue;
     type Mapping = Vec<(String, PositionedValue)>;
 
@@ -348,20 +361,16 @@ impl Builder for PositionedBuilder {
             value,
             line,
             quoted,
-            source_spans: None,
+            ref_source: None,
             inserted_at: None,
         }
     }
-    fn v_block_string(
-        value: String,
-        line: u32,
-        source_spans: Vec<StringSourceSpan>,
-    ) -> PositionedValue {
+    fn v_string_src(value: String, line: u32, source: ReferenceSource) -> PositionedValue {
         PositionedValue::String {
             value,
             line,
             quoted: false,
-            source_spans: Some(source_spans),
+            ref_source: Some(source),
             inserted_at: None,
         }
     }

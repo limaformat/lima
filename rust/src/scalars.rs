@@ -9,7 +9,7 @@
 //! source already prefers over its regexes for the same forms.
 
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
-use crate::value::{days_from_civil, Builder, Instant};
+use crate::value::{days_from_civil, Builder, Instant, ReferenceSource};
 
 pub const SCALAR_LENGTH_LIMIT: usize = 16_384;
 
@@ -363,7 +363,23 @@ fn looks_date_ish(s: &str) -> bool {
 /// shapes, in that order, falling back to a plain string. Generic over
 /// [`Builder`] — shared by `parse_core`'s plain result and
 /// `references.rs`'s position-annotated tree, one grammar either way.
-fn build_typed<B: Builder>(s: &str, strict: bool, line: u32) -> Result<B::Value, LimaError> {
+/// An unquoted string node. When `source` is given the node carries it so
+/// `scan_tokens` can attribute each `${…}` / `$(…)` to a real physical
+/// `(line, codepoint-offset)` in the source (§2.4). `PlainBuilder` discards
+/// it.
+fn build_string<B: Builder>(value: &str, line: u32, source: Option<ReferenceSource>) -> B::Value {
+    match source {
+        Some(s) => B::v_string_src(value.to_string(), line, s),
+        None => B::v_string(value.to_string(), line, false),
+    }
+}
+
+fn build_typed<B: Builder>(
+    s: &str,
+    strict: bool,
+    line: u32,
+    source: Option<ReferenceSource>,
+) -> Result<B::Value, LimaError> {
     if s.is_empty() || s == "null" || s == "~" {
         return Ok(B::v_null(line));
     }
@@ -377,7 +393,7 @@ fn build_typed<B: Builder>(s: &str, strict: bool, line: u32) -> Result<B::Value,
     let first = s.as_bytes()[0];
     if !(first.is_ascii_digit() || first == b'-' || first == b'.') {
         check_string_limit(s, line)?;
-        return Ok(B::v_string(s.to_string(), line, false));
+        return Ok(build_string::<B>(s, line, source.clone()));
     }
 
     // Hex/octal/binary literals (0x, 0o, 0b) stay strings — YAML 1.2 compatible.
@@ -385,7 +401,7 @@ fn build_typed<B: Builder>(s: &str, strict: bool, line: u32) -> Result<B::Value,
         let c = s.as_bytes()[1] | 0x20; // lowercase
         if matches!(c, b'x' | b'o' | b'b') {
             check_string_limit(s, line)?;
-            return Ok(B::v_string(s.to_string(), line, false));
+            return Ok(build_string::<B>(s, line, source.clone()));
         }
     }
 
@@ -440,7 +456,7 @@ fn build_typed<B: Builder>(s: &str, strict: bool, line: u32) -> Result<B::Value,
     }
 
     check_string_limit(s, line)?;
-    Ok(B::v_string(s.to_string(), line, false))
+    Ok(build_string::<B>(s, line, source.clone()))
 }
 
 // ─── Scalar / quoting ───────────────────────────────────────────────────────
@@ -653,6 +669,7 @@ pub fn parse_quoted_or_typed<B: Builder>(
     raw: &str,
     strict: bool,
     line: u32,
+    source: Option<ReferenceSource>,
 ) -> Result<B::Value, LimaError> {
     let bytes = raw.as_bytes();
     if !bytes.is_empty() && (bytes[0] == b'"' || bytes[0] == b'\'') {
@@ -686,16 +703,19 @@ pub fn parse_quoted_or_typed<B: Builder>(
         let first = raw.as_bytes()[0];
         if !(first.is_ascii_digit() || first == b'-' || first == b'.') {
             check_string_limit(raw, line)?;
-            return Ok(B::v_string(raw.to_string(), line, false));
+            return Ok(build_string::<B>(raw, line, source));
         }
     }
-    build_typed::<B>(raw, strict, line)
+    build_typed::<B>(raw, strict, line, source)
 }
 
-/// Strips a trailing `#` comment — mirrors `js/src/scalars.ts`'s
-/// `stripComment`: quote-aware (a `#` inside `"..."`/`'...'` is not a
-/// comment marker) and `\#` is an escaped literal hash, not a comment start.
-pub fn strip_comment(val: &str) -> String {
+/// The value text with a trailing `#` comment removed, but with `\#`
+/// escapes left as written — the *physical* form a References 2.0 token's
+/// column is measured against (§2.4). The comment is not part of the value
+/// (so its `${…}`-shaped text must not be scanned as a token), but a `\#`
+/// before a token still occupies its two source columns. Mirrors
+/// `js/src/scalars.ts`'s `stripCommentKeepEscapes`.
+pub fn strip_comment_keep_escapes(val: &str) -> String {
     let chars: Vec<char> = val.chars().collect();
     let mut quote: Option<char> = None;
     let mut i = 0;
@@ -713,11 +733,28 @@ pub fn strip_comment(val: &str) -> String {
             i += 1;
         } else if c == '#' {
             let cut: String = chars[..i].iter().collect();
-            return cut.trim_end().replace("\\#", "#");
+            return cut.trim_end().to_string();
         }
         i += 1;
     }
-    val.replace("\\#", "#")
+    val.to_string()
+}
+
+/// Strips a trailing `#` comment — mirrors `js/src/scalars.ts`'s
+/// `stripComment`: quote-aware (a `#` inside `"..."`/`'...'` is not a
+/// comment marker) and `\#` is an escaped literal hash, not a comment start.
+pub fn strip_comment(val: &str) -> String {
+    strip_comment_keep_escapes(val).replace("\\#", "#")
+}
+
+/// The physical `raw` form for a References 2.0 token's column: a trailing
+/// comment removed, `\#` kept. Mirrors `js/src/block.ts`'s `physicalRaw`.
+pub fn physical_raw(s: &str) -> String {
+    if s.contains('#') {
+        strip_comment_keep_escapes(s)
+    } else {
+        s.to_string()
+    }
 }
 
 /// Top-level entry: rejects an unclosed `[`/`{` in strict mode (References'
@@ -727,6 +764,7 @@ pub fn parse_scalar_value<B: Builder>(
     raw: &str,
     strict: bool,
     line: u32,
+    source: Option<ReferenceSource>,
 ) -> Result<B::Value, LimaError> {
     if strict {
         if let Some(&first) = raw.as_bytes().first() {
@@ -740,7 +778,7 @@ pub fn parse_scalar_value<B: Builder>(
             }
         }
     }
-    parse_quoted_or_typed::<B>(raw, strict, line)
+    parse_quoted_or_typed::<B>(raw, strict, line, source)
 }
 
 #[cfg(test)]
@@ -749,10 +787,10 @@ mod tests {
     use crate::value::{LimaValue, PlainBuilder};
 
     fn v(raw: &str) -> LimaValue {
-        parse_scalar_value::<PlainBuilder>(raw, false, 1).unwrap()
+        parse_scalar_value::<PlainBuilder>(raw, false, 1, None).unwrap()
     }
     fn v_strict(raw: &str) -> Result<LimaValue, LimaError> {
-        parse_scalar_value::<PlainBuilder>(raw, true, 1)
+        parse_scalar_value::<PlainBuilder>(raw, true, 1, None)
     }
 
     #[test]

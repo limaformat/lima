@@ -3,11 +3,50 @@ package lima
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 )
 
-func flowParts(s string) []string {
-	var out []string
-	start := 0
+// flowPart is one comma-separated element of a flow container: its trimmed
+// text and the byte offset of that trimmed text within the container's
+// inner string. The offset feeds References §5 error ordering — a token's
+// position must reflect its real place across a flow collection's
+// elements, not an offset local to one element's own scalar text.
+type flowPart struct {
+	text  string
+	start int
+}
+
+// innerSource re-anchors src (the column of the container's opening `[`/`{`)
+// onto the first character of its trimmed inner string.
+func innerSource(src *referenceSource, raw string) *referenceSource {
+	if src == nil {
+		return nil
+	}
+	body := raw[1 : len(raw)-1]
+	lead := len(body) - len(trimLeftWhitespace(body))
+	return &referenceSource{line: src.line, col: src.col + 1 + utf8.RuneCountInString(body[:lead]), tabAdjust: src.tabAdjust}
+}
+
+// elementSource is the referenceSource for a flow element starting at byte
+// byteStart within the container inner string: the inner-string column plus
+// the codepoint distance to the element (References §5).
+func elementSource(src *referenceSource, inner string, byteStart int) *referenceSource {
+	if src == nil {
+		return nil
+	}
+	return &referenceSource{line: src.line, col: src.col + utf8.RuneCountInString(inner[:byteStart]), tabAdjust: src.tabAdjust}
+}
+
+func flowParts(s string) []flowPart {
+	var out []flowPart
+	seg := 0
+	emit := func(end int) {
+		raw := s[seg:end]
+		out = append(out, flowPart{
+			text:  trimWhitespace(raw),
+			start: seg + len(raw) - len(trimLeftWhitespace(raw)),
+		})
+	}
 	q := byte(0)
 	esc := false
 	depth := 0
@@ -32,11 +71,12 @@ func flowParts(s string) []string {
 		} else if c == ']' || c == '}' {
 			depth--
 		} else if c == ',' && depth == 0 {
-			out = append(out, trimWhitespace(s[start:i]))
-			start = i + 1
+			emit(i)
+			seg = i + 1
 		}
 	}
-	return append(out, trimWhitespace(s[start:]))
+	emit(len(s))
+	return out
 }
 func findSep(s string) int {
 	q := byte(0)
@@ -63,19 +103,21 @@ func findSep(s string) int {
 	}
 	return -1
 }
-func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnostic), captureReferences bool) (*pvalue, error) {
+func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnostic), captureReferences bool, src *referenceSource) (*pvalue, error) {
 	if strings.HasPrefix(raw, "[") {
 		if !strings.HasSuffix(raw, "]") {
 			if strict {
 				return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: unclosed flow sequence at line %d", line))
 			}
-			return parseScalar(raw, strict, line, captureReferences)
+			return parseScalar(raw, strict, line, captureReferences, src)
 		}
+		isrc := innerSource(src, raw)
 		inner := trimWhitespace(raw[1 : len(raw)-1])
 		a := []*pvalue{}
 		if inner != "" {
 			parts := flowParts(inner)
-			for partIndex, part := range parts {
+			for partIndex, fp := range parts {
+				part := fp.text
 				if part == "" {
 					if strict {
 						return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: empty element in flow sequence at line %d", line))
@@ -90,7 +132,7 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 				if strings.HasPrefix(part, "[") {
 					return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow nesting at line %d: %q", line, part))
 				}
-				v, e := parseFlowOrScalar(part, strict, line, onWarning, captureReferences)
+				v, e := parseFlowOrScalar(part, strict, line, onWarning, captureReferences, elementSource(isrc, inner, fp.start))
 				if e != nil {
 					return nil, e
 				}
@@ -104,12 +146,14 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 			if strict {
 				return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: unclosed flow mapping at line %d", line))
 			}
-			return parseScalar(raw, strict, line, captureReferences)
+			return parseScalar(raw, strict, line, captureReferences, src)
 		}
+		isrc := innerSource(src, raw)
 		inner := trimWhitespace(raw[1 : len(raw)-1])
 		m := []pentry{}
 		if inner != "" {
-			for _, part := range flowParts(inner) {
+			for _, fp := range flowParts(inner) {
+				part := fp.text
 				if part == "" {
 					if strict {
 						return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: empty element in flow mapping at line %d", line))
@@ -121,7 +165,7 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 					if strict {
 						return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow mapping item (missing \": \") at line %d: %q", line, part))
 					}
-					return parseScalar(raw, strict, line, captureReferences)
+					return parseScalar(raw, strict, line, captureReferences, src)
 				}
 				keyRaw := trimWhitespace(part[:sep])
 				if !isValidKey(keyRaw) {
@@ -146,11 +190,12 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 				if e := checkDuplicate(idx >= 0, key, line, strict, onWarning); e != nil {
 					return nil, e
 				}
-				rv := trimWhitespace(part[sep+2:])
+				valuePart := part[sep+2:]
+				rv := trimWhitespace(valuePart)
 				if strings.HasPrefix(rv, "[") || strings.HasPrefix(rv, "{") {
 					return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow nesting at line %d: %q", line, rv))
 				}
-				v, e := parseScalar(rv, strict, line, captureReferences)
+				v, e := parseScalar(rv, strict, line, captureReferences, elementSource(isrc, inner, fp.start+sep+2+len(valuePart)-len(trimLeftWhitespace(valuePart))))
 				if e != nil {
 					return nil, e
 				}
@@ -163,5 +208,5 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 		}
 		return &pvalue{line: line, mapping: m}, nil
 	}
-	return parseScalar(raw, strict, line, captureReferences)
+	return parseScalar(raw, strict, line, captureReferences, src)
 }

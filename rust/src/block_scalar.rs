@@ -7,7 +7,6 @@
 
 use crate::errors::LimaError;
 use crate::scalars::check_string_limit;
-use crate::value::StringSourceSpan;
 
 /// Leading U+0020 count. "Indentation" in §6.1.5 is spaces, from column 0.
 fn leading_spaces(line: &str) -> usize {
@@ -32,14 +31,15 @@ fn trailing_space_end(line: &str) -> usize {
 /// level). `pipe_line` is the 1-based line of the `|` line, so
 /// `body_lines[i]` is at `pipe_line + 1 + i`.
 ///
-/// Returns the joined value, its source spans, and how many of `body_lines`
-/// the scalar consumed — a caller iterating physical lines resumes past
-/// that; a caller that already sliced the range to the scalar ignores it.
+/// Returns the joined value, the raw body (original column-0 lines joined
+/// with `\n`, from which a token's physical `(line, offset)` is read — §2.4,
+/// never from the `^^`-merged `joined` string), and how many of `body_lines`
+/// the scalar consumed.
 pub(crate) fn build_block_scalar(
     body_lines: &[&str],
     key_indent: usize,
     pipe_line: u32,
-) -> Result<(String, Vec<StringSourceSpan>, usize), LimaError> {
+) -> Result<(String, String, usize), LimaError> {
     // Extent (§6.1.5): a line belongs to the scalar iff its indentation is
     // strictly greater than the introducing key's. Empty lines between
     // content lines belong regardless; the first non-empty line dedented to
@@ -75,8 +75,7 @@ pub(crate) fn build_block_scalar(
     };
 
     let mut merged: Vec<String> = Vec::new();
-    let mut line_spans: Vec<Vec<StringSourceSpan>> = Vec::new();
-    for (i, line) in lines.iter().enumerate() {
+    for line in lines {
         let b = line.as_bytes();
         let mut start = trim_amt.min(line.len());
         let is_continuation = b.get(start) == Some(&b'^') && b.get(start + 1) == Some(&b'^'); // ^^
@@ -88,50 +87,23 @@ pub(crate) fn build_block_scalar(
             end = start;
         }
         let content = &line[start..end];
-        let span_line = pipe_line + 1 + i as u32;
         if is_continuation && !merged.is_empty() {
             if !content.is_empty() {
                 let last = merged.last_mut().unwrap();
-                let output_start = last.len() + 1;
                 last.push(' ');
                 last.push_str(content);
-                line_spans.last_mut().unwrap().push(StringSourceSpan {
-                    start: output_start,
-                    line: span_line,
-                    source_offset: start,
-                });
             }
         } else {
             merged.push(content.to_string());
-            line_spans.push(if content.is_empty() {
-                Vec::new()
-            } else {
-                vec![StringSourceSpan {
-                    start: 0,
-                    line: span_line,
-                    source_offset: start,
-                }]
-            });
         }
     }
 
     // Trailing content (§6.1.5): all trailing empty lines are stripped.
     while merged.last().is_some_and(String::is_empty) {
         merged.pop();
-        line_spans.pop();
-    }
-
-    let mut spans = Vec::new();
-    let mut output_start = 0;
-    for (line, mut pieces) in merged.iter().zip(line_spans) {
-        for span in &mut pieces {
-            span.start += output_start;
-        }
-        spans.extend(pieces);
-        output_start += line.len() + 1;
     }
 
     let joined = merged.join("\n");
     check_string_limit(&joined, pipe_line)?;
-    Ok((joined, spans, consumed))
+    Ok((joined, lines.join("\n"), consumed))
 }

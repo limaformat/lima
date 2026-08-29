@@ -42,6 +42,10 @@ suite. References 1.0 remains an independent frozen conformance target.
 | R2-061 | §5 | Attribution | final global errors identify earliest participating insertion | limit cases |
 | R2-062 | §5 | Priority | partial validation precedes document parsing | priority case |
 | R2-063 | §5 | Block-scalar position | `^^`-continuation tokens report their physical source line; tokens sharing that line follow the character-offset tie-break | continuation cases |
+| R2-064 | §5 / §2.4 | Physical token position | a token's `(line, column)` is its real physical codepoint position in the source; tokens in different flow elements on one line order by it (across error kinds too); `expect.error.column` is asserted and identical across TS/Rust/Go | flow-offset cases |
+| R2-065 | §2.4 | Original-source position | the column is the token's position in the *original* source text, before Core normalization: an escaped `\#` that collapses to `#` and leading tabs that expand to spaces (inline, nested, and inside a block scalar) do not shift a later token's reported column | `error-position-*` cases |
+| R2-066 | §2.4 | Comment not scanned | a trailing `#` comment is not part of the value: a `${…}`-shaped sequence inside it is not a token (mapping value and sequence item) | `comment-after-*-reference-*-not-scanned` |
+| R2-067 | §2.4 | Raw/decoded whitespace boundary | the raw token scan uses the same leading-whitespace boundary as value decoding — U+0085 before a token on a sequence continuation-key line is scalar content, column 9 in all three implementations (a host `TrimSpace` would report 8) | `error-position-continuation-key-unicode-space` |
 | R2-070 | §6.1 | API | `parse` defaults to References mode; `mode: "core"` uses the Core path; `parseReferences` is a deprecated exact alias | API cases |
 | R2-071 | §6.1 | Invalid options | `partials` with `mode: "core"` is rejected before parsing | binding/schema test |
 | R2-072 | §6.2 | Names | every partial name matches grammar; dot rejected; `_` accepted | validation cases |

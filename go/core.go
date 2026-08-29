@@ -5,15 +5,21 @@ package lima
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 )
 
 type sourceLine struct {
 	text           string
 	number, indent int
+	// Columns Core §3 leading-tab expansion added to this line (one per
+	// leading tab), subtracted when reporting a References 2.0 token's
+	// column so it is the *original*-source column (§2.4).
+	tabAdjust int
 }
 
 func sourceLines(input string) []sourceLine {
 	input = strings.ReplaceAll(strings.ReplaceAll(input, "\r\n", "\n"), "\r", "\n")
+	preTab := strings.Split(input, "\n")
 	input = expandLeadingTabs(input)
 	raw := strings.Split(input, "\n")
 	out := make([]sourceLine, len(raw))
@@ -25,7 +31,17 @@ func sourceLines(input string) []sourceLine {
 		for n < len(s) && s[n] == ' ' {
 			n++
 		}
-		out[i] = sourceLine{strings.TrimRight(s, " "), i + 1, n}
+		tabs := 0
+		if i < len(preTab) {
+			for _, c := range preTab[i] {
+				if c == '\t' {
+					tabs++
+				} else if c != ' ' {
+					break
+				}
+			}
+		}
+		out[i] = sourceLine{strings.TrimRight(s, " "), i + 1, n, tabs}
 	}
 	return out
 }
@@ -135,6 +151,37 @@ func bareNestedValue(keyColumn, keyLine int, lines []sourceLine, idx *int, stric
 // grammar, including a bare key (§4 rule 7 / §6.1.3 comment-skip, nested
 // block) alongside an ordinary key: value pair. Stops at the first line
 // that is not a valid continuation key, leaving *idx there.
+
+func leadingWsBytes(s string) int { return len(s) - len(trimLeftWhitespace(s)) }
+
+// valueColOf returns the codepoint column of the value's first character,
+// given the full source line and the byte offset where the value begins.
+func valueColOf(lineText string, valueByteStart int) int {
+	if valueByteStart > len(lineText) {
+		valueByteStart = len(lineText)
+	}
+	return utf8.RuneCountInString(lineText[:valueByteStart])
+}
+
+// inlineRefSource builds the References 2.0 source anchor for an inline
+// value on line `l`, only when references are being captured (ParseCore
+// discards it, so skip the allocation there). `rawFrom` is the value text
+// before `\#` collapse; a trailing comment is dropped here (its
+// `${…}`-shaped text is not part of the value) but `\#` is kept, so a
+// token's column is its physical position in the original source (§2.4).
+// `col` is the value's codepoint column in the tab-expanded line.
+func inlineRefSource(capture bool, l sourceLine, rawFrom string, col int) *referenceSource {
+	if !capture {
+		return nil
+	}
+	return &referenceSource{
+		raw:       strings.TrimRight(physicalRaw(rawFrom), " "),
+		line:      l.number,
+		col:       col,
+		tabAdjust: []int{l.tabAdjust},
+	}
+}
+
 func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int, indent int, strict bool, onWarning func(Diagnostic), captureReferences bool) error {
 	for *idx < len(lines) && lineStructuralIndent(lines[*idx]) > indent {
 		cl := lines[*idx]
@@ -162,7 +209,14 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 		if bare {
 			cv, e = bareNestedValue(lineStructuralIndent(cl), cl.number, lines, idx, strict, onWarning, captureReferences)
 		} else {
-			cv, e = parseFlowOrScalar(stripComment(trimWhitespace(cc[s+2:])), strict, cl.number, onWarning, captureReferences)
+			rvRaw := cc[s+2:]
+			// The raw anchor must start at the same byte the column points
+			// to — after the *project* (ECMAScript) leading-whitespace set,
+			// not Go's `strings.TrimSpace` (which also eats U+0085 etc.), so
+			// raw and decoded scans stay in lockstep (§2.4).
+			valueByte := cl.indent + s + 2 + leadingWsBytes(rvRaw)
+			src := inlineRefSource(captureReferences, cl, cl.text[valueByte:], valueColOf(cl.text, valueByte))
+			cv, e = parseFlowOrScalar(stripComment(trimWhitespace(rvRaw)), strict, cl.number, onWarning, captureReferences, src)
 		}
 		if e != nil {
 			return e
@@ -240,7 +294,10 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				if bv, ok, be := blockScalarValue(rawVal, indent+2, l.number, lines, idx, captureReferences); ok {
 					v, e = bv, be
 				} else {
-					v, e = parseFlowOrScalar(rawVal, strict, l.number, onWarning, captureReferences)
+					restByteInC := 1 + leadingWsBytes(c[1:])
+					valueByte := l.indent + restByteInC + sep + 2 + leadingWsBytes(rest[sep+2:])
+					vcol := valueColOf(l.text, valueByte)
+					v, e = parseFlowOrScalar(rawVal, strict, l.number, onWarning, captureReferences, inlineRefSource(captureReferences, l, l.text[valueByte:], vcol))
 				}
 				if e != nil {
 					return nil, e
@@ -260,7 +317,10 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				// §7.2: the item's sibling keys align at the first key's
 				// column, after `- `; a nested block must be deeper than that.
 				afterDash := c[1:]
-				keyColumn := lineStructuralIndent(l) + 1 + (len(afterDash) - len(trimLeftWhitespace(afterDash)))
+				// Codepoints: a multi-byte space after the dash counts as one
+				// column, matching the TypeScript reference (CR-M2 / §7.2).
+				dashWs := afterDash[:len(afterDash)-len(trimLeftWhitespace(afterDash))]
+				keyColumn := lineStructuralIndent(l) + 1 + utf8.RuneCountInString(dashWs)
 				*idx++
 				v, e := bareNestedValue(keyColumn, l.number, lines, idx, strict, onWarning, captureReferences)
 				if e != nil {
@@ -273,7 +333,8 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				arr = append(arr, &pvalue{line: l.number, mapping: item})
 				continue
 			}
-			v, e := parseFlowOrScalar(rest, strict, l.number, onWarning, captureReferences)
+			restByte := l.indent + 1 + leadingWsBytes(c[1:])
+			v, e := parseFlowOrScalar(rest, strict, l.number, onWarning, captureReferences, inlineRefSource(captureReferences, l, l.text[restByte:], valueColOf(l.text, restByte)))
 			if e != nil {
 				return nil, e
 			}
@@ -341,10 +402,12 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				}
 			} else {
 				raw := trimWhitespace(c[sep+2:])
+				valueByte := l.indent + sep + 2 + leadingWsBytes(c[sep+2:])
+				vcol := valueColOf(l.text, valueByte)
 				if bv, ok, be := blockScalarValue(raw, indent, l.number, lines, idx, captureReferences); ok {
 					v, e = bv, be
 				} else {
-					v, e = parseFlowOrScalar(stripComment(raw), strict, l.number, onWarning, captureReferences)
+					v, e = parseFlowOrScalar(stripComment(raw), strict, l.number, onWarning, captureReferences, inlineRefSource(captureReferences, l, l.text[valueByte:], vcol))
 				}
 			}
 			if e != nil {
@@ -438,10 +501,12 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 			}
 		} else {
 			raw := trimWhitespace(c[sep+2:])
+			valueByte := sep + 2 + leadingWsBytes(c[sep+2:])
+			vcol := valueColOf(c, valueByte)
 			if bv, ok, be := blockScalarValue(raw, 0, l.number, lines, &i, captureReferences); ok {
 				v, e = bv, be
 			} else {
-				v, e = parseFlowOrScalar(stripComment(raw), strict, l.number, onWarning, captureReferences)
+				v, e = parseFlowOrScalar(stripComment(raw), strict, l.number, onWarning, captureReferences, inlineRefSource(captureReferences, l, c[valueByte:], vcol))
 			}
 		}
 		if e != nil {

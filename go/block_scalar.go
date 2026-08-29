@@ -13,9 +13,11 @@ const blockScalarMaxInt = int(^uint(0) >> 1)
 //
 // bodyLines are the physical source lines after the `|` line. keyIndent is
 // the introducing key's indentation (0 at the top level). It returns the
-// joined value, its source spans, how many of bodyLines the scalar consumed
-// (a caller iterating lines resumes past that), and any scalar-length error.
-func buildBlockScalar(bodyLines []sourceLine, keyIndent int) (string, []stringSourceSpan, int, error) {
+// joined value, the raw body (original column-0 lines joined with "\n", from
+// which a token's physical (line, offset) is read — §2.4, never from the
+// ^^-merged value), how many of bodyLines the scalar consumed, and any
+// scalar-length error.
+func buildBlockScalar(bodyLines []sourceLine, keyIndent int) (string, string, int, error) {
 	// Extent (§6.1.5): a line belongs to the scalar iff its indentation is
 	// strictly greater than the introducing key's. Empty lines between
 	// content lines belong regardless; the first non-empty line dedented to
@@ -47,8 +49,9 @@ func buildBlockScalar(bodyLines []sourceLine, keyIndent int) (string, []stringSo
 	}
 
 	merged := []string{}
-	lineSpans := [][]stringSourceSpan{}
-	for _, l := range lines {
+	rawLines := make([]string, len(lines))
+	for i, l := range lines {
+		rawLines[i] = l.text
 		text := l.text
 		cut := trimAmt
 		if cut > len(text) {
@@ -61,35 +64,14 @@ func buildBlockScalar(bodyLines []sourceLine, keyIndent int) (string, []stringSo
 		}
 		if continuation && len(merged) > 0 {
 			if text != "" {
-				start := len(merged[len(merged)-1]) + 1
 				merged[len(merged)-1] += " " + text
-				lineSpans[len(lineSpans)-1] = append(lineSpans[len(lineSpans)-1], stringSourceSpan{start: start, line: l.number, sourceOffset: cut + 2})
 			}
 		} else {
 			merged = append(merged, text)
-			spans := []stringSourceSpan{}
-			if text != "" {
-				offset := cut
-				if continuation {
-					offset += 2
-				}
-				spans = append(spans, stringSourceSpan{line: l.number, sourceOffset: offset})
-			}
-			lineSpans = append(lineSpans, spans)
 		}
 	}
 	for len(merged) > 0 && merged[len(merged)-1] == "" {
 		merged = merged[:len(merged)-1]
-		lineSpans = lineSpans[:len(lineSpans)-1]
-	}
-	spans := []stringSourceSpan{}
-	outputStart := 0
-	for i, line := range merged {
-		for _, span := range lineSpans[i] {
-			span.start += outputStart
-			spans = append(spans, span)
-		}
-		outputStart += len(line) + 1
 	}
 
 	joined := strings.Join(merged, "\n")
@@ -98,9 +80,9 @@ func buildBlockScalar(bodyLines []sourceLine, keyIndent int) (string, []stringSo
 		limitLine = bodyLines[0].number - 1
 	}
 	if e := checkStringLimit(joined, limitLine); e != nil {
-		return "", nil, 0, e
+		return "", "", 0, e
 	}
-	return joined, spans, consumed, nil
+	return joined, strings.Join(rawLines, "\n"), consumed, nil
 }
 
 // blockScalarValue handles a key whose inline value text is exactly `|`.
@@ -118,13 +100,18 @@ func blockScalarValue(raw string, keyIndent, keyLine int, lines []sourceLine, id
 		body = append(body, lines[*idx])
 		*idx++
 	}
-	text, spans, _, e := buildBlockScalar(body, keyIndent)
+	text, rawBody, consumed, e := buildBlockScalar(body, keyIndent)
 	if e != nil {
 		return nil, true, e
 	}
-	v := pstr(text, keyLine+1, false, captureReferences)
+	var src *referenceSource
 	if captureReferences {
-		setReferenceTokens2(v, scanReferenceTokens2(text, keyLine+1, spans))
+		tab := make([]int, consumed)
+		for i := 0; i < consumed && i < len(body); i++ {
+			tab[i] = body[i].tabAdjust
+		}
+		src = &referenceSource{raw: rawBody, line: keyLine + 1, col: 0, tabAdjust: tab}
 	}
+	v := pstr(text, keyLine+1, false, captureReferences, src)
 	return v, true, nil
 }

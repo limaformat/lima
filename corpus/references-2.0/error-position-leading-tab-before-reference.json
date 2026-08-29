@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-position.leading-tab-before-reference",
+  "spec": "references",
+  "section": "2.4",
+  "description": "The nested key line is indented with a hard tab, which Core §3 expands to two spaces before parsing. §2.4 fixes a token's character offset to its physical position in the *original* source text, so the leading-tab line reports the `$` at column 9 (1 tab + `inner: `), not column 10 as measured after tab expansion.",
+  "input": "outer:\n\tinner: ${missing}\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "token": "${missing}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 9
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

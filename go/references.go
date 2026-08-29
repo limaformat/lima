@@ -159,7 +159,7 @@ func fromValue(v Value, line int) *pvalue {
 		}
 		return &pvalue{line: line, mapping: m}
 	case String:
-		return pstr(string(x), line, true, false)
+		return pstr(string(x), line, true, false, nil)
 	default:
 		return pv(v, line)
 	}
@@ -265,7 +265,7 @@ func resolve(v *pvalue, lookup, partials []pentry, strict bool) (*pvalue, error)
 			if utf8.RuneCountInString(r) > scalarLengthLimit {
 				return nil, limaError(ResourceLimit, v.line, fmt.Sprintf("Lima: scalar exceeds maximum length of %d code points at line %d", scalarLengthLimit, v.line))
 			}
-			return pstr(r, v.line, false, false), nil
+			return pstr(r, v.line, false, false, nil), nil
 		}
 		if strict && (strings.Contains(text, "($") || strings.Contains(text, "(%")) {
 			return nil, &LimaError{Code: UnresolvedReference, Line: v.line, Token: text, Message: fmt.Sprintf("Lima: unresolved reference %q at line %d", text, v.line)}

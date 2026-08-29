@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-position.leading-tab-block-scalar-reference",
+  "spec": "references",
+  "section": "2.4",
+  "description": "A block scalar body line indented with a hard tab. Core §3 expands the tab to two spaces and §6.1.5 then strips the common indentation, but §2.4 keeps the reference token anchored to its physical position in the original source: the `$` follows a single tab, so it reports column 2, not the column it would occupy after tab expansion and dedent.",
+  "input": "d: |\n\t${x}\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "token": "${x}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 2
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

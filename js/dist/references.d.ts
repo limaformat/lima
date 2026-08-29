@@ -81,7 +81,11 @@ export type FinalizedValue = {
     deepestParticipants: InsertedAt[];
 };
 export declare const finalizePositioned: (v: PositionedValue) => FinalizedValue;
-/** Earliest (lowest-line) participant, or null when none exist — R-113's "line 1" fallback applies then. */
+/**
+ * Earliest participant by source position — lowest line, then lowest
+ * character offset (References §5) — or null when none exist (R-113's
+ * "line 1" fallback applies then).
+ */
 export declare const earliestParticipant: (participants: InsertedAt[]) => InsertedAt | null;
 /** Node-count attribution for the RESOURCE_LIMIT error path: every reference insertion anywhere in the tree contributes to the total. */
 export declare const collectAllParticipants: (v: PositionedValue, acc: InsertedAt[]) => void;

@@ -372,9 +372,17 @@ export const finalizePositioned = (v: PositionedValue): FinalizedValue => {
 	return { native: toNativeFromPositioned(v), nodeCount: 1, depth: 0, deepestParticipants: own }
 }
 
-/** Earliest (lowest-line) participant, or null when none exist — R-113's "line 1" fallback applies then. */
+/**
+ * Earliest participant by source position — lowest line, then lowest
+ * character offset (References §5) — or null when none exist (R-113's
+ * "line 1" fallback applies then).
+ */
 export const earliestParticipant = (participants: InsertedAt[]): InsertedAt | null =>
-	participants.length === 0 ? null : participants.reduce((a, b) => (b.line < a.line ? b : a))
+	participants.length === 0
+		? null
+		: participants.reduce((a, b) =>
+			b.line < a.line || (b.line === a.line && (b.offset ?? 0) < (a.offset ?? 0)) ? b : a,
+		)
 
 /** Node-count attribution for the RESOURCE_LIMIT error path: every reference insertion anywhere in the tree contributes to the total. */
 export const collectAllParticipants = (v: PositionedValue, acc: InsertedAt[]): void => {

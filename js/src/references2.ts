@@ -104,9 +104,9 @@ const resolveNodeUncached = (
 				const match = tokenMatches(item)[0]
 				const token = match?.token ?? item.value
 				addDiagnostic(ctx, {
-					code: 'INVALID_REFERENCE_SHAPE', line: item.line, token,
-					message: `Lima: reference "${token}" resolves to an array, which cannot be inserted as a sequence item at line ${item.line}`,
-				})
+					code: 'INVALID_REFERENCE_SHAPE', line: match?.line ?? item.line, token,
+					message: `Lima: reference "${token}" resolves to an array, which cannot be inserted as a sequence item at line ${match?.line ?? item.line}`,
+				}, match?.offset ?? 0)
 				return item
 			}
 			return result.value
@@ -144,7 +144,7 @@ const resolveNodeUncached = (
 		if (target === undefined || stack.has(target)) return { value: node, complete: false }
 		if (pure.partialPath !== undefined) {
 			return {
-				value: { ...deepCopyPositioned(target), insertedAt: { line: pure.line, token: pure.token } },
+				value: { ...deepCopyPositioned(target), insertedAt: { line: pure.line, offset: pure.offset, token: pure.token } },
 				complete: true,
 			}
 		}
@@ -155,7 +155,7 @@ const resolveNodeUncached = (
 		const selected = lookupPath(result.value, documentLookup?.tail ?? [])
 		if (selected === undefined) return { value: node, complete: false }
 		return {
-			value: { ...deepCopyPositioned(selected), insertedAt: { line: pure.line, token: pure.token } },
+			value: { ...deepCopyPositioned(selected), insertedAt: { line: pure.line, offset: pure.offset, token: pure.token } },
 			complete: true,
 		}
 	}
@@ -296,7 +296,10 @@ export const parse = <T extends Record<string, unknown> = Meta>(frontMatter: str
 	if (options?.strict) for (const value of resolved.values()) scanUnresolved(value, ctx)
 	if (ctx.diagnostics.length > 0) {
 		ctx.diagnostics.sort((a, b) => a.line - b.line || a.offset - b.offset)
-		throw new LimaError(ctx.diagnostics[0])
+		const winner = ctx.diagnostics[0]
+		// §2.4: expose the token's physical position (1-based) — Rust and Go
+		// already do; `offset` was internal-only here.
+		throw new LimaError({ ...winner, column: winner.offset + 1 })
 	}
 
 	const finalized = [...resolved].map(([key, value]) => [key, finalizePositioned(value)] as const)
@@ -306,6 +309,7 @@ export const parse = <T extends Record<string, unknown> = Meta>(frontMatter: str
 		const winner = earliestParticipant(participants)
 		throw new LimaError({
 			code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
+			...(winner?.offset !== undefined ? { column: winner.offset + 1 } : {}),
 			message: `Lima: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line ${winner?.line ?? 1}`,
 		})
 	}
@@ -317,6 +321,7 @@ export const parse = <T extends Record<string, unknown> = Meta>(frontMatter: str
 		const winner = earliestParticipant(participants)
 		throw new LimaError({
 			code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
+			...(winner?.offset !== undefined ? { column: winner.offset + 1 } : {}),
 			message: `Lima: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line ${winner?.line ?? 1}`,
 		})
 	}

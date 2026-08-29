@@ -456,7 +456,7 @@ fn references_matches_conformance_corpus() {
     );
     assert_eq!(
         entries.len(),
-        119,
+        130,
         "References 2.0 corpus case count changed"
     );
 
@@ -517,6 +517,10 @@ fn references_matches_conformance_corpus() {
                         .get("token")
                         .and_then(Json::as_str)
                         .is_none_or(|token| e.token.as_deref() == Some(token));
+                    let column_ok = expected_error
+                        .get("column")
+                        .and_then(Json::as_u64)
+                        .is_none_or(|column| e.column == Some(column as u32));
                     let partial_ok = expected_error
                         .get("partial")
                         .and_then(Json::as_str)
@@ -532,6 +536,7 @@ fn references_matches_conformance_corpus() {
                     if expected_code == Some(code_name(e.code))
                         && line_ok
                         && token_ok
+                        && column_ok
                         && partial_ok
                         && path_ok
                         && contains_ok

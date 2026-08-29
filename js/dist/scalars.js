@@ -13,13 +13,12 @@ export const hasActiveReferences2 = (value) => value.kind === 'string' ? (value.
         : false;
 /** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */
 export const positionedBuilder = {
-    tracksStringSourcePositions: true,
     null: (line) => ({ kind: 'null', line }),
     bool: (value, line) => ({ kind: 'bool', value, line }),
     int: (value, line) => ({ kind: 'int', value, line }),
     float: (value, line) => ({ kind: 'float', value, line }),
-    string: (value, line, quoted, sourceSpans) => {
-        const references2 = quoted ? undefined : scanReferenceTokens2(value, line, sourceSpans);
+    string: (value, line, quoted, source) => {
+        const references2 = quoted ? undefined : scanReferenceTokens2(value, source);
         return {
             kind: 'string', value, line, quoted,
             ...(references2 && references2.length > 0 ? { references2 } : {}),
@@ -239,7 +238,7 @@ export const parseSimpleScalarSpan = (source, start, end, line, strict, builder)
  * an intermediate tagged `LimaValue` keeps both builders on one grammar while
  * eliminating an allocate-then-switch conversion for every scalar.
  */
-const buildTyped = (str, strict, line, builder) => {
+const buildTyped = (str, strict, line, builder, source) => {
     if (str === '' || str === 'null' || str === '~')
         return builder.null(line);
     if (str === 'true')
@@ -253,7 +252,7 @@ const buildTyped = (str, strict, line, builder) => {
     // the email/date prechecks for ordinary words, URLs and identifiers.
     if (!((first >= 48 && first <= 57) || first === 45 || first === 46)) {
         checkStringLimit(str, line);
-        return builder.string(str, line, false);
+        return builder.string(str, line, false, source);
     }
     // Hex (0x/0X), octal (0o/0O), binary (0b/0B) — kept as strings (YAML 1.2 compatible).
     if (str.length > 2 && str.charCodeAt(0) === 48 &&
@@ -261,7 +260,7 @@ const buildTyped = (str, strict, line, builder) => {
             str.charCodeAt(1) === 111 || str.charCodeAt(1) === 79 ||
             str.charCodeAt(1) === 98 || str.charCodeAt(1) === 66)) {
         checkStringLimit(str, line);
-        return builder.string(str, line, false);
+        return builder.string(str, line, false, source);
     }
     const exactIsoShape = (str.length === 10 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45) ||
         (str.length === 20 && str.charCodeAt(4) === 45 && str.charCodeAt(7) === 45 &&
@@ -272,7 +271,7 @@ const buildTyped = (str, strict, line, builder) => {
         if (date !== null)
             return builder.instant(date, line);
         checkStringLimit(str, line);
-        return builder.string(str, line, false);
+        return builder.string(str, line, false, source);
     }
     if (NUMBER_RE.test(str)) {
         const n = Number(str);
@@ -307,7 +306,7 @@ const buildTyped = (str, strict, line, builder) => {
             return builder.instant(date, line);
     }
     checkStringLimit(str, line);
-    return builder.string(str, line, false);
+    return builder.string(str, line, false, source);
 };
 // ─── Scalar / quoting ──────────────────────────────────────────────────────
 /**
@@ -424,7 +423,14 @@ export const unescapeDQ = (s, strict = false, line = 0) => {
         }
     });
 };
-export const stripComment = (val) => {
+/**
+ * The value text with a trailing `#` comment removed, but with `\#`
+ * escapes left as written. This is the *physical* form a References 2.0
+ * token's column is measured against (§2.4): the comment is not part of
+ * the value (so its `${…}`-shaped text must not be scanned as a token),
+ * but a `\#` before a token still occupies its two source columns.
+ */
+export const stripCommentKeepEscapes = (val) => {
     let quote = 0;
     for (let i = 0; i < val.length; i++) {
         const cc = val.charCodeAt(i);
@@ -441,11 +447,12 @@ export const stripComment = (val) => {
             i++;
         }
         else if (cc === 35) {
-            return val.slice(0, i).trimEnd().replace(ESCAPED_HASH_RE, '#');
+            return val.slice(0, i).trimEnd();
         }
     }
-    return val.replace(ESCAPED_HASH_RE, '#');
+    return val;
 };
+export const stripComment = (val) => stripCommentKeepEscapes(val).replace(ESCAPED_HASH_RE, '#');
 /**
  * Strips a key's surrounding quotes — unescaping a double-quoted key
  * (§6.1.2 escapes, strict-checked), taking a single-quoted key literally
@@ -468,7 +475,7 @@ export const stripKeyQuotes = (s, strict = false, line = 0) => {
  * apply in every one of those positions, so they are enforced here rather
  * than gated to the top level.
  */
-export const parseQuotedOrTyped = (raw, ctx, line, builder) => {
+export const parseQuotedOrTyped = (raw, ctx, line, builder, source) => {
     const first = raw.charCodeAt(0);
     if (first === 34 || first === 39) {
         const close = closingQuoteIndex(raw);
@@ -489,11 +496,11 @@ export const parseQuotedOrTyped = (raw, ctx, line, builder) => {
     if (raw !== '' && raw !== 'null' && raw !== '~' && raw !== 'true' && raw !== 'false' &&
         !((first >= 48 && first <= 57) || first === 45 || first === 46)) {
         checkStringLimit(raw, line);
-        return builder.string(raw, line, false);
+        return builder.string(raw, line, false, source);
     }
-    return buildTyped(raw, ctx.strict, line, builder);
+    return buildTyped(raw, ctx.strict, line, builder, source);
 };
-export const parseScalarValue = (raw, ctx, line, builder) => {
+export const parseScalarValue = (raw, ctx, line, builder, source) => {
     const first = raw.charCodeAt(0);
     if (ctx.strict && (first === 91 || first === 123)) {
         throw new LimaError({
@@ -501,5 +508,5 @@ export const parseScalarValue = (raw, ctx, line, builder) => {
             message: `Lima: unclosed flow ${first === 91 ? 'sequence' : 'mapping'} at line ${line}`,
         });
     }
-    return parseQuotedOrTyped(raw, ctx, line, builder);
+    return parseQuotedOrTyped(raw, ctx, line, builder, source);
 };

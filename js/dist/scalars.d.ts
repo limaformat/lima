@@ -7,20 +7,22 @@
 import { type LimaValue } from './value.js';
 import { type ParseContext } from './normalize.js';
 import type { ValueBuilder } from './builder.js';
-import { type ReferenceToken2 } from './reference-tokens2.js';
+import { type ReferenceSource, type ReferenceToken2 } from './reference-tokens2.js';
 /**
  * `insertedAt` is never set by Core — it's a References-only annotation
  * (see references.ts's `resolveTree`), stamped on the root of a value
  * copied in by a successful pure-reference resolution, with the source
- * token and line that caused the insertion. It powers References §5's
- * global-error attribution (R-112): when a final-result limit (nesting
- * depth, total node count) is violated, the lowest-line `insertedAt` among
- * the participating nodes identifies which reference token to blame — the
- * spec requires the error message to include both the token and the line.
+ * token, line, and character offset that caused the insertion. It powers
+ * References §5's global-error attribution (R-112): when a final-result
+ * limit (nesting depth, total node count) is violated, the lowest source
+ * position (`line`, then `offset`) among the participating nodes identifies
+ * which reference token to blame — the spec requires the error message to
+ * include both the token and the line.
  */
 export type InsertedAt = {
     line: number;
     token: string;
+    offset?: number;
 };
 export type PositionedValue = {
     kind: 'null';
@@ -107,6 +109,14 @@ export declare const closingQuoteIndex: (s: string, singleQuoteEscape?: boolean)
  */
 export declare const isValidKey: (raw: string) => boolean;
 export declare const unescapeDQ: (s: string, strict?: boolean, line?: number) => string;
+/**
+ * The value text with a trailing `#` comment removed, but with `\#`
+ * escapes left as written. This is the *physical* form a References 2.0
+ * token's column is measured against (§2.4): the comment is not part of
+ * the value (so its `${…}`-shaped text must not be scanned as a token),
+ * but a `\#` before a token still occupies its two source columns.
+ */
+export declare const stripCommentKeepEscapes: (val: string) => string;
 export declare const stripComment: (val: string) => string;
 /**
  * Strips a key's surrounding quotes — unescaping a double-quoted key
@@ -124,5 +134,5 @@ export declare const stripKeyQuotes: (s: string, strict?: boolean, line?: number
  * apply in every one of those positions, so they are enforced here rather
  * than gated to the top level.
  */
-export declare const parseQuotedOrTyped: <V, M>(raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>) => V;
-export declare const parseScalarValue: <V, M>(raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>) => V;
+export declare const parseQuotedOrTyped: <V, M>(raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>, source?: ReferenceSource) => V;
+export declare const parseScalarValue: <V, M>(raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>, source?: ReferenceSource) => V;
