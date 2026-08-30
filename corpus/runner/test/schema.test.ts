@@ -138,6 +138,49 @@ describe('validateCase — structural rules', () => {
 		expect(result).toEqual({ valid: true, errors: [] })
 	})
 
+	it('accepts int and float result markers only for the Core API', () => {
+		expect(validateCase({
+			...baseCase,
+			expect: { result: { i: { $type: 'int', value: 42 }, f: { $type: 'float', value: 42 } } },
+		})).toEqual({ valid: true, errors: [] })
+		expect(validateCase({
+			...baseCase,
+			spec: 'references',
+			api: 'parse',
+			expect: { result: { x: { $type: 'float', value: 1 } } },
+		}).valid).toBe(false)
+	})
+
+	it('rejects non-integral int markers', () => {
+		expect(validateCase({
+			...baseCase,
+			expect: { result: { x: { $type: 'int', value: 1.5 } } },
+		}).valid).toBe(false)
+	})
+
+	it('rejects int and float markers in partial inputs', () => {
+		expect(validateCase({
+			...baseCase,
+			spec: 'references',
+			api: 'parse',
+			options: { partials: { x: { $type: 'int', value: 1 } } },
+		}).valid).toBe(false)
+	})
+
+	it('rejects extra properties on every marker object', () => {
+		for (const marker of [
+			{ $type: 'instant', value: '2024-03-01T09:00:00Z', extra: true },
+			{ $type: 'host-number', value: 'nan', extra: true },
+			{ $type: 'host-date', value: 'invalid', extra: true },
+			{ $type: 'int', value: 1, extra: true },
+			{ $type: 'float', value: 1, extra: true },
+		]) {
+			const result = validateCase({ ...baseCase, expect: { result: { x: marker } } })
+			expect(result.valid).toBe(false)
+			expect(result.errors).toContain('expect.result.x: marker object must have only $type and value')
+		}
+	})
+
 	it('rejects a malformed instant value', () => {
 		const result = validateCase({
 			...baseCase,

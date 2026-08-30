@@ -145,6 +145,22 @@ fn value_matches(actual: &LimaValue, expected: &Json) -> Option<bool> {
         (LimaValue::Bool(b), Json::Bool(e)) => Some(b == e),
         (LimaValue::Int(n), Json::Number(e)) => Some(e.as_f64() == Some(*n as f64)),
         (LimaValue::Float(n), Json::Number(e)) => Some(e.as_f64() == Some(*n)),
+        (LimaValue::Int(n), Json::Object(o))
+            if matches!(o.get("$type").and_then(Json::as_str), Some("int" | "float")) =>
+        {
+            Some(
+                o.get("$type").and_then(Json::as_str) == Some("int")
+                    && o.get("value").and_then(Json::as_i64) == Some(*n),
+            )
+        }
+        (LimaValue::Float(n), Json::Object(o))
+            if matches!(o.get("$type").and_then(Json::as_str), Some("int" | "float")) =>
+        {
+            Some(
+                o.get("$type").and_then(Json::as_str) == Some("float")
+                    && o.get("value").and_then(Json::as_f64) == Some(*n),
+            )
+        }
         (LimaValue::String(s), Json::String(e)) => Some(s == e),
         (LimaValue::Instant(i), Json::Object(o)) => {
             if o.get("$type").and_then(Json::as_str) != Some("instant") {

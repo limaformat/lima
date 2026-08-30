@@ -1,0 +1,17 @@
+{
+  "id": "core.number-kind.floats",
+  "spec": "core",
+  "section": "6.4.1",
+  "description": "A decimal point or exponent makes a number a Float even when its mathematical value is integral.",
+  "input": "exponent: 1e3\nupper_exponent: 1E+3\ndecimal_integer: 3.0\nleading_decimal: .5\ndecimal_exponent: 1.5e-2",
+  "expect": {
+    "result": {
+      "exponent": { "$type": "float", "value": 1000 },
+      "upper_exponent": { "$type": "float", "value": 1000 },
+      "decimal_integer": { "$type": "float", "value": 3 },
+      "leading_decimal": { "$type": "float", "value": 0.5 },
+      "decimal_exponent": { "$type": "float", "value": 0.015 }
+    }
+  },
+  "tags": ["number", "positive"]
+}

@@ -17,6 +17,15 @@ describe('corpusValuesEqual', () => {
 		expect(corpusValuesEqual(NaN, 1)).toBe(false)
 	})
 
+	it('requires an exact numeric kind for tagged expectations', () => {
+		const int = { $numkind: 'int', value: 1000 }
+		const float = { $numkind: 'float', value: 1000 }
+		expect(corpusValuesEqual(float, float)).toBe(true)
+		expect(corpusValuesEqual(int, float)).toBe(false)
+		expect(corpusValuesEqual(float, 1000)).toBe(true)
+		expect(corpusValuesEqual(1000, float)).toBe(false)
+	})
+
 	it('compares Dates as UTC instants, by timestamp not identity', () => {
 		const a = new Date('2024-03-01T09:00:00Z')
 		const b = new Date('2024-03-01T09:00:00Z')
@@ -76,6 +85,13 @@ describe('diffCorpusValues', () => {
 	it('points at the exact nested path of a mismatch', () => {
 		const diffs = diffCorpusValues({ a: { b: 1 } }, { a: { b: 2 } })
 		expect(diffs).toEqual(['$.a.b: expected 2, got 1'])
+	})
+
+	it('describes numeric kind mismatches explicitly', () => {
+		expect(diffCorpusValues(
+			{ x: { $numkind: 'int', value: 1000 } },
+			{ x: { $numkind: 'float', value: 1000 } },
+		)).toEqual(['$.x: expected float 1000, got int 1000'])
 	})
 })
 

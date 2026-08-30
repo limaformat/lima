@@ -79,6 +79,7 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-088 | §6.4.2/§10 | Numbers | Non-zero underflow throws | error | strict |
 | C-089 | §6.4.2 | Numbers | Subnormal non-zero is accepted | boundary | both |
 | C-090 | §6.4.3 | Numbers | Plus sign, trailing dot, leading zero, hex/octal/binary all remain strings | fallback | both |
+| C-091 | §6.4.1/§6.4.2 | Numbers | Corpus asserts the grammar-selected Int/Float kind, including exponent, integral decimal, safe-integer, and normalized-zero boundaries | positive | both |
 | C-100 | §6.5.1 | Dates | All supported ISO forms | positive | both |
 | C-101 | §6.5.1 | Dates | German one-/two-digit formats | positive | both |
 | C-102 | §6.5.1 | Dates | Slash formats | positive | both |

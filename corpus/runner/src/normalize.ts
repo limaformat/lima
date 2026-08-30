@@ -14,6 +14,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date)
 }
 
+type NumberKindValue = { $numkind: 'int' | 'float'; value: number }
+const isNumberKindValue = (value: unknown): value is NumberKindValue =>
+	isPlainObject(value) && (value.$numkind === 'int' || value.$numkind === 'float') && typeof value.value === 'number'
+
 export function corpusValuesEqual(actual: unknown, expected: unknown): boolean {
 	if (actual instanceof Date || expected instanceof Date) {
 		if (!(actual instanceof Date) || !(expected instanceof Date)) return false
@@ -22,6 +26,10 @@ export function corpusValuesEqual(actual: unknown, expected: unknown): boolean {
 	if (typeof actual === 'number' && typeof expected === 'number') {
 		return Object.is(actual, expected)
 	}
+	if (isNumberKindValue(expected)) {
+		return isNumberKindValue(actual) && actual.$numkind === expected.$numkind && Object.is(actual.value, expected.value)
+	}
+	if (isNumberKindValue(actual) && typeof expected === 'number') return Object.is(actual.value, expected)
 	if (Array.isArray(actual) || Array.isArray(expected)) {
 		if (!Array.isArray(actual) || !Array.isArray(expected)) return false
 		if (actual.length !== expected.length) return false
@@ -51,6 +59,9 @@ export function diffCorpusValues(actual: unknown, expected: unknown, path = '$')
 	const isActualDate = actual instanceof Date
 	const isExpectedDate = expected instanceof Date
 	if (isActualDate || isExpectedDate) {
+		return [`${path}: expected ${describe(expected)}, got ${describe(actual)}`]
+	}
+	if (isNumberKindValue(actual) || isNumberKindValue(expected)) {
 		return [`${path}: expected ${describe(expected)}, got ${describe(actual)}`]
 	}
 
@@ -84,6 +95,7 @@ export function diffCorpusValues(actual: unknown, expected: unknown, path = '$')
 
 function describe(value: unknown): string {
 	if (value instanceof Date) return `Date(${value.toISOString?.() ?? 'Invalid Date'})`
+	if (isNumberKindValue(value)) return `${value.$numkind} ${String(value.value)}`
 	if (typeof value === 'string') return JSON.stringify(value)
 	return String(value)
 }

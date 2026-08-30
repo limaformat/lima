@@ -6,6 +6,8 @@ import {
 import { corpusValuesEqual, diffCorpusValues, hasOnlySafeOwnDataProperties } from './normalize'
 import { compareDiagnostic, type LimaDiagnostic } from './errors'
 import { parse, parseCore, parseReferences } from '../../../js/src/index'
+import { parseCoreWithPositions, toPlainValue } from '../../../js/src/core'
+import type { LimaValue } from '../../../js/src/value'
 import { parseReferencesV1 } from '../../../js/src/references'
 import { LimaError } from '../../../js/src/errors'
 
@@ -57,6 +59,48 @@ export interface CaseOutcome {
 	notes: string[]
 }
 
+const containsNumberKind = (value: unknown): boolean => {
+	if (Array.isArray(value)) return value.some(containsNumberKind)
+	if (typeof value !== 'object' || value === null) return false
+	const record = value as Record<string, unknown>
+	if (record.$numkind === 'int' || record.$numkind === 'float') return true
+	return Object.values(record).some(containsNumberKind)
+}
+
+const stripNumberKinds = (value: unknown): unknown => {
+	if (Array.isArray(value)) return value.map(stripNumberKinds)
+	if (typeof value !== 'object' || value === null || value instanceof Date) return value
+	const record = value as Record<string, unknown>
+	if ((record.$numkind === 'int' || record.$numkind === 'float') && typeof record.value === 'number') return record.value
+	const result: Record<string, unknown> = Object.create(null)
+	for (const [key, child] of Object.entries(record)) result[key] = stripNumberKinds(child)
+	return result
+}
+
+const projectNumberKinds = (value: LimaValue): unknown => {
+	switch (value.kind) {
+		case 'null': return null
+		case 'bool': return value.value
+		case 'int': return Object.assign(Object.create(null), { $numkind: 'int', value: value.value })
+		case 'float': return Object.assign(Object.create(null), { $numkind: 'float', value: value.value })
+		case 'string': return value.value
+		case 'instant': return value.value
+		case 'array': return value.items.map(projectNumberKinds)
+		case 'mapping': {
+			const result: Record<string, unknown> = Object.create(null)
+			for (const [key, child] of value.entries) result[key] = projectNumberKinds(child)
+			return result
+		}
+	}
+}
+
+const parseCoreWithNumberKinds = (input: string, strict: boolean, onWarning: (d: { message: string; line: number }) => void): unknown => {
+	const positioned = parseCoreWithPositions(input, { strict, onWarning })
+	const result: Record<string, unknown> = Object.create(null)
+	for (const [key, value] of positioned) result[key] = projectNumberKinds(toPlainValue(value))
+	return result
+}
+
 /**
  * Runs the case's chosen entry point (`c.api`) via the real `onWarning`
  * callback (Core §11.2) — each raw `{message, line}` diagnostic is run
@@ -86,8 +130,11 @@ function invokeParser(c: LoadedCase): {
 			onWarning,
 			mode: c.options.mode,
 		}
+		const needsNumberKinds = c.expectation.kind === 'result' && containsNumberKind(c.expectation.value)
 		const value = c.api === 'core'
-			? parseCore(c.input, { strict: c.options.strict, onWarning })
+			? needsNumberKinds
+				? parseCoreWithNumberKinds(c.input, c.options.strict, onWarning)
+				: parseCore(c.input, { strict: c.options.strict, onWarning })
 			: c.specVersion === '1.0'
 				? parseReferencesV1(c.input, referenceOptions)
 			: c.api === 'references'
@@ -188,7 +235,7 @@ function runCase(c: LoadedCase): CaseOutcome {
 		}
 
 		if (reasons.length === 0 && c.spec === 'core' && c.api === 'core') {
-			reasons.push(...crossCheckResultAgainstParse(c, result.value))
+			reasons.push(...crossCheckResultAgainstParse(c, stripNumberKinds(result.value)))
 		}
 
 		return {

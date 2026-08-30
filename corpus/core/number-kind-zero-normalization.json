@@ -1,0 +1,14 @@
+{
+  "id": "core.number-kind.zero-normalization",
+  "spec": "core",
+  "section": "6.4.2",
+  "description": "Negative numeric zero normalizes to positive zero without changing the grammar-selected Int or Float kind.",
+  "input": "integer_zero: -0\nfloat_zero: -0.0",
+  "expect": {
+    "result": {
+      "integer_zero": { "$type": "int", "value": 0 },
+      "float_zero": { "$type": "float", "value": 0 }
+    }
+  },
+  "tags": ["number", "positive"]
+}

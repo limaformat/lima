@@ -204,9 +204,17 @@ func equalCorpus(v Value, e any) bool {
 		y, ok := e.(bool)
 		return ok && bool(x) == y
 	case Int64:
+		if marker, ok := e.(map[string]any); ok {
+			value, valueOK := marker["value"].(float64)
+			return marker["$type"] == "int" && valueOK && float64(x) == value
+		}
 		y, ok := e.(float64)
 		return ok && float64(x) == y
 	case Float64:
+		if marker, ok := e.(map[string]any); ok {
+			value, valueOK := marker["value"].(float64)
+			return marker["$type"] == "float" && valueOK && float64(x) == value
+		}
 		y, ok := e.(float64)
 		return ok && float64(x) == y
 	case String:

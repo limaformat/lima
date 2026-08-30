@@ -24,7 +24,7 @@ const TAG_PATTERN = new RegExp(schemaDoc.properties.tags.items.pattern)
 const INSTANT_PATTERN = new RegExp(
 	(schemaDoc.$defs.corpusValue.oneOf[5] as any).properties.value.pattern
 )
-const HOST_DATE_SENTINELS = (schemaDoc.$defs.corpusValue.oneOf[7] as any).properties.value
+const HOST_DATE_SENTINELS = (schemaDoc.$defs.corpusValue.oneOf[9] as any).properties.value
 	.enum as readonly string[]
 
 export interface ValidationResult {
@@ -85,6 +85,10 @@ function validateCorpusValue(value: unknown, path: string, errors: string[]): vo
 		return fail(errors, path, 'must be null, boolean, number, string, array, or object')
 	}
 	if ('$type' in value) {
+		const keys = Object.keys(value)
+		if (keys.length !== 2 || !keys.includes('$type') || !keys.includes('value')) {
+			fail(errors, path, 'marker object must have only $type and value')
+		}
 		const type = value.$type
 		if (type === 'instant') {
 			if (typeof value.value !== 'string' || !INSTANT_PATTERN.test(value.value)) {
@@ -98,6 +102,12 @@ function validateCorpusValue(value: unknown, path: string, errors: string[]): vo
 			if (!HOST_DATE_SENTINELS.includes(value.value as string)) {
 				fail(errors, `${path}.value`, `host-date value must be one of ${HOST_DATE_SENTINELS.join(', ')}`)
 			}
+		} else if (type === 'int') {
+			if (typeof value.value !== 'number' || !Number.isInteger(value.value)) {
+				fail(errors, `${path}.value`, 'int value must be an integer')
+			}
+		} else if (type === 'float') {
+			if (typeof value.value !== 'number') fail(errors, `${path}.value`, 'float value must be a number')
 		} else {
 			fail(errors, `${path}.$type`, `unknown marker type "${String(type)}"`)
 		}
@@ -106,6 +116,13 @@ function validateCorpusValue(value: unknown, path: string, errors: string[]): vo
 	for (const [key, entry] of Object.entries(value)) {
 		validateCorpusValue(entry, `${path}.${key}`, errors)
 	}
+}
+
+function containsNumberKindMarker(value: unknown): boolean {
+	if (Array.isArray(value)) return value.some(containsNumberKindMarker)
+	if (!isPlainObject(value)) return false
+	if (value.$type === 'int' || value.$type === 'float') return true
+	return Object.values(value).some(containsNumberKindMarker)
 }
 
 export function validateCase(doc: unknown): ValidationResult {
@@ -217,6 +234,9 @@ export function validateCase(doc: unknown): ValidationResult {
 				else {
 					for (const [key, value] of Object.entries(options.partials)) {
 						validateCorpusValue(value, `options.partials.${key}`, errors)
+						if (containsNumberKindMarker(value)) {
+							fail(errors, `options.partials.${key}`, 'int/float markers are only valid in expect.result')
+						}
 					}
 				}
 			}
@@ -279,7 +299,12 @@ export function validateCase(doc: unknown): ValidationResult {
 					})`
 				)
 			}
-			if ('result' in expectation) validateCorpusValue(expectation.result, 'expect.result', errors)
+			if ('result' in expectation) {
+				validateCorpusValue(expectation.result, 'expect.result', errors)
+				if (containsNumberKindMarker(expectation.result) && (doc.spec !== 'core' || (doc.api !== undefined && doc.api !== 'core'))) {
+					fail(errors, 'expect.result', 'int/float markers require spec core and api core')
+				}
+			}
 			if ('error' in expectation) validateDiagnostic(expectation.error, 'expect.error', errors)
 			if ('warnings' in expectation) {
 				if (!Array.isArray(expectation.warnings)) fail(errors, 'expect.warnings', 'must be an array')

@@ -23,6 +23,11 @@ describe('materialize', () => {
 		expect(result.toISOString()).toBe('2024-03-01T09:00:00.000Z')
 	})
 
+	it('materializes int and float markers without losing their asserted kind', () => {
+		expect(materialize({ $type: 'int', value: 42 })).toEqual({ $numkind: 'int', value: 42 })
+		expect(materialize({ $type: 'float', value: 42 })).toEqual({ $numkind: 'float', value: 42 })
+	})
+
 	it('throws for a malformed instant value', () => {
 		expect(() => materialize({ $type: 'instant', value: 'not-a-date' })).toThrow()
 	})

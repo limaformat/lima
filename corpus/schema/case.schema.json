@@ -292,6 +292,38 @@
           "additionalProperties": false,
           "properties": {
             "$type": {
+              "const": "int"
+            },
+            "value": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "$type",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "$type": {
+              "const": "float"
+            },
+            "value": {
+              "type": "number"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "$type",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "$type": {
               "const": "host-number"
             },
             "value": {

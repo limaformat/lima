@@ -1,0 +1,14 @@
+{
+  "id": "core.number-kind.integers",
+  "spec": "core",
+  "section": "6.4.1",
+  "description": "Number forms without a decimal point or exponent produce Int values, including the maximum safe integer.",
+  "input": "plain: 42\nsafe_max: 9007199254740991",
+  "expect": {
+    "result": {
+      "plain": { "$type": "int", "value": 42 },
+      "safe_max": { "$type": "int", "value": 9007199254740991 }
+    }
+  },
+  "tags": ["number", "positive"]
+}

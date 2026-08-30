@@ -14,6 +14,7 @@ export type CorpusValue =
 	| string
 	| CorpusValue[]
 	| InstantMarker
+	| NumberKindMarker
 	| HostNumberMarker
 	| HostDateMarker
 	| CorpusMapping
@@ -21,6 +22,16 @@ export type CorpusValue =
 export interface InstantMarker {
 	$type: 'instant'
 	value: string
+}
+
+export interface NumberKindMarker {
+	$type: 'int' | 'float'
+	value: number
+}
+
+export interface NumberKindValue {
+	$numkind: 'int' | 'float'
+	value: number
 }
 
 export type HostNumberLiteral = 'nan' | 'infinity' | '-infinity' | '-0'
@@ -76,6 +87,9 @@ export function materialize(value: CorpusValue): unknown {
 				}
 				return date
 			}
+			case 'int':
+			case 'float':
+				return { $numkind: value.$type, value: value.value as number } satisfies NumberKindValue
 			case 'host-number': {
 				const literal = value.value as HostNumberLiteral
 				if (!(literal in HOST_NUMBERS)) {

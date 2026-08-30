@@ -378,11 +378,27 @@ only for the positioned builder.
 
 ### 8. Int vs Float sentinel in the corpus — corpus infra + 3 runners — M7 — decision: option A
 
-`{"$type":"int"/"float","value":N}` inside `expect.result`, honoured by
-`normalize.ts` / `corpus.rs` / `corpus_test.go`. Only ~5–10 new targeted
-cases for the §6.4.1 / §6.4.2 boundaries (starting with `1e3` → Float); do
-not retag existing cases. See
-`decisions/corpus-int-float-type-assertion.md` (option A).
+**Status: done (`c93fdab`, Core 1.0.7).** `{"$type":"int"/"float","value":N}`
+in `expect.result`, restricted to `spec:core`/`api:core` (rejected in
+partials and References cases). Honoured in all three comparison paths:
+`normalize.ts` (`materialize` → a `{$numkind,value}` wrapper; `run.ts`
+projects the actual via `parseCoreWithPositions` + `toPlainValue` only for
+marker-bearing cases; kind-exact equality with a plain-number
+backward-compat fallback), `rust/tests/corpus.rs` `value_matches` (explicit
+`Int`/`Float` × marker arms before the `$type => None` skip — a mismatch is
+`Some(false)`, not a skip), `go/corpus_test.go` `equalCorpus`. 3 new cases
+`core.number-kind.{integers,floats,zero-normalization}` (`since: "1.0.7"`,
+Core suite 186 → 189); the frozen `number-grammar-forms.json` is untouched.
+Verified: a deliberately wrong kind FAILs in all three runners, never
+skipped. Coverage C-091.
+
+### 12. Harden the `$type` marker shape in the corpus validator — corpus infra
+
+**Status: done (`c93fdab`, folded into #8).** `schema.ts`'s
+`validateCorpusValue` now rejects a `$type` object with any key other than
+`$type` and `value` — for every marker (`instant`, `host-number`,
+`host-date`, `int`, `float`) — matching `case.schema.json`'s
+`additionalProperties: false`. `schema.test.ts` covers all five.
 
 ### 9. Preserve `insertedAt` provenance across a second pure-reference copy — code
 
@@ -437,8 +453,7 @@ part C).
 
 ## P3 — polish / follow-up
 
-- **12.** `schema.ts:87–104`: `$type` markers accept extra properties; the
-  JSON schema declares `additionalProperties: false`. Align them. (M-MINOR1)
+- **12. Done (`c93fdab`)** — see P2 #12 above; folded into the #8 batch.
 - **13.** Repair `js/bench/index.ts` (~L72) and add a stable References 2.0
   benchmark. (also in `follow-ups.md`)
 - **14.** Document the `resolveNode` cache invariant (key without the

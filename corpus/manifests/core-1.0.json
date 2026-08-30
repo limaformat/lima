@@ -3,8 +3,8 @@
   "frozen": true,
   "baselineVersion": "1.0.0",
   "baselineCaseCount": 149,
-  "specVersion": "1.0.6",
-  "caseCount": 186,
+  "specVersion": "1.0.7",
+  "caseCount": 189,
   "cases": [
     {
       "path": "core/api-parse-core-never-resolves-references.json",
@@ -911,6 +911,24 @@
       "id": "core.numbers.invalid-exponent-forms",
       "sha256": "088d6890ff87cb7e9be8c145781ba305768334a1c1573c429a22de9f8a8409bf",
       "since": "1.0.0"
+    },
+    {
+      "path": "core/number-kind-floats.json",
+      "id": "core.number-kind.floats",
+      "sha256": "cee84694281f86f960874d44751c283f69ea381034a00f5fc239352450a874d9",
+      "since": "1.0.7"
+    },
+    {
+      "path": "core/number-kind-integers.json",
+      "id": "core.number-kind.integers",
+      "sha256": "7d89cc2cd1a2c3641fb8860133203f44449f0a8aa71e8e352c23917b00e0a582",
+      "since": "1.0.7"
+    },
+    {
+      "path": "core/number-kind-zero-normalization.json",
+      "id": "core.number-kind.zero-normalization",
+      "sha256": "7ed472770f11f68be96b4fef35e084aab6265d4f76ccfde5b39501bc9a56a330",
+      "since": "1.0.7"
     },
     {
       "path": "core/number-outside-safe-integer-range.json",

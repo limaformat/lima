@@ -106,8 +106,8 @@ describe('loadCorpus', () => {
 	it('loads every real case under core/ and references/ with zero failures', () => {
 		const { cases, failures } = loadCorpus(corpusRoot)
 		expect(failures).toEqual([])
-		// 149 Core 1.0.0 + 37 Core 1.0.1-1.0.6 (2026-09 review errata) + 101 References 1.0.
-		expect(cases.length).toBe(287)
+		// 149 Core 1.0.0 + 40 Core 1.0.1-1.0.7 (2026-09 review errata) + 101 References 1.0.
+		expect(cases.length).toBe(290)
 	})
 
 	it('produces unique, stable case IDs', () => {
