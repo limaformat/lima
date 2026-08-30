@@ -217,7 +217,8 @@ func clonePositioned2(v *pvalue) *pvalue {
 	if v == nil {
 		return nil
 	}
-	out := &pvalue{value: v.value, line: v.line, quoted: v.quoted, inserted: v.inserted}
+	out := &pvalue{value: v.value, line: v.line, quoted: v.quoted, inserted: v.inserted,
+		priorInsertions: append([]insertedAt(nil), v.priorInsertions...)}
 	setReferenceTokens2(out, append([]referenceToken2(nil), referenceTokensOf2(v)...))
 	if v.array != nil {
 		out.array = make([]*pvalue, len(v.array))
@@ -232,6 +233,15 @@ func clonePositioned2(v *pvalue) *pvalue {
 		}
 	}
 	return out
+}
+
+func copyWithInsertion2(target *pvalue, token referenceToken2) *pvalue {
+	copy := clonePositioned2(target)
+	if copy.inserted != nil {
+		copy.priorInsertions = append(copy.priorInsertions, *copy.inserted)
+	}
+	copy.inserted = &insertedAt{line: token.line, offset: token.offset, token: token.token}
+	return copy
 }
 
 func mappingChild2(v *pvalue, key string) *pvalue {
@@ -333,7 +343,8 @@ func resolveNode2(node *pvalue, document, partials []pentry, remaining int, stac
 
 func resolveNodeUncached2(node *pvalue, document, partials []pentry, remaining int, stack map[*pvalue]bool, ctx *resolveContext2) resolution2 {
 	if node.array != nil {
-		out := &pvalue{line: node.line, inserted: node.inserted, array: make([]*pvalue, len(node.array))}
+		out := &pvalue{line: node.line, inserted: node.inserted,
+			priorInsertions: append([]insertedAt(nil), node.priorInsertions...), array: make([]*pvalue, len(node.array))}
 		complete := true
 		for i, item := range node.array {
 			r := resolveNode2(item, document, partials, remaining, stack, ctx)
@@ -349,7 +360,8 @@ func resolveNodeUncached2(node *pvalue, document, partials []pentry, remaining i
 		return resolution2{out, complete}
 	}
 	if node.mapping != nil {
-		out := &pvalue{line: node.line, inserted: node.inserted, mapping: make([]pentry, len(node.mapping))}
+		out := &pvalue{line: node.line, inserted: node.inserted,
+			priorInsertions: append([]insertedAt(nil), node.priorInsertions...), mapping: make([]pentry, len(node.mapping))}
 		complete := true
 		for i, entry := range node.mapping {
 			r := resolveNode2(entry.value, document, partials, remaining, stack, ctx)
@@ -374,9 +386,7 @@ func resolveNodeUncached2(node *pvalue, document, partials []pentry, remaining i
 			return resolution2{clonePositioned2(node), false}
 		}
 		if token.partialPath != "" {
-			copy := clonePositioned2(target)
-			copy.inserted = &insertedAt{line: token.line, offset: token.offset, token: token.token}
-			return resolution2{copy, true}
+			return resolution2{copyWithInsertion2(target, token), true}
 		}
 		stack[target] = true
 		r := resolveNode2(target, document, partials, remaining-1, stack, ctx)
@@ -388,9 +398,7 @@ func resolveNodeUncached2(node *pvalue, document, partials []pentry, remaining i
 		if selected == nil {
 			return resolution2{clonePositioned2(node), false}
 		}
-		copy := clonePositioned2(selected)
-		copy.inserted = &insertedAt{line: token.line, offset: token.offset, token: token.token}
-		return resolution2{copy, true}
+		return resolution2{copyWithInsertion2(selected, token), true}
 	}
 	var out strings.Builder
 	cursor, complete := 0, true
@@ -429,7 +437,8 @@ func resolveNodeUncached2(node *pvalue, document, partials []pentry, remaining i
 	if utf8.RuneCountInString(value) > scalarLengthLimit {
 		addRefDiagnostic(ctx, tokens[0], ResourceLimit, fmt.Sprintf("scalar exceeds maximum length of %d code points", scalarLengthLimit))
 	}
-	result := &pvalue{value: String(value), line: node.line, inserted: node.inserted}
+	result := &pvalue{value: String(value), line: node.line, inserted: node.inserted,
+		priorInsertions: append([]insertedAt(nil), node.priorInsertions...)}
 	setReferenceTokens2(result, unresolved)
 	return resolution2{result, complete}
 }
@@ -483,7 +492,7 @@ type finalized2 struct {
 }
 
 func finalize2(v *pvalue) finalized2 {
-	participants := []insertedAt{}
+	participants := append([]insertedAt(nil), v.priorInsertions...)
 	if v.inserted != nil {
 		participants = append(participants, *v.inserted)
 	}
@@ -530,6 +539,7 @@ func earliestParticipant2(items []insertedAt) *insertedAt {
 	return &best
 }
 func collectParticipants2(v *pvalue, out *[]insertedAt) {
+	*out = append(*out, v.priorInsertions...)
 	if v.inserted != nil {
 		*out = append(*out, *v.inserted)
 	}

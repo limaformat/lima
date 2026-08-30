@@ -255,20 +255,57 @@ fn canonical(value: &PositionedValue) -> String {
 
 fn copied_with_insertion(value: &PositionedValue, token: &Token) -> PositionedValue {
     let mut copy = value.clone();
-    let mark = Some(InsertedAt {
+    let mark = InsertedAt {
         line: token.line,
         offset: token.offset,
         token: token.text.clone(),
-    });
+    };
     match &mut copy {
-        PositionedValue::Null { inserted_at, .. }
-        | PositionedValue::Bool { inserted_at, .. }
-        | PositionedValue::Int { inserted_at, .. }
-        | PositionedValue::Float { inserted_at, .. }
-        | PositionedValue::String { inserted_at, .. }
-        | PositionedValue::Instant { inserted_at, .. }
-        | PositionedValue::Array { inserted_at, .. }
-        | PositionedValue::Mapping { inserted_at, .. } => *inserted_at = mark,
+        PositionedValue::Null {
+            inserted_at,
+            prior_insertions,
+            ..
+        }
+        | PositionedValue::Bool {
+            inserted_at,
+            prior_insertions,
+            ..
+        }
+        | PositionedValue::Int {
+            inserted_at,
+            prior_insertions,
+            ..
+        }
+        | PositionedValue::Float {
+            inserted_at,
+            prior_insertions,
+            ..
+        }
+        | PositionedValue::String {
+            inserted_at,
+            prior_insertions,
+            ..
+        }
+        | PositionedValue::Instant {
+            inserted_at,
+            prior_insertions,
+            ..
+        }
+        | PositionedValue::Array {
+            inserted_at,
+            prior_insertions,
+            ..
+        }
+        | PositionedValue::Mapping {
+            inserted_at,
+            prior_insertions,
+            ..
+        } => {
+            if let Some(old) = inserted_at.take() {
+                prior_insertions.push(old);
+            }
+            *inserted_at = Some(mark);
+        }
     }
     copy
 }
@@ -377,6 +414,7 @@ fn resolve_node(
             items,
             line,
             inserted_at,
+            prior_insertions,
         } => {
             let mut complete = true;
             let mut unresolved = Vec::new();
@@ -423,6 +461,7 @@ fn resolve_node(
                     items: output,
                     line: *line,
                     inserted_at: inserted_at.clone(),
+                    prior_insertions: prior_insertions.clone(),
                 },
                 complete,
                 unresolved,
@@ -432,6 +471,7 @@ fn resolve_node(
             entries,
             line,
             inserted_at,
+            prior_insertions,
         } => {
             let mut complete = true;
             let mut unresolved = Vec::new();
@@ -449,6 +489,7 @@ fn resolve_node(
                     entries,
                     line: *line,
                     inserted_at: inserted_at.clone(),
+                    prior_insertions: prior_insertions.clone(),
                 },
                 complete,
                 unresolved,
@@ -460,6 +501,7 @@ fn resolve_node(
             quoted: false,
             ref_source,
             inserted_at,
+            prior_insertions,
         } => {
             let tokens = scan_tokens(value, *line, ref_source.as_ref());
             let pure =
@@ -588,6 +630,7 @@ fn resolve_node(
                         quoted: false,
                         ref_source: ref_source.clone(),
                         inserted_at: inserted_at.clone(),
+                        prior_insertions: prior_insertions.clone(),
                     },
                     complete,
                     unresolved,
@@ -727,21 +770,25 @@ fn positioned(v: &LimaValue) -> PositionedValue {
         LimaValue::Null => PositionedValue::Null {
             line: 0,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Bool(value) => PositionedValue::Bool {
             value: *value,
             line: 0,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Int(value) => PositionedValue::Int {
             value: *value,
             line: 0,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Float(value) => PositionedValue::Float {
             value: *value,
             line: 0,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::String(value) => PositionedValue::String {
             value: value.clone(),
@@ -749,16 +796,19 @@ fn positioned(v: &LimaValue) -> PositionedValue {
             quoted: true,
             ref_source: None,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Instant(value) => PositionedValue::Instant {
             value: *value,
             line: 0,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Array(items) => PositionedValue::Array {
             items: items.iter().map(positioned).collect(),
             line: 0,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Mapping(entries) => PositionedValue::Mapping {
             entries: entries
@@ -767,6 +817,7 @@ fn positioned(v: &LimaValue) -> PositionedValue {
                 .collect(),
             line: 0,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
     }
 }
@@ -830,6 +881,7 @@ fn final_validate(v: &PositionedValue) -> Result<(usize, u32), LimaError> {
             items,
             line,
             inserted_at,
+            ..
         } => {
             if let Some(child) = items
                 .iter()
@@ -879,7 +931,8 @@ struct FinalizedValue {
 }
 
 fn finalize_positioned(v: &PositionedValue) -> FinalizedValue {
-    let own: Vec<InsertedAt> = v.inserted_at().cloned().into_iter().collect();
+    let mut own = v.prior_insertions().to_vec();
+    own.extend(v.inserted_at().cloned());
     match v {
         PositionedValue::Array { items, .. } => {
             let mut native = Vec::with_capacity(items.len());
@@ -949,6 +1002,7 @@ fn earliest_participant(participants: &[InsertedAt]) -> Option<&InsertedAt> {
 }
 
 fn collect_all_participants(v: &PositionedValue, acc: &mut Vec<InsertedAt>) {
+    acc.extend_from_slice(v.prior_insertions());
     if let Some(at) = v.inserted_at() {
         acc.push(at.clone());
     }

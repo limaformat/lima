@@ -21,13 +21,13 @@ export const emptyMapping = (): Meta => Object.create(null)
  */
 export const deepCopyPositioned = (v: PositionedValue): PositionedValue => {
 	switch (v.kind) {
-		case 'array': return { kind: 'array', items: v.items.map(deepCopyPositioned), line: v.line, references2Active: v.references2Active, insertedAt: v.insertedAt }
+		case 'array': return { kind: 'array', items: v.items.map(deepCopyPositioned), line: v.line, references2Active: v.references2Active, insertedAt: v.insertedAt, priorInsertions: v.priorInsertions }
 		case 'mapping': {
 			const entries = new Map<string, PositionedValue>()
 			for (const [k, c] of v.entries) entries.set(k, deepCopyPositioned(c))
-			return { kind: 'mapping', entries, line: v.line, references2Active: v.references2Active, insertedAt: v.insertedAt }
+			return { kind: 'mapping', entries, line: v.line, references2Active: v.references2Active, insertedAt: v.insertedAt, priorInsertions: v.priorInsertions }
 		}
-		case 'instant': return { kind: 'instant', value: new Date(v.value.getTime()), line: v.line, insertedAt: v.insertedAt }
+		case 'instant': return { kind: 'instant', value: new Date(v.value.getTime()), line: v.line, insertedAt: v.insertedAt, priorInsertions: v.priorInsertions }
 		default: return v
 	}
 }
@@ -93,7 +93,7 @@ export const partialToPositioned = (v: LimaValue, line: number): PositionedValue
 export type FinalizedValue = { native: NativeValue; nodeCount: number; depth: number; deepestParticipants: InsertedAt[] }
 
 export const finalizePositioned = (v: PositionedValue): FinalizedValue => {
-	const own = v.insertedAt ? [v.insertedAt] : []
+	const own = v.insertedAt ? [...(v.priorInsertions ?? []), v.insertedAt] : (v.priorInsertions ?? [])
 	if (v.kind === 'array') {
 		if (v.items.length === 0) return { native: [], nodeCount: 1, depth: 1, deepestParticipants: own }
 		const native: NativeValue[] = new Array(v.items.length)
@@ -144,6 +144,7 @@ export const earliestParticipant = (participants: InsertedAt[]): InsertedAt | nu
 
 /** Node-count attribution for the RESOURCE_LIMIT error path: every reference insertion anywhere in the tree contributes to the total. */
 export const collectAllParticipants = (v: PositionedValue, acc: InsertedAt[]): void => {
+	if (v.priorInsertions) acc.push(...v.priorInsertions)
 	if (v.insertedAt) acc.push(v.insertedAt)
 	if (v.kind === 'array') for (const item of v.items) collectAllParticipants(item, acc)
 	if (v.kind === 'mapping') for (const c of v.entries.values()) collectAllParticipants(c, acc)

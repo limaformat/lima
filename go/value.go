@@ -151,13 +151,14 @@ type referenceToken2 struct {
 }
 type referenceTokens2 []referenceToken2
 type pvalue struct {
-	value       Value
-	line        int
-	quoted      bool
-	inserted    *insertedAt
-	references2 *referenceTokens2
-	array       []*pvalue
-	mapping     []pentry
+	value           Value
+	line            int
+	quoted          bool
+	inserted        *insertedAt
+	priorInsertions []insertedAt
+	references2     *referenceTokens2
+	array           []*pvalue
+	mapping         []pentry
 }
 type pentry struct {
 	key   string

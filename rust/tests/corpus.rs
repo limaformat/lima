@@ -456,7 +456,7 @@ fn references_matches_conformance_corpus() {
     );
     assert_eq!(
         entries.len(),
-        130,
+        131,
         "References 2.0 corpus case count changed"
     );
 

@@ -7,6 +7,15 @@ import { collectAllParticipants, deepCopyPositioned, earliestParticipant, emptyM
 const PARTIAL_NAME = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*';
 const PARTIAL_NAME_RE = new RegExp(`^${PARTIAL_NAME}$`);
 const MAX_EDGES = 3;
+/** Copies a pure-reference target and stamps the new insertion without
+ * discarding provenance already attached to the copied root (R-112). */
+const copyWithInsertion = (target, insertedAt) => {
+    const copy = deepCopyPositioned(target);
+    const priorInsertions = copy.insertedAt === undefined
+        ? copy.priorInsertions
+        : [...(copy.priorInsertions ?? []), copy.insertedAt];
+    return { ...copy, insertedAt, priorInsertions };
+};
 const addDiagnostic = (ctx, diagnostic, offset = 0) => {
     ctx.diagnostics.push({ ...diagnostic, offset });
 };
@@ -119,8 +128,10 @@ const resolveNodeUncached = (node, document, partials, ctx, remainingEdges, stac
         if (target === undefined || stack.has(target))
             return { value: node, complete: false };
         if (pure.partialPath !== undefined) {
+            // `partialToPositioned` never annotates partial targets: partials are
+            // inert and have no source token before this document insertion.
             return {
-                value: { ...deepCopyPositioned(target), insertedAt: { line: pure.line, offset: pure.offset, token: pure.token } },
+                value: copyWithInsertion(target, { line: pure.line, offset: pure.offset, token: pure.token }),
                 complete: true,
             };
         }
@@ -133,7 +144,9 @@ const resolveNodeUncached = (node, document, partials, ctx, remainingEdges, stac
         if (selected === undefined)
             return { value: node, complete: false };
         return {
-            value: { ...deepCopyPositioned(selected), insertedAt: { line: pure.line, offset: pure.offset, token: pure.token } },
+            // `selected` may itself be the root inserted by an earlier reference;
+            // both it and this outer copy participate in final-structure errors.
+            value: copyWithInsertion(selected, { line: pure.line, offset: pure.offset, token: pure.token }),
             complete: true,
         };
     }

@@ -384,20 +384,47 @@ cases for the §6.4.1 / §6.4.2 boundaries (starting with `1e3` → Float); do
 not retag existing cases. See
 `decisions/corpus-int-float-type-assertion.md` (option A).
 
-### 9. Verify M1C, and preserve `insertedAt` if it is real — code (TS)
+### 9. Preserve `insertedAt` provenance across a second pure-reference copy — code
 
-`references2.ts:147/158` overwrites `insertedAt` on the copy root
-unconditionally, discarding the provenance of an inner reference result
-that resolved earlier. **Build a repro first** — a chain within the
-three-edge limit that triggers a final node/depth limit — and only fix if
-the attribution is observably wrong.
+**Status: done (TS `afb2e60`, Rust + Go `0d9a06a`).** The pure-reference
+copy sites spread `{ ...deepCopyPositioned(target), insertedAt: {…} }`,
+unconditionally overwriting a root `insertedAt` that the deep copy had
+preserved from an earlier resolution. When a pure reference copies a value
+that was *itself* the root inserted by an earlier pure reference, that
+earlier token's provenance was lost — so §5's "earliest source token whose
+inserted or copied value participates in the invalid structure" picked the
+wrong (later) token for a final depth/node-count error.
+
+Repro (`middle: ${base}` … `outer: …n10: { v: ${middle} }`, `base` deep
+enough that `outer` overflows `NESTING_DEPTH_LIMIT`): pre-fix, all three
+implementations reported `RESOURCE_LIMIT` at line 20 (`${middle}`); §5
+requires line 1 (`${base}`).
+
+Fix (same model in all three): additive `priorInsertions` /
+`prior_insertions` on the positioned node, carried by the deep copy,
+consumed by `finalize*`/`collect*Participants`; a `copyWithInsertion` /
+`copied_with_insertion` helper stashes the old root insertion into the
+history before stamping the new token. Output is byte-identical for every
+tree where no root is re-stamped (frozen 1.0 unchanged). Corpus
+`error-position-provenance-second-copy` (R2-068) asserts the three
+implementations agree — verified `RESOURCE_LIMIT` line 1 col 9 `${base}`
+for the two-copy repro and line 1 col 4 `${b}` for a three-edge chain in
+TS/Rust/Go. References 2.0 suite 130 → 131.
+
+The frozen References 1.0 resolver (`references.ts:168/172`, and the Rust
+`resolve_tree` equivalent) has the same overwrite pattern — deliberately
+untouched (never public; only the 101-case frozen corpus is normative for
+it), the new struct field is threaded through it mechanically and stays
+empty there.
 
 ### 10. Extract the shared helpers out of `references.ts` — code (TS, refactor)
 
-`deepCopyPositioned`, `finalizePositioned`, `earliestParticipant`,
-`collectAllParticipants`, `partialToPositioned` into a neutral module (e.g.
-`positioned-tree.ts`), so the live References 2.0 resolver does not import
-from the frozen 1.0 module. No behaviour change.
+**Status: done (`037219d`).** `deepCopyPositioned`, `partialToPositioned`,
+`finalizePositioned` (+ `FinalizedValue`), `earliestParticipant`,
+`collectAllParticipants`, and `emptyMapping` moved verbatim to
+`js/src/positioned-tree.ts`; `references.ts` (frozen 1.0) and
+`references2.ts` both import from it. `references2.ts` no longer imports
+anything from `references.ts`. No behaviour change, no test changes.
 
 ### 11. LF in quoted keys; single-quote comment state — spec answer + code
 
@@ -450,3 +477,8 @@ corpus/runner) · corpus runner, all three suites · `cargo test` ·
 
 P0 #1 → P1 #2, #3, #4 (all three languages + corpus) → gates. #5–#8 can run
 in parallel (TS / corpus only, no Rust/Go blocker). #7 is doable now.
+
+**No freeze blockers remain.** #9's provenance fix is done in all three
+implementations (`afb2e60` + `0d9a06a`). Everything still open (#8, #11,
+P3 #12–#15) is non-blocking; plus the decision-doc `Status:` headers and a
+one-line spec note on `LimaError.column` before `git-retime` + push.

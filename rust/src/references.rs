@@ -223,21 +223,25 @@ fn partial_to_positioned(v: &LimaValue, line: u32) -> PositionedValue {
         LimaValue::Null => PositionedValue::Null {
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Bool(b) => PositionedValue::Bool {
             value: *b,
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Int(n) => PositionedValue::Int {
             value: *n,
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Float(n) => PositionedValue::Float {
             value: *n,
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::String(s) => PositionedValue::String {
             value: s.clone(),
@@ -245,11 +249,13 @@ fn partial_to_positioned(v: &LimaValue, line: u32) -> PositionedValue {
             quoted: true,
             ref_source: None,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Instant(i) => PositionedValue::Instant {
             value: *i,
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Array(items) => PositionedValue::Array {
             items: items
@@ -258,6 +264,7 @@ fn partial_to_positioned(v: &LimaValue, line: u32) -> PositionedValue {
                 .collect(),
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
         LimaValue::Mapping(entries) => PositionedValue::Mapping {
             entries: entries
@@ -266,6 +273,7 @@ fn partial_to_positioned(v: &LimaValue, line: u32) -> PositionedValue {
                 .collect(),
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         },
     }
 }
@@ -489,6 +497,7 @@ fn resolve_tree(
                 quoted: false,
                 ref_source: None,
                 inserted_at: None,
+                prior_insertions: Vec::new(),
             };
         }
 
@@ -496,9 +505,10 @@ fn resolve_tree(
     }
 
     match node {
-        PositionedValue::Array { items, line, inserted_at } => PositionedValue::Array {
+        PositionedValue::Array { items, line, inserted_at, prior_insertions } => PositionedValue::Array {
             line: *line,
             inserted_at: inserted_at.clone(),
+            prior_insertions: prior_insertions.clone(),
             items: items
                 .iter()
                 .map(|item| {
@@ -521,9 +531,10 @@ fn resolve_tree(
                 })
                 .collect(),
         },
-        PositionedValue::Mapping { entries, line, inserted_at } => PositionedValue::Mapping {
+        PositionedValue::Mapping { entries, line, inserted_at, prior_insertions } => PositionedValue::Mapping {
             line: *line,
             inserted_at: inserted_at.clone(),
+            prior_insertions: prior_insertions.clone(),
             entries: entries.iter().map(|(k, c)| (k.clone(), resolve_tree(c, lookup, partials, ctx))).collect(),
         },
         other => other.clone(), // null/bool/int/float/instant — nothing to resolve
@@ -794,6 +805,7 @@ pub fn parse_references(
                             quoted: false,
                             ref_source: None,
                             inserted_at: None,
+                            prior_insertions: Vec::new(),
                         },
                     )
                 } else {

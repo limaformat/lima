@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-position.provenance-second-copy",
+  "spec": "references",
+  "section": "5",
+  "description": "A second pure-reference copy preserves the earlier insertion provenance already carried by the copied root. Both tokens participate in the final over-depth structure, so References §5 attributes the error to `${base}` on line 1 rather than the outer `${middle}` on line 20.",
+  "input": "middle: ${base}\nbase:\n  n0:\n    n1:\n      n2:\n        n3:\n          v: x\nouter:\n  n0:\n    n1:\n      n2:\n        n3:\n          n4:\n            n5:\n              n6:\n                n7:\n                  n8:\n                    n9:\n                      n10:\n                        v: ${middle}",
+  "options": {
+    "strict": false
+  },
+  "expect": {
+    "error": {
+      "code": "RESOURCE_LIMIT",
+      "line": 1,
+      "column": 9,
+      "token": "${base}"
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

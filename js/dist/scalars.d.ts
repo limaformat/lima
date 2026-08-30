@@ -17,7 +17,8 @@ import { type ReferenceSource, type ReferenceToken2 } from './reference-tokens2.
  * limit (nesting depth, total node count) is violated, the lowest source
  * position (`line`, then `offset`) among the participating nodes identifies
  * which reference token to blame — the spec requires the error message to
- * include both the token and the line.
+ * include both the token and the line. `priorInsertions` retains older
+ * root provenance when a resolved pure-reference result is copied again.
  */
 export type InsertedAt = {
     line: number;
@@ -28,21 +29,25 @@ export type PositionedValue = {
     kind: 'null';
     line: number;
     insertedAt?: InsertedAt;
+    priorInsertions?: InsertedAt[];
 } | {
     kind: 'bool';
     value: boolean;
     line: number;
     insertedAt?: InsertedAt;
+    priorInsertions?: InsertedAt[];
 } | {
     kind: 'int';
     value: number;
     line: number;
     insertedAt?: InsertedAt;
+    priorInsertions?: InsertedAt[];
 } | {
     kind: 'float';
     value: number;
     line: number;
     insertedAt?: InsertedAt;
+    priorInsertions?: InsertedAt[];
 } | {
     kind: 'string';
     value: string;
@@ -50,23 +55,27 @@ export type PositionedValue = {
     quoted: boolean;
     references2?: ReferenceToken2[];
     insertedAt?: InsertedAt;
+    priorInsertions?: InsertedAt[];
 } | {
     kind: 'instant';
     value: Date;
     line: number;
     insertedAt?: InsertedAt;
+    priorInsertions?: InsertedAt[];
 } | {
     kind: 'array';
     items: PositionedValue[];
     line: number;
     references2Active?: boolean;
     insertedAt?: InsertedAt;
+    priorInsertions?: InsertedAt[];
 } | {
     kind: 'mapping';
     entries: Map<string, PositionedValue>;
     line: number;
     references2Active?: boolean;
     insertedAt?: InsertedAt;
+    priorInsertions?: InsertedAt[];
 };
 export declare const hasActiveReferences2: (value: PositionedValue) => boolean;
 /** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */

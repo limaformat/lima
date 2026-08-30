@@ -20,19 +20,20 @@ import { scanReferenceTokens2, type ReferenceSource, type ReferenceToken2 } from
  * limit (nesting depth, total node count) is violated, the lowest source
  * position (`line`, then `offset`) among the participating nodes identifies
  * which reference token to blame — the spec requires the error message to
- * include both the token and the line.
+ * include both the token and the line. `priorInsertions` retains older
+ * root provenance when a resolved pure-reference result is copied again.
  */
 export type InsertedAt = { line: number; token: string; offset?: number }
 
 export type PositionedValue =
-	| { kind: 'null'; line: number; insertedAt?: InsertedAt }
-	| { kind: 'bool'; value: boolean; line: number; insertedAt?: InsertedAt }
-	| { kind: 'int'; value: number; line: number; insertedAt?: InsertedAt }
-	| { kind: 'float'; value: number; line: number; insertedAt?: InsertedAt }
-	| { kind: 'string'; value: string; line: number; quoted: boolean; references2?: ReferenceToken2[]; insertedAt?: InsertedAt }
-	| { kind: 'instant'; value: Date; line: number; insertedAt?: InsertedAt }
-	| { kind: 'array'; items: PositionedValue[]; line: number; references2Active?: boolean; insertedAt?: InsertedAt }
-	| { kind: 'mapping'; entries: Map<string, PositionedValue>; line: number; references2Active?: boolean; insertedAt?: InsertedAt }
+	| { kind: 'null'; line: number; insertedAt?: InsertedAt; priorInsertions?: InsertedAt[] }
+	| { kind: 'bool'; value: boolean; line: number; insertedAt?: InsertedAt; priorInsertions?: InsertedAt[] }
+	| { kind: 'int'; value: number; line: number; insertedAt?: InsertedAt; priorInsertions?: InsertedAt[] }
+	| { kind: 'float'; value: number; line: number; insertedAt?: InsertedAt; priorInsertions?: InsertedAt[] }
+	| { kind: 'string'; value: string; line: number; quoted: boolean; references2?: ReferenceToken2[]; insertedAt?: InsertedAt; priorInsertions?: InsertedAt[] }
+	| { kind: 'instant'; value: Date; line: number; insertedAt?: InsertedAt; priorInsertions?: InsertedAt[] }
+	| { kind: 'array'; items: PositionedValue[]; line: number; references2Active?: boolean; insertedAt?: InsertedAt; priorInsertions?: InsertedAt[] }
+	| { kind: 'mapping'; entries: Map<string, PositionedValue>; line: number; references2Active?: boolean; insertedAt?: InsertedAt; priorInsertions?: InsertedAt[] }
 
 export const hasActiveReferences2 = (value: PositionedValue): boolean =>
 	value.kind === 'string' ? (value.references2?.length ?? 0) > 0

@@ -77,6 +77,54 @@ describe('References 2.0 public API', () => {
 		}
 	})
 
+	it('retains an earlier root insertion when a pure-reference result is copied again', () => {
+		const input = `middle: \${base}
+base:
+  n0:
+    n1:
+      n2:
+        n3:
+          v: x
+outer:
+  n0:
+    n1:
+      n2:
+        n3:
+          n4:
+            n5:
+              n6:
+                n7:
+                  n8:
+                    n9:
+                      n10:
+                        v: \${middle}`
+		try {
+			parse(input)
+			expect.unreachable()
+		} catch (error) {
+			expect(error).toBeInstanceOf(LimaError)
+			expect((error as LimaError).code).toBe('RESOURCE_LIMIT')
+			expect((error as LimaError).line).toBe(1)
+			expect((error as LimaError).column).toBe(9)
+			expect((error as LimaError).token).toBe('${base}')
+		}
+	})
+
+	it('attributes a deep partial copy only to its document insertion token', () => {
+		let deep: unknown = 'leaf'
+		for (let i = 15; i >= 0; i--) deep = { [`n${i}`]: deep }
+		try {
+			parse('outer:\n  v: $(deep)', { partials: { deep } })
+			expect.unreachable()
+		} catch (error) {
+			expect(error).toBeInstanceOf(LimaError)
+			expect((error as LimaError).code).toBe('RESOURCE_LIMIT')
+			expect((error as LimaError).line).toBe(2)
+			expect((error as LimaError).column).toBe(6)
+			expect((error as LimaError).token).toBe('$(deep)')
+		}
+	})
+
 	it('marks only structural branches containing active 2.0 tokens', () => {
 		const tree = parseCoreWithPositions(
 			'inert:\n  nested:\n    value: literal\nactive:\n  nested:\n    value: ${source}\nsource: 42\n',

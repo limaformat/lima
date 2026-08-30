@@ -26,6 +26,16 @@ type SourceDiagnostic = LimaDiagnostic & { line: number; offset: number }
 type Context = { diagnostics: SourceDiagnostic[]; cache: WeakMap<PositionedValue, Map<number, Resolution>> }
 type Resolution = { value: PositionedValue; complete: boolean }
 
+/** Copies a pure-reference target and stamps the new insertion without
+ * discarding provenance already attached to the copied root (R-112). */
+const copyWithInsertion = (target: PositionedValue, insertedAt: InsertedAt): PositionedValue => {
+	const copy = deepCopyPositioned(target)
+	const priorInsertions = copy.insertedAt === undefined
+		? copy.priorInsertions
+		: [...(copy.priorInsertions ?? []), copy.insertedAt]
+	return { ...copy, insertedAt, priorInsertions }
+}
+
 const addDiagnostic = (ctx: Context, diagnostic: Omit<SourceDiagnostic, 'offset'>, offset = 0): void => {
 	ctx.diagnostics.push({ ...diagnostic, offset })
 }
@@ -142,8 +152,10 @@ const resolveNodeUncached = (
 		const target = pure.documentPath !== undefined ? documentLookup?.root : lookupPartial(partials, pure.partialPath!)
 		if (target === undefined || stack.has(target)) return { value: node, complete: false }
 		if (pure.partialPath !== undefined) {
+			// `partialToPositioned` never annotates partial targets: partials are
+			// inert and have no source token before this document insertion.
 			return {
-				value: { ...deepCopyPositioned(target), insertedAt: { line: pure.line, offset: pure.offset, token: pure.token } },
+				value: copyWithInsertion(target, { line: pure.line, offset: pure.offset, token: pure.token }),
 				complete: true,
 			}
 		}
@@ -154,7 +166,9 @@ const resolveNodeUncached = (
 		const selected = lookupPath(result.value, documentLookup?.tail ?? [])
 		if (selected === undefined) return { value: node, complete: false }
 		return {
-			value: { ...deepCopyPositioned(selected), insertedAt: { line: pure.line, offset: pure.offset, token: pure.token } },
+			// `selected` may itself be the root inserted by an earlier reference;
+			// both it and this outer copy participate in final-structure errors.
+			value: copyWithInsertion(selected, { line: pure.line, offset: pure.offset, token: pure.token }),
 			complete: true,
 		}
 	}

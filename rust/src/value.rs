@@ -127,21 +127,25 @@ pub enum PositionedValue {
     Null {
         line: u32,
         inserted_at: Option<InsertedAt>,
+        prior_insertions: Vec<InsertedAt>,
     },
     Bool {
         value: bool,
         line: u32,
         inserted_at: Option<InsertedAt>,
+        prior_insertions: Vec<InsertedAt>,
     },
     Int {
         value: i64,
         line: u32,
         inserted_at: Option<InsertedAt>,
+        prior_insertions: Vec<InsertedAt>,
     },
     Float {
         value: f64,
         line: u32,
         inserted_at: Option<InsertedAt>,
+        prior_insertions: Vec<InsertedAt>,
     },
     String {
         value: String,
@@ -149,22 +153,26 @@ pub enum PositionedValue {
         quoted: bool,
         ref_source: Option<ReferenceSource>,
         inserted_at: Option<InsertedAt>,
+        prior_insertions: Vec<InsertedAt>,
     },
     Instant {
         value: Instant,
         line: u32,
         inserted_at: Option<InsertedAt>,
+        prior_insertions: Vec<InsertedAt>,
     },
     Array {
         items: Vec<PositionedValue>,
         line: u32,
         inserted_at: Option<InsertedAt>,
+        prior_insertions: Vec<InsertedAt>,
     },
     /// Insertion-ordered — Core has no concept of key sorting.
     Mapping {
         entries: Vec<(String, PositionedValue)>,
         line: u32,
         inserted_at: Option<InsertedAt>,
+        prior_insertions: Vec<InsertedAt>,
     },
 }
 
@@ -192,6 +200,35 @@ impl PositionedValue {
             | PositionedValue::Instant { inserted_at, .. }
             | PositionedValue::Array { inserted_at, .. }
             | PositionedValue::Mapping { inserted_at, .. } => inserted_at.as_ref(),
+        }
+    }
+
+    pub fn prior_insertions(&self) -> &[InsertedAt] {
+        match self {
+            PositionedValue::Null {
+                prior_insertions, ..
+            }
+            | PositionedValue::Bool {
+                prior_insertions, ..
+            }
+            | PositionedValue::Int {
+                prior_insertions, ..
+            }
+            | PositionedValue::Float {
+                prior_insertions, ..
+            }
+            | PositionedValue::String {
+                prior_insertions, ..
+            }
+            | PositionedValue::Instant {
+                prior_insertions, ..
+            }
+            | PositionedValue::Array {
+                prior_insertions, ..
+            }
+            | PositionedValue::Mapping {
+                prior_insertions, ..
+            } => prior_insertions,
         }
     }
 
@@ -333,6 +370,7 @@ impl Builder for PositionedBuilder {
         PositionedValue::Null {
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         }
     }
     fn v_bool(value: bool, line: u32) -> PositionedValue {
@@ -340,6 +378,7 @@ impl Builder for PositionedBuilder {
             value,
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         }
     }
     fn v_int(value: i64, line: u32) -> PositionedValue {
@@ -347,6 +386,7 @@ impl Builder for PositionedBuilder {
             value,
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         }
     }
     fn v_float(value: f64, line: u32) -> PositionedValue {
@@ -354,6 +394,7 @@ impl Builder for PositionedBuilder {
             value,
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         }
     }
     fn v_string(value: String, line: u32, quoted: bool) -> PositionedValue {
@@ -363,6 +404,7 @@ impl Builder for PositionedBuilder {
             quoted,
             ref_source: None,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         }
     }
     fn v_string_src(value: String, line: u32, source: ReferenceSource) -> PositionedValue {
@@ -372,6 +414,7 @@ impl Builder for PositionedBuilder {
             quoted: false,
             ref_source: Some(source),
             inserted_at: None,
+            prior_insertions: Vec::new(),
         }
     }
     fn v_instant(value: Instant, line: u32) -> PositionedValue {
@@ -379,6 +422,7 @@ impl Builder for PositionedBuilder {
             value,
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         }
     }
     fn v_array(items: Vec<PositionedValue>, line: u32) -> PositionedValue {
@@ -386,6 +430,7 @@ impl Builder for PositionedBuilder {
             items,
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         }
     }
     fn v_mapping(entries: Self::Mapping, line: u32) -> PositionedValue {
@@ -393,6 +438,7 @@ impl Builder for PositionedBuilder {
             entries,
             line,
             inserted_at: None,
+            prior_insertions: Vec::new(),
         }
     }
 
