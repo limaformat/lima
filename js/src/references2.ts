@@ -23,7 +23,7 @@ const PARTIAL_NAME_RE = new RegExp(`^${PARTIAL_NAME}$`)
 const MAX_EDGES = 3
 
 type SourceDiagnostic = LimaDiagnostic & { line: number; offset: number }
-type Context = { diagnostics: SourceDiagnostic[]; cache: WeakMap<PositionedValue, Map<number, Resolution>> }
+type Context = { diagnostics: SourceDiagnostic[]; cache?: WeakMap<PositionedValue, Map<number, Resolution>> }
 type Resolution = { value: PositionedValue; complete: boolean }
 
 /** Copies a pure-reference target and stamps the new insertion without
@@ -213,7 +213,18 @@ const resolveNodeUncached = (
 	return { value: { ...node, value: output, references2: unresolvedTokens }, complete }
 }
 
-/** Successful and failed dependency results are immutable and budget-specific. */
+/**
+ * The cache key is complete without `stack`: for a fixed node and edge
+ * budget, its outgoing targets and traversal order are fixed by the parsed
+ * document. If one of those targets is already on the current stack, that
+ * target is on a dependency cycle reachable from this node; entering from a
+ * different ancestor cannot make the cycle complete, and the monotonically
+ * decreasing edge budget fixes where an overlong path becomes unresolved.
+ * Thus `stack` only detects an already-inevitable incomplete dependency; it
+ * does not select a different successful value. Top-level calls are excluded
+ * (`stack.size > 1`) and cached Resolution trees are immutable, so sharing a
+ * successful or incomplete result at the same remaining budget is safe.
+ */
 const resolveNode = (
 	node: PositionedValue,
 	document: Map<string, PositionedValue>,
@@ -222,17 +233,17 @@ const resolveNode = (
 	remainingEdges: number,
 	stack: Set<PositionedValue>,
 ): Resolution => {
-	const cacheable = stack.size > 1 && (
+	const cache = ctx.cache
+	if (cache === undefined || stack.size <= 1 || !(
 		node.kind === 'array' || node.kind === 'mapping' ||
 		(isActiveString(node) && tokenMatches(node).length > 0)
-	)
-	if (!cacheable) return resolveNodeUncached(node, document, partials, ctx, remainingEdges, stack)
-	const byBudget = ctx.cache.get(node)
+	)) return resolveNodeUncached(node, document, partials, ctx, remainingEdges, stack)
+	const byBudget = cache.get(node)
 	const cached = byBudget?.get(remainingEdges)
 	if (cached !== undefined) return cached
 	const result = resolveNodeUncached(node, document, partials, ctx, remainingEdges, stack)
 	if (byBudget !== undefined) byBudget.set(remainingEdges, result)
-	else ctx.cache.set(node, new Map([[remainingEdges, result]]))
+	else cache.set(node, new Map([[remainingEdges, result]]))
 	return result
 }
 
@@ -283,7 +294,11 @@ export type ParseOptions = {
 	onWarning?: (diagnostic: Diagnostic) => void
 }
 
-export const parse = <T extends Record<string, unknown> = Meta>(frontMatter: string, options?: ParseOptions): T => {
+const parseInternal = <T extends Record<string, unknown> = Meta>(
+	frontMatter: string,
+	options: ParseOptions | undefined,
+	useResolveCache: boolean,
+): T => {
 	if (options?.mode !== undefined && options.mode !== 'core' && options.mode !== 'references') {
 		throw new TypeError(`Lima: invalid parse mode "${String(options.mode)}"`)
 	}
@@ -300,7 +315,7 @@ export const parse = <T extends Record<string, unknown> = Meta>(frontMatter: str
 		return parseCore<T>(frontMatter, options as CoreOptions | undefined)
 	}
 	const document = parseCoreWithPositions(frontMatter, { strict: options?.strict ?? false, onWarning: options?.onWarning })
-	const ctx: Context = { diagnostics: [], cache: new WeakMap() }
+	const ctx: Context = { diagnostics: [], ...(useResolveCache ? { cache: new WeakMap() } : {}) }
 	const resolved = new Map<string, PositionedValue>()
 	for (const [key, value] of document) {
 		const stack = new Set<PositionedValue>([value])
@@ -342,6 +357,15 @@ export const parse = <T extends Record<string, unknown> = Meta>(frontMatter: str
 	for (const [key, value] of finalized) out[key] = value.native
 	return out as T
 }
+
+export const parse = <T extends Record<string, unknown> = Meta>(frontMatter: string, options?: ParseOptions): T =>
+	parseInternal<T>(frontMatter, options, true)
+
+/** Test oracle: exercises the resolver without its dependency-result cache. */
+export const __parseWithoutResolveCacheForTest = <T extends Record<string, unknown> = Meta>(
+	frontMatter: string,
+	options?: ParseOptions,
+): T => parseInternal<T>(frontMatter, options, false)
 
 /** @deprecated Use parse(). */
 export const parseReferences = parse

@@ -194,13 +194,24 @@ const resolveNodeUncached = (node, document, partials, ctx, remainingEdges, stac
     }
     return { value: { ...node, value: output, references2: unresolvedTokens }, complete };
 };
-/** Successful and failed dependency results are immutable and budget-specific. */
+/**
+ * The cache key is complete without `stack`: for a fixed node and edge
+ * budget, its outgoing targets and traversal order are fixed by the parsed
+ * document. If one of those targets is already on the current stack, that
+ * target is on a dependency cycle reachable from this node; entering from a
+ * different ancestor cannot make the cycle complete, and the monotonically
+ * decreasing edge budget fixes where an overlong path becomes unresolved.
+ * Thus `stack` only detects an already-inevitable incomplete dependency; it
+ * does not select a different successful value. Top-level calls are excluded
+ * (`stack.size > 1`) and cached Resolution trees are immutable, so sharing a
+ * successful or incomplete result at the same remaining budget is safe.
+ */
 const resolveNode = (node, document, partials, ctx, remainingEdges, stack) => {
-    const cacheable = stack.size > 1 && (node.kind === 'array' || node.kind === 'mapping' ||
-        (isActiveString(node) && tokenMatches(node).length > 0));
-    if (!cacheable)
+    const cache = ctx.cache;
+    if (cache === undefined || stack.size <= 1 || !(node.kind === 'array' || node.kind === 'mapping' ||
+        (isActiveString(node) && tokenMatches(node).length > 0)))
         return resolveNodeUncached(node, document, partials, ctx, remainingEdges, stack);
-    const byBudget = ctx.cache.get(node);
+    const byBudget = cache.get(node);
     const cached = byBudget?.get(remainingEdges);
     if (cached !== undefined)
         return cached;
@@ -208,7 +219,7 @@ const resolveNode = (node, document, partials, ctx, remainingEdges, stack) => {
     if (byBudget !== undefined)
         byBudget.set(remainingEdges, result);
     else
-        ctx.cache.set(node, new Map([[remainingEdges, result]]));
+        cache.set(node, new Map([[remainingEdges, result]]));
     return result;
 };
 const validatePartials = (raw) => {
@@ -255,7 +266,7 @@ const scanUnresolved = (node, ctx) => {
         for (const child of node.entries.values())
             scanUnresolved(child, ctx);
 };
-export const parse = (frontMatter, options) => {
+const parseInternal = (frontMatter, options, useResolveCache) => {
     if (options?.mode !== undefined && options.mode !== 'core' && options.mode !== 'references') {
         throw new TypeError(`Lima: invalid parse mode "${String(options.mode)}"`);
     }
@@ -272,7 +283,7 @@ export const parse = (frontMatter, options) => {
         return parseCore(frontMatter, options);
     }
     const document = parseCoreWithPositions(frontMatter, { strict: options?.strict ?? false, onWarning: options?.onWarning });
-    const ctx = { diagnostics: [], cache: new WeakMap() };
+    const ctx = { diagnostics: [], ...(useResolveCache ? { cache: new WeakMap() } : {}) };
     const resolved = new Map();
     for (const [key, value] of document) {
         const stack = new Set([value]);
@@ -318,5 +329,8 @@ export const parse = (frontMatter, options) => {
         out[key] = value.native;
     return out;
 };
+export const parse = (frontMatter, options) => parseInternal(frontMatter, options, true);
+/** Test oracle: exercises the resolver without its dependency-result cache. */
+export const __parseWithoutResolveCacheForTest = (frontMatter, options) => parseInternal(frontMatter, options, false);
 /** @deprecated Use parse(). */
 export const parseReferences = parse;

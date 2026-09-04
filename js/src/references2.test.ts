@@ -1,10 +1,89 @@
 import { describe, expect, it } from 'bun:test'
 import { parse, parseCore, parseReferences } from './index.js'
+import { __parseWithoutResolveCacheForTest } from './references2.js'
 import { LimaError } from './errors.js'
 import { parseCoreWithPositions } from './core.js'
 import { hasActiveReferences2 } from './scalars.js'
+import { join } from 'node:path'
+
+// Keep the corpus loader out of js's TypeScript compilation graph: test files
+// are excluded from the package build, while `tsc --noEmit` checks them.
+const corpusLoaderPath: string = '../../corpus/runner/src/loader.ts'
+const { loadCorpus } = await import(corpusLoaderPath)
+
+type CapturedParse =
+	| { kind: 'value'; value: unknown; warnings: unknown[] }
+	| { kind: 'error'; error: Record<string, unknown>; warnings: unknown[] }
+
+const captureParse = (
+	parser: typeof parse,
+	input: string,
+	options: Parameters<typeof parse>[1],
+): CapturedParse => {
+	const warnings: unknown[] = []
+	try {
+		return { kind: 'value', value: parser(input, { ...options, onWarning: (warning) => warnings.push({ ...warning }) }), warnings }
+	} catch (error) {
+		if (!(error instanceof Error)) return { kind: 'error', error: { thrown: error }, warnings }
+		const fields = error instanceof LimaError
+			? { code: error.code, line: error.line, column: error.column, token: error.token, key: error.key, partial: error.partial, path: error.path }
+			: {}
+		return { kind: 'error', error: { name: error.name, message: error.message, ...fields }, warnings }
+	}
+}
+
+const generatedCacheDocuments = (): string[] => {
+	const documents: string[] = []
+	const ref = (path: string): string => '${' + path + '}'
+	for (let i = 0; i < 1536; i++) {
+		const suffix = i.toString(36)
+		switch (i % 6) {
+			case 0: {
+				const edges = i % 5 + 1
+				const lines = Array.from({ length: edges }, (_, edge) => `k${edge}: ${ref(`k${edge + 1}`)}`)
+				documents.push([...lines, `k${edges}: leaf-${suffix}`, `out: ${ref('k0')}`].join('\n') + '\n')
+				break
+			}
+			case 1:
+				documents.push(`base:\n  left: ${suffix}\n  right: [${i}, ${i + 1}]\na: ${ref('base')}\nb: ${ref('base')}\nout: ${ref('a.left')} ${ref('b.left')}\n`)
+				break
+			case 2:
+				documents.push(`a: ${ref('b')}\nb: ${ref('c')}\nc: ${ref('a')}\nout: ${ref('a')}\n`)
+				break
+			case 3:
+				documents.push(`shared:\n  nested:\n    value: ${suffix}\nfirst: ${ref('shared')}\nsecond: ${ref('shared')}\nthird: ${ref('first')}\n`)
+				break
+			case 4:
+				documents.push(`root:\n  a: ${ref('target')}\n  b: ${ref('target')}\ntarget:\n  items: [${i}, ${i + 1}, ${i + 2}]\ncopy: ${ref('root')}\n`)
+				break
+			default:
+				documents.push(`a: ${ref('b')}\nb: ${ref('c')}\nc: ${ref('d')}\nd: ${ref('e')}\ne: ${suffix}\ndiamond: ${ref('a')} ${ref('b')}\n`)
+		}
+	}
+	return documents
+}
 
 describe('References 2.0 public API', () => {
+	it('matches an uncached resolver oracle across the corpus and generated dependency graphs', () => {
+		const corpusRoot = join(import.meta.dir, '..', '..', 'corpus')
+		const loaded = loadCorpus(corpusRoot, ['references-2.0'])
+		expect(loaded.failures).toEqual([])
+		for (const testCase of loaded.cases) {
+			const options = {
+				strict: testCase.options.strict,
+				...(testCase.options.partialsSupplied ? { partials: testCase.options.partials } : {}),
+			}
+			expect(captureParse(__parseWithoutResolveCacheForTest, testCase.input, options), testCase.id)
+				.toEqual(captureParse(parse, testCase.input, options))
+		}
+		for (const [index, input] of generatedCacheDocuments().entries()) {
+			for (const strict of [false, true]) {
+				expect(captureParse(__parseWithoutResolveCacheForTest, input, { strict }), `generated ${index}, strict=${strict}`)
+					.toEqual(captureParse(parse, input, { strict }))
+			}
+		}
+	})
+
 	it('parse resolves document and partial references with the 2.0 syntax', () => {
 		expect(parse('name: Ada\nlabel: Hello ${name} from $(place.city)', {
 			partials: { place: { city: 'London' } },
