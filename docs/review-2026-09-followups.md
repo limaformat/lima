@@ -477,29 +477,41 @@ tested, zero divergence). Two corpus cases added as a regression guard
 ## P3 — polish / follow-up
 
 - **12. Done (`c93fdab`)** — see P2 #12 above; folded into the #8 batch.
-- **13.** Repair `js/bench/index.ts` (~L72) and add a stable References 2.0
-  benchmark. (also in `follow-ups.md`)
-- **14.** Document the `resolveNode` cache invariant (key without the
-  active dependency stack) as a comment / property test — 200k fuzzed
-  documents found no divergence, but it is not obviously safe. (also in
-  `follow-ups.md`)
+- **13. Done (`0a623d9`).** `js/bench/index.ts` had five template literals
+  eagerly interpolating in JavaScript (`${siteName}` / `${author}` /
+  `${target}` / two `${base}` sweeps) plus the malformed `${k${i})` — the
+  file did not load at all. All five now generate literal References 2.0
+  tokens; `bun run bench` runs the full 31-benchmark table and `--json`
+  validates. The shared-target cache benchmark (`200 references to the
+  same one-hop mapping target`) was already present.
+- **14. Done (`8e512df`).** `resolveNode`'s cache key `(node,
+  remainingEdges)` omits `stack`; a multi-line doc comment now explains
+  why that is complete (a cacheable node's targets and traversal order
+  are fixed by the document; `stack` only ever detects an
+  already-inevitable incomplete dependency, and the monotonic edge budget
+  fixes where an overlong path fails — it never selects a different
+  successful value). A property test compares every References 2.0 corpus
+  document plus 1,536 generated chains/diamonds/cycles/shared-target/
+  budget-boundary graphs, both modes, against an uncached oracle
+  (`__parseWithoutResolveCacheForTest`, module-internal, not exported from
+  the package) — value, warnings, and full structured error all identical.
 - **15.** Verify the Go CI job added in `da292ff` on its first run (added
-  without a local Go toolchain).
+  without a local Go toolchain). Push-time check.
 - **16. Done:** docs count 117→119 / "Draft" (commit `cbc2701`).
 
 ---
 
-## Decisions to close formally
+## Decisions — all closed
 
-Update the `Status:` header in `docs/decisions/`:
+`Status:` headers in `docs/decisions/` are current:
 
 | Document | Resolution |
 |---|---|
-| `nested-block-scalars-not-supported.md` | decided — option A (implement); see P0 #1 |
-| `comment-lines-and-bare-key-block-detection.md` | decided — option C (fix to spec); see P1 #4 |
-| `corpus-int-float-type-assertion.md` | decided — option A (`$type` sentinel); see P2 #8 |
-| `fence-recognition-convention.md` | deferred — outside the freeze scope; revisit separately |
-| `structural-indentation-unicode-whitespace.md` | already resolved (2026-08-07) |
+| `nested-block-scalars-not-supported.md` | resolved — option A, implemented (P0 #1) |
+| `comment-lines-and-bare-key-block-detection.md` | resolved — option C, implemented (P1 #4) |
+| `corpus-int-float-type-assertion.md` | implemented — option A, `$type` sentinel (P2 #8, Core corpus 1.0.7) |
+| `fence-recognition-convention.md` | deferred — host-integration signalling, outside the freeze scope; revisit separately |
+| `structural-indentation-unicode-whitespace.md` | resolved (2026-08-07) |
 
 ---
 

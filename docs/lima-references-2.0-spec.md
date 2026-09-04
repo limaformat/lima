@@ -307,9 +307,15 @@ separately retained as insertion provenance for final-structure attribution.
 ## 5. Diagnostics and error ordering
 
 Errors associated with source tokens are ordered by the token's 1-based line
-number and then by its character offset within that line. If multiple such
-errors exist, the one at the lowest source position is thrown. Messages MUST
-include the complete References 2.0 token text and its source line.
+number and then by its character offset within that line. The character offset
+is counted in Unicode code points and is zero-based. If multiple such errors
+exist, the one at the lowest source position is thrown. Messages MUST include
+the complete References 2.0 token text and its source line.
+
+Where a host API exposes the offending token's column as a separate field, it
+is the one-based form of that same code-point offset (offset + 1), and
+conforming implementations report an identical `(line, column)` for a given
+token.
 
 This ordering applies to unresolved references (including cycles and chain
 exhaustion), invalid interpolation, invalid array shapes, scalar-limit errors,

@@ -109,7 +109,7 @@ bench('partial mapping-path traversal ($(person.address.city))', () => parse(par
 
 const blockScalarWithContinuation =
 	'author: Alice\ndescription: |\n  Written by ${author} and\n  ^^edited by the team,\n  ^^published ${status}.\nstatus: today\n'
-bench('block scalar, refs after a ^^ continuation (source-span tracking)', () => parse(blockScalarWithContinuation), 20000)
+bench('block scalar, refs after a ^^ continuation (raw+decoded token zip)', () => parse(blockScalarWithContinuation), 20000)
 
 const mostlyReferenceFree =
 	'source: 42\nroot:\n' +

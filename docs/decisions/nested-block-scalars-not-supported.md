@@ -1,11 +1,13 @@
 # Decision: nested `|` block scalars don't work in any implementation
 
-**Status: decided (2026-09-04) — option A (implement in all three
-implementations).** Tracked as P0 item 1 in
+**Status: resolved (2026-09-04) — option A, implemented in all three
+implementations (P0 item 1, commits `1b9bdf5` / `a3ed59f`).** Tracked in
 [`../review-2026-09-followups.md`](../review-2026-09-followups.md), bundled
-with the other block-scalar defects the 2026-09 review found. Not yet
-implemented. This one was never a spec-ambiguity question: the spec text is
-unambiguous, and all three implementations diverge from it the same way.
+with the other block-scalar defects the 2026-09 review found. A shared
+block-scalar reader per language now serves both the top-level and nested
+paths (corpus cases C-218–C-224, `since: "1.0.1"`). This one was never a
+spec-ambiguity question: the spec text is unambiguous, and all three
+implementations diverged from it the same way.
 
 Discovered incidentally during Claude Code's review of the Go port's
 `lineContent` fix (2026-08-07), via an unrelated sanity check. Not

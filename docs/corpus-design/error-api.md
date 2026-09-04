@@ -48,6 +48,19 @@ export class LimaError extends Error {
 }
 ```
 
+## Context fields
+
+`line` is 1-based. `column`, when present, is the 1-based Unicode code-point
+column of the offending token — the one-based form of the zero-based character
+offset that References 2.0 §5 orders errors by (`column = offset + 1`). It is
+set on References 2.0 token errors (`UNRESOLVED_REFERENCE`,
+`INVALID_INTERPOLATION`, `INVALID_REFERENCE_SHAPE`, and the final-structure
+`RESOURCE_LIMIT` cases) and is identical across the TypeScript, Rust, and Go
+implementations for a given token — see `coverage/references-2.0.md` R2-064
+through R2-068. `token` carries the complete `${…}` / `$(…)` text; `key`,
+`partial`, and `path` name the mapping key, partial, or dotted path a
+diagnostic is about when one applies.
+
 ## Warnings
 
 The frozen Core spec (§11.2) defines `onWarning`'s own parameter as the
