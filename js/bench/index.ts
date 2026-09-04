@@ -44,8 +44,8 @@ bench('typical document (9 keys, no refs) — parse References', () => parse(typ
 bench('typical document (9 keys, no refs) — deprecated alias', () => parseReferences(typical), 20000)
 
 const withRefs = `siteName: My Site
-title: Hello ${siteName}!
-byline: Written by ${author}
+title: Hello \${siteName}!
+byline: Written by \${author}
 author: Alice
 tagline: $(tagline)
 `
@@ -69,7 +69,7 @@ bench('wide block array (1000 items)', () => parseCore(wideArray), 2000)
 
 const interpHeavy =
 	Array.from({ length: 20 }, (_, i) => `k${i}: v${i}`).join('\n') + '\nsummary: ' +
-	Array.from({ length: 20 }, (_, i) => `${k${i})`).join(' ') + '\n'
+	Array.from({ length: 20 }, (_, i) => '${k' + i + '}').join(' ') + '\n'
 bench('one string interpolating 20 references', () => parseReferences(interpHeavy), 10000)
 
 const bigPartial = Array.from({ length: 2000 }, (_, i) => i)
@@ -100,7 +100,7 @@ bench('reference chain at the three-edge limit (a->b->c->d)', () => parse(threeE
 
 const sharedMappingTarget =
 	'chainRoot:\n  a: 1\n  b: 2\n  c: 3\ntarget: ${chainRoot}\nrefs:\n' +
-	Array.from({ length: 200 }, (_, i) => `  k${i}: ${target}`).join('\n') + '\n'
+	Array.from({ length: 200 }, (_, i) => `  k${i}: ` + '${target}').join('\n') + '\n'
 bench('200 references to the same one-hop mapping target (cache-relevant)', () => parse(sharedMappingTarget), 500)
 
 const partialMappingPath = 'city: $(person.address.city)\n'
@@ -130,7 +130,7 @@ for (const n of [100, 200, 400, 800, 1600]) {
 
 log('\n--- reference count (nested under one key, bypasses the 128 top-level-key limit) ---')
 for (const n of [50, 100, 200, 400, 800, 1600, 3200]) {
-	const doc = 'base: 42\nrefs:\n' + Array.from({ length: n }, (_, i) => `  k${i}: ${base}`).join('\n') + '\n'
+	const doc = 'base: 42\nrefs:\n' + Array.from({ length: n }, (_, i) => `  k${i}: ` + '${base}').join('\n') + '\n'
 	if (new TextEncoder().encode(doc).length > 65536) continue
 	bench(`${n} backward references`, () => parseReferences(doc), Math.max(30, Math.floor(5000 / n)))
 }
