@@ -1,0 +1,9 @@
+{
+  "id": "core.keys.quoted.raw-newline-single-quoted-not-a-key",
+  "spec": "core",
+  "section": "5.2",
+  "description": "A raw line terminator is not a valid single-quoted-key character; both physical lines are unrecognised and skipped.",
+  "input": "'a\nb': value\n",
+  "expect": { "result": {} },
+  "tags": ["negative", "keys", "quoted"]
+}

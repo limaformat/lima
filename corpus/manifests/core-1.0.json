@@ -3,8 +3,8 @@
   "frozen": true,
   "baselineVersion": "1.0.0",
   "baselineCaseCount": 149,
-  "specVersion": "1.0.7",
-  "caseCount": 189,
+  "specVersion": "1.0.8",
+  "caseCount": 196,
   "cases": [
     {
       "path": "core/api-parse-core-never-resolves-references.json",
@@ -697,6 +697,12 @@
       "since": "1.0.2"
     },
     {
+      "path": "core/key-escape-newline-double-quoted-is-a-key.json",
+      "id": "core.keys.quoted.escape-newline-double-quoted-is-a-key",
+      "sha256": "81b93bf4c238dee102f15528066b90289a7ca9d685d3357d8e7e0abbd7896e68",
+      "since": "1.0.8"
+    },
+    {
       "path": "core/key-flow-mapping-dot-invalid.json",
       "id": "core.keys.flow-mapping.dot-invalid",
       "sha256": "a6bb6209acdcb74dc87d98c5e7f2c79c5f630ff8a62d9545dae5fc538550abaa",
@@ -749,6 +755,30 @@
       "id": "core.keys.nested.unquoted-space-invalid",
       "sha256": "ad77a628012cd93ca1cf1eb27b5e9a42200c02d1aaa590301320867606ae66df",
       "since": "1.0.2"
+    },
+    {
+      "path": "core/key-raw-newline-does-not-swallow-next-key.json",
+      "id": "core.keys.quoted.raw-newline-does-not-swallow-next-key",
+      "sha256": "193743464a76294e58a3a4c2cfc26a200ed345675b961cb3d3f431fdc8724640",
+      "since": "1.0.8"
+    },
+    {
+      "path": "core/key-raw-newline-double-quoted-not-a-key-strict.json",
+      "id": "core.keys.quoted.raw-newline-double-quoted-not-a-key.strict",
+      "sha256": "2215362a16aee2187bc055c48f0b754e939965c150e0899ae31ae6ffa65f42bd",
+      "since": "1.0.8"
+    },
+    {
+      "path": "core/key-raw-newline-double-quoted-not-a-key.json",
+      "id": "core.keys.quoted.raw-newline-double-quoted-not-a-key",
+      "sha256": "6375b68a7b76c71cf312206204883d350cc899ae5cb42a9f3312bbbcae653189",
+      "since": "1.0.8"
+    },
+    {
+      "path": "core/key-raw-newline-single-quoted-not-a-key.json",
+      "id": "core.keys.quoted.raw-newline-single-quoted-not-a-key",
+      "sha256": "934b9c582ded904c9f57b5196a789aed5b09f78a0e34d69c1a628b834811f4b2",
+      "since": "1.0.8"
     },
     {
       "path": "core/key-section-5-1-punctuation-valid.json",
@@ -977,6 +1007,18 @@
       "id": "core.keys.quoted.single-quoted-including-empty",
       "sha256": "2900ccfffdb049923a77f55c920362653f4aa973201f4bfd9bb9d9f3af2c8891",
       "since": "1.0.0"
+    },
+    {
+      "path": "core/single-quoted-value-escaped-quote-hash-not-comment.json",
+      "id": "core.strings.single-quoted.escaped-quote-hash-not-comment",
+      "sha256": "043f21c1171ba8f9029710f8504fad3b6540ec83583fe865d20eb4f75f432fa2",
+      "since": "1.0.8"
+    },
+    {
+      "path": "core/single-quoted-value-then-real-comment.json",
+      "id": "core.strings.single-quoted.then-real-comment",
+      "sha256": "cfe72572d44f0a71fd8c37310f41bb0504baf5350bc284b14b1ebf4142fc17bf",
+      "since": "1.0.8"
     },
     {
       "path": "core/space-before-colon-nonstrict.json",

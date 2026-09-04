@@ -1,0 +1,9 @@
+{
+  "id": "core.keys.quoted.escape-newline-double-quoted-is-a-key",
+  "spec": "core",
+  "section": "5.2",
+  "description": "The \\n escape remains valid in a double-quoted key and decodes to a key containing U+000A.",
+  "input": "\"a\\nb\": value\n",
+  "expect": { "result": { "a\nb": "value" } },
+  "tags": ["positive", "keys", "quoted"]
+}

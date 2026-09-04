@@ -283,8 +283,10 @@ describe('quoted keys', () => {
 		expect(parse('"key: with colon": value')).toEqual({ 'key: with colon': 'value' })
 	})
 
-	it('single-quoted key spanning a literal newline', () => {
-		expect(parse("'a\nb': value")).toEqual({ 'a\nb': 'value' })
+	it('single-quoted key containing a raw newline is not recognised', () => {
+		// Core §15.6 excludes U+000A from single-quoted-key characters. Both
+		// physical lines are therefore unrecognised and skipped in either mode.
+		expect(parse("'a\nb': value")).toEqual({})
 	})
 
 	it('double-quoted key with an escaped quote', () => {

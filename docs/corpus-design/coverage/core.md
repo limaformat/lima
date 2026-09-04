@@ -80,6 +80,8 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-089 | §6.4.2 | Numbers | Subnormal non-zero is accepted | boundary | both |
 | C-090 | §6.4.3 | Numbers | Plus sign, trailing dot, leading zero, hex/octal/binary all remain strings | fallback | both |
 | C-091 | §6.4.1/§6.4.2 | Numbers | Corpus asserts the grammar-selected Int/Float kind, including exponent, integral decimal, safe-integer, and normalized-zero boundaries | positive | both |
+| C-092 | §5.2/§15.6 | Keys | Raw line terminators are not quoted-key characters and the unrecognised lines are skipped | fallback | both |
+| C-093 | §8 | Comments | Escaped quotes preserve a following hash inside single-quoted content; a hash after the closing quote starts a comment | positive | both |
 | C-100 | §6.5.1 | Dates | All supported ISO forms | positive | both |
 | C-101 | §6.5.1 | Dates | German one-/two-digit formats | positive | both |
 | C-102 | §6.5.1 | Dates | Slash formats | positive | both |

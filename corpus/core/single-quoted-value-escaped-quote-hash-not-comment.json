@@ -1,0 +1,9 @@
+{
+  "id": "core.strings.single-quoted.escaped-quote-hash-not-comment",
+  "spec": "core",
+  "section": "8",
+  "description": "A hash after an escaped quote inside a single-quoted value remains string content rather than starting a comment.",
+  "input": "x: 'a\\'s # keep me'\n",
+  "expect": { "result": { "x": "a's # keep me" } },
+  "tags": ["positive", "strings", "comments"]
+}

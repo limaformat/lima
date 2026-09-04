@@ -160,6 +160,8 @@ The key in the output object is the content between the quotes — delimiters ar
 
 Non-strict: treat as unrecognised line, skip. Strict: throw.
 
+A raw line terminator inside a quoted key is not a valid quoted-key character (§15.6, which excludes U+000A from both single- and double-quoted-key characters). A physical line whose quoted key does not close on that same line is unrecognised and skipped in both modes — it is not diagnosed. The `\n` escape in a double-quoted key is unaffected: it decodes to a key containing U+000A, exactly as in a double-quoted value.
+
 ### 5.3 Duplicate Keys
 
 Duplicate keys are invalid at all mapping levels (top-level, nested maps, flow mappings, object arrays), with mode-dependent handling:

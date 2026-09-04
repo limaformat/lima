@@ -14,7 +14,7 @@
  * conformance corpus, and hand-built adversarial edge cases, zero
  * divergences) the exact matching behavior of:
  *
- *   /^(?:([a-zA-Z\d_][a-zA-Z\d_:-]*)|'([^']*)'|"((?:[^"\\]|\\.)*)"):( *\n| )/gm
+ *   /^(?:([a-zA-Z\d_][a-zA-Z\d_:-]*)|'([^'\n\r\u2028\u2029]*)'|"((?:[^"\\\n\r\u2028\u2029]|\\.)*)"):( *\n| )/gm
  *
  * including subtle backtracking-dependent cases that are easy to get
  * wrong without empirical verification against the real parser:
@@ -30,8 +30,9 @@
  *     at all (the separator alternative `( *\n| )` requires an actual
  *     trailing newline or a literal space; end-of-string alone satisfies
  *     neither).
- *   - Quoted keys (`'...'`, `"..."`) may contain a literal `\n` — the
- *     character classes inside quotes don't exclude it.
+ *   - A raw line terminator in a quoted key aborts the match (Core §15.6
+ *     excludes U+000A); the `\n` escape remains valid and decodes to a key
+ *     containing U+000A.
  *   - A backslash directly followed by a line terminator inside a
  *     double-quoted key is NOT a valid `\\.` escape — the source regex's
  *     `.` never matches a line terminator without the `s` flag (not set),

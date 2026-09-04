@@ -442,12 +442,35 @@ empty there.
 `references2.ts` both import from it. `references2.ts` no longer imports
 anything from `references.ts`. No behaviour change, no test changes.
 
-### 11. LF in quoted keys; single-quote comment state — spec answer + code
+### 11. Raw line terminator in a quoted key; single-quote comment state — code (TS) + corpus
 
-`"line1\nline2": value` is accepted at top level. Decide whether the
-quoted-key grammar (§5.2) permits LF (likely not), then fix. Verify the
-single-quote / `#` / backslash interaction in the comment stripper (M3
-part C).
+**Status: done (`542002a`, Core 1.0.8).** Decision was option A —
+align TS to the grammar. A quoted key spanning a raw newline
+(`"line1<LF>line2": value`) was stitched into one key by TS but rejected
+(unrecognised line, skip in both modes) by Rust and Go. Core §15.6
+already excludes U+000A from both single- and double-quoted-key
+characters, so TS was the outlier.
+
+Fix: `matchAt` in `js/src/scanner.ts` (the one choke point for both
+top-level key paths — `scanKeys` and `KeyCursor`) now rejects a raw
+`\n`/`\r`/U+2028/U+2029 inside a single- or double-quoted key; the
+module's canonical-regex comment is updated. The `\n` *escape*
+(backslash-`n`) still yields a key containing U+000A in all three (§5.2
+escape symmetry). Strict stays skip-in-both-modes (the `unclosed key` /
+`garbage line` norm — not a §5.2 "space before colon" throw). One
+existing JS test that encoded the pre-fix stitching was corrected (with a
+written reason), not weakened. §5.2 gained a clarifying paragraph
+(non-normative, restates §15.6). 5 corpus cases
+(`core.keys.quoted.raw-newline-*`, `…escape-newline…`,
+`…does-not-swallow-next-key`), coverage C-092. Verified `{}` / `{"d":2}` /
+key-with-newline identical across TS/Rust/Go in both modes.
+
+**M3 part C — verified, no code needed.** `stripComment` /
+`stripCommentKeepEscapes` handle single-quote / `\'` / `\\` / `#` /
+backslash identically across TS/Rust/Go in both modes (~15 combinations
+tested, zero divergence). Two corpus cases added as a regression guard
+(`single-quoted-value-escaped-quote-hash-not-comment`,
+`single-quoted-value-then-real-comment`), coverage C-093.
 
 ---
 
@@ -493,7 +516,8 @@ corpus/runner) · corpus runner, all three suites · `cargo test` ·
 P0 #1 → P1 #2, #3, #4 (all three languages + corpus) → gates. #5–#8 can run
 in parallel (TS / corpus only, no Rust/Go blocker). #7 is doable now.
 
-**No freeze blockers remain.** #9's provenance fix is done in all three
-implementations (`afb2e60` + `0d9a06a`). Everything still open (#8, #11,
-P3 #12–#15) is non-blocking; plus the decision-doc `Status:` headers and a
-one-line spec note on `LimaError.column` before `git-retime` + push.
+**No freeze blockers remain, and all of P0/P1/P2 is done.** Remaining:
+P3 #13 (bench), #14 (`resolveNode` cache invariant), #15 (Go CI first
+run — a push-time check); the decision-doc `Status:` headers; a one-line
+spec note on `LimaError.column`; then `git-retime` + push. Core is at
+errata 1.0.8, References 2.0 corpus at 131 cases.

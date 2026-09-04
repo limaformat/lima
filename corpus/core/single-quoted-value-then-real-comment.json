@@ -1,0 +1,9 @@
+{
+  "id": "core.strings.single-quoted.then-real-comment",
+  "spec": "core",
+  "section": "8",
+  "description": "A hash following a closed single-quoted value starts a real comment.",
+  "input": "x: 'ab' # real comment\n",
+  "expect": { "result": { "x": "ab" } },
+  "tags": ["positive", "strings", "comments"]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "core.keys.quoted.raw-newline-double-quoted-not-a-key.strict",
+  "spec": "core",
+  "section": "5.2",
+  "description": "A double-quoted key containing a raw line terminator is an unrecognised line and is skipped rather than diagnosed in strict mode.",
+  "input": "\"a\nb\": value\n",
+  "options": { "strict": true },
+  "expect": { "result": {} },
+  "tags": ["negative", "keys", "quoted", "strict"]
+}

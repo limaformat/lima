@@ -1,0 +1,9 @@
+{
+  "id": "core.keys.quoted.raw-newline-does-not-swallow-next-key",
+  "spec": "core",
+  "section": "5.2",
+  "description": "Rejecting a raw newline in a quoted key does not consume a later valid key line.",
+  "input": "\"a\nc\": 1\nd: 2\n",
+  "expect": { "result": { "d": 2 } },
+  "tags": ["negative", "keys", "quoted"]
+}
