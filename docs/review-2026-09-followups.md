@@ -515,6 +515,128 @@ tested, zero divergence). Two corpus cases added as a regression guard
 
 ---
 
+## Performance regression from the review work
+
+Interleaved A/B (`js/bench/index.ts`, 5×5, min-of-5) of HEAD `b964871`
+against the pre-campaign baseline `af7e439` (2026-08-14):
+
+| Path | Regression |
+|---|---|
+| `parseCore` typical (9 keys) | +18.6 % |
+| max nesting depth / wide block array / nested keys | +16 – +24 % |
+| `parse` typical (References 2.0) | +12.7 % |
+| reference chain / shared-target / backward-ref sweeps | +15 – +41 % |
+| near size limit; block scalar after `^^` | flat / −11 % |
+
+Bisect: the Core errata (1.0.1–1.0.6) are perf-neutral. The whole hit is
+the M1 physical-token-position rewrite (`d3e9f50` — `ReferenceSource`
+threaded from every value-parse site). MINOR-2 (`a62dfb6`) added the
+`wantSource` guard to `core.ts` only; `block.ts` and the object
+construction itself still build a `ReferenceSource` for every value even
+under `parseCore`. Rust guards everywhere (`B::POSITIONED.then(…)`); Go
+too (`inlineRefSource` → nil).
+
+**Perf package — done (`bce812f`).** `js/src/core.ts` and `block.ts` now
+build a `ReferenceSource` only for the positioned builder (parity with
+Rust's `B::POSITIONED.then(…)`). Verified by an independent 6×6 min-of-6
+A/B vs `af7e439`:
+
+| Core benchmark | vs `af7e439` |
+|---|---|
+| `parseCore` typical (9 keys) | −0.7 % |
+| `parse` core mode | −1.6 % |
+| wide block array / 128 top-level keys | +0.3 % / +1.5 % |
+| 100 / 200 nested keys | −14 % / −10 % (faster than baseline) |
+| near size limit | −8 % |
+| **max nesting depth (16)** | **+24 %** |
+| **mostly-reference-free large tree — parseCore** | **+12 %** |
+
+The typical/hot-path Core cost is back to baseline; the nested-block path
+is now *faster* than pre-campaign. Two residuals remain, both bisected to
+**`41d9206` (P1 #2/#3 key & quoted-string lexing errata)** — not the M1
+work, not the perf package's scope: the escape-aware `findKeySep` /
+`closingQuoteIndex` / `SPACE_BEFORE_COLON_RE` per-key work costs ~24 % on
+a 16-deep bare-key document and ~14 % on a large tree. Non-typical shapes,
+sub-µs absolute.
+
+**Perf #2 — done (`fdc4a3e`).** `checkKeyLength` takes a plain `line:
+number` (the thunk was vestigial — `line` is O(1) at every call site
+since the KeyCursor/scanKeys refactor); `isValidKey`'s unquoted-key regex
+is replaced by an equivalent ASCII char scan (verified: 27 cases + 20 k
+fuzz, zero divergence); the bare-key branch computes its `:` suffix once
+and skips `findKeySep` when a space-free bare key cannot contain `": "`.
+No §5.1 behaviour change (verified across TS/Rust/Go). Independent 5×5
+min-of-5 A/B vs `af7e439`: **`max nesting depth` +5.1 %** (was +24 %),
+**`mostly-reference-free tree` −4.0 %** (was +12 %, now faster than
+pre-campaign). Both inside the +8 % budget; the rest of the Core suite is
+flat-or-faster.
+
+The References 2.0 residual (+15–50 %, the two-scan raw+decoded zip) is
+inherent to §2.4 physical-position conformance — accepted unless a later
+pass finds a safe single-scan variant.
+
+**Perf #3 (brief in `scratchpad/lima-paket-perf3/`) — Rust + Go still
+carry the full `parseCore` regression; one TS shape not yet recovered.**
+A cross-language vs-YAML A/B (each impl against its own reference library,
+paired speedup vs `af7e439`):
+
+| | typical | wide array | list of author objects |
+|---|---|---|---|
+| **TS** vs js-yaml | 3,83 → 3,84 | 3,52 → 3,64 | **3,35 → 2,61** |
+| **Rust** vs yaml-rust2 | **3,82 → 3,20** | **3,07 → 2,42** | **3,48 → 2,84** |
+| **Go** vs go.yaml.in/yaml/v3 | **4,81 → 4,15** | **2,90 → 2,39** | **4,97 → 4,22** |
+
+Causes: Rust computes `value_line_start`/`value_col` (a backward
+`rfind('\n')` + `chars().count()`) eagerly per value, not behind
+`B::POSITIONED` — TS guards this, the port didn't. Go does the same with
+`valueColOf(…)` (evaluated as an argument) *and* an unguarded
+`strings.Split(input, "\n")` + per-line tab scan in `sourceLines`
+(TS/Rust guard tab work on `contains('\t')`). The TS "list of author
+objects" residual is the `41d9206` key-lexing overhead on the dash-item /
+continuation-key path, which Perf #2 only fast-pathed for the bare-key
+branch.
+
+**Perf #3 — the full pass (`f94964b`) restructured the dash-item branch
+in all three languages and measurably slowed Rust's scalar
+block-sequence path (wide-array vs yaml-rust2 −12.6 % across 5 runs). It
+was dropped; only the guard hunks were kept (`3e22274`, option C):**
+`rust/src/core.rs` and `block.rs` compute the value column only for the
+positioned builder; `go/core.go` `sourceLines` skips the extra pre-tab
+split + per-line tab scan when the document has no tab. No behaviour
+change, no restructure, cannot regress. The dash-item / continuation-key
+key-lexing cost (`41d9206` §5.1 per-key validation) and the M1
+raw+decoded token scan (`d3e9f50`) **stay** — they are the deliberate,
+recorded cost of spec conformance, not a defect.
+
+**Final cross-language standing.** Measured each impl against its own YAML
+reference (js-yaml v5.2.3 / yaml-rust2 0.11 / go.yaml.in/yaml/v3), paired
+speedup, `af7e439` → `3e22274`, on six realistic frontmatter documents:
+
+| | TS vs js-yaml | Rust vs yaml-rust2 | Go vs yaml/v3 |
+|---|---|---|---|
+| typical / nested / SEO / many-keys | 3.7 → 3.0–3.7× (flat–−14 %) | 3.2–4.3 → 2.9–3.8× (−4 to −11 %) | 4.6–4.8 → 4.2–4.3× (−8 to −10 %) |
+| wide block array | 3.6 → 3.5× (flat) | 3.1 → ~2.4× (−25 %) | 2.8 → 2.5× (−12 %) |
+| list of author objects | 3.3 → 2.5× (−25 %) | 3.5 → 2.9× (−16 %) | 5.0 → 4.4× (−12 %) |
+
+Caveats: the bench machine was heat-soaked after hours of continuous
+runs; the cross-run noise floor is ~±10–15 %, so treat single-digit
+percentages as flat. The *direction* is consistent across every session:
+Rust and Go `parseCore` carry a ~10–20 % regression, dominated by the
+`41d9206` §5.1 per-key validation and the `d3e9f50` M1 raw+decoded token
+scan; TS recovered its hot path via Perf #1/#2; one TS shape
+(block-sequence-of-mappings) keeps the `41d9206` cost on the
+continuation-key path.
+
+**This is accepted.** The regression buys spec conformance (every key
+validated per §5.1) and cross-language-identical diagnostics (§2.4
+physical token positions). Lima still parses realistic frontmatter
+2.4–3.7× faster than the corresponding YAML library (was ~2.9–4.9×). No
+further perf work is planned; a future targeted pass could revisit the
+continuation-key key-lexing path and a single-scan token variant if it
+ever matters.
+
+---
+
 ## After the fixes: re-run the gates
 
 Fresh build · `src`/`dist` byte comparison · `typecheck` · `bun test` (js +

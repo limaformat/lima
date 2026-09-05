@@ -157,7 +157,7 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
         }
     }
     const parseEntry = (key, line, rawStart, isBlock, inlineEnd, nextStart) => {
-        checkKeyLength(key, () => line);
+        checkKeyLength(key, line);
         if ((strict || ctx.onWarning !== undefined) && builder.hasMappingKey(root, key)) {
             const diagnostic = {
                 code: 'DUPLICATE_KEY', line, key,
@@ -196,8 +196,11 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
             const uncommented = hasHash ? stripComment(val) : val;
             // The physical anchor keeps `\#` but drops a real comment, so a
             // `${…}`-shaped token inside a trailing comment is not scanned (§2.4).
-            const rawSource = wantSource && hasHash ? stripCommentKeepEscapes(val) : val;
-            builder.setMapping(root, key, parseFlowOrScalarValue(uncommented, ctx, line, builder, { raw: rawSource, line, col: valueCol, tabAdjust: lineTabAdjust }));
+            const source = wantSource ? {
+                raw: hasHash ? stripCommentKeepEscapes(val) : val,
+                line, col: valueCol, tabAdjust: lineTabAdjust,
+            } : undefined;
+            builder.setMapping(root, key, parseFlowOrScalarValue(uncommented, ctx, line, builder, source));
             return;
         }
         if (isBlock) {
@@ -225,8 +228,11 @@ const parseCoreGeneric = (frontMatter, ctx, builder, computeDepth) => {
                 const line0 = lines[0];
                 const hasHash = line0.includes('#');
                 const val = hasHash ? stripComment(line0) : line0;
-                const rawSource = wantSource && hasHash ? stripCommentKeepEscapes(line0) : line0;
-                builder.setMapping(root, key, parseFlowOrScalarValue(val, ctx, line, builder, { raw: rawSource, line, col: valueCol, tabAdjust: lineTabAdjust }));
+                const source = wantSource ? {
+                    raw: hasHash ? stripCommentKeepEscapes(line0) : line0,
+                    line, col: valueCol, tabAdjust: lineTabAdjust,
+                } : undefined;
+                builder.setMapping(root, key, parseFlowOrScalarValue(val, ctx, line, builder, source));
                 return;
             }
             // Multi-line string (`|` literal block scalar). The introducing key

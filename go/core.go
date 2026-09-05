@@ -19,7 +19,16 @@ type sourceLine struct {
 
 func sourceLines(input string) []sourceLine {
 	input = strings.ReplaceAll(strings.ReplaceAll(input, "\r\n", "\n"), "\r", "\n")
-	preTab := strings.Split(input, "\n")
+	// Original (pre-tab-expansion) lines, only needed to count how many
+	// columns leading-tab expansion added per line (References 2.0 §2.4).
+	// Overwhelmingly, frontmatter has no tabs at all — skip the extra split
+	// and the per-line scan in that case (mirrors the TS/Rust `has tab?`
+	// guard). ParseCore discards tabAdjust entirely, but the count is cheap
+	// enough here not to warrant a second `captureReferences` branch.
+	var preTab []string
+	if strings.Contains(input, "\t") {
+		preTab = strings.Split(input, "\n")
+	}
 	input = expandLeadingTabs(input)
 	raw := strings.Split(input, "\n")
 	out := make([]sourceLine, len(raw))
@@ -32,7 +41,7 @@ func sourceLines(input string) []sourceLine {
 			n++
 		}
 		tabs := 0
-		if i < len(preTab) {
+		if preTab != nil && i < len(preTab) {
 			for _, c := range preTab[i] {
 				if c == '\t' {
 					tabs++

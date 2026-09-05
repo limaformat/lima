@@ -332,13 +332,20 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             let first_newline = front_matter[tk.value_start..span_end]
                 .find('\n')
                 .map(|p| p + tk.value_start);
-            // Physical codepoint column of the value's first char (References §2.4).
-            let value_line_start = front_matter[..tk.value_start]
-                .rfind('\n')
-                .map_or(0, |p| p + 1);
-            let value_col = front_matter[value_line_start..tk.value_start]
-                .chars()
-                .count();
+            // Physical codepoint column of the value's first char (References
+            // §2.4) — only the positioned builder keeps it; `parse_core` would
+            // pay a backward `rfind('\n')` scan plus a codepoint count per
+            // value for nothing (mirrors the TS `wantSource` guard).
+            let value_col = if B::POSITIONED {
+                let value_line_start = front_matter[..tk.value_start]
+                    .rfind('\n')
+                    .map_or(0, |p| p + 1);
+                front_matter[value_line_start..tk.value_start]
+                    .chars()
+                    .count()
+            } else {
+                0
+            };
             // `raw` keeps `\#` (so it does not shift a token's reported
             // column) but drops a trailing comment (whose `${…}`-shaped text
             // is not part of the value and must not be scanned) — §2.4.

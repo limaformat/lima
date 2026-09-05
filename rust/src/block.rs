@@ -228,10 +228,14 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                         raw_undecoded.to_string()
                     };
                     let key_indent = cursor.ascii_indent;
-                    let value_col = cursor.ascii_indent
-                        + colon_pos
-                        + 2
-                        + leading_ws_len(&trimmed[colon_pos + 2..]);
+                    let value_col = if B::POSITIONED {
+                        cursor.ascii_indent
+                            + colon_pos
+                            + 2
+                            + leading_ws_len(&trimmed[colon_pos + 2..])
+                    } else {
+                        0
+                    };
                     let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                         &raw,
                         key_indent,
@@ -369,10 +373,14 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 let value_start = colon_pos + 2;
                 let raw = trim_slice(&after_dash, value_start, after_dash.len());
                 // The key sits after `- `, so the value column is dash prefix + `key: `.
-                let value_col = cursor.indent
-                    + dash_prefix_len(cursor)
-                    + value_start
-                    + leading_ws_len(&after_dash[value_start..]);
+                let value_col = if B::POSITIONED {
+                    cursor.indent
+                        + dash_prefix_len(cursor)
+                        + value_start
+                        + leading_ws_len(&after_dash[value_start..])
+                } else {
+                    0
+                };
                 let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                     raw,
                     base_indent + 2,
@@ -410,8 +418,11 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     } else {
                         cvalue_undecoded.to_string()
                     };
-                    let cvalue_col =
-                        cursor.indent + csep + 2 + leading_ws_len(&cont_line[csep + 2..]);
+                    let cvalue_col = if B::POSITIONED {
+                        cursor.indent + csep + 2 + leading_ws_len(&cont_line[csep + 2..])
+                    } else {
+                        0
+                    };
                     let cvalue = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                         &cvalue,
                         ckey_indent,
@@ -495,8 +506,11 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 } else {
                     raw_undecoded.to_string()
                 };
-                let value_col =
-                    cursor.ascii_indent + colon_pos + 2 + leading_ws_len(&trimmed[colon_pos + 2..]);
+                let value_col = if B::POSITIONED {
+                    cursor.ascii_indent + colon_pos + 2 + leading_ws_len(&trimmed[colon_pos + 2..])
+                } else {
+                    0
+                };
                 let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                     &raw,
                     base_indent,

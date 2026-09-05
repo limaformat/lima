@@ -55,20 +55,11 @@ export const checkScalarLimit = (v: LimaValue, line: number): void => {
 	if (v.kind === 'string') checkStringLimit(v.value, line)
 }
 
-/**
- * `line` is a thunk, not a plain number: computing a top-level key's line
- * can trigger an O(document length) scan (see `keyLine` in core.ts) the very
- * first time it's called, and this check runs for every key in the
- * document. Evaluating it eagerly would pay that cost on every parse, even
- * though the overwhelming majority of keys never violate the limit — the
- * thunk defers it to the one branch that actually needs a line number.
- */
-export const checkKeyLength = (key: string, line: () => number): void => {
+export const checkKeyLength = (key: string, line: number): void => {
 	if (key.length > KEY_LENGTH_LIMIT && codepointLength(key) > KEY_LENGTH_LIMIT) {
-		const l = line()
 		throw new LimaError({
-			code: 'RESOURCE_LIMIT', line: l,
-			message: `Lima: key "${key}" exceeds maximum length of ${KEY_LENGTH_LIMIT} code points at line ${l}`,
+			code: 'RESOURCE_LIMIT', line,
+			message: `Lima: key "${key}" exceeds maximum length of ${KEY_LENGTH_LIMIT} code points at line ${line}`,
 		})
 	}
 }

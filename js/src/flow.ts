@@ -152,7 +152,7 @@ export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: num
 			continue
 		}
 		const key = stripKeyQuotes(keyRaw, ctx.strict, line)
-		checkKeyLength(key, () => line)
+		checkKeyLength(key, line)
 		if (ctx.strict || ctx.onWarning !== undefined) {
 			checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
 		}

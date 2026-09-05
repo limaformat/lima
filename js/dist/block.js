@@ -9,7 +9,7 @@
  * never resolves a reference in the first place).
  */
 import { checkKeyLength, checkDuplicateKey, NESTING_DEPTH_LIMIT } from './normalize.js';
-import { stripKeyQuotes, stripComment, stripCommentKeepEscapes, parseQuotedOrTyped, closingQuoteIndex, isValidKey, } from './scalars.js';
+import { stripKeyQuotes, stripComment, stripCommentKeepEscapes, parseQuotedOrTyped, closingQuoteIndex, isValidKey, positionedBuilder, } from './scalars.js';
 import { parseFlowMapping, parseFlowOrScalarValue } from './flow.js';
 import { buildBlockScalar } from './block-scalar.js';
 import { LimaError } from './errors.js';
@@ -44,13 +44,14 @@ const physicalRaw = (s) => (s.includes('#') ? stripCommentKeepEscapes(s) : s);
 /** The `ReferenceSource` for an inline value on line `keyLine` at column
  * `valueCol`; `rawUndecoded` is the value text before comment stripping /
  * `\#` collapse (so a `\#` before a token doesn't shift its column). */
-const inlineSource = (ctx, keyLine, valueCol, rawUndecoded) => ({
+const inlineSource = (wantSource, ctx, keyLine, valueCol, rawUndecoded) => wantSource ? ({
     raw: physicalRaw(rawUndecoded), line: keyLine, col: valueCol,
     tabAdjust: ctx.tabAdjust ? [ctx.tabAdjust[keyLine - 1] ?? 0] : undefined,
-});
+}) : undefined;
 const inlineOrBlockScalar = (raw, keyIndent, keyLine, valueCol, rawUndecoded, cursor, ctx, builder) => {
+    const wantSource = builder === positionedBuilder;
     if (raw !== '|') {
-        const value = parseFlowOrScalarValue(raw, ctx, keyLine, builder, inlineSource(ctx, keyLine, valueCol, rawUndecoded));
+        const value = parseFlowOrScalarValue(raw, ctx, keyLine, builder, inlineSource(wantSource, ctx, keyLine, valueCol, rawUndecoded));
         cursor.next();
         return value;
     }
@@ -128,6 +129,7 @@ const cursorAfterDash = (cursor) => {
 };
 /** Shared block grammar consuming one mutable physical-line cursor. */
 const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
+    const wantSource = builder === positionedBuilder;
     let items = null;
     let entries = null;
     let pendingItem = null;
@@ -144,27 +146,28 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
         if (indent > baseIndent) {
             const trimmed = cursorContent(cursor);
             if (items !== null && pendingItem !== null) {
-                const colonPos = findKeySep(trimmed);
+                const bareKey = trimmed.charCodeAt(trimmed.length - 1) === 58;
+                const colonPos = bareKey && trimmed.indexOf(' ') === -1 ? -1 : findKeySep(trimmed);
                 const keyRaw = colonPos !== -1
                     ? trimSlice(trimmed, 0, colonPos)
-                    : trimmed.endsWith(':') ? trimSlice(trimmed, 0, trimmed.length - 1) : '';
+                    : bareKey ? trimSlice(trimmed, 0, trimmed.length - 1) : '';
                 if (keyRaw !== '' && !isValidKey(keyRaw)) {
                     // §5.1: not a usable key — skipped in both modes, as at the top level.
                     cursor.next();
                 }
                 else if (colonPos !== -1) {
                     const key = stripKeyQuotes(keyRaw, ctx.strict, line);
-                    checkKeyLength(key, () => line);
+                    checkKeyLength(key, line);
                     const rawUndecoded = trimSlice(trimmed, colonPos + 2, trimmed.length);
                     let raw = rawUndecoded;
                     if (raw !== '|' && raw.includes('#'))
                         raw = stripComment(raw);
-                    const valueCol = cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2));
+                    const valueCol = wantSource ? cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2)) : 0;
                     builder.setMapping(pendingItem, key, inlineOrBlockScalar(raw, indent, line, valueCol, rawUndecoded, cursor, ctx, builder));
                 }
-                else if (trimmed.endsWith(':')) {
+                else if (bareKey) {
                     const key = stripKeyQuotes(keyRaw, ctx.strict, line);
-                    checkKeyLength(key, () => line);
+                    checkKeyLength(key, line);
                     cursor.next();
                     skipEmptyAndCommentLines(cursor);
                     if (cursor.valid && cursor.indent > indent) {
@@ -207,17 +210,19 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
             let afterDash = afterDashRaw;
             if (afterDash.includes('#'))
                 afterDash = stripComment(afterDash);
-            const dashPfx = dashPrefixLen(cursor); // `- ` prefix, all ASCII
-            const afterDashCol = cursor.indent + dashPfx;
-            const afterDashTab = ctx.tabAdjust ? [ctx.tabAdjust[line - 1] ?? 0] : undefined;
+            const afterDashCol = wantSource ? cursor.indent + dashPrefixLen(cursor) : 0;
+            const afterDashTab = wantSource && ctx.tabAdjust ? [ctx.tabAdjust[line - 1] ?? 0] : undefined;
+            const dashSource = wantSource ? ({
+                raw: physicalRaw(afterDashRaw), line, col: afterDashCol, tabAdjust: afterDashTab,
+            }) : undefined;
             const first = afterDash.charCodeAt(0);
             if (first !== 34 && first !== 39 && first !== 45 && first !== 123 &&
                 afterDash.indexOf(': ') === -1 && !afterDash.endsWith(':')) {
-                items.push(parseQuotedOrTyped(afterDash, ctx, line, builder, { raw: physicalRaw(afterDashRaw), line, col: afterDashCol, tabAdjust: afterDashTab }));
+                items.push(parseQuotedOrTyped(afterDash, ctx, line, builder, dashSource));
                 cursor.next();
                 continue;
             }
-            const flowMap = parseFlowMapping(afterDash, ctx, line, builder, { raw: physicalRaw(afterDashRaw), line, col: afterDashCol, tabAdjust: afterDashTab });
+            const flowMap = parseFlowMapping(afterDash, ctx, line, builder, dashSource);
             const colonPos = findKeySep(afterDash);
             if (flowMap !== null) {
                 items.push(flowMap);
@@ -242,15 +247,15 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
             else if (colonPos !== -1 && isValidKey(trimSlice(afterDash, 0, colonPos))) {
                 const keyRaw = trimSlice(afterDash, 0, colonPos);
                 const key = stripKeyQuotes(keyRaw, ctx.strict, line);
-                checkKeyLength(key, () => line);
+                checkKeyLength(key, line);
                 const valueStart = colonPos + 2;
                 const valueFirst = afterDash.charCodeAt(valueStart);
                 const valueLast = afterDash.charCodeAt(afterDash.length - 1);
                 const raw = valueFirst > 0x20 && valueFirst < 0x7f && valueLast > 0x20 && valueLast < 0x7f
                     ? afterDash.slice(valueStart) : trimSlice(afterDash, valueStart, afterDash.length);
                 // The key sits after `- `, two columns past the dash.
-                const valueCol = afterDashCol + valueStart + leadingWsLen(afterDash.slice(valueStart));
-                pendingItem = builder.createMappingWith(key, inlineOrBlockScalar(raw, baseIndent + 2, line, valueCol, afterDashRaw.slice(valueStart), cursor, ctx, builder));
+                const valueCol = wantSource ? afterDashCol + valueStart + leadingWsLen(afterDash.slice(valueStart)) : 0;
+                pendingItem = builder.createMappingWith(key, inlineOrBlockScalar(raw, baseIndent + 2, line, valueCol, wantSource ? afterDashRaw.slice(valueStart) : raw, cursor, ctx, builder));
                 while (cursor.valid && cursor.indent > baseIndent) {
                     const continuationLine = baseLine + cursor.lineIndex;
                     const ckeyIndent = cursor.asciiIndent;
@@ -267,20 +272,20 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
                     const ckey = stripKeyQuotes(ckeyRaw, ctx.strict, continuationLine);
                     if (!ckey)
                         break;
-                    checkKeyLength(ckey, () => continuationLine);
+                    checkKeyLength(ckey, continuationLine);
                     const valueUndecoded = trimSlice(contLine, csep + 2, contLine.length);
                     let value = valueUndecoded;
                     if (value !== '|' && value.includes('#'))
                         value = stripComment(value);
                     // contLine starts exactly at contentStart (no leading trim), so
                     // the value's column is the indent plus its offset in contLine.
-                    const cValueCol = cursor.indent + csep + 2 + leadingWsLen(contLine.slice(csep + 2));
+                    const cValueCol = wantSource ? cursor.indent + csep + 2 + leadingWsLen(contLine.slice(csep + 2)) : 0;
                     builder.setMapping(pendingItem, ckey, inlineOrBlockScalar(value, ckeyIndent, continuationLine, cValueCol, valueUndecoded, cursor, ctx, builder));
                 }
             }
             else if (afterDash.endsWith(':') && isValidKey(trimSlice(afterDash, 0, afterDash.length - 1))) {
                 const key = stripKeyQuotes(trimSlice(afterDash, 0, afterDash.length - 1), ctx.strict, line);
-                checkKeyLength(key, () => line);
+                checkKeyLength(key, line);
                 // §7.1 rule 3 / §7.2: sibling keys of an object item align at
                 // the column of the first key *after* `- `; a nested block
                 // must be indented deeper than that column, not merely deeper
@@ -302,7 +307,7 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
             else {
                 // A quoted-or-typed scalar item — parseQuotedOrTyped enforces
                 // §10.1's unterminated / trailing-content strict checks.
-                items.push(parseQuotedOrTyped(afterDash, ctx, line, builder, { raw: physicalRaw(afterDashRaw), line, col: afterDashCol, tabAdjust: afterDashTab }));
+                items.push(parseQuotedOrTyped(afterDash, ctx, line, builder, dashSource));
                 cursor.next();
             }
         }
@@ -315,10 +320,11 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
                 cursor.next();
                 continue;
             }
-            const colonPos = findKeySep(trimmed);
+            const bareKey = trimmed.charCodeAt(trimmed.length - 1) === 58;
+            const colonPos = bareKey && trimmed.indexOf(' ') === -1 ? -1 : findKeySep(trimmed);
             const keyRaw = colonPos !== -1
                 ? trimSlice(trimmed, 0, colonPos)
-                : trimmed.endsWith(':') ? trimSlice(trimmed, 0, trimmed.length - 1) : '';
+                : bareKey ? trimSlice(trimmed, 0, trimmed.length - 1) : '';
             if (keyRaw !== '' && !isValidKey(keyRaw)) {
                 // §5.1: not a usable key — unrecognised line, skipped in both
                 // modes (§10's strict list is closed and does not cover this).
@@ -328,21 +334,21 @@ const parseCursorBlock = (cursor, baseIndent, ctx, baseLine, builder) => {
                 if (entries === null)
                     entries = builder.createMapping();
                 const key = stripKeyQuotes(keyRaw, ctx.strict, line);
-                checkKeyLength(key, () => line);
+                checkKeyLength(key, line);
                 if (ctx.strict || ctx.onWarning !== undefined)
                     checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx);
                 const rawUndecoded = trimSlice(trimmed, colonPos + 2, trimmed.length);
                 let raw = rawUndecoded;
                 if (raw !== '|' && raw.includes('#'))
                     raw = stripComment(raw);
-                const valueCol = cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2));
+                const valueCol = wantSource ? cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2)) : 0;
                 builder.setMapping(entries, key, inlineOrBlockScalar(raw, baseIndent, line, valueCol, rawUndecoded, cursor, ctx, builder));
             }
-            else if (trimmed.endsWith(':')) {
+            else if (bareKey) {
                 if (entries === null)
                     entries = builder.createMapping();
                 const key = stripKeyQuotes(keyRaw, ctx.strict, line);
-                checkKeyLength(key, () => line);
+                checkKeyLength(key, line);
                 if (ctx.strict || ctx.onWarning !== undefined)
                     checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx);
                 cursor.next();

@@ -35,14 +35,6 @@ export declare const NESTING_DEPTH_LIMIT = 16;
 export declare const byteLength: (s: string) => number;
 export declare const checkStringLimit: (value: string, line: number) => void;
 export declare const checkScalarLimit: (v: LimaValue, line: number) => void;
-/**
- * `line` is a thunk, not a plain number: computing a top-level key's line
- * can trigger an O(document length) scan (see `keyLine` in core.ts) the very
- * first time it's called, and this check runs for every key in the
- * document. Evaluating it eagerly would pay that cost on every parse, even
- * though the overwhelming majority of keys never violate the limit — the
- * thunk defers it to the one branch that actually needs a line number.
- */
-export declare const checkKeyLength: (key: string, line: () => number) => void;
+export declare const checkKeyLength: (key: string, line: number) => void;
 export declare const checkDuplicateKey: (exists: boolean, key: string, line: number, ctx: ParseContext) => void;
 export declare const checkDuplicateKeyMap: (entries: Map<string, unknown>, key: string, line: number, ctx: ParseContext) => void;

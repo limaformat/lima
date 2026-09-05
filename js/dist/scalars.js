@@ -350,9 +350,9 @@ export const closingQuoteIndex = (s, singleQuoteEscape = true) => {
  * The unquoted-key grammar of Core §5.1: `[a-zA-Z0-9_][a-zA-Z0-9_:\-]*`.
  * Kept byte-for-byte identical to `scanner.ts`'s `isKeyStartChar` /
  * `isKeyContinueChar`, which enforce the same grammar at the top level.
- * Anchored, no backtracking — RE2-representable (see README).
  */
-const UNQUOTED_KEY_RE = /^[A-Za-z0-9_][A-Za-z0-9_:-]*$/;
+const isUnquotedKeyStart = (c) => (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 95;
+const isUnquotedKeyContinue = (c) => isUnquotedKeyStart(c) || c === 58 || c === 45;
 /**
  * Whether `raw` (a key candidate as written, before quote stripping) is a
  * usable Lima key:
@@ -372,7 +372,13 @@ export const isValidKey = (raw) => {
     const f = raw.charCodeAt(0);
     if (f === 34 || f === 39)
         return closingQuoteIndex(raw, false) === raw.length - 1;
-    return UNQUOTED_KEY_RE.test(raw);
+    if (!isUnquotedKeyStart(f))
+        return false;
+    for (let i = 1; i < raw.length; i++) {
+        if (!isUnquotedKeyContinue(raw.charCodeAt(i)))
+            return false;
+    }
+    return true;
 };
 const ESCAPED_HASH_RE = /\\#/g;
 const ANY_ESCAPE_RE = /\\(u[0-9a-fA-F]{0,4}|U[0-9a-fA-F]{0,8}|x[0-9a-fA-F]{0,2}|.)/gs;
