@@ -10,21 +10,65 @@ use crate::scalars::{
 };
 use crate::value::{Builder, ReferenceSource};
 
-/// `ReferenceSource` for a flow element starting at byte `byte_start` within
-/// the container `val` — the container column plus the codepoint distance to
-/// the element, so References 2.0 error ordering uses real positions.
+/// Maps a byte offset in the decoded container `val` to the corresponding
+/// offset in the physical container `raw`. The two differ only by `\#` → `#`
+/// collapses outside quoted strings (FR-5 keeps `\#` inside quotes), so every
+/// `#` in `val` outside a quote is one such collapse — `raw` has `\#` there.
+/// `#`, `\`, `"`, `'` are ASCII, so byte scanning is safe.
+fn raw_offset_of(raw: &str, val: &str, val_offset: usize) -> usize {
+    let (rb, vb) = (raw.as_bytes(), val.as_bytes());
+    let mut ri = 0usize;
+    let mut vi = 0usize;
+    let mut quote = 0u8;
+    while vi < val_offset {
+        let c = vb[vi];
+        if quote != 0 {
+            if c == b'\\' {
+                vi += 2;
+                ri += 2;
+                continue;
+            }
+            if c == quote {
+                quote = 0;
+            }
+        } else if c == b'"' || c == b'\'' {
+            quote = c;
+        } else if c == b'#' {
+            vi += 1;
+            ri += 2; // '#' in the decoded container <= '\#' in raw
+            continue;
+        }
+        vi += 1;
+        ri += 1;
+    }
+    debug_assert!(ri <= rb.len());
+    ri
+}
+
+/// `ReferenceSource` for a flow element spanning bytes `[start, end)` in the
+/// decoded container `val` — the container column plus the codepoint distance
+/// to the element's start in the physical text, plus the physical element
+/// slice as `raw`, so a token's reported position (§2.4) and §5 ordering are
+/// correct even when an earlier `\#` widened the source. `source.raw` is the
+/// physical container (equal to `val` when the value carried no `\#`).
 fn element_source(
     source: Option<&ReferenceSource>,
     val: &str,
-    byte_start: usize,
+    start: usize,
+    end: usize,
 ) -> Option<ReferenceSource> {
-    source.map(|s| ReferenceSource {
-        raw: None,
-        line: s.line,
-        col: s.col + val[..byte_start].chars().count(),
-        // A flow collection is one physical line, so the container's
-        // leading-tab adjustment applies to every element.
-        tab_adjust: s.tab_adjust.clone(),
+    source.map(|s| {
+        let raw = s.raw.as_deref().unwrap_or(val);
+        let rs = raw_offset_of(raw, val, start);
+        let re = raw_offset_of(raw, val, end);
+        ReferenceSource {
+            col: s.col + raw[..rs].chars().count(),
+            raw: Some(raw[rs..re].to_string()),
+            line: s.line,
+            // A flow collection is one physical line, so the container's
+            // leading-tab adjustment applies to every element.
+            tab_adjust: s.tab_adjust.clone(),
+        }
     })
 }
 
@@ -196,7 +240,7 @@ pub(crate) fn parse_flow_sequence_checked<B: Builder, const CHECK_DUPLICATES: bo
                 item,
                 strict,
                 line,
-                element_source(source.as_ref(), val, start),
+                element_source(source.as_ref(), val, start, end),
             )? {
                 items.push(nested);
                 continue;
@@ -206,7 +250,7 @@ pub(crate) fn parse_flow_sequence_checked<B: Builder, const CHECK_DUPLICATES: bo
             item,
             strict,
             line,
-            element_source(source.as_ref(), val, start),
+            element_source(source.as_ref(), val, start, end),
         )?);
     }
     Ok(Some(items))
@@ -320,7 +364,7 @@ pub(crate) fn parse_flow_mapping_checked<B: Builder, const CHECK_DUPLICATES: boo
             raw_val,
             strict,
             line,
-            element_source(source.as_ref(), val, value_start),
+            element_source(source.as_ref(), val, value_start, value_end),
         )?;
         B::m_set(&mut entries, key, v);
     }

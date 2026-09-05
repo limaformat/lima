@@ -4,16 +4,62 @@ import { parseQuotedOrTyped, parseScalarValue, stripKeyQuotes, closingQuoteIndex
 import { LimaError } from './errors.js';
 import { isTrimWhitespace } from './chars.js';
 /**
- * The `ReferenceSource` for a flow element starting at UTF-16 index
- * `utf16Start` within the container text `val`. The element's physical
- * column is the container's column plus the *codepoint* distance to the
- * element's start — so References §5 ordering across a flow collection's
- * elements uses real left-to-right positions, consistently across
- * implementations.
+ * Maps a UTF-16 offset in the decoded container `val` to the corresponding
+ * offset in the physical container `raw`. The two differ only by `\#` → `#`
+ * collapses outside quoted strings (FR-5 keeps `\#` inside quotes), so every
+ * `#` in `val` outside a quote is one such collapse — `raw` has `\#` there.
+ * Brackets, commas, quotes and quoted content are identical in both.
  */
-const elementSource = (source, val, utf16Start) => source === undefined
-    ? undefined
-    : { line: source.line, col: source.col + [...val.slice(0, utf16Start)].length, tabAdjust: source.tabAdjust };
+const rawOffsetOf = (raw, val, valOffset) => {
+    let ri = 0;
+    let vi = 0;
+    let quote = 0;
+    while (vi < valOffset) {
+        const vc = val.charCodeAt(vi);
+        if (quote) {
+            if (vc === 92) {
+                vi += 2;
+                ri += 2;
+                continue;
+            } // escaped pair, identical in both
+            if (vc === quote)
+                quote = 0;
+        }
+        else if (vc === 34 || vc === 39) {
+            quote = vc;
+        }
+        else if (vc === 35) {
+            vi += 1;
+            ri += 2;
+            continue; // '#' in the decoded container ⇐ '\#' in raw
+        }
+        vi += 1;
+        ri += 1;
+    }
+    return ri;
+};
+/**
+ * The `ReferenceSource` for a flow element spanning UTF-16 `[start, end)` in
+ * the decoded container `val`. The element's physical column is the
+ * container's column plus the *codepoint* distance to the element's start in
+ * the physical text, and its `raw` is the physical element slice — so a
+ * token's reported position (References §2.4) and §5 left-to-right ordering
+ * are correct even when an earlier `\#` widened the source. `source.raw` is
+ * the physical container (equal to `val` when the value carried no `\#`).
+ */
+const elementSource = (source, val, start, end) => {
+    if (source === undefined)
+        return undefined;
+    const raw = source.raw ?? val;
+    const rs = rawOffsetOf(raw, val, start);
+    const re = rawOffsetOf(raw, val, end);
+    return {
+        line: source.line,
+        col: source.col + [...raw.slice(0, rs)].length,
+        raw: raw.slice(rs, re),
+        tabAdjust: source.tabAdjust,
+    };
+};
 const trimStart = (source, start, end) => {
     while (start < end && isTrimWhitespace(source.charCodeAt(start)))
         start++;
@@ -101,13 +147,13 @@ export const parseFlowSequence = (val, ctx, line, builder, source) => {
             });
         }
         if (item.charCodeAt(0) === 123 && item.charCodeAt(item.length - 1) === 125) {
-            const nested = parseFlowMapping(item, ctx, line, builder, elementSource(source, val, start));
+            const nested = parseFlowMapping(item, ctx, line, builder, elementSource(source, val, start, end));
             if (nested !== null) {
                 items.push(nested);
                 continue;
             }
         }
-        items.push(parseQuotedOrTyped(item, ctx, line, builder, elementSource(source, val, start)));
+        items.push(parseQuotedOrTyped(item, ctx, line, builder, elementSource(source, val, start, end)));
     }
     return items;
 };
@@ -174,7 +220,7 @@ export const parseFlowMapping = (val, ctx, line, builder, source) => {
         if (isNestedFlowConstruct(rawVal)) {
             throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `Lima: invalid flow nesting at line ${line}: "${rawVal}"` });
         }
-        builder.setMapping(entries, key, parseQuotedOrTyped(rawVal, ctx, line, builder, elementSource(source, val, valueStart)));
+        builder.setMapping(entries, key, parseQuotedOrTyped(rawVal, ctx, line, builder, elementSource(source, val, valueStart, valueEnd)));
     }
     return builder.mapping(entries, line);
 };

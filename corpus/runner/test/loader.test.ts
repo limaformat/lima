@@ -106,8 +106,8 @@ describe('loadCorpus', () => {
 	it('loads every real case under core/ and references/ with zero failures', () => {
 		const { cases, failures } = loadCorpus(corpusRoot)
 		expect(failures).toEqual([])
-		// 149 Core 1.0.0 + 47 Core 1.0.1-1.0.8 (2026-09 review errata) + 101 References 1.0.
-		expect(cases.length).toBe(297)
+		// 149 Core 1.0.0 + 62 Core 1.0.1-1.0.9 (2026-09 review errata) + 101 References 1.0.
+		expect(cases.length).toBe(312)
 	})
 
 	it('produces unique, stable case IDs', () => {
@@ -119,12 +119,12 @@ describe('loadCorpus', () => {
 	it('loads the versioned References 2.0 suite independently', () => {
 		const { cases, failures } = loadCorpus(corpusRoot, ['references-2.0'])
 		expect(failures).toEqual([])
-		expect(cases).toHaveLength(131)
+		expect(cases).toHaveLength(136)
 		expect(cases.every((c) => c.spec === 'references' && c.specVersion === '2.0')).toBe(true)
 		expect(cases.every((c) => c.api === 'parse' || c.api === 'core' || c.api === 'references')).toBe(true)
 		expect(cases.find((c) => c.id === 'references-2.activity.block-sequence-item')?.api).toBe('parse')
 		expect(cases.find((c) => c.id === 'references-2.api.parse-references.deprecated-alias')?.api).toBe('references')
-		expect(new Set(cases.map((c) => c.id)).size).toBe(131)
+		expect(new Set(cases.map((c) => c.id)).size).toBe(136)
 	})
 
 	it('defaults every spec: "core" case to api: "core" — the public parseCore entry point, not a References resolver', () => {

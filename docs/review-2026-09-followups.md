@@ -5,6 +5,10 @@ review (external review 2026-09-04, cross-checked against the code at
 `da292ff`). Companion to [`follow-ups.md`](follow-ups.md); supersedes none
 of it.
 
+A second external review on 2026-09-08 (the consolidated campaign diff,
+pre-release) re-opened the release gate — see "Consolidated pre-release
+review — 2026-09-08" below, findings `FR-1` … `FR-6`.
+
 Two axes: **priority** (P0 = blocks the next Core 1.0 release because valid
 input is parsed incorrectly) and **type** (code bug / corpus infra / docs /
 decision to close).
@@ -637,6 +641,276 @@ ever matters.
 
 ---
 
+## Consolidated pre-release review — 2026-09-08
+
+A final independent review of the whole consolidated campaign diff
+(`af7e439..460530f`, external review via ChatGPT web, cross-checked and
+independently reproduced against the code with all three toolchains). No
+architectural BLOCKER. Six conformance findings the green corpus did not
+catch. Verdict: **Ship after fixes**.
+
+Findings referenced `FR-1` … `FR-6`. Independent reproduction: MAJOR
+1/2/3/5 reproduced in every affected language; MAJOR 4 reproduced in all
+three (consistent). One reviewer sub-claim retracted on cross-check (TS
+*does* throw `INVALID_ESCAPE` on `\q` in strict — the apparent miss was a
+test harness passing a bare `true` where `parseCore` wants `{strict:true}`).
+
+**All six fixed (2026-09-08), shipping as Core errata 1.0.9 + References
+2.0 R2-069:** FR-4 `2c7f7fc`, FR-1 `a741492`, FR-2 `f62c62d`, FR-5
+`7e2f82e`, FR-6 `8279dda`, FR-3 `d9c79dc`. Every affected input verified
+TS == Rust == Go. FR-4 resolved as option B (§6.1.3 "Backslash pairing"
+clarification, no code change). Full gates green.
+
+**Delta review of the fix batch (`460530f..HEAD`, third external pass).**
+Verdict: FR-1/FR-3/FR-4 clean; FR-5's `\#`-in-quotes fix correct; FR-2
+functional. Two findings, both closed:
+
+- **MAJOR** — `stripComment` / `stripCommentKeepEscapes` trimmed the
+  value↔`#` whitespace with a language-dependent set (Go `" \t"`, Rust
+  `.trim_end()` = Unicode `White_Space`, TS `.trimEnd()` = the project
+  set). `x: [a\#b ${m}]<U+00A0># c` → flow in TS/Rust, string in Go;
+  `<U+FEFF>` kept in Rust/Go. Predates the batch but sits in FR-5's
+  surface. Fixed `b1b41d1`: Go `trimRightWhitespace`, Rust
+  `trim_end_matches(is_trim_whitespace)`; TS already correct. 3 Core + 1
+  References 2.0 case. Verified TS == Rust == Go for U+00A0 / U+FEFF /
+  U+2000 / U+3000 / U+2028 (trimmed) and U+0085 (kept — not in the set,
+  not a line terminator).
+- **MINOR** — `scanner.ts` still claimed exact equivalence to a regex
+  whose `\\.` does not match U+2028/U+2029, but the post-FR-2 hand scanner
+  consumes `\`+U+2028 as an escape pair (decode-time validation, like
+  `\q`). Doc-only, `a41de4a`: regex → `\\[^\n]`, framing corrected.
+- OBSERVATIONs (no fix): FR-3's "differ only by `\#`" invariant is
+  worded slightly stronger than needed (holds on every *mapped prefix*);
+  FR-6's `looksReferenceless` over-approximates (skips the cross-check for
+  a referenceless input that merely contains `${…}` in a quote/comment) —
+  acceptable, the `mode:"core"` expectation is still asserted directly.
+
+Core corpus 196 → 211, References 2.0 131 → 136.
+
+### FR-1. Go pulls Unicode-whitespace-only lines into `|` block scalars — code (Go) — MAJOR
+
+`go/block_scalar.go:27`, `:42`, `:99` decide "is this scalar line empty?"
+with `trimWhitespace(l.text) == ""` — the broad Unicode set from
+`go/normalize.go:42` (NBSP, U+2000–200A, U+2028/2029, U+202F, U+205F,
+U+3000, FEFF). TS (`leadingSpaces(bl) === bl.length`) and Rust
+(`leading_spaces(line) == line.len()`) count only U+0020.
+
+Repro — `x: |` then `  a`, a line containing only U+00A0, then `  b`,
+then `y: z`:
+
+| middle line | TS | Rust | Go |
+|---|---|---|---|
+| U+0020 / empty | `a\n\nb` | `a\n\nb` | `a\n\nb` |
+| **U+00A0** | `a` | `a` | **`a\n\nb`** |
+| **U+2003 / FEFF / U+2028 / U+3000** | `a` | `a` | **`a\n\ufffd\nb`** |
+
+Two defects: (a) a non-empty line with zero leading U+0020 spaces must end
+a top-level scalar per §6.1.5, but Go treats it as blank and keeps
+absorbing; (b) for a multi-byte whitespace character `block_scalar.go:56-60`
+slices `text[cut:]` mid-rune → **invalid UTF-8 in the result** (the
+`\ufffd`). Cross-language divergence (§2) plus data corruption. TS/Rust
+correct.
+
+Fix (Go only): the block-scalar "empty line" test is `l.text == ""` (the
+`sourceLine.text` already has trailing U+0020 stripped at construction) —
+not `trimWhitespace`. Same at `blockScalarValue`'s body-collection loop
+(`:99`) and the `minIndent` scan (`:42`). No corpus conflict. Corpus:
+top-level and nested `|` with a NBSP-only line, cross-language.
+
+### FR-2. TS rejects U+2028/U+2029 in top-level quoted keys — code (TS) — MAJOR
+
+`js/src/scanner.ts:90`, `:104`, `:109` abort the key match on
+`0x2028`/`0x2029` (and the dead `0x000D` — CR is already gone after §3
+normalisation). Added in errata 1.0.8 (`542002a`) alongside the correct
+U+000A rejection.
+
+| input | TS | Rust | Go |
+|---|---|---|---|
+| `"a<U+2028>b": v` top-level | `{}` | `{a␊b: v}` | `{a␊b: v}` |
+| same, nested / flow | **accepted** | accepted | accepted |
+| raw `\n` in a quoted key | `{}` | `{}` | `{}` — all correct |
+
+§15.6's `single-quoted-character` / `double-quoted-character` exclude only
+U+000A; §5.2's parenthetical names U+000A explicitly. U+2028/U+2029 are
+valid quoted-key characters. Rust/Go correct; TS is the outlier and is
+also internally inconsistent (nested/flow accept). The 1.0.8 corpus cases
+only assert raw `\n` — **no corpus defect**.
+
+Fix (TS only): narrow the three `matchAt` checks to `cc === 10` (drop
+`0x2028`/`0x2029`; `0x000D` may stay as harmless defence or go). Restore
+the module-doc regex to `[^'\n]` / `[^"\\\n]`. Corpus: a quoted key
+containing U+2028 *is* a valid key, cross-language.
+
+### FR-3. Flow collections lose physical-raw provenance for reference tokens — code (TS + Rust + Go) — MAJOR
+
+`js/src/flow.ts:18` `elementSource`, `rust/src/flow.rs:16` `element_source`
+(explicit `raw: None`), `go/flow.go:33` `elementSource` re-anchor a flow
+element's column but drop `raw`. The reference-token scanner then falls
+back to the *decoded* element text, which is one character shorter per
+`\#` (comment-escape → `#`), so a token's reported column is low by one
+per preceding `\#` — only inside `[...]` / `{...}`.
+
+Repro (`strict: true`), 1-based column of the physical `$`:
+
+| input | expected | TS | Rust | Go |
+|---|---|---|---|---|
+| `x: a\#b ${m}` (non-flow) | 9 | 9 | 9 | 9 |
+| `x: [a\#b ${m}]` | 10 | **9** | **9** | **9** |
+| `x: {a: q\#r ${m}}` | 13 | **12** | **12** | **12** |
+| `x: [ab ${m}]` (no `\#`) | 8 | 8 | 8 | 8 |
+
+References §2.4 (position in the *original* source). All three are wrong
+the same way — **not** a cross-language divergence, but a shared
+§2.4 violation. `error-position-escaped-hash-before-reference.json` only
+covers the non-flow inline path.
+
+Fix (all three): the flow element cursor must carry a decoded-offset →
+physical-raw-offset mapping (or the sliced raw element text) into
+`elementSource`, not just a column. Passing the whole parent `raw` through
+is not enough — element boundaries and quoted/inactive spans still have to
+be honoured. Corpus: sequence *and* mapping element, `\#` before the token
+and `\#` in an earlier sibling element, cross-language.
+
+### FR-4. `\\` treated as an escape pair in single-quoted *values* — code (TS + Rust + Go) — MAJOR per reviewer / MINOR per re-check — needs a decision
+
+`closingQuoteIndex` (`js/src/scalars.ts:344`; mirrored in
+`rust/src/scalars.rs`, `go/scalars.go`) skips two characters on `\\` as
+well as `\'` when scanning for a single-quoted value's closing quote. Its
+own doc comment says "`\'` and `\\` are the only special sequences
+(§6.1.3)" — but §6.1.3 says the opposite: "**exactly one special
+sequence**: `\'` … `\\` is two characters (backslash + backslash)". §6.1.4's
+backslash-counting model for `\#` (only the immediately preceding
+backslash is consumed) supports the strict reading.
+
+Repro — all three identical, both modes: `x: 'a\\'` → `a\\` (terminated,
+two backslashes). Strict reading: `\` literal, then `\'` escaped quote →
+string unterminated.
+
+Re-check notes (why MINOR, not MAJOR): affects only a single-quoted value
+ending in an *even* run of backslashes — rare; no cross-language
+divergence (all three consistent); the strict reading makes `'C:\\'`
+unterminated and leaves no way to end a single-quoted string with a
+backslash at all.
+
+**Decision needed.** Option A — align the three implementations to the
+literal §6.1.3 (single-quote value close-scan skips two only on `\'`);
+add corpus cases; `'C:\\'` becomes an unterminated-string fallback / strict
+throw. Option B — clarify §6.1.3 that `\\` is recognised as a
+non-collapsing two-character unit so it cannot pair with a following
+quote, and fix the doc comment; behaviour unchanged. Lean: **Option B** —
+Final spec text vs. a real footgun, no divergence, and the current
+behaviour is what all three implementations independently chose.
+
+### FR-5. `\#` is decoded inside quoted strings — code (TS + Rust + Go) — MAJOR
+
+`stripComment` (`js/src/scalars.ts:461`) is `stripCommentKeepEscapes(val)`
+(correctly quote-aware for locating the comment) followed by a **global**
+`.replace(/\\#/g, '#')`. `stripComment` is applied to the whole inline
+value before quoted/flow/scalar dispatch (`core.ts:225`,`:261`;
+`block.ts:179`,`:217`,`:271`,`:325`), so the unquoted-only §6.1.4 rule
+also rewrites `\#` inside quotes. Rust and Go mirror this.
+
+Repro — all three identical, both modes: `x: "a\#b"` → `a#b`;
+`x: 'a\#b'` → `a#b`; `x: ["a\#b"]` → `["a#b"]`. Expected: double-quoted
+non-strict `a\#b` (unknown escape, backslash preserved), strict throw
+`INVALID_ESCAPE`; single-quoted `a\#b` (backslash literal, §6.1.3).
+§6.1.4 restricts `\#` → `#` to unquoted values.
+
+Fix (all three): `stripComment` must only rewrite `\#` in the region
+outside quotes — fold the `\#` → `#` step into the same quote-aware scan
+as `stripCommentKeepEscapes` (rewrite while `quote === 0`, leave the
+backslash intact inside quotes). The corpus tests `#` in quotes and `\#`
+unquoted but never `\#` in quotes — corpus gap. Corpus: `\#` in a
+double-quoted value (non-strict preserved, strict throws), in a
+single-quoted value, and in flow, cross-language.
+
+### FR-6. Corpus runner cross-checks Core cases against `parse()` without confirming referencelessness — corpus infra — MINOR (latent)
+
+`corpus/runner/src/run.ts:159` `parseReferenceless` runs `parse()` on
+every `spec:"core" api:"core"` case and diffs it against `parseCore`,
+on the stated assumption that Core input is reference-unaware. Nothing
+verifies the input actually contains no `${…}` / `$(…)`. A legitimate new
+Core case such as `x: ${missing}` (Core: literal string; `parse()`:
+`UNRESOLVED_REFERENCE`) would be reported as a spurious FAIL. No current
+case contains reference syntax, so the 196 are unaffected — but a Core
+case exercising literal reference syntax cannot be added.
+
+Fix: gate `crossCheckResultAgainstParse` / `crossCheckErrorAgainstParse`
+on the input being reference-shape-free, or add an explicit per-case
+opt-out for cases that deliberately carry literal `${…}` / `$(…)`.
+
+---
+
+## Implementation plan for FR-1 … FR-6 — DONE
+
+All six landed 2026-09-08 as one batch (order below), each a trailerless
+commit, full gates green after each. Hashes: FR-4 `2c7f7fc` (option B:
+§6.1.3 "Backslash pairing" clarification, no code change), FR-1 `a741492`,
+FR-2 `f62c62d`, FR-5 `7e2f82e`, FR-6 `8279dda`, FR-3 `d9c79dc`. FR-2 and
+FR-5 committed without the `js/dist` rebuild; FR-3 carries it (net HEAD
+consistent; CI rebuilds dist regardless). Core corpus 196 → 211 (errata
+1.0.9), References 2.0 131 → 136 (R2-069). `git-retime` + push still
+pending.
+
+Original plan below, for the record.
+
+Ordered; each finding is one commit (trailerless, per the campaign),
+`git-retime` deferred until the whole batch + gates are green.
+
+1. **FR-4 decision first.** Get the maintainer's Option A/B call — it
+   changes whether FR-4 is a code commit or a one-paragraph §6.1.3
+   clarification (spec edit needs explicit authorisation).
+
+2. **FR-1 — `fix(go): block-scalar blank-line test is ASCII-only`.**
+   `go/block_scalar.go` three sites → `l.text == ""` (or an explicit
+   `leadingSpaces == len` helper mirroring TS/Rust). Verify against the
+   TS/Rust matrix above for U+00A0 / U+2003 / FEFF / U+2028 / U+3000, top
+   level and nested. Corpus: 2 cases (`since` next errata).
+
+3. **FR-2 — `fix(core): U+2028/U+2029 are valid quoted-key characters`.**
+   `js/src/scanner.ts` three checks → `cc === 10` only; module-doc regex
+   restored. Corpus: 1–2 cases (quoted key with U+2028 is a key; not
+   swallowed), cross-language — Rust/Go already pass, so this closes a
+   TS-only divergence.
+
+4. **FR-5 — `fix(core): \# is not decoded inside quoted strings`.**
+   Rewrite `stripComment` (TS) so the `\#` → `#` step runs inside the
+   quote-aware scan; port to `rust/src/scalars.rs`, `go/scalars.go`.
+   Watch the References raw+decoded zip (FR-3 territory) — `stripComment`
+   feeds `physicalRaw`; keeping `\#` intact inside quotes must not shift
+   the zip. Corpus: double-quoted `\#` (non-strict preserve / strict
+   `INVALID_ESCAPE`), single-quoted, flow — cross-language.
+
+5. **FR-3 — `fix(references): flow elements keep physical-raw provenance`.**
+   Thread a decoded→raw offset map (or the raw element slice) from the
+   flow cursor into `elementSource` in all three. Largest change; do it
+   after FR-5 so the `\#`-in-quotes decoding is already settled. Corpus:
+   `error-position-*` for sequence and mapping elements, `\#` before the
+   token and in an earlier sibling. Re-verify the existing R2 position
+   cases are unmoved.
+
+6. **FR-6 — `test(corpus): gate the parse() cross-check on referencelessness`.**
+   Runner-only. Add a guard + a deliberately-referenceful Core case that
+   would have tripped the old cross-check.
+
+7. **FR-4 code path (only if Option A).**
+   `closing_quote_index` single-quote value branch skips two only on
+   `\'`. Corpus: `'a\\'` unterminated, `'a\\\''` etc., cross-language.
+
+8. **Gates:** fresh build · `src`/`dist` byte compare · `typecheck` ·
+   `bun test` (js + corpus/runner) · all three corpus suites ·
+   `cargo test` · `go test ./...` · the per-finding regression cases.
+   Then bump the Core errata version in `corpus/manifests/core-1.0.json`
+   (FR-1/FR-2/FR-5 add Core cases; FR-3 adds References 2.0 cases — the
+   References corpus has no `since`), refresh the CHANGELOG 0.4.0 entries,
+   `git-retime`, and only then push.
+
+Corpus accounting: FR-1/FR-2/FR-5 land as one new Core errata revision
+(e.g. `1.0.9`); FR-3 adds References 2.0 cases; FR-4 (Option A) folds into
+the same Core revision. The frozen 1.0.0 baseline stays untouched.
+
+---
+
 ## After the fixes: re-run the gates
 
 Fresh build · `src`/`dist` byte comparison · `typecheck` · `bun test` (js +
@@ -650,8 +924,12 @@ corpus/runner) · corpus runner, all three suites · `cargo test` ·
 P0 #1 → P1 #2, #3, #4 (all three languages + corpus) → gates. #5–#8 can run
 in parallel (TS / corpus only, no Rust/Go blocker). #7 is doable now.
 
-**No freeze blockers remain, and all of P0/P1/P2 is done.** Remaining:
-P3 #13 (bench), #14 (`resolveNode` cache invariant), #15 (Go CI first
-run — a push-time check); the decision-doc `Status:` headers; a one-line
-spec note on `LimaError.column`; then `git-retime` + push. Core is at
-errata 1.0.8, References 2.0 corpus at 131 cases.
+All of the original P0/P1/P2/P3 is done, and the consolidated 2026-09-08
+review's FR-1…FR-6 are all fixed (see above). Core is at errata **1.0.9**
+(211 corpus cases), References 2.0 at **136**. No known conformance
+blocker remains.
+
+Left before 0.4.0 ships and the Core 1.0 freeze closes: refresh the three
+CHANGELOG 0.4.0 sections to mention errata 1.0.9 / R2-069; `git-retime`;
+push `main`; verify the first Rust+Go CI run (#15); then tags
+`v0.4.0` / `rust/v0.4.0` / `go/v0.4.0`, `npm publish`, `cargo publish`.

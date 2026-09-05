@@ -154,8 +154,17 @@ function invokeParser(c: LoadedCase): {
  * too, in both directions, because `parse` runs an independent code path
  * (the positioned builder + References layer) over the same Core grammar
  * that a Core-only run could never catch drifting apart. See
- * docs/review-2026-09-followups.md P1 #6 and CR-M4.
+ * docs/review-2026-09-followups.md P1 #6, CR-M4, and FR-6.
+ *
+ * The cross-check only holds when the input is actually referenceless.
+ * `parseCore` keeps `${…}` / `$(…)` as literal text; `parse` tokenizes it
+ * and resolves or diagnoses it, so a Core case that deliberately exercises
+ * literal reference syntax would diverge by design. Such a case skips the
+ * cross-check (its `mode: "core"` behaviour is still asserted directly).
  */
+const looksReferenceless = (input: string): boolean =>
+	!input.includes('${') && !input.includes('$(')
+
 const parseReferenceless = (c: LoadedCase): unknown =>
 	parse(c.input, {
 		...(c.options.partialsSupplied ? { partials: c.options.partials } : {}),
@@ -234,7 +243,7 @@ function runCase(c: LoadedCase): CaseOutcome {
 			})
 		}
 
-		if (reasons.length === 0 && c.spec === 'core' && c.api === 'core') {
+		if (reasons.length === 0 && c.spec === 'core' && c.api === 'core' && looksReferenceless(c.input)) {
 			reasons.push(...crossCheckResultAgainstParse(c, stripNumberKinds(result.value)))
 		}
 
@@ -282,7 +291,7 @@ function runCase(c: LoadedCase): CaseOutcome {
 		}
 	}
 
-	if (c.spec === 'core' && c.api === 'core') {
+	if (c.spec === 'core' && c.api === 'core' && looksReferenceless(c.input)) {
 		const crossReasons = crossCheckErrorAgainstParse(c, adapted.diagnostic)
 		if (crossReasons.length > 0) {
 			return { id: c.id, sourceFile: c.sourceFile, classification: 'FAIL', reasons: crossReasons, notes }

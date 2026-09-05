@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-position.flow-whitespace-before-comment",
+  "spec": "references",
+  "section": "2.4",
+  "description": "A U+00A0 between a flow container's `]` and a trailing `#` comment is trimmed with the project whitespace set, so the container is parsed as a flow sequence and the unresolved token reports its real column rather than an INVALID_FLOW_SYNTAX from a stray trailing space. Identical across TS/Rust/Go.",
+  "input": "x: [a\\#b ${missing}] # c\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "${missing}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 10
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

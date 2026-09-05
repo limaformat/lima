@@ -1,0 +1,17 @@
+{
+  "id": "core.comments.whitespace-boundary.nbsp",
+  "spec": "core",
+  "section": "8",
+  "description": "Whitespace between a value and its `#` comment is stripped with the project whitespace set, not just ASCII space/tab — a U+00A0 before the comment is not part of the value, identical across TS/Rust/Go.",
+  "input": "x: foo # c\n",
+  "expect": {
+    "result": {
+      "x": "foo"
+    }
+  },
+  "tags": [
+    "positive",
+    "comments",
+    "unicode-whitespace"
+  ]
+}

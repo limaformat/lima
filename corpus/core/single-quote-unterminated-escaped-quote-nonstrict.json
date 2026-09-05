@@ -1,0 +1,9 @@
+{
+  "id": "core.strings.single-quote.unterminated-escaped-quote.non-strict",
+  "spec": "core",
+  "section": "6.1.3",
+  "description": "'abc\\' ends in an odd run of backslashes, so the final \\' is the escaped-quote sequence and the string has no closing quote — non-strict falls back to a plain string from the opening quote to end of line. Companion to the existing strict case.",
+  "input": "v: 'abc\\'\n",
+  "expect": { "result": { "v": "'abc\\'" } },
+  "tags": ["fallback", "strings", "quoted"]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "core.strings.hash-escape.single-quoted.literal",
+  "spec": "core",
+  "section": "6.1.3",
+  "description": "Inside a single-quoted string only `\\'` is special, so `\\#` is a literal backslash followed by `#` — the backslash is not removed.",
+  "input": "x: 'a\\#b'\n",
+  "expect": {
+    "result": {
+      "x": "a\\#b"
+    }
+  },
+  "tags": [
+    "positive",
+    "strings",
+    "escapes"
+  ]
+}

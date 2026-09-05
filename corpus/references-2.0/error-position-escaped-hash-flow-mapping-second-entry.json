@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-position.escaped-hash-flow-mapping-second-entry",
+  "spec": "references",
+  "section": "2.4",
+  "description": "A `\\#` in an earlier flow-mapping entry widens the source before the token in a later entry: `$` is at column 17.",
+  "input": "x: {a: q\\#r, b: ${missing}}\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "${missing}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 17
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

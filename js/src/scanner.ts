@@ -9,15 +9,23 @@
  * standard `regex` crate is itself RE2-derived and cannot express
  * backtracking-dependent patterns at all.
  *
- * Reproduces (verified by extensive differential testing against the
- * regex it replaced — over 100,000 fuzzed and structured cases, the full
- * conformance corpus, and hand-built adversarial edge cases, zero
- * divergences) the exact matching behavior of:
+ * Equivalent to this regex:
  *
- *   /^(?:([a-zA-Z\d_][a-zA-Z\d_:-]*)|'([^'\n\r\u2028\u2029]*)'|"((?:[^"\\\n\r\u2028\u2029]|\\.)*)"):( *\n| )/gm
+ *   /^(?:([a-zA-Z\d_][a-zA-Z\d_:-]*)|'([^'\n]*)'|"((?:[^"\\\n]|\\[^\n])*)"):( *\n| )/gm
  *
- * including subtle backtracking-dependent cases that are easy to get
- * wrong without empirical verification against the real parser:
+ * The scanner replaced an actual regex of this shape; the differential
+ * testing that verified the port — over 100,000 fuzzed and structured
+ * cases, the full conformance corpus, hand-built adversarial edge cases,
+ * zero divergences — was against that original. The quoted-key character
+ * classes have since been tightened to exclude only U+000A (Core errata
+ * 1.0.8 / 1.0.9), reflected above: `[^'\n]`, `[^"\\\n]`, and `\\[^\n]` (a
+ * backslash escapes any character except U+000A; the resulting sequence is
+ * then validated as an escape at decode time — an unknown escape like
+ * `\` + U+2028 throws in strict, is kept literally in non-strict, exactly
+ * like `\q`).
+ *
+ * Subtle backtracking-dependent cases that are easy to get wrong without
+ * empirical verification against the real parser:
  *   - `a:b: value` → key "a:b" (colon is a legal mid-key character; the
  *     mandatory separator-introducing `:` is whichever colon within the
  *     greedily-matched run is the RIGHTMOST one for which a valid
@@ -30,13 +38,17 @@
  *     at all (the separator alternative `( *\n| )` requires an actual
  *     trailing newline or a literal space; end-of-string alone satisfies
  *     neither).
- *   - A raw line terminator in a quoted key aborts the match (Core §15.6
- *     excludes U+000A); the `\n` escape remains valid and decodes to a key
- *     containing U+000A.
- *   - A backslash directly followed by a line terminator inside a
- *     double-quoted key is NOT a valid `\\.` escape — the source regex's
- *     `.` never matches a line terminator without the `s` flag (not set),
- *     so this fails the match entirely rather than consuming the pair.
+ *   - A raw U+000A in a quoted key aborts the match — and only U+000A:
+ *     Core §15.6's single- and double-quoted-key character classes exclude
+ *     U+000A alone, so U+2028 / U+2029 (and, on already-§3-normalised
+ *     input, U+000D) are ordinary quoted-key characters here, matching the
+ *     nested and flow key paths and the Rust/Go scanners. The `\n` escape
+ *     is unaffected — it decodes to a key containing U+000A.
+ *   - A backslash directly followed by U+000A inside a double-quoted key
+ *     aborts the match (`\\[^\n]` — the backslash needs a non-U+000A
+ *     character after it). A backslash followed by any other character,
+ *     U+2028 / U+2029 included, is consumed as an escape pair here and
+ *     resolved at decode time.
  */
 
 const isKeyStartChar = (c: number): boolean =>
@@ -86,8 +98,7 @@ const matchAt = (s: string, pos: number, line: number, out: KeyCursor): boolean 
 		const end = s.indexOf("'", pos + 1)
 		if (end === -1 || s.charCodeAt(end + 1) !== 58) return false
 		for (let i = pos + 1; i < end; i++) {
-			const cc = s.charCodeAt(i)
-			if (cc === 10 || cc === 13 || cc === 0x2028 || cc === 0x2029) return false
+			if (s.charCodeAt(i) === 10) return false // §15.6 excludes U+000A only
 		}
 		sepStart = end + 2
 		separator = matchSeparator(s, sepStart)
@@ -100,13 +111,12 @@ const matchAt = (s: string, pos: number, line: number, out: KeyCursor): boolean 
 			const cc = s.charCodeAt(i)
 			if (cc === 92) {
 				// `\\.` in the source regex — see the module doc comment.
-				const next = s.charCodeAt(i + 1)
-				if (i + 1 >= s.length || next === 10 || next === 13 || next === 0x2028 || next === 0x2029) return false
+				if (i + 1 >= s.length || s.charCodeAt(i + 1) === 10) return false
 				i += 2
 				continue
 			}
 			if (cc === 34) { closed = true; break }
-			if (cc === 10 || cc === 13 || cc === 0x2028 || cc === 0x2029) return false
+			if (cc === 10) return false // §15.6 excludes U+000A only
 			i++
 		}
 		if (!closed) return false

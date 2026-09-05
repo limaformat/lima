@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-position.escaped-hash-flow-sequence-second-element",
+  "spec": "references",
+  "section": "2.4",
+  "description": "A `\\#` in an earlier flow-sequence element widens the source before the token in a later element: `$` is at column 11, not the 10 a decoded-string offset would give.",
+  "input": "x: [a\\#b, ${missing}]\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "${missing}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 11
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}

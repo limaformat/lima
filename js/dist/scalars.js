@@ -314,10 +314,12 @@ const buildTyped = (str, strict, line, builder, source) => {
  * if it is never closed. Escape-aware, so `"a\""` closes at its last
  * character rather than the escaped inner `"`:
  *   - double quotes: a backslash escapes the next character (§6.1.2);
- *   - single-quoted *values*: `\'` and `\\` are the only special sequences
- *     (§6.1.3), so a lone `\` is literal and `\\'` closes after two
- *     backslashes — pass `singleQuoteEscape = false` for single-quoted
- *     *keys*, which are fully literal (§5.2), where the first `'` closes.
+ *   - single-quoted *values* (§6.1.3 "Backslash pairing"): scanning left
+ *     to right, `\\` (two literal backslashes) and `\'` (an escaped quote)
+ *     are each consumed as a two-character unit, so a lone `\` is literal
+ *     and a closing `'` after an even backslash run closes the string.
+ *     Pass `singleQuoteEscape = false` for single-quoted *keys*, which are
+ *     fully literal (§5.2), where the first `'` closes.
  * `s[0]` is assumed to be `'` or `"`.
  */
 export const closingQuoteIndex = (s, singleQuoteEscape = true) => {
@@ -380,7 +382,6 @@ export const isValidKey = (raw) => {
     }
     return true;
 };
-const ESCAPED_HASH_RE = /\\#/g;
 const ANY_ESCAPE_RE = /\\(u[0-9a-fA-F]{0,4}|U[0-9a-fA-F]{0,8}|x[0-9a-fA-F]{0,2}|.)/gs;
 const SINGLE_CHAR_ESCAPES = '"\\/bfnrt'; // deliberately excludes '0' — Core Appendix A: \0 is unknown, not a null shorthand.
 const U_ESCAPE_RE = /^u([0-9a-fA-F]{4})$/;
@@ -435,6 +436,11 @@ export const unescapeDQ = (s, strict = false, line = 0) => {
  * token's column is measured against (§2.4): the comment is not part of
  * the value (so its `${…}`-shaped text must not be scanned as a token),
  * but a `\#` before a token still occupies its two source columns.
+ *
+ * `trimEnd()` is exactly the project whitespace set (ECMAScript WhiteSpace
+ * + LineTerminator = `isTrimWhitespace`) — a U+00A0 / FEFF between the
+ * value and the `#` is not part of the value. The Rust and Go ports must
+ * use `is_trim_whitespace` here, not a host `trim_end` or `" \t"`.
  */
 export const stripCommentKeepEscapes = (val) => {
     let quote = 0;
@@ -458,7 +464,42 @@ export const stripCommentKeepEscapes = (val) => {
     }
     return val;
 };
-export const stripComment = (val) => stripCommentKeepEscapes(val).replace(ESCAPED_HASH_RE, '#');
+/**
+ * The value text with a trailing `#` comment removed and each `\#` *outside*
+ * a quoted string collapsed to `#` (Core §6.1.4 — the escaped-hash rule is
+ * defined for unquoted values only). Inside `"..."` / `'...'` the backslash
+ * is left intact: `\#` there is an unknown double-quoted escape (§6.1.2:
+ * strict throws, non-strict keeps it) or a literal backslash in a
+ * single-quoted string (§6.1.3). Finds the same comment boundary as
+ * `stripCommentKeepEscapes` — the two must agree, they annotate the same
+ * value.
+ */
+export const stripComment = (val) => {
+    let quote = 0;
+    let out = '';
+    let seg = 0;
+    for (let i = 0; i < val.length; i++) {
+        const cc = val.charCodeAt(i);
+        if (quote) {
+            if (cc === 92)
+                i++;
+            else if (cc === quote)
+                quote = 0;
+        }
+        else if (cc === 34 || cc === 39) {
+            quote = cc;
+        }
+        else if (cc === 92 && val.charCodeAt(i + 1) === 35) {
+            out += val.slice(seg, i) + '#';
+            i++;
+            seg = i + 1;
+        }
+        else if (cc === 35) {
+            return (out + val.slice(seg, i)).trimEnd();
+        }
+    }
+    return out + val.slice(seg);
+};
 /**
  * Strips a key's surrounding quotes — unescaping a double-quoted key
  * (§6.1.2 escapes, strict-checked), taking a single-quoted key literally

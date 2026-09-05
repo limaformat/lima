@@ -1,0 +1,18 @@
+{
+  "id": "core.strings.hash-escape.in-quotes-does-not-block-comment",
+  "spec": "core",
+  "section": "8",
+  "description": "A `\\#` inside a quoted value keeps its backslash and the real trailing comment after the closing quote is still stripped.",
+  "input": "x: \"a\\#b\" # real comment\n",
+  "expect": {
+    "result": {
+      "x": "a\\#b"
+    }
+  },
+  "tags": [
+    "positive",
+    "strings",
+    "comments",
+    "escapes"
+  ]
+}

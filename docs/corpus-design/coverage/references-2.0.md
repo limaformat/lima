@@ -47,6 +47,7 @@ suite. References 1.0 remains an independent frozen conformance target.
 | R2-066 | §2.4 | Comment not scanned | a trailing `#` comment is not part of the value: a `${…}`-shaped sequence inside it is not a token (mapping value and sequence item) | `comment-after-*-reference-*-not-scanned` |
 | R2-067 | §2.4 | Raw/decoded whitespace boundary | the raw token scan uses the same leading-whitespace boundary as value decoding — U+0085 before a token on a sequence continuation-key line is scalar content, column 9 in all three implementations (a host `TrimSpace` would report 8) | `error-position-continuation-key-unicode-space` |
 | R2-068 | §5 / §4 | Provenance across a second copy | a pure-reference result copied again retains both insertion tokens as final-structure participants, so the earliest source position wins | `error-position-provenance-second-copy` |
+| R2-069 | §2.4 | Original-source position in flow collections | a `\#` collapse inside a `[...]` element or a `{...}` value — and in an earlier sibling element/entry — does not shift a later token's reported column; positions match the inline path and are identical across TS/Rust/Go | `error-position-escaped-hash-flow-*` |
 | R2-070 | §6.1 | API | `parse` defaults to References mode; `mode: "core"` uses the Core path; `parseReferences` is a deprecated exact alias | API cases |
 | R2-071 | §6.1 | Invalid options | `partials` with `mode: "core"` is rejected before parsing | binding/schema test |
 | R2-072 | §6.2 | Names | every partial name matches grammar; dot rejected; `_` accepted | validation cases |

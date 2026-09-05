@@ -298,10 +298,12 @@ func unescapeDQ(s string, strict bool, line int) (string, error) {
 // quoted scalar opening at s[0], or -1 if it is never closed. Escape-aware,
 // so `"a\""` closes at its last byte rather than the escaped inner `"`:
 //   - double quotes: a backslash escapes the next byte (§6.1.2);
-//   - single-quoted *values*: `\'` and `\\` are the only special sequences
-//     (§6.1.3), so a lone `\` is literal and `\\'` closes after two
-//     backslashes — pass singleQuoteEscape = false for single-quoted
-//     *keys*, which are fully literal (§5.2), where the first `'` closes.
+//   - single-quoted *values* (§6.1.3 "Backslash pairing"): scanning left
+//     to right, `\\` (two literal backslashes) and `\'` (an escaped quote)
+//     are each consumed as a two-character unit, so a lone `\` is literal
+//     and a closing `'` after an even backslash run closes the string.
+//     Pass singleQuoteEscape = false for single-quoted *keys*, which are
+//     fully literal (§5.2), where the first `'` closes.
 //
 // s[0] is assumed to be `'` or `"`. Byte-indexed: safe because `'`, `"`,
 // `\` are all single-byte ASCII and never a UTF-8 continuation byte.
@@ -378,8 +380,49 @@ func stripKeyQuotes(s string, strict bool, line int) (string, error) {
 	}
 	return s, nil
 }
+
+// stripComment removes a trailing `#` comment and collapses each `\#`
+// *outside* a quoted string to `#` (Core §6.1.4 — the escaped-hash rule is
+// for unquoted values only). Inside `"..."` / `'...'` the backslash is left
+// intact: `\#` there is an unknown double-quoted escape (§6.1.2) or a
+// literal backslash in a single-quoted string (§6.1.3). Finds the same
+// comment boundary as stripCommentKeepEscapes. The whitespace between the
+// value and the `#` is stripped with the project set (isTrimWhitespace),
+// not just ASCII space/tab — so a U+00A0 or FEFF before a comment does not
+// stay attached to the value, matching js `.trimEnd()`. Mirrors js
+// stripComment.
 func stripComment(s string) string {
-	return strings.ReplaceAll(stripCommentKeepEscapes(s), "\\#", "#")
+	q := byte(0)
+	esc := false
+	var out []byte
+	seg := 0
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if esc {
+			esc = false
+			continue
+		}
+		if q != 0 {
+			if c == '\\' {
+				esc = true
+			} else if c == q {
+				q = 0
+			}
+			continue
+		}
+		if c == '"' || c == '\'' {
+			q = c
+		} else if c == '\\' && i+1 < len(s) && s[i+1] == '#' {
+			out = append(out, s[seg:i]...)
+			out = append(out, '#')
+			i++
+			seg = i + 1
+		} else if c == '#' {
+			out = append(out, s[seg:i]...)
+			return trimRightWhitespace(string(out))
+		}
+	}
+	return string(append(out, s[seg:]...))
 }
 
 // stripCommentKeepEscapes removes a trailing `#` comment but leaves `\#`
@@ -410,7 +453,7 @@ func stripCommentKeepEscapes(s string) string {
 		} else if c == '\\' && i+1 < len(s) && s[i+1] == '#' {
 			i++
 		} else if c == '#' {
-			return strings.TrimRight(s[:i], " \t")
+			return trimRightWhitespace(s[:i])
 		}
 	}
 	return s

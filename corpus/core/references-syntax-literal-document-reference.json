@@ -1,0 +1,18 @@
+{
+  "id": "core.references-syntax.literal-document-reference",
+  "spec": "core",
+  "section": "6.1.1",
+  "description": "Core is reference-unaware (Appendix B): `${a}` in an unquoted value is ordinary literal text, even when a key `a` exists in the same document. (References 2.0 would resolve it — this case deliberately carries reference syntax and the runner skips the parse() cross-check for it, FR-6.)",
+  "input": "a: 1\nx: ${a}\n",
+  "expect": {
+    "result": {
+      "a": 1,
+      "x": "${a}"
+    }
+  },
+  "tags": [
+    "positive",
+    "strings",
+    "references-syntax"
+  ]
+}

@@ -225,6 +225,8 @@ A value enclosed in matching single quotes (`'...'`) is a string. Type coercion 
 
 Single-quoted strings have exactly one special sequence: `\'` produces a single quote character. All other characters, including backslashes, are literal. `\\` is two characters (backslash + backslash), not one backslash.
 
+**Backslash pairing.** When the closing quote is located, the content is scanned left to right and each backslash is taken together with the character after it: `\\` is a two-character run of literal backslashes, and `\'` is an escaped quote. The second backslash of a `\\` run therefore cannot combine with a following quote to form `\'`. A closing `'` preceded by an even number of backslashes (zero included) ends the string; a `'` preceded by an odd number of backslashes is the `\'` escape — so a single-quoted value whose content would otherwise end in an odd run of backslashes is an unterminated string (§10.1) and takes the fallback below.
+
 Inside single-quoted strings, `#` is never a comment.
 
 | Condition | Non-strict | Strict |

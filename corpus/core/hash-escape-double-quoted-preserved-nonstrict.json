@@ -1,0 +1,17 @@
+{
+  "id": "core.strings.hash-escape.double-quoted.non-strict",
+  "spec": "core",
+  "section": "6.1.2",
+  "description": "The `\\#` escaped-hash rule is for unquoted values only (§6.1.4). Inside a double-quoted string `\\#` is an unknown escape: non-strict keeps the backslash (§6.1.2).",
+  "input": "x: \"a\\#b\"\n",
+  "expect": {
+    "result": {
+      "x": "a\\#b"
+    }
+  },
+  "tags": [
+    "fallback",
+    "strings",
+    "escapes"
+  ]
+}

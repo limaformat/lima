@@ -94,10 +94,12 @@ export declare const parseSimpleScalarSpan: <V, M>(source: string, start: number
  * if it is never closed. Escape-aware, so `"a\""` closes at its last
  * character rather than the escaped inner `"`:
  *   - double quotes: a backslash escapes the next character (§6.1.2);
- *   - single-quoted *values*: `\'` and `\\` are the only special sequences
- *     (§6.1.3), so a lone `\` is literal and `\\'` closes after two
- *     backslashes — pass `singleQuoteEscape = false` for single-quoted
- *     *keys*, which are fully literal (§5.2), where the first `'` closes.
+ *   - single-quoted *values* (§6.1.3 "Backslash pairing"): scanning left
+ *     to right, `\\` (two literal backslashes) and `\'` (an escaped quote)
+ *     are each consumed as a two-character unit, so a lone `\` is literal
+ *     and a closing `'` after an even backslash run closes the string.
+ *     Pass `singleQuoteEscape = false` for single-quoted *keys*, which are
+ *     fully literal (§5.2), where the first `'` closes.
  * `s[0]` is assumed to be `'` or `"`.
  */
 export declare const closingQuoteIndex: (s: string, singleQuoteEscape?: boolean) => number;
@@ -124,8 +126,23 @@ export declare const unescapeDQ: (s: string, strict?: boolean, line?: number) =>
  * token's column is measured against (§2.4): the comment is not part of
  * the value (so its `${…}`-shaped text must not be scanned as a token),
  * but a `\#` before a token still occupies its two source columns.
+ *
+ * `trimEnd()` is exactly the project whitespace set (ECMAScript WhiteSpace
+ * + LineTerminator = `isTrimWhitespace`) — a U+00A0 / FEFF between the
+ * value and the `#` is not part of the value. The Rust and Go ports must
+ * use `is_trim_whitespace` here, not a host `trim_end` or `" \t"`.
  */
 export declare const stripCommentKeepEscapes: (val: string) => string;
+/**
+ * The value text with a trailing `#` comment removed and each `\#` *outside*
+ * a quoted string collapsed to `#` (Core §6.1.4 — the escaped-hash rule is
+ * defined for unquoted values only). Inside `"..."` / `'...'` the backslash
+ * is left intact: `\#` there is an unknown double-quoted escape (§6.1.2:
+ * strict throws, non-strict keeps it) or a literal backslash in a
+ * single-quoted string (§6.1.3). Finds the same comment boundary as
+ * `stripCommentKeepEscapes` — the two must agree, they annotate the same
+ * value.
+ */
 export declare const stripComment: (val: string) => string;
 /**
  * Strips a key's surrounding quotes — unescaping a double-quoted key

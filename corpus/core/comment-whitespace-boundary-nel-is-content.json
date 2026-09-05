@@ -1,0 +1,17 @@
+{
+  "id": "core.comments.whitespace-boundary.nel-is-content",
+  "spec": "core",
+  "section": "8",
+  "description": "U+0085 (NEL) is not in the project whitespace set and is not a line terminator (NL is U+000A only), so a U+0085 before a `#` stays as literal content and the `#` after it is still a comment. Identical across TS/Rust/Go.",
+  "input": "x: foo# c\n",
+  "expect": {
+    "result": {
+      "x": "foo"
+    }
+  },
+  "tags": [
+    "positive",
+    "comments",
+    "unicode-whitespace"
+  ]
+}

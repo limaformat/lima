@@ -1,0 +1,9 @@
+{
+  "id": "core.strings.single-quote.trailing-even-backslash-run",
+  "spec": "core",
+  "section": "6.1.3",
+  "description": "Backslashes are paired left to right when the closing quote is located (§6.1.3 'Backslash pairing'): a closing ' preceded by an even run of backslashes closes the string, and \\\\ stays as two literal backslashes.",
+  "input": "v: 'C:\\\\dir\\\\'\n",
+  "expect": { "result": { "v": "C:\\\\dir\\\\" } },
+  "tags": ["positive", "strings", "quoted", "escapes"]
+}

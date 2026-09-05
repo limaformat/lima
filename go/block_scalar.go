@@ -22,9 +22,18 @@ func buildBlockScalar(bodyLines []sourceLine, keyIndent int) (string, string, in
 	// strictly greater than the introducing key's. Empty lines between
 	// content lines belong regardless; the first non-empty line dedented to
 	// the key's column or less ends the scalar, `#` lines included.
+	//
+	// "Empty" is measured in ASCII spaces only (§3 structural whitespace),
+	// matching js/src/block-scalar.ts's `leadingSpaces(bl) === bl.length`
+	// and rust/src/block_scalar.rs. sourceLine.text already has trailing
+	// U+0020 stripped (core.go), so an all-spaces line is exactly "". A
+	// line whose only content is a non-ASCII space (U+00A0, U+2028, …) is
+	// literal content: it has zero leading ASCII spaces and ends the
+	// scalar. `trimWhitespace` here would wrongly treat it as blank and,
+	// worse, `text[cut:]` below would slice a multi-byte space mid-rune.
 	consumed := len(bodyLines)
 	for i, l := range bodyLines {
-		if trimWhitespace(l.text) == "" {
+		if l.text == "" {
 			continue
 		}
 		if l.indent <= keyIndent {
@@ -39,7 +48,7 @@ func buildBlockScalar(bodyLines []sourceLine, keyIndent int) (string, string, in
 	// uniformly from every line. No cap tied to the key's length.
 	minIndent := blockScalarMaxInt
 	for _, l := range lines {
-		if trimWhitespace(l.text) != "" && l.indent < minIndent {
+		if l.text != "" && l.indent < minIndent {
 			minIndent = l.indent
 		}
 	}
@@ -96,7 +105,7 @@ func blockScalarValue(raw string, keyIndent, keyLine int, lines []sourceLine, id
 		return nil, false, nil
 	}
 	var body []sourceLine
-	for *idx < len(lines) && (lines[*idx].indent > keyIndent || trimWhitespace(lines[*idx].text) == "") {
+	for *idx < len(lines) && (lines[*idx].indent > keyIndent || lines[*idx].text == "") {
 		body = append(body, lines[*idx])
 		*idx++
 	}

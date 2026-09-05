@@ -1,0 +1,19 @@
+{
+  "id": "core.keys.quoted.line-separator-is-a-key",
+  "spec": "core",
+  "section": "5.2",
+  "description": "U+2028 (LINE SEPARATOR) and U+2029 are ordinary quoted-key characters: Core §15.6 excludes only U+000A from single- and double-quoted-key characters. The key contains the separator literally.",
+  "input": "\"a b\": x\n'c d': y\n",
+  "expect": {
+    "result": {
+      "a b": "x",
+      "c d": "y"
+    }
+  },
+  "tags": [
+    "positive",
+    "keys",
+    "quoted",
+    "unicode-whitespace"
+  ]
+}

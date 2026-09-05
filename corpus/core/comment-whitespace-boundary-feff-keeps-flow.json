@@ -1,0 +1,21 @@
+{
+  "id": "core.comments.whitespace-boundary.feff-keeps-flow",
+  "spec": "core",
+  "section": "8",
+  "description": "A U+FEFF between a flow collection's closing `]` and a `#` comment is trimmed, so the value is still recognised as a flow sequence rather than falling back to a string.",
+  "input": "x: [a, b]﻿# c\n",
+  "expect": {
+    "result": {
+      "x": [
+        "a",
+        "b"
+      ]
+    }
+  },
+  "tags": [
+    "positive",
+    "comments",
+    "flow",
+    "unicode-whitespace"
+  ]
+}

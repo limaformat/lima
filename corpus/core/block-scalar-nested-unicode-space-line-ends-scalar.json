@@ -1,0 +1,20 @@
+{
+  "id": "core.block-scalar.nested-unicode-space-line-ends-scalar",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "The same rule under a nested key: a U+00A0-only line dedented to the introducing key's column ends the nested block scalar, and a following sibling key resumes.",
+  "input": "outer:\n  m: |\n    a\n \n  n: v\n",
+  "expect": {
+    "result": {
+      "outer": {
+        "m": "a",
+        "n": "v"
+      }
+    }
+  },
+  "tags": [
+    "positive",
+    "block-scalar",
+    "unicode-whitespace"
+  ]
+}

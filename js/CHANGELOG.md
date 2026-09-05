@@ -12,6 +12,76 @@ are both frozen regardless of what this file shows.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-09-08
+
+First independent whole-repo review of Lima, then a second review of the
+consolidated result. Nine rounds of Core 1.0 errata (`1.0.1`–`1.0.9`) and
+a cross-implementation rework of References 2.0 error positions, all
+fixing behaviour the specifications already required. The npm package
+version advances to `0.4.0` to align with the Rust crate and Go module.
+The Lima Core 1.0 and References 2.0 specification texts gain only
+non-normative clarifications (§5, §5.2, §6.1.3, error-api); no rule
+changed.
+
+The shared conformance corpus grows to 211 Core and 136 References 2.0
+cases (from 149 / 119). The frozen 1.0.0 baseline of 149 Core cases is
+byte-identical; every added case carries a `since` revision marker.
+
+### Changed
+
+- An unquoted key must now match the Core §5.1 grammar
+  (`[A-Za-z0-9_][A-Za-z0-9_:-]*`) in **every** mapping context — top level,
+  nested, and flow. Keys such as `a.b`, `($x)`, `${x}`, or a key with a
+  leading non-ASCII space are no longer recognised; the line or item is
+  skipped in both strict and non-strict mode. Previously some of these
+  were accepted as literal keys in nested or flow mappings. (errata 1.0.5)
+- `parseCore` no longer builds reference-position metadata — that work is
+  now confined to the `parse` / positioned path — restoring the Core hot
+  path to its pre-errata baseline.
+
+### Fixed
+
+- `|` literal block scalars: recognised under a nested key, not only at the
+  top level; the scalar now ends at the first line indented to the key's
+  column or less, so a dedented comment or freetext is no longer absorbed;
+  indentation trimming removes exactly the smallest common indent (no
+  `key.length + 2` cap, a one-space indent is handled). (errata 1.0.1)
+- Quoted-string lexing is escape-aware in every value position: `"a\""` and
+  `'a\''` are unterminated in flow and block contexts too; `"a: b": v` and
+  `"say \"hi\"": v` parse as a single key; an unquoted key with interior
+  whitespace makes its line or item unrecognised in nested and flow
+  mappings, matching the top level. (errata 1.0.2)
+- A comment line between a bare key and its nested block no longer drops
+  the block. (errata 1.0.3)
+- A block-sequence item's first bare key now aligns following sibling keys
+  at the key's own column, not the dash column. (errata 1.0.6)
+- A raw U+000A inside a quoted key is rejected (Core §15.6), the `\n`
+  escape is unaffected, and — corrected in 1.0.9 — U+2028 / U+2029 are
+  ordinary quoted-key characters (§15.6 excludes only U+000A), matching
+  the Rust and Go implementations. (errata 1.0.8 / 1.0.9)
+- A block-scalar line whose only content is a non-ASCII space (U+00A0,
+  U+2028, …) is no longer treated as blank in the Go implementation; it
+  ends the scalar, matching TypeScript and Rust. (errata 1.0.9)
+- `\#` is collapsed to `#` only in unquoted values (Core §6.1.4). Inside
+  `"..."` it is now an unknown escape — non-strict keeps the backslash,
+  strict throws `INVALID_ESCAPE` — and inside `'...'` a literal backslash.
+  (errata 1.0.9)
+- The whitespace between a value and a trailing `#` comment is stripped
+  with the full project whitespace set in all three implementations, so a
+  U+00A0 or U+FEFF before a comment no longer stays attached to the value
+  (Go and Rust previously used narrower sets). U+0085 is not in the set
+  and remains literal content. (errata 1.0.9)
+- References 2.0 error positions: `line` and `column` are the physical
+  position in the original source text, counted in Unicode code points and
+  identical across the TypeScript, Rust, and Go implementations.
+  Leading-tab expansion and `\#` escapes no longer shift a later token's
+  reported column — including inside a flow `[...]` / `{...}`.
+  `LimaError.column` is now populated on reference errors.
+- References 2.0 diagnostic ordering: an unresolved-reference or structural
+  error is attributed to the earliest participating source token,
+  including across flow-collection elements on one line and across a second
+  pure-reference copy.
+
 ## [0.3.1] — 2026-08-12
 
 ### Fixed

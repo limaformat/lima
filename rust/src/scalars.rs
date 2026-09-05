@@ -8,6 +8,7 @@
 //! in hand-written scanners, matching the char-code fast paths the TS
 //! source already prefers over its regexes for the same forms.
 
+use crate::chars::is_trim_whitespace;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
 use crate::value::{days_from_civil, Builder, Instant, ReferenceSource};
 
@@ -546,10 +547,12 @@ pub fn unescape_dq(s: &str, strict: bool, line: u32) -> Result<String, LimaError
 /// `None` if it is never closed. Escape-aware, so `"a\""` closes at its
 /// last byte rather than the escaped inner `"`:
 ///   - double quotes: a backslash escapes the next byte (§6.1.2);
-///   - single-quoted *values*: `\'` and `\\` are the only special sequences
-///     (§6.1.3), so a lone `\` is literal and `\\'` closes after two
-///     backslashes — pass `single_quote_escape = false` for single-quoted
-///     *keys*, which are fully literal (§5.2), where the first `'` closes.
+///   - single-quoted *values* (§6.1.3 "Backslash pairing"): scanning left
+///     to right, `\\` (two literal backslashes) and `\'` (an escaped quote)
+///     are each consumed as a two-character unit, so a lone `\` is literal
+///     and a closing `'` after an even backslash run closes the string.
+///     Pass `single_quote_escape = false` for single-quoted *keys*, which
+///     are fully literal (§5.2), where the first `'` closes.
 ///
 /// `s[0]` is assumed to be `'` or `"`. Byte-indexed: safe because `'`, `"`,
 /// `\` are all single-byte ASCII and never a UTF-8 continuation byte.
@@ -733,18 +736,50 @@ pub fn strip_comment_keep_escapes(val: &str) -> String {
             i += 1;
         } else if c == '#' {
             let cut: String = chars[..i].iter().collect();
-            return cut.trim_end().to_string();
+            // Project whitespace set, not Rust's `char::is_whitespace` — the
+            // latter trims U+0085 (NEL) and keeps U+FEFF, both wrong here.
+            return cut.trim_end_matches(is_trim_whitespace).to_string();
         }
         i += 1;
     }
     val.to_string()
 }
 
-/// Strips a trailing `#` comment — mirrors `js/src/scalars.ts`'s
-/// `stripComment`: quote-aware (a `#` inside `"..."`/`'...'` is not a
-/// comment marker) and `\#` is an escaped literal hash, not a comment start.
+/// Strips a trailing `#` comment and collapses each `\#` *outside* a quoted
+/// string to `#` (Core §6.1.4 — the escaped-hash rule is for unquoted values
+/// only). Inside `"..."` / `'...'` the backslash is left intact: `\#` there
+/// is an unknown double-quoted escape (§6.1.2) or a literal backslash in a
+/// single-quoted string (§6.1.3). Finds the same comment boundary as
+/// `strip_comment_keep_escapes`. Mirrors `js/src/scalars.ts`'s `stripComment`.
 pub fn strip_comment(val: &str) -> String {
-    strip_comment_keep_escapes(val).replace("\\#", "#")
+    let chars: Vec<char> = val.chars().collect();
+    let mut quote: Option<char> = None;
+    let mut out = String::new();
+    let mut seg = 0usize;
+    let mut i = 0usize;
+    while i < chars.len() {
+        let c = chars[i];
+        if let Some(q) = quote {
+            if c == '\\' {
+                i += 1;
+            } else if c == q {
+                quote = None;
+            }
+        } else if c == '"' || c == '\'' {
+            quote = Some(c);
+        } else if c == '\\' && chars.get(i + 1) == Some(&'#') {
+            out.extend(&chars[seg..i]);
+            out.push('#');
+            i += 1;
+            seg = i + 1;
+        } else if c == '#' {
+            out.extend(&chars[seg..i]);
+            return out.trim_end_matches(is_trim_whitespace).to_string();
+        }
+        i += 1;
+    }
+    out.extend(&chars[seg..]);
+    out
 }
 
 /// The physical `raw` form for a References 2.0 token's column: a trailing
@@ -915,5 +950,9 @@ mod tests {
         assert_eq!(strip_comment("\"a # b\" # real comment"), "\"a # b\"");
         assert_eq!(strip_comment("escaped \\# hash"), "escaped # hash");
         assert_eq!(strip_comment("no comment here"), "no comment here");
+        // FR-5: `\#` inside a quoted string keeps its backslash (§6.1.2/§6.1.3)
+        assert_eq!(strip_comment("\"a\\#b\""), "\"a\\#b\"");
+        assert_eq!(strip_comment("'a\\#b'"), "'a\\#b'");
+        assert_eq!(strip_comment("\"a\\#b\" # real"), "\"a\\#b\"");
     }
 }

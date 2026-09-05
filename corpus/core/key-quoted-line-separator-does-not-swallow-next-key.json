@@ -1,0 +1,19 @@
+{
+  "id": "core.keys.quoted.line-separator-does-not-swallow-next-key",
+  "spec": "core",
+  "section": "5.2",
+  "description": "A quoted key containing U+2028 is a single-line key that closes on its own line; the following line is a separate key, not consumed.",
+  "input": "\"a c\": 1\nd: 2\n",
+  "expect": {
+    "result": {
+      "a c": 1,
+      "d": 2
+    }
+  },
+  "tags": [
+    "positive",
+    "keys",
+    "quoted",
+    "unicode-whitespace"
+  ]
+}

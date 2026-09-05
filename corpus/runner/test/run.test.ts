@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(297)
+		expect(outcomes).toHaveLength(312)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -24,8 +24,8 @@ describe('runCorpus', () => {
 	it('passes the complete References 2.0 suite through the local adapter', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot, ['references-2.0'])
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(131)
-		expect(outcomes.filter((outcome) => outcome.classification === 'PASS')).toHaveLength(131)
+		expect(outcomes).toHaveLength(136)
+		expect(outcomes.filter((outcome) => outcome.classification === 'PASS')).toHaveLength(136)
 		expect(outcomes.filter((outcome) => outcome.classification === 'BLOCKED')).toHaveLength(0)
 		expect(outcomes.filter((outcome) => outcome.classification === 'FAIL')).toHaveLength(0)
 	})
@@ -42,6 +42,17 @@ describe('runCorpus', () => {
 		)
 		expect(crossCheckFailures).toEqual([])
 		expect(outcomes.every((o) => o.classification === 'PASS')).toBe(true)
+	})
+
+	it('does not cross-check a Core case that deliberately carries literal reference syntax against parse() (FR-6)', () => {
+		// `a: 1 / x: ${a}` is literal text in Core but a resolved reference in
+		// References 2.0 — the cross-check only holds for referenceless input.
+		// The case passes; without the guard it would FAIL with a "parse()"
+		// reason (parseCore -> {x:"${a}"}, parse -> {x:1}).
+		const { outcomes } = runCorpus(corpusRoot, ['core-1.0'])
+		const literalRef = outcomes.find((o) => o.id === 'core.references-syntax.literal-document-reference')
+		expect(literalRef?.classification).toBe('PASS')
+		expect(literalRef?.reasons.some((r) => r.startsWith('parse()'))).toBe(false)
 	})
 
 	/**
@@ -513,7 +524,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 297, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 312, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

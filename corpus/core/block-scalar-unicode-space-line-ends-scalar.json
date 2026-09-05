@@ -1,0 +1,11 @@
+{
+  "id": "core.block-scalar.unicode-space-line-ends-scalar",
+  "spec": "core",
+  "section": "6.1.5",
+  "description": "A line whose only content is a non-ASCII space (U+00A0) has zero leading ASCII spaces and is not an empty line, so it ends a top-level block scalar just like any other dedented content line. Core structural whitespace is ASCII space only.",
+  "input": "x: |\n  a\n \n  b\ny: z\n",
+  "expect": {
+    "result": { "x": "a", "y": "z" }
+  },
+  "tags": ["positive", "block-scalar", "unicode-whitespace"]
+}

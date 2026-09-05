@@ -16,25 +16,75 @@ type flowPart struct {
 	start int
 }
 
-// innerSource re-anchors src (the column of the container's opening `[`/`{`)
-// onto the first character of its trimmed inner string.
-func innerSource(src *referenceSource, raw string) *referenceSource {
-	if src == nil {
-		return nil
+// rawOffsetOf maps a byte offset in the decoded flow container `val` to the
+// corresponding offset in the physical container `raw`. The two differ only
+// by `\#` → `#` collapses outside quoted strings (stripComment keeps `\#`
+// inside quotes), so every `#` in `val` outside a quote is one such collapse
+// — `raw` has `\#` there. `#`, `\`, `"`, `'` are ASCII, so byte scanning is
+// safe (continuation bytes of a multi-byte rune are all >= 0x80).
+func rawOffsetOf(raw, val string, valOffset int) int {
+	ri, vi := 0, 0
+	q := byte(0)
+	for vi < valOffset && vi < len(val) {
+		c := val[vi]
+		if q != 0 {
+			if c == '\\' {
+				vi += 2
+				ri += 2
+				continue
+			}
+			if c == q {
+				q = 0
+			}
+			vi++
+			ri++
+			continue
+		}
+		if c == '"' || c == '\'' {
+			q = c
+		} else if c == '#' {
+			vi++
+			ri += 2 // '#' in the decoded container <= '\#' in raw
+			continue
+		}
+		vi++
+		ri++
 	}
-	body := raw[1 : len(raw)-1]
-	lead := len(body) - len(trimLeftWhitespace(body))
-	return &referenceSource{line: src.line, col: src.col + 1 + utf8.RuneCountInString(body[:lead]), tabAdjust: src.tabAdjust}
+	if ri > len(raw) {
+		ri = len(raw)
+	}
+	return ri
 }
 
-// elementSource is the referenceSource for a flow element starting at byte
-// byteStart within the container inner string: the inner-string column plus
-// the codepoint distance to the element (References §5).
-func elementSource(src *referenceSource, inner string, byteStart int) *referenceSource {
+// elementSource is the referenceSource for a flow element spanning bytes
+// [byteStart, byteEnd) of the decoded container `dec` — src.col (the column
+// of the container's opening `[`/`{`) plus the codepoint distance to the
+// element's start in the physical text, plus the physical element slice as
+// raw. So a token's reported position (§2.4) and §5 ordering are right even
+// when an earlier `\#` widened the source.
+func elementSource(src *referenceSource, dec string, byteStart, byteEnd int) *referenceSource {
 	if src == nil {
 		return nil
 	}
-	return &referenceSource{line: src.line, col: src.col + utf8.RuneCountInString(inner[:byteStart]), tabAdjust: src.tabAdjust}
+	raw := src.raw
+	if raw == "" {
+		raw = dec
+	}
+	rs := rawOffsetOf(raw, dec, byteStart)
+	re := rawOffsetOf(raw, dec, byteEnd)
+	return &referenceSource{
+		line:      src.line,
+		col:       src.col + utf8.RuneCountInString(raw[:rs]),
+		raw:       raw[rs:re],
+		tabAdjust: src.tabAdjust,
+	}
+}
+
+// innerByteOffset is the byte offset of the trimmed inner string within the
+// flow container `raw` (past `[`/`{` and any leading whitespace).
+func innerByteOffset(raw string) int {
+	body := raw[1 : len(raw)-1]
+	return 1 + len(body) - len(trimLeftWhitespace(body))
 }
 
 func flowParts(s string) []flowPart {
@@ -111,7 +161,7 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 			}
 			return parseScalar(raw, strict, line, captureReferences, src)
 		}
-		isrc := innerSource(src, raw)
+		innerOff := innerByteOffset(raw)
 		inner := trimWhitespace(raw[1 : len(raw)-1])
 		a := []*pvalue{}
 		if inner != "" {
@@ -132,7 +182,8 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 				if strings.HasPrefix(part, "[") {
 					return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow nesting at line %d: %q", line, part))
 				}
-				v, e := parseFlowOrScalar(part, strict, line, onWarning, captureReferences, elementSource(isrc, inner, fp.start))
+				es := elementSource(src, raw, innerOff+fp.start, innerOff+fp.start+len(part))
+				v, e := parseFlowOrScalar(part, strict, line, onWarning, captureReferences, es)
 				if e != nil {
 					return nil, e
 				}
@@ -148,7 +199,7 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 			}
 			return parseScalar(raw, strict, line, captureReferences, src)
 		}
-		isrc := innerSource(src, raw)
+		innerOff := innerByteOffset(raw)
 		inner := trimWhitespace(raw[1 : len(raw)-1])
 		m := []pentry{}
 		if inner != "" {
@@ -195,7 +246,9 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 				if strings.HasPrefix(rv, "[") || strings.HasPrefix(rv, "{") {
 					return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow nesting at line %d: %q", line, rv))
 				}
-				v, e := parseScalar(rv, strict, line, captureReferences, elementSource(isrc, inner, fp.start+sep+2+len(valuePart)-len(trimLeftWhitespace(valuePart))))
+				vStart := innerOff + fp.start + sep + 2 + len(valuePart) - len(trimLeftWhitespace(valuePart))
+				es := elementSource(src, raw, vStart, vStart+len(rv))
+				v, e := parseScalar(rv, strict, line, captureReferences, es)
 				if e != nil {
 					return nil, e
 				}

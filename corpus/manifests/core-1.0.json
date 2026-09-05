@@ -3,8 +3,8 @@
   "frozen": true,
   "baselineVersion": "1.0.0",
   "baselineCaseCount": 149,
-  "specVersion": "1.0.8",
-  "caseCount": 196,
+  "specVersion": "1.0.9",
+  "caseCount": 211,
   "cases": [
     {
       "path": "core/api-parse-core-never-resolves-references.json",
@@ -133,6 +133,12 @@
       "since": "1.0.0"
     },
     {
+      "path": "core/block-scalar-indented-unicode-space-is-content.json",
+      "id": "core.block-scalar.indented-unicode-space-is-content",
+      "sha256": "dbcca68b5d7943f2e887852b935dca267ec8d25a936c84c8d696bb0239ab4962",
+      "since": "1.0.9"
+    },
+    {
       "path": "core/block-scalar-internal-blank-line-preserved.json",
       "id": "core.block-scalar.internal-blank-line-preserved",
       "sha256": "19761d47c3c19f5dc548a49ddd39e6dddbf0087530ed58b50bdb00e06f92d2f3",
@@ -157,6 +163,12 @@
       "since": "1.0.1"
     },
     {
+      "path": "core/block-scalar-nested-unicode-space-line-ends-scalar.json",
+      "id": "core.block-scalar.nested-unicode-space-line-ends-scalar",
+      "sha256": "30969b2a687d3ce8e87a70e6b29c140db116d82ea54a4a6eecd0ce15758f3a7a",
+      "since": "1.0.9"
+    },
+    {
       "path": "core/block-scalar-single-space-indentation-removed.json",
       "id": "core.block-scalar.single-space-indentation-removed",
       "sha256": "3bb6ec8f8a78b8435dff9cf28d5b2985337ab7620888515aacd1bbca0de2b08e",
@@ -173,6 +185,12 @@
       "id": "core.block-scalar.trailing-blank-lines-stripped",
       "sha256": "7cd971bc1188bee78d3ba8503b6ad484f1a9004e95ca5d414cbc9778a1894a33",
       "since": "1.0.0"
+    },
+    {
+      "path": "core/block-scalar-unicode-space-line-ends-scalar.json",
+      "id": "core.block-scalar.unicode-space-line-ends-scalar",
+      "sha256": "1585cb914445d7574fda5920ba0e9f30f95c62c7b961c09cce0a919405a59f91",
+      "since": "1.0.9"
     },
     {
       "path": "core/block-sequence-item-bare-key-nested-block.json",
@@ -275,6 +293,24 @@
       "id": "core.document.comment-before-nested-block.no-content-follows",
       "sha256": "aa3989f10a4c04ecfdeb49711b79c91bdc6082290e1d670372263fafaa08d1b5",
       "since": "1.0.3"
+    },
+    {
+      "path": "core/comment-whitespace-boundary-feff-keeps-flow.json",
+      "id": "core.comments.whitespace-boundary.feff-keeps-flow",
+      "sha256": "80c883b4cc88e2ce9f7c9e921337ecad1dfa69f8fe56caab3e4df593284532e3",
+      "since": "1.0.9"
+    },
+    {
+      "path": "core/comment-whitespace-boundary-nbsp.json",
+      "id": "core.comments.whitespace-boundary.nbsp",
+      "sha256": "c3aa21a7cd60ce77aaf317455a8e711aead7133de4af8b63421c2bca39923c51",
+      "since": "1.0.9"
+    },
+    {
+      "path": "core/comment-whitespace-boundary-nel-is-content.json",
+      "id": "core.comments.whitespace-boundary.nel-is-content",
+      "sha256": "c0a104c85cce29cecfd56cb9d041f33eac605f9a8f6b2ee0bcef0feda2949dae",
+      "since": "1.0.9"
     },
     {
       "path": "core/comments-at-every-mapping-level.json",
@@ -595,10 +631,34 @@
       "since": "1.0.0"
     },
     {
+      "path": "core/hash-escape-double-quoted-preserved-nonstrict.json",
+      "id": "core.strings.hash-escape.double-quoted.non-strict",
+      "sha256": "3ac3b5f4163a4e3781b86db181b6b300bad2a055610d01871909d5cd52e9a0b5",
+      "since": "1.0.9"
+    },
+    {
+      "path": "core/hash-escape-double-quoted-strict.json",
+      "id": "core.strings.hash-escape.double-quoted.strict",
+      "sha256": "261ad8af638a2780ba7141be6fd9d992ab21d2db64dec4ad7cacf6a59808620d",
+      "since": "1.0.9"
+    },
+    {
+      "path": "core/hash-escape-in-quotes-does-not-block-comment.json",
+      "id": "core.strings.hash-escape.in-quotes-does-not-block-comment",
+      "sha256": "c40a97c52ab12c28e0de8fb2a398e844fc114eb933d1f847bb16e628ef66f025",
+      "since": "1.0.9"
+    },
+    {
       "path": "core/hash-escape-multiple-backslashes.json",
       "id": "core.strings.unquoted.hash-escape.multiple-backslashes",
       "sha256": "5f4a7840bb9ce8ec1c9c03eb6b322ffce55a63432d9fd380e4b8e479263be1bf",
       "since": "1.0.0"
+    },
+    {
+      "path": "core/hash-escape-single-quoted-literal.json",
+      "id": "core.strings.hash-escape.single-quoted.literal",
+      "sha256": "603fa8afd7ca9b390c283d55996c82e332e8ef28d10b57165bb77e01abbf447d",
+      "since": "1.0.9"
     },
     {
       "path": "core/hash-in-quotes-literal.json",
@@ -755,6 +815,18 @@
       "id": "core.keys.nested.unquoted-space-invalid",
       "sha256": "ad77a628012cd93ca1cf1eb27b5e9a42200c02d1aaa590301320867606ae66df",
       "since": "1.0.2"
+    },
+    {
+      "path": "core/key-quoted-line-separator-does-not-swallow-next-key.json",
+      "id": "core.keys.quoted.line-separator-does-not-swallow-next-key",
+      "sha256": "211be3dedbb787f50e28c5cf845e08e09c265a47306b5d47bac0109e877ea61e",
+      "since": "1.0.9"
+    },
+    {
+      "path": "core/key-quoted-line-separator-is-a-key.json",
+      "id": "core.keys.quoted.line-separator-is-a-key",
+      "sha256": "e484918c01a298e6f04983ad264743d16c8d72f4c9d8eaa353d0c9029f797a8d",
+      "since": "1.0.9"
     },
     {
       "path": "core/key-raw-newline-does-not-swallow-next-key.json",
@@ -991,6 +1063,12 @@
       "since": "1.0.0"
     },
     {
+      "path": "core/references-syntax-literal-document-reference.json",
+      "id": "core.references-syntax.literal-document-reference",
+      "sha256": "3d320f9e2e17e91f677686ec2441b3db423457a8705b7b503f719e85867fbcc7",
+      "since": "1.0.9"
+    },
+    {
       "path": "core/scalar-limit-above.json",
       "id": "core.limits.scalar.above",
       "sha256": "13eef906e0245fbd9d463997895f1d182334d1e6c33ed1138d49af9bf3869aae",
@@ -1001,6 +1079,18 @@
       "id": "core.strings.single-quote.apostrophe-escape",
       "sha256": "27b86d29f8d8d618b93d3aaf81b9854f5c094e0c1a194b97a0741ae4fd7af46b",
       "since": "1.0.0"
+    },
+    {
+      "path": "core/single-quote-trailing-even-backslash-run.json",
+      "id": "core.strings.single-quote.trailing-even-backslash-run",
+      "sha256": "4f6de03b405189170796e0d31e0c30b7990cc85a2bbd204c7b4eaf1c39d25a6c",
+      "since": "1.0.9"
+    },
+    {
+      "path": "core/single-quote-unterminated-escaped-quote-nonstrict.json",
+      "id": "core.strings.single-quote.unterminated-escaped-quote.non-strict",
+      "sha256": "10ac2bf9e08f2bbb55b8c6421071372b7f643ce217c0f0e187d88b257e22c543",
+      "since": "1.0.9"
     },
     {
       "path": "core/single-quoted-key-including-empty.json",

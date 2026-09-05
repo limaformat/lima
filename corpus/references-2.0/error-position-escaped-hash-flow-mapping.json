@@ -1,0 +1,23 @@
+{
+  "id": "references-2.error-position.escaped-hash-flow-mapping",
+  "spec": "references",
+  "section": "2.4",
+  "description": "The §2.4 physical-position rule holds inside a flow mapping value: `$` is at column 13 of the source line despite the `\\#` collapse in the decoded value.",
+  "input": "x: {a: q\\#r ${missing}}\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "token": "${missing}",
+      "code": "UNRESOLVED_REFERENCE",
+      "column": 13
+    }
+  },
+  "tags": [
+    "error-order",
+    "error"
+  ],
+  "specVersion": "2.0"
+}
