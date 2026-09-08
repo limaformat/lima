@@ -1,5 +1,7 @@
 # Lima
 
+**Website & documentation: [limaformat.dev](https://limaformat.dev)**
+
 [![npm version](https://img.shields.io/npm/v/%40limaformat%2Flima.svg)](https://www.npmjs.com/package/@limaformat/lima)
 [![crates.io version](https://img.shields.io/crates/v/lima.svg)](https://crates.io/crates/lima)
 

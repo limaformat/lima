@@ -934,9 +934,28 @@ review's FR-1…FR-6 are all fixed (see above). Core is at errata **1.0.9**
 (211 corpus cases), References 2.0 at **136**. No known conformance
 blocker remains.
 
-**Pushed 2026-09-08** — the 20-commit campaign is on `origin/main`
+**Shipped 2026-09-08.** The 20-commit campaign is on `origin/main`
 (`af7e439..e52cecd`), squashed to logical commits, retimed, CI green
-(#15 done). Left before 0.4.0 ships and the Core 1.0 freeze closes: tags
-`v0.4.0` / `rust/v0.4.0` / `go/v0.4.0`, `npm publish` (from `js/`),
-`cargo publish` (from `rust/`). README benchmark prose still needs a fresh
-measurement pass (separate follow-up).
+(#15 done). Tags `v0.4.0` / `rust/v0.4.0` / `go/v0.4.0` all on `e52cecd`.
+Published: `@limaformat/lima@0.4.0` (npm, `latest`), `lima 0.4.0`
+(crates.io), `github.com/limaformat/lima/go@v0.4.0` (Go proxy). One
+GitHub release — "Lima 0.4.0 — the 2026-09 review campaign" on `v0.4.0`,
+marked Latest, covering all three packages. Repo homepage set to
+`https://limaformat.dev`.
+
+Remaining, non-blocking: the README benchmark prose still cites 0.3.1
+figures and pre-campaign speedups — a fresh measurement pass is a
+separate follow-up.
+
+### Core 1.0 freeze — status
+
+Core 1.0 and References 2.0 are **Final**, unchanged in wording bar the
+non-normative clarifications listed above. The shared conformance corpus
+as of `v0.4.0` (211 Core through errata 1.0.9, 101 References 1.0, 136
+References 2.0) is the definitive 1.0 conformance suite; the frozen 1.0.0
+baseline (149 Core cases) is byte-identical and anchored by
+`BASELINE_DIGESTS`. All three reference implementations pass it with zero
+skips, on CI. Three independent reviews plus four re-review rounds found
+no remaining conformance blocker. Further Core 1.0 errata are not
+anticipated; any that arise ship additively as `1.0.10+` without touching
+the baseline.
