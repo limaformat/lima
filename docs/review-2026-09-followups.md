@@ -499,8 +499,13 @@ tested, zero divergence). Two corpus cases added as a regression guard
   budget-boundary graphs, both modes, against an uncached oracle
   (`__parseWithoutResolveCacheForTest`, module-internal, not exported from
   the package) — value, warnings, and full structured error all identical.
-- **15.** Verify the Go CI job added in `da292ff` on its first run (added
-  without a local Go toolchain). Push-time check.
+- **15. Done.** First real CI run on `origin/main` after the campaign
+  push (run 34255360307, 2026-09-08): all five jobs green, including the
+  new `rust (fmt, clippy, test + conformance corpus)` and `go (vet, test
+  + conformance corpus)` jobs on their first-ever run. Non-blocking
+  annotations only: an `actions/checkout`/`setup-go` Node 20 deprecation
+  notice, and a `setup-go` cache miss because the dependency-free Go
+  module has no `go.sum`.
 - **16. Done:** docs count 117→119 / "Draft" (commit `cbc2701`).
 
 ---
@@ -929,7 +934,9 @@ review's FR-1…FR-6 are all fixed (see above). Core is at errata **1.0.9**
 (211 corpus cases), References 2.0 at **136**. No known conformance
 blocker remains.
 
-Left before 0.4.0 ships and the Core 1.0 freeze closes: refresh the three
-CHANGELOG 0.4.0 sections to mention errata 1.0.9 / R2-069; `git-retime`;
-push `main`; verify the first Rust+Go CI run (#15); then tags
-`v0.4.0` / `rust/v0.4.0` / `go/v0.4.0`, `npm publish`, `cargo publish`.
+**Pushed 2026-09-08** — the 20-commit campaign is on `origin/main`
+(`af7e439..e52cecd`), squashed to logical commits, retimed, CI green
+(#15 done). Left before 0.4.0 ships and the Core 1.0 freeze closes: tags
+`v0.4.0` / `rust/v0.4.0` / `go/v0.4.0`, `npm publish` (from `js/`),
+`cargo publish` (from `rust/`). README benchmark prose still needs a fresh
+measurement pass (separate follow-up).
