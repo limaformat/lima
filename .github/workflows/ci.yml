@@ -109,3 +109,24 @@ jobs:
               console.log('pack smoke test OK')
             })
           "
+
+  vscode-extension:
+    name: editors/vscode (typecheck, grammar + diagnostics tests, bundle)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+        working-directory: editors/vscode
+      - run: bunx tsc --noEmit
+        working-directory: editors/vscode
+      # grammar.test.ts tokenises sample documents through vscode-textmate +
+      # vscode-oniguruma (the engine VS Code uses) and asserts scopes;
+      # diagnostics.test.ts runs the bundled parser over bad documents and
+      # checks the findings. Both guard against drift from the specs.
+      - run: bun test
+        working-directory: editors/vscode
+      # esbuild must be able to bundle src/extension.ts together with the
+      # parser it imports from ../../js/src — a broken import path fails here.
+      - run: bun run build
+        working-directory: editors/vscode

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Lima frontmatter (Markdown injection)",
+  "scopeName": "lima.frontmatter.injection",
+  "comment": "Highlights a Lima frontmatter block delimited by --- fences at the very start of a Markdown or MDX document. \\A anchors the opening fence to the first line so ordinary --- thematic breaks lower in the document are not affected.",
+  "injectionSelector": "L:text.html.markdown, L:source.mdx",
+  "patterns": [
+    { "include": "#lima-frontmatter" }
+  ],
+  "repository": {
+    "lima-frontmatter": {
+      "begin": "\\A(-{3})[ \\t]*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.frontmatter.begin.lima" }
+      },
+      "end": "^(-{3})[ \\t]*$",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.frontmatter.end.lima" }
+      },
+      "contentName": "meta.embedded.block.lima",
+      "patterns": [
+        { "include": "source.lima" }
+      ]
+    }
+  }
+}

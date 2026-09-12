@@ -1,0 +1,88 @@
+{
+  "name": "vscode-lima",
+  "displayName": "Lima",
+  "description": "Syntax highlighting and live diagnostics for Lima frontmatter — standalone .lima files and the frontmatter block of Markdown/MDX.",
+  "version": "0.1.0",
+  "publisher": "limaformat",
+  "license": "ISC",
+  "main": "./dist/extension.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/limaformat/lima.git",
+    "directory": "editors/vscode"
+  },
+  "homepage": "https://limaformat.dev",
+  "bugs": {
+    "url": "https://github.com/limaformat/lima/issues"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": ["Programming Languages", "Linters"],
+  "keywords": ["lima", "frontmatter", "yaml", "markdown"],
+  "activationEvents": [
+    "onLanguage:lima",
+    "onLanguage:markdown",
+    "onLanguage:mdx"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "lima",
+        "aliases": ["Lima", "lima"],
+        "extensions": [".lima"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lima",
+        "scopeName": "source.lima",
+        "path": "./syntaxes/lima.tmLanguage.json"
+      },
+      {
+        "path": "./syntaxes/lima.markdown-injection.json",
+        "scopeName": "lima.frontmatter.injection",
+        "injectTo": ["text.html.markdown", "source.mdx"],
+        "embeddedLanguages": {
+          "meta.embedded.block.lima": "lima"
+        }
+      }
+    ],
+    "configuration": {
+      "title": "Lima",
+      "properties": {
+        "lima.diagnostics.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Report Lima parse diagnostics in .lima files and Markdown/MDX frontmatter."
+        },
+        "lima.diagnostics.strict": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check in strict mode (recommended in an editor): duplicate keys, invalid dates, unknown escape sequences, and unterminated strings are reported as errors. Turn this off to match a non-strict runtime, which silently coerces those instead."
+        },
+        "lima.diagnostics.ignoreUnresolvedReferences": {
+          "type": "boolean",
+          "default": true,
+          "description": "Suppress unresolved-reference and partial diagnostics. The editor has no cross-document or partials context, so these are usually false positives."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "bun run esbuild.mjs",
+    "watch": "bun run esbuild.mjs --watch",
+    "prepare": "bun run esbuild.mjs",
+    "vscode:prepublish": "bun run esbuild.mjs --production",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.75.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.4.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
+  }
+}

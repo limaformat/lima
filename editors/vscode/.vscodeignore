@@ -1,0 +1,12 @@
+.vscode/**
+.gitignore
+bun.lock
+bun.lockb
+esbuild.mjs
+tsconfig.json
+src/**
+test/**
+node_modules/**
+**/*.map
+**/*.ts
+!dist/**

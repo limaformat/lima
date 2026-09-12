@@ -1,0 +1,185 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Lima",
+  "scopeName": "source.lima",
+  "fileTypes": ["lima"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#block-scalar" },
+    { "include": "#mapping-key" },
+    { "include": "#array-dash" },
+    { "include": "#line-continuation" },
+    { "include": "#value" }
+  ],
+  "repository": {
+    "comment": {
+      "comment": "Comment: # at start of line or after whitespace, running to end of line.",
+      "match": "(?:^|\\s)(#).*$",
+      "captures": {
+        "1": { "name": "punctuation.definition.comment.lima" }
+      },
+      "name": "comment.line.number-sign.lima"
+    },
+
+    "block-scalar": {
+      "comment": "Literal block scalar: exactly `|` as the complete inline value (Lima Core §15.7). `>` folded scalars are not supported.",
+      "match": "(?<=:\\s)(\\|)[ \\t]*(?:(#).*)?$",
+      "captures": {
+        "1": { "name": "keyword.operator.block-scalar.lima" },
+        "2": { "name": "comment.line.number-sign.lima" }
+      }
+    },
+
+    "line-continuation": {
+      "comment": "Lima Core §6.1.6: inside a `|` block, a line beginning with `^^` continues the previous line.",
+      "match": "^(\\s*)(\\^\\^)",
+      "captures": {
+        "2": { "name": "keyword.operator.line-continuation.lima" }
+      }
+    },
+
+    "mapping-key": {
+      "comment": "key: — unquoted, single-quoted, or double-quoted key followed by a colon and a space or end of line.",
+      "match": "^(\\s*)([A-Za-z0-9_][A-Za-z0-9_:\\-]*|'[^']*'|\"[^\"]*\")(\\s*)(:)(?=\\s|$)",
+      "captures": {
+        "2": { "name": "entity.name.tag.lima" },
+        "4": { "name": "punctuation.separator.key-value.lima" }
+      }
+    },
+
+    "array-dash": {
+      "comment": "Block sequence item marker: - at the start of a line.",
+      "match": "^(\\s*)(-)(?=\\s|$)",
+      "captures": {
+        "2": { "name": "punctuation.definition.list.begin.lima" }
+      }
+    },
+
+    "value": {
+      "patterns": [
+        { "include": "#reference-document" },
+        { "include": "#reference-partial" },
+        { "include": "#flow-sequence" },
+        { "include": "#flow-mapping" },
+        { "include": "#quoted-string-double" },
+        { "include": "#quoted-string-single" },
+        { "include": "#constant-null" },
+        { "include": "#constant-bool" },
+        { "include": "#date" },
+        { "include": "#number" }
+      ]
+    },
+
+    "reference-document": {
+      "comment": "Lima References 2.0 §2.1: ${document.path} reads a value from the current document. Inactive (literal) inside quoted strings.",
+      "match": "\\$\\{[A-Za-z0-9_][A-Za-z0-9_:\\-]*(?:\\.[A-Za-z0-9_][A-Za-z0-9_:\\-]*)*\\}",
+      "name": "variable.other.reference.document.lima"
+    },
+
+    "reference-partial": {
+      "comment": "Lima References 2.0 §2.2: $(partial.path) reads from the partials option.",
+      "match": "\\$\\([A-Za-z0-9_][A-Za-z0-9_:/\\-]*(?:\\.[A-Za-z0-9_][A-Za-z0-9_:\\-]*)*\\)",
+      "name": "variable.other.reference.partial.lima"
+    },
+
+    "flow-sequence": {
+      "comment": "Inline sequence: [a, b, c]",
+      "begin": "\\[",
+      "end": "\\]",
+      "beginCaptures": { "0": { "name": "punctuation.definition.sequence.begin.lima" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.sequence.end.lima" } },
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#reference-document" },
+        { "include": "#reference-partial" },
+        { "include": "#flow-sequence" },
+        { "include": "#flow-mapping" },
+        { "include": "#quoted-string-double" },
+        { "include": "#quoted-string-single" },
+        { "include": "#constant-null" },
+        { "include": "#constant-bool" },
+        { "include": "#date" },
+        { "include": "#number" },
+        { "match": ",", "name": "punctuation.separator.sequence.lima" }
+      ]
+    },
+
+    "flow-mapping": {
+      "comment": "Inline mapping: {key: val, key2: val2}",
+      "begin": "\\{",
+      "end": "\\}",
+      "beginCaptures": { "0": { "name": "punctuation.definition.mapping.begin.lima" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.mapping.end.lima" } },
+      "patterns": [
+        { "include": "#comment" },
+        {
+          "match": "([A-Za-z0-9_][A-Za-z0-9_:\\-]*|'[^']*'|\"[^\"]*\")(\\s*)(:)(?=\\s)",
+          "captures": {
+            "1": { "name": "entity.name.tag.lima" },
+            "3": { "name": "punctuation.separator.key-value.lima" }
+          }
+        },
+        { "include": "#reference-document" },
+        { "include": "#reference-partial" },
+        { "include": "#flow-sequence" },
+        { "include": "#flow-mapping" },
+        { "include": "#quoted-string-double" },
+        { "include": "#quoted-string-single" },
+        { "include": "#constant-null" },
+        { "include": "#constant-bool" },
+        { "include": "#date" },
+        { "include": "#number" },
+        { "match": ",", "name": "punctuation.separator.mapping.lima" }
+      ]
+    },
+
+    "quoted-string-double": {
+      "comment": "Lima Core §6.1.2. Only opens when the quote is at a value boundary, not mid-word — an unquoted value may contain a literal \" or '. Valid escapes: \\\\ \\\" \\/ \\n \\r \\t \\b \\f \\uXXXX \\UXXXXXXXX \\xXX; any other \\x is unknown (strict: error; non-strict: left literal).",
+      "begin": "(?<!\\w)\"",
+      "end": "\"",
+      "name": "string.quoted.double.lima",
+      "patterns": [
+        {
+          "match": "\\\\(?:[\"\\\\/nrtbf]|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|x[0-9a-fA-F]{2})",
+          "name": "constant.character.escape.lima"
+        },
+        {
+          "match": "\\\\.",
+          "name": "invalid.illegal.unknown-escape.lima"
+        }
+      ]
+    },
+
+    "quoted-string-single": {
+      "comment": "Lima Core §6.1.3. Only opens at a value boundary, not mid-word — otherwise an apostrophe in an unquoted value (\"YAML's\") would start a bogus string. Only special sequence is \\' (an escaped quote); \\\\ is a two-character literal run.",
+      "begin": "(?<!\\w)'",
+      "end": "'",
+      "name": "string.quoted.single.lima",
+      "patterns": [
+        { "match": "\\\\\\\\", "name": "constant.character.escape.lima" },
+        { "match": "\\\\'", "name": "constant.character.escape.lima" }
+      ]
+    },
+
+    "constant-null": {
+      "match": "(?<![\\w\\-])(null|~)(?![\\w\\-])",
+      "name": "constant.language.null.lima"
+    },
+
+    "constant-bool": {
+      "match": "(?<![\\w\\-])(true|false)(?![\\w\\-])",
+      "name": "constant.language.boolean.lima"
+    },
+
+    "date": {
+      "comment": "Lima Core §6.5.1: ISO 8601 (with optional time and offset), plus German DD.MM.YYYY and slash DD/MM/YYYY forms.",
+      "match": "(?<![\\w\\-])(?:\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}(?::\\d{2})?(?:Z|[+\\-]\\d{2}:\\d{2})?)?|\\d{1,2}[.\\/]\\d{1,2}[.\\/]\\d{4}(?:[T ]\\d{2}:\\d{2}(?::\\d{2})?)?)(?![\\w])",
+      "name": "constant.other.date.lima"
+    },
+
+    "number": {
+      "match": "(?<![\\w\\-.])-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+\\-]?\\d+)?(?![\\w\\-.])",
+      "name": "constant.numeric.lima"
+    }
+  }
+}
