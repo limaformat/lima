@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "publisher": "limaformat",
   "license": "ISC",
+  "icon": "icon.png",
   "main": "./dist/extension.js",
   "repository": {
     "type": "git",
@@ -75,12 +76,16 @@
     "watch": "bun run esbuild.mjs --watch",
     "prepare": "bun run esbuild.mjs",
     "vscode:prepublish": "bun run esbuild.mjs --production",
+    "package": "vsce package",
+    "publish:openvsx": "ovsx publish vscode-lima-0.1.0.vsix",
     "test": "bun test"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.75.0",
+    "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.24.0",
+    "ovsx": "^1.2.0",
     "typescript": "^5.4.0",
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.3.2"
