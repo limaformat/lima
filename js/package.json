@@ -7,7 +7,7 @@
   "author": "Michael Kortstiege",
   "repository": {
     "type": "git",
-    "url": "https://github.com/limaformat/lima",
+    "url": "git+https://github.com/limaformat/lima.git",
     "directory": "js"
   },
   "bugs": "https://github.com/limaformat/lima/issues",
