@@ -26,10 +26,12 @@
 //!
 //! ## Conformance
 //!
-//! Checked against the **entire** shared conformance corpus
-//! (all 149 Core, 101 frozen References 1.0, and 119 References 2.0 cases —
-//! 369 cases in total, with counts pinned by integration and private unit
-//! tests).
+//! Checked against the shared, language-neutral conformance corpus: 211
+//! Lima Core 1.0 cases (a byte-frozen 149-case 1.0.0 baseline plus
+//! additive errata through 1.0.9), 136 References 2.0 cases, and the
+//! 101-case frozen References 1.0 corpus — a regression target only; its
+//! resolver is not part of the published crate. All counts are pinned by
+//! the test suite.
 
 pub mod block;
 mod block_cursor;
