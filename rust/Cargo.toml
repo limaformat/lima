@@ -1,6 +1,6 @@
 [package]
 name = "lima"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "Lima frontmatter parser — LIMA Is Metadata Annotation"
 license = "ISC"
@@ -10,6 +10,7 @@ documentation = "https://docs.rs/lima"
 keywords = ["frontmatter", "parser", "yaml", "markdown"]
 categories = ["parser-implementations", "text-processing"]
 readme = "README.md"
+exclude = ["src/references.rs"]
 
 # No runtime dependencies — matches the TypeScript implementation's
 # dependency-free stance. Everything below is dev-only (fixture loading for

@@ -8,7 +8,7 @@
  *   - Code and comments counted separately, split via the TypeScript AST
  *     (never regex) — a comment is whatever `ts.getLeadingCommentRanges`
  *     attaches to a token; everything else is code.
- *   - Hand-authored source only, never a bundled/minified/generated build.
+ *   - Committed source only, never a bundled/minified/generated build.
  *   - Core vs. References is "actual imports, not file boundaries": a
  *     shared file contributes only the top-level declarations a given
  *     entry point actually reaches, not the whole file.

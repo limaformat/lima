@@ -11,6 +11,24 @@ and [Lima References
 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-1.0-spec.md)
 are both frozen regardless of what this file shows.
 
+## [0.5.0] — 2026-09-09
+
+Scope cleanup, matching `@limaformat/lima` 0.5.0 and the Rust crate. The
+frozen **References 1.0** resolver (`parseReferencesV1`) is confined to a
+`_test.go` file and is no longer compiled into consumer builds — it was
+never exported and only served the frozen 1.0 conformance corpus. The 1.0
+specification and its 101-case corpus stay in the repository as a frozen
+regression target.
+
+No changes to Core 1.0 or References 2.0 syntax, semantics, or public API.
+The release line advances to `go/v0.5.0` in step with the TypeScript
+package and Rust crate.
+
+### Changed
+
+- Documentation de-emphasises References 1.0 throughout: a briefly-published,
+  immediately-superseded early version, not a current target.
+
 ## [0.4.0] — 2026-09-08
 
 First independent whole-repo review of Lima, then a second review of the

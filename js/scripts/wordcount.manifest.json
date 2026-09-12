@@ -1,10 +1,10 @@
 {
   "buckets": {
     "lima-core-1.0": {
-      "description": "Everything reachable from parseCore() only — the nativeBuilder fast path. Run with --root pointed at the repo root (the default).",
+      "description": "Everything reachable from parseCore() — the nativeBuilder fast path. Three References 2.0 §2.4 positioned-source helpers that parseCore never executes (they are only reached inside a `wantSource` / `source === undefined` guard that is always false/undefined on this path) are attributed to References 2.0 even though they live in shared files: `stripCommentKeepEscapes`, `physicalRaw`, `rawOffsetOf`. `inlineSource` and `elementSource` stay here — parseCore does call them (they return `undefined` immediately when there is no positioned source). Run with --root pointed at the repo root (the default).",
       "entries": [
-        { "file": "js/src/block.ts" },
-        { "file": "js/src/flow.ts" },
+        { "file": "js/src/block.ts", "exclude": ["physicalRaw"] },
+        { "file": "js/src/flow.ts", "exclude": ["rawOffsetOf"] },
         { "file": "js/src/normalize.ts" },
         { "file": "js/src/errors.ts" },
         { "file": "js/src/scanner.ts" },
@@ -29,7 +29,7 @@
         },
         {
           "file": "js/src/scalars.ts",
-          "exclude": ["InsertedAt", "PositionedValue", "hasActiveReferences2", "positionedBuilder", "toPlainValue", "LNull", "scanReferenceTokens2"]
+          "exclude": ["InsertedAt", "PositionedValue", "hasActiveReferences2", "positionedBuilder", "toPlainValue", "LNull", "scanReferenceTokens2", "stripCommentKeepEscapes"]
         },
         { "file": "js/src/index.ts", "include": ["parseCore"] }
       ]
@@ -50,8 +50,10 @@
         { "file": "js/src/core.ts", "include": ["parseCoreWithPositions", "depthOfPositioned", "toNativeFromPositioned"] },
         {
           "file": "js/src/scalars.ts",
-          "include": ["InsertedAt", "PositionedValue", "hasActiveReferences2", "positionedBuilder", "toPlainValue", "LNull", "scanReferenceTokens2"]
+          "include": ["InsertedAt", "PositionedValue", "hasActiveReferences2", "positionedBuilder", "toPlainValue", "LNull", "scanReferenceTokens2", "stripCommentKeepEscapes"]
         },
+        { "file": "js/src/block.ts", "include": ["physicalRaw"] },
+        { "file": "js/src/flow.ts", "include": ["rawOffsetOf"] },
         { "file": "js/src/reference-tokens2.ts" },
         { "file": "js/src/references2.ts" },
         {
@@ -62,7 +64,7 @@
       ]
     },
     "js-yaml-load": {
-      "description": "js-yaml 5.2.3's load()-transitive source: parser, constructor, schema, tag resolvers under the default CORE_SCHEMA. Excludes dump()/serialization and the legacy_map.ts/real_map.ts tag variants CORE_SCHEMA doesn't use. Run with --root pointed at a local checkout of https://github.com/nodeca/js-yaml at tag 5.2.3 (src/ subdirectory) — not vendored in this repo. Reproduce with: git clone --depth 1 --branch 5.2.3 https://github.com/nodeca/js-yaml.git",
+      "description": "js-yaml 5.2.3's load()-transitive source: parser, constructor, and every schema and tag module statically reachable from load(). schema.ts imports all four exposed schemas' tag modules, so they are all counted regardless of which schema is the runtime default (CORE_SCHEMA). Excludes dump()/serialization and the legacy_map.ts/real_map.ts tag variants, which are only re-exported from index.ts and never reached from load(). Run with --root pointed at a local checkout of https://github.com/nodeca/js-yaml at tag 5.2.3 (src/ subdirectory) — not vendored in this repo. Reproduce with: git clone --depth 1 --branch 5.2.3 https://github.com/nodeca/js-yaml.git",
       "entries": [
         { "file": "load.ts" },
         { "file": "common/exception.ts" },

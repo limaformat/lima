@@ -183,12 +183,13 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 
 ## Core 1.0.x errata (2026-09)
 
-All 1.0.x rows were added for defects the 2026-09 independent review found
-(`docs/review-2026-09-followups.md`). No spec text changed — these cover
-behaviour Core always specified but no 1.0.0 fixture exercised. No 1.0.0
-case changed result. The `since` marker in `corpus/manifests/core-1.0.json`
-records each addition's revision; the 149-case 1.0.0 baseline stays
-byte-frozen.
+All 1.0.x rows were added for defects the 2026-09 independent reviews found
+(`docs/review-2026-09-followups.md`). No normative rule changed — these
+cover behaviour Core always specified but no 1.0.0 fixture exercised; the
+review added only non-normative clarifications (§5, §5.2, §6.1.3, and the
+error-api context fields). No 1.0.0 case changed result. The `since` marker
+in `corpus/manifests/core-1.0.json` records each addition's revision
+(1.0.1–1.0.9); the 149-case 1.0.0 baseline stays byte-frozen.
 
 ### Block scalars — C-218–C-224 (P0 #1)
 

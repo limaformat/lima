@@ -458,7 +458,8 @@ All date values represent a **UTC Instant**: a point in time in UTC with second 
 |----------|--------------|
 | JavaScript/TypeScript | `Date` (milliseconds always 0) |
 | JSON serialisation | RFC 3339 string (`2024-03-01T09:00:00Z`) |
-| Rust | To be defined in the Rust implementation document |
+| Rust | `Instant { epoch_seconds: i64 }` (seconds since the Unix epoch) |
+| Go | `Instant{ EpochSeconds int64 }` (seconds since the Unix epoch) |
 
 #### 6.5.4 Explicitly Not Recognised
 

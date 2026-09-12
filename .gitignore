@@ -1,5 +1,7 @@
 # JavaScript
 node_modules/
+# Build artifact: rebuilt by `prepack`/`pretest` and in CI; not a source of truth.
+js/dist/
 
 # Rust
 rust/target/

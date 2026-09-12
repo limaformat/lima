@@ -18,16 +18,28 @@ mean repeating that reconstruction.
   whichever project comments less look artificially smaller.
 - **AST-based comment/code split, never regex** — a comment is whatever
   `ts.getLeadingCommentRanges` attaches to a token.
-- **Hand-authored source only** — never a bundled/minified/generated build.
+- **Committed source only** — never a bundled/minified/generated build.
   Lima: `js/src/`. js-yaml: its own `src/`, never `dist/`.
-- **Core vs. References: actual imports, not file boundaries.** A shared
-  file (`value.ts`, `core.ts`, `scalars.ts`) contributes only the top-level
-  declarations a given entry point actually reaches — not the whole file.
+- **Core vs. References: what each entry point actually reaches, not file
+  boundaries.** A shared file (`value.ts`, `core.ts`, `scalars.ts`,
+  `block.ts`, `flow.ts`) contributes only the top-level declarations a given
+  entry point reaches — not the whole file. Three References 2.0 §2.4
+  source-position helpers that `parseCore` never executes —
+  `stripCommentKeepEscapes` and `physicalRaw` (only reached inside a
+  `wantSource` branch that is always false on the `parseCore` path) and
+  `rawOffsetOf` (behind an early `source === undefined` return) — live in
+  shared parser files but count as References. `inlineSource` and
+  `elementSource` stay in Core: `parseCore` does call them, they just
+  return `undefined` immediately when there is no positioned source.
 - **js-yaml scope: `load()`'s transitive imports only** — parser,
-  constructor, schema, tag resolvers under the default `CORE_SCHEMA`. Not
+  constructor, and every schema and tag module statically reachable from
+  `load()`. `schema.ts` imports all four exposed schemas' tag modules
+  (`FAILSAFE`/`JSON`/`CORE`/`YAML11`), so all 21 are counted regardless of
+  which schema is the runtime default (`CORE_SCHEMA`). Not
   `dump()`/serialization (Lima has no equivalent), not the `dist/` bundle
   (bundler boilerplate and stripped comments would bias the comparison), not
-  the `legacy_map.ts`/`real_map.ts` tag variants `CORE_SCHEMA` doesn't use.
+  the `legacy_map.ts`/`real_map.ts` tag variants, which are only re-exported
+  from `index.ts` and never reached from `load()`.
 - **Spec word counts**: `wc -w` on the raw specification Markdown.
 
 ## Running it
@@ -56,14 +68,18 @@ part of "the current public implementation" this table measures.
 
 ## Current reproduced values
 
+Current as of `@limaformat/lima` 0.5.0 (Core errata 1.0.9, References 2.0
+corpus at 136).
+
 | Measurement | Words |
 |---|---:|
-| Lima Core 1.0 specification | 7,602 |
-| Lima References 2.0 specification | 2,968 |
-| Lima Core implementation code | 6,954 |
-| Lima Core implementation comments | 2,940 |
-| Lima References 2.0 additions code | 3,489 |
-| Lima References 2.0 additions comments | 1,127 |
+| Lima Core 1.0 specification | 7,784 |
+| Lima References 2.0 specification | 3,018 |
+| Lima Core implementation code | 7,471 |
+| Lima Core implementation comments | 4,136 |
+| Lima References 2.0 additions code | 3,503 |
+| Lima References 2.0 additions comments | 1,305 |
+| npm tarball (`@limaformat/lima` 0.5.0) | 53,446 bytes (53.4 KB) |
 
 ## Calibration
 
@@ -124,7 +140,10 @@ dual-builder split changes shape again.
 
 ## Package size
 
-Not scripted — run `bun run build`, then `bun pm pack --destination <dir>`
-for Lima. The resulting 0.3.1 tarball is 42,874 bytes (42.9 KB), and `js/dist`
-must still match the committed output. The published js-yaml 5.2.3 tarball is
-338 KB; registry tarballs for a released version are immutable.
+Not scripted — from `js/`, run `bun run build` (so `js/dist` matches the
+committed output), then `npm pack --dry-run --json` and read `.size`. For
+`@limaformat/lima` 0.5.0 that is 53,446 bytes, i.e. 53.4 KB (decimal, the
+same unit as the js-yaml figure below). The published js-yaml 5.2.3 tarball
+is 338 KB; registry tarballs for a released version are immutable. The
+ratio is 338 / 53.4 ≈ 6.3×. (0.5.0 dropped ~6 KB by excluding the internal
+References 1.0 resolver from the build; 0.4.0 was 59.3 KB.)

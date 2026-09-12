@@ -146,8 +146,10 @@ export interface LoadedCorpus {
 
 /**
  * Loads every case in the selected versioned suite directories. The default
- * remains the frozen Core 1.0 + References 1.0 baseline. A single malformed
- * case is reported as a failure rather than aborting the whole load.
+ * is the current conformance target: Core 1.0 + References 2.0. The frozen
+ * References 1.0 baseline is still loadable on request (`--suite
+ * references-1.0`) as an internal regression guard. A single malformed case
+ * is reported as a failure rather than aborting the whole load.
  */
 export const SUITE_DIRECTORIES = {
 	'core-1.0': 'core',
@@ -157,7 +159,7 @@ export const SUITE_DIRECTORIES = {
 
 export type SuiteName = keyof typeof SUITE_DIRECTORIES
 
-export const DEFAULT_SUITES: readonly SuiteName[] = ['core-1.0', 'references-1.0']
+export const DEFAULT_SUITES: readonly SuiteName[] = ['core-1.0', 'references-2.0']
 
 export function loadCorpus(
 	corpusRoot: string,

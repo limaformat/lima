@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(312)
+		expect(outcomes).toHaveLength(347)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -524,7 +524,7 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 312, FAIL: 0, BLOCKED: 0 })
+		expect(counts).toEqual({ PASS: 347, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {
@@ -557,8 +557,9 @@ describe('runCorpus', () => {
 		// references.interpolation.mapping.error used to crash with a raw
 		// TypeError ("No default value" from String() on a prototype-free
 		// mapping) instead of being rejected per References §3.5. Regression
-		// guard for the fix.
-		const { outcomes } = runCorpus(corpusRoot)
+		// guard for the fix — a frozen References 1.0 case, not in the default
+		// target, so load it explicitly.
+		const { outcomes } = runCorpus(corpusRoot, ['references-1.0'])
 		const outcome = outcomes.find((o) => o.id === 'references.interpolation.mapping.error')
 		expect(outcome?.classification).toBe('PASS')
 	})

@@ -103,11 +103,11 @@ describe('loadCase', () => {
 })
 
 describe('loadCorpus', () => {
-	it('loads every real case under core/ and references/ with zero failures', () => {
+	it('loads the default target (Core 1.0 + References 2.0) with zero failures', () => {
 		const { cases, failures } = loadCorpus(corpusRoot)
 		expect(failures).toEqual([])
-		// 149 Core 1.0.0 + 62 Core 1.0.1-1.0.9 (2026-09 review errata) + 101 References 1.0.
-		expect(cases.length).toBe(312)
+		// 149 Core 1.0.0 + 62 Core 1.0.1-1.0.9 (2026-09 review errata) + 136 References 2.0.
+		expect(cases.length).toBe(347)
 	})
 
 	it('produces unique, stable case IDs', () => {
@@ -125,6 +125,13 @@ describe('loadCorpus', () => {
 		expect(cases.find((c) => c.id === 'references-2.activity.block-sequence-item')?.api).toBe('parse')
 		expect(cases.find((c) => c.id === 'references-2.api.parse-references.deprecated-alias')?.api).toBe('references')
 		expect(new Set(cases.map((c) => c.id)).size).toBe(136)
+	})
+
+	it('still loads the frozen References 1.0 baseline on request (internal regression guard)', () => {
+		const { cases, failures } = loadCorpus(corpusRoot, ['references-1.0'])
+		expect(failures).toEqual([])
+		expect(cases).toHaveLength(101)
+		expect(cases.every((c) => c.spec === 'references' && c.specVersion !== '2.0')).toBe(true)
 	})
 
 	it('defaults every spec: "core" case to api: "core" — the public parseCore entry point, not a References resolver', () => {

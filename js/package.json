@@ -1,6 +1,6 @@
 {
   "name": "@limaformat/lima",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Lima frontmatter parser — LIMA Is Metadata Annotation",
   "keywords": ["frontmatter", "parser", "yaml", "markdown", "metadata"],
   "homepage": "https://limaformat.dev",
@@ -23,6 +23,7 @@
   "engines": { "node": ">=18" },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "prepack": "bun run build",
     "pretest": "bun run build",
     "test": "bun test",
     "typecheck": "tsc --noEmit",

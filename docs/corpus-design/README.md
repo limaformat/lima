@@ -1,7 +1,12 @@
 # Lima Conformance Corpus – Design Package
 
-**Status:** implemented — frozen 250-case Core/References 1.0 corpus plus
-a separate 119-case References 2.0 final corpus; counts are pinned by tests.
+**Status:** implemented — a byte-frozen 149-case Core 1.0.0 baseline with
+additive Core errata through 1.0.9 on top (211 Core cases total), plus a
+separate 136-case References 2.0 final corpus; all counts are pinned by
+tests. The baseline also includes 101 byte-frozen References 1.0 cases: that
+extension was published briefly in mid-2026 and superseded almost immediately
+by References 2.0, so the 1.0 corpus is kept and still run as a regression
+guard on internal code, not as a conformance target anyone is asked to claim.
 Verified from `corpus/runner/` with the suite commands described below. This
 document is the design rationale the corpus was
 built from; §11's "Implementation order" is a historical record of how
@@ -32,7 +37,7 @@ case-name.json   # metadata, options, and expectation; refers to the
                   # sidecar via the "inputFile" field instead of "input"
 ```
 
-As of this writing, all 250 cases use the inline form; none currently use a
+As of this writing, every case uses the inline form; none currently use a
 `.lima` sidecar. The sidecar mechanism (`inputFile`, handled by
 `corpus/runner/src/loader.ts`) stays fully implemented and covered by its
 own test (`corpus/runner/test/loader.test.ts`) so it is available the next
@@ -439,11 +444,12 @@ bun run run:references-1
 bun run run:references-2
 ```
 
-The default `bun run run` remains the historical Core 1.0 plus References 1.0
-baseline. The local TypeScript adapter also runs all References 2.0 cases; an
-adapter without 2.0 support may report its References-API cases as `BLOCKED`.
-This does not change the 250/250 1.0 result. A 2.0 conformance target consists
-of Core 1.0 plus References 2.0, not References 1.0.
+The default `bun run run` runs the current conformance target: Core 1.0
+(211 cases through errata 1.0.9) plus References 2.0 (136). `bun run
+run:references-1` still runs the frozen References 1.0 baseline (101) as an
+internal regression guard, but it is not part of the default and not a
+target anyone claims. TypeScript, Rust, and Go all pass the default target
+through their public APIs.
 
 `docs/corpus-design/` (originally `testkorpus-design/`, filed under `docs/`
 since it is non-normative but, unlike an archive, still actively

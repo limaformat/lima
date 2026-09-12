@@ -12,6 +12,27 @@ are both frozen regardless of what this file shows.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-09-09
+
+Scope cleanup. The frozen **References 1.0** resolver is no longer bundled in
+the published package — it was never a public entry point (`parseReferences`
+and `parse` are References 2.0) and only existed to run the frozen 1.0
+conformance corpus, which now does so against the repository source. The
+1.0 specification and its 101-case corpus stay in the repository as a
+frozen regression target.
+
+No changes to Core 1.0 or References 2.0 syntax, semantics, or public API.
+The version advances to `0.5.0` in step with the Rust crate and Go module.
+
+### Changed
+
+- The published tarball drops from ~59.3 KB to ~53.4 KB — the internal
+  References 1.0 resolver (`references.ts`) is excluded from the build.
+- Documentation de-emphasises References 1.0 throughout: it is presented as
+  a briefly-published, immediately-superseded early version, not a current
+  target. The "Migrating References 1.0 to 2.0" guide is removed (see git
+  history if you need it).
+
 ## [0.4.0] — 2026-09-08
 
 First independent whole-repo review of Lima, then a second review of the

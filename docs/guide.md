@@ -516,7 +516,5 @@ version, until that's a documented, stable export.
 - [Lima Core 1.0](lima-core-1.0-spec.md) and the
   [Lima References 2.0](lima-references-2.0-spec.md) — the normative specs;
   this guide simplifies, they decide.
-- [Migrating References 1.0 to 2.0](migrating-references-1-to-2.md) — syntax
-  and API changes for existing users.
 - [Repository README](../README.md) — why Lima exists, the case against
   YAML, security rationale.
