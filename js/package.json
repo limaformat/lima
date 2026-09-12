@@ -26,6 +26,7 @@
     "prepack": "bun run build",
     "pretest": "bun run build",
     "test": "bun test",
+    "pretypecheck": "bun run build",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "bun run typecheck && bun test",
     "bench": "bun run bench/index.ts",
