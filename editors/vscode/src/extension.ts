@@ -9,7 +9,7 @@
  */
 
 import * as vscode from "vscode";
-import { DEBOUNCE_MS } from "../../shared/constants.js";
+import { DEBOUNCE_MS, MARKDOWN_LANGS } from "../../shared/constants.js";
 import { KeyedDebouncer } from "../../shared/debounce.js";
 import { check, type LimaFinding } from "../../shared/diagnostics.js";
 import { limaDocumentText } from "../../shared/document-text.js";
@@ -49,8 +49,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const documentSelector: vscode.DocumentSelector = [
     { language: "lima" },
-    { language: "markdown" },
-    { language: "mdx" },
+    ...[...MARKDOWN_LANGS].map((language) => ({ language })),
   ];
   context.subscriptions.push(
     vscode.languages.registerHoverProvider(documentSelector, {
