@@ -1,0 +1,27 @@
+<idea-plugin>
+    <id>format.lima.jetbrains</id>
+    <name>Lima Language Server</name>
+    <vendor url="https://limaformat.dev">Lima</vendor>
+
+    <description><![CDATA[
+        Registers the Lima Language Server for <code>.lima</code> files through
+        LSP4IJ, providing diagnostics, hover, and go to definition with no
+        manual language-server configuration.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.redhat.devtools.lsp4ij</depends>
+
+    <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
+        <server id="limaLanguageServer"
+                name="Lima Language Server"
+                factoryClass="format.lima.jetbrains.LimaLanguageServerFactory">
+            <description><![CDATA[
+                Diagnostics and document-reference navigation for Lima files.
+            ]]></description>
+        </server>
+        <fileNamePatternMapping patterns="*.lima"
+                                serverId="limaLanguageServer"
+                                languageId="lima"/>
+    </extensions>
+</idea-plugin>
