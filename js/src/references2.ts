@@ -22,10 +22,14 @@ type Meta = Record<string, unknown>
 const PARTIAL_NAME = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*'
 const PARTIAL_NAME_RE = new RegExp(`^${PARTIAL_NAME}$`)
 const MAX_EDGES = 3
+// Looking up the root path is itself the first reference edge; recursion into
+// that root therefore gets the public resolver's remaining two-edge budget.
+const TARGET_EDGE_BUDGET = MAX_EDGES - 1
 // Positioned document maps are immutable after parsing. Cache the expensive
 // whole-document post-resolution limit check across hover/definition lookups
 // without retaining maps after their editor-version cache is discarded.
-const referenceResourceValidity = new WeakMap<Map<string, PositionedValue>, boolean>()
+type ReferenceResourceStatus = 'valid' | 'invalid' | 'unverifiable-partials'
+const referenceResourceStatuses = new WeakMap<Map<string, PositionedValue>, Exclude<ReferenceResourceStatus, 'unverifiable-partials'>>()
 
 type SourceDiagnostic = LimaDiagnostic & { line: number; offset: number }
 type Context = { diagnostics: SourceDiagnostic[]; cache?: WeakMap<PositionedValue, Map<number, Resolution>> }
@@ -75,14 +79,21 @@ const documentTarget = (root: Map<string, PositionedValue>, path: string): { roo
  * and edge budget used by the public References 2.0 parser. The returned
  * positioned value retains the definition site's source line.
  */
+export type DocumentReferenceTargetResolution =
+	| { status: 'resolved'; target: PositionedValue }
+	| { status: 'unverifiable-partials' }
+	| { status: 'unresolved' }
+
 export const resolveDocumentReferenceTarget = (
 	parsed: PositionedReferenceParse,
 	path: string,
-): PositionedValue | undefined => {
+): DocumentReferenceTargetResolution => {
 	const { document } = parsed
 	const target = documentTarget(document, path)
-	if (target === undefined) return undefined
-	if (!documentWithinReferenceResourceLimits(parsed)) return undefined
+	if (target === undefined) return { status: 'unresolved' }
+	const resourceStatus = documentReferenceResourceStatus(parsed)
+	if (resourceStatus === 'unverifiable-partials') return { status: resourceStatus }
+	if (resourceStatus === 'invalid') return { status: 'unresolved' }
 	const ctx: Context = { diagnostics: [], cache: new WeakMap() }
 	const stack = new Set<PositionedValue>([target.root])
 	const resolved = resolveNode(
@@ -90,11 +101,14 @@ export const resolveDocumentReferenceTarget = (
 		document,
 		new Map(),
 		ctx,
-		MAX_EDGES - 1,
+		TARGET_EDGE_BUDGET,
 		stack,
 	)
-	if (!resolved.complete || ctx.diagnostics.length > 0) return undefined
-	return lookupPath(resolved.value, target.tail)
+	if (!resolved.complete || ctx.diagnostics.length > 0) return { status: 'unresolved' }
+	const selected = lookupPath(resolved.value, target.tail)
+	return selected === undefined
+		? { status: 'unresolved' }
+		: { status: 'resolved', target: selected }
 }
 
 const resolveDocument = (
@@ -141,15 +155,15 @@ const assertResolvedDocumentResourceLimits = (
 	return finalized
 }
 
-const documentWithinReferenceResourceLimits = (
+const documentReferenceResourceStatus = (
 	parsed: PositionedReferenceParse,
-): boolean => {
+): ReferenceResourceStatus => {
 	// Partial values are supplied by caller code and can change whole-document
 	// depth/node limits. With no file convention for them, editor tooling cannot
 	// prove that even an unrelated document reference is safe to resolve.
-	if (parsed.references.some((reference) => reference.partialPath !== undefined)) return false
+	if (parsed.references.some((reference) => reference.partialPath !== undefined)) return 'unverifiable-partials'
 	const { document } = parsed
-	const cached = referenceResourceValidity.get(document)
+	const cached = referenceResourceStatuses.get(document)
 	if (cached !== undefined) return cached
 	const ctx: Context = { diagnostics: [], cache: new WeakMap() }
 	const resolved = resolveDocument(document, new Map(), ctx)
@@ -162,8 +176,9 @@ const documentWithinReferenceResourceLimits = (
 			valid = false
 		}
 	}
-	referenceResourceValidity.set(document, valid)
-	return valid
+	const status = valid ? 'valid' : 'invalid'
+	referenceResourceStatuses.set(document, status)
+	return status
 }
 
 const lookupPartial = (partials: Map<string, PositionedValue>, path: string): PositionedValue | undefined => {

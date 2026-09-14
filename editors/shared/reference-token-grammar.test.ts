@@ -8,9 +8,11 @@ const CASES: { token: string; kind: TokenKind; valid: boolean }[] = [
   { token: "${key}", kind: "document", valid: true },
   { token: "${site.default.claim}", kind: "document", valid: true },
   { token: "${a:b-c_1.0}", kind: "document", valid: true },
+  { token: "${_private.9lives}", kind: "document", valid: true },
   { token: "$(key)", kind: "partial", valid: true },
   { token: "$(people/alice.name)", kind: "partial", valid: true },
   { token: "$(a:b-c/path.more:x)", kind: "partial", valid: true },
+  { token: "$(_root/name-space:part.child_2)", kind: "partial", valid: true },
   { token: "$key", kind: "document", valid: false },
   { token: "${}", kind: "document", valid: false },
   { token: "${.key}", kind: "document", valid: false },
@@ -20,6 +22,8 @@ const CASES: { token: string; kind: TokenKind; valid: boolean }[] = [
   { token: "$()", kind: "partial", valid: false },
   { token: "$(key..value)", kind: "partial", valid: false },
   { token: "$(key.value/path)", kind: "partial", valid: false },
+  { token: "$(-leading)", kind: "partial", valid: false },
+  { token: "$(name.:child)", kind: "partial", valid: false },
   { token: "prefix$(key)", kind: "partial", valid: false },
 ];
 

@@ -146,7 +146,7 @@ describe('References 2.0 public API', () => {
 		}
 
 		const parsed = parseCoreWithPositionedReferences(input, { strict: false })
-		expect(resolveDocumentReferenceTarget(parsed, 'safe')).toBeUndefined()
+		expect(resolveDocumentReferenceTarget(parsed, 'safe')).toEqual({ status: 'unverifiable-partials' })
 	})
 
 	it('records the source line of an active token inside a block scalar', () => {

@@ -68,6 +68,18 @@ export const codepointOffsetToUtf16 = (text: string, codepointOffset: number): n
 	return utf16Offset
 }
 
+/** Converts a 0-based JavaScript/LSP UTF-16 offset to a codepoint offset. */
+export const utf16OffsetToCodepoint = (text: string, utf16Offset: number): number => {
+	let currentUtf16 = 0
+	let codepoints = 0
+	const limit = Math.min(Math.max(utf16Offset, 0), text.length)
+	while (currentUtf16 < limit) {
+		currentUtf16 += utf16WidthAt(text, currentUtf16)
+		codepoints++
+	}
+	return codepoints
+}
+
 /** Splice points (decoded value order): token text, UTF-16 index, path. */
 const scanDecoded = (value: string): DecodedMatch[] => {
 	REFERENCE_2.lastIndex = 0

@@ -98,7 +98,19 @@ test("does not confidently resolve a document path when any partial is present",
   const reference = referenceAtPosition(text, { line: 2, character: 10 });
   expect(reference?.path).toBe("safe");
   expect(reference?.definition).toBeUndefined();
-  expect(reference?.hover).toContain("No matching resolvable document path");
+  expect(reference?.hover).toContain("partial values supplied by the caller");
+});
+
+test("explains when a document reference target chains through a partial", () => {
+  const text = "source: $(giant)\nprobe: ${source}\nmissing: ${nowhere}\n";
+  const reference = referenceAtPosition(text, { line: 1, character: 10 });
+  expect(reference?.path).toBe("source");
+  expect(reference?.definition).toBeUndefined();
+  expect(reference?.hover).toContain("partial values supplied by the caller");
+
+  const missing = referenceAtPosition(text, { line: 2, character: 12 });
+  expect(missing?.path).toBe("nowhere");
+  expect(missing?.hover).toContain("No matching resolvable document path");
 });
 
 test("ignores quoted and commented reference-shaped text", () => {
@@ -111,6 +123,22 @@ test("converts the scanner's codepoint column to a UTF-16 editor position", () =
   expect(reference?.range).toEqual({
     start: { line: 7, character: 10 },
     end: { line: 7, character: 18 },
+  });
+});
+
+test("finds a later token without rescanning each earlier UTF-16 prefix", () => {
+  const text = "title: first\nsecond: next\nrefs: 😀 ${title} / ${second}\n";
+  const reference = referenceAtPosition(text, { line: 2, character: 23 });
+  expect(reference).toMatchObject({
+    path: "second",
+    range: {
+      start: { line: 2, character: 20 },
+      end: { line: 2, character: 29 },
+    },
+    definition: {
+      start: { line: 1, character: 0 },
+      end: { line: 1, character: 0 },
+    },
   });
 });
 

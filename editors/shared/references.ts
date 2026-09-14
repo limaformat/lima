@@ -5,9 +5,13 @@ import {
 } from "../../js/src/core.js";
 import {
   codepointOffsetToUtf16,
+  utf16OffsetToCodepoint,
   type ReferenceToken2,
 } from "../../js/src/reference-tokens2.js";
-import { resolveDocumentReferenceTarget } from "../../js/src/references2.js";
+import {
+  resolveDocumentReferenceTarget,
+  type DocumentReferenceTargetResolution,
+} from "../../js/src/references2.js";
 import { limaDocumentText } from "./document-text.js";
 import type { RangeLike } from "./finding-range.js";
 
@@ -43,7 +47,7 @@ type ReferenceIndex = PositionedReferenceParse & {
   referencesByLine: Map<number, ReferenceToken2[]>;
   lines: string[];
   strictInvalid: boolean;
-  targets: Map<string, PositionedValue | undefined>;
+  targets: Map<string, DocumentReferenceTargetResolution>;
 };
 
 type CachedDocument = {
@@ -164,19 +168,18 @@ function referenceFromIndex(
   const localLine = position.line - lineOffset;
   if (localLine < 0) return null;
 
+  const line = index.lines[localLine] ?? "";
+  const cursorCodepoint = utf16OffsetToCodepoint(line, position.character);
   for (const token of index.referencesByLine.get(localLine) ?? []) {
-    const tokenLine = token.line - 1;
-    const startCharacter = codepointOffsetToUtf16(
-      index.lines[tokenLine] ?? "",
-      token.offset,
-    );
-    const endCharacter = startCharacter + token.token.length;
+    // Reference-token syntax is ASCII, so its UTF-16 and codepoint lengths
+    // are identical. Rule out non-matches before converting the token offset.
     if (
-      position.character < startCharacter ||
-      position.character >= endCharacter
+      cursorCodepoint < token.offset ||
+      cursorCodepoint >= token.offset + token.token.length
     ) {
       continue;
     }
+    const startCharacter = codepointOffsetToUtf16(line, token.offset);
     return describeReference(index, token, lineOffset, startCharacter);
   }
 
@@ -195,6 +198,9 @@ function indexReferencesByLine(
     } else {
       byLine.set(line, [reference]);
     }
+  }
+  for (const lineReferences of byLine.values()) {
+    lineReferences.sort((left, right) => left.offset - right.offset);
   }
   return byLine;
 }
@@ -236,14 +242,26 @@ function describeReference(
         "parse in the configured strict mode.",
     };
   }
-  let target: PositionedValue | undefined;
+  let resolution: DocumentReferenceTargetResolution;
   if (index.targets.has(path)) {
-    target = index.targets.get(path);
+    resolution = index.targets.get(path)!;
   } else {
-    target = resolveDocumentReferenceTarget(index, path);
-    index.targets.set(path, target);
+    resolution = resolveDocumentReferenceTarget(index, path);
+    index.targets.set(path, resolution);
   }
-  if (target === undefined) {
+  if (resolution.status === "unverifiable-partials") {
+    return {
+      kind: "document",
+      path,
+      token: token.token,
+      range,
+      hover:
+        `**Lima document reference** \`${token.token}\`\n\n` +
+        `Target \`${path}\` exists, but resolution cannot be verified because ` +
+        "this document contains partial values supplied by the caller.",
+    };
+  }
+  if (resolution.status === "unresolved") {
     return {
       kind: "document",
       path,
@@ -255,6 +273,7 @@ function describeReference(
     };
   }
 
+  const target = resolution.target;
   const definitionLine = Math.max(0, target.line - 1 + lineOffset);
   return {
     kind: "document",
