@@ -1,13 +1,7 @@
-/**
- * Tests the pure diagnostic layer (src/diagnostics.ts + src/frontmatter.ts)
- * against the real bundled parser. No `vscode` dependency.
- *
- *   bun test
- */
+/** Tests the shared diagnostic layer against the real Lima parser. */
 
 import { expect, test } from "bun:test";
-import { check } from "../src/diagnostics.js";
-import { extractFrontmatter } from "../src/frontmatter.js";
+import { check } from "./diagnostics.js";
 
 test("a clean document produces no findings", () => {
   expect(check("title: Hello\ntags: [a, b]\n")).toEqual([]);
@@ -45,27 +39,4 @@ test("unresolved references are suppressed by default, surfaced when asked", () 
   expect(check(doc)).toEqual([]); // ignoreUnresolvedReferences defaults true
   const shown = check(doc, { ignoreUnresolvedReferences: false });
   expect(shown.some((d) => d.code === "UNRESOLVED_REFERENCE")).toBe(true);
-});
-
-test("extractFrontmatter pulls the leading --- block", () => {
-  const md = "---\ntitle: Hi\ndraft: true\n---\n\n# Body\n";
-  const fm = extractFrontmatter(md);
-  expect(fm).not.toBeNull();
-  expect(fm!.text).toBe("title: Hi\ndraft: true\n");
-  expect(fm!.startLine).toBe(1);
-});
-
-test("extractFrontmatter returns null without a leading fence", () => {
-  expect(extractFrontmatter("# Just a heading\n\n---\n")).toBeNull();
-  expect(extractFrontmatter("\n---\ntitle: x\n---\n")).toBeNull();
-});
-
-test("a frontmatter error is found in the extracted text, with the right line", () => {
-  const md = "---\ntitle: ok\nwhen: 2024-13-99\n---\n# body\n";
-  const fm = extractFrontmatter(md);
-  const f = check(fm!.text);
-  expect(f.some((d) => d.severity === "error")).toBe(true);
-  // "when:" is line 2 within the body; the extension adds fm.startLine (1)
-  // to land it on document line 3.
-  expect(f[0].line).toBe(2);
 });

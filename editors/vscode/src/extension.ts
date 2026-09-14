@@ -7,28 +7,24 @@
  */
 
 import * as vscode from "vscode";
-import { check, type LimaFinding } from "./diagnostics.js";
-import { extractFrontmatter } from "./frontmatter.js";
-
-const DEBOUNCE_MS = 300;
-const MARKDOWN_LANGS = new Set(["markdown", "mdx"]);
+import { DEBOUNCE_MS, MARKDOWN_LANGS } from "../../shared/constants.js";
+import { KeyedDebouncer } from "../../shared/debounce.js";
+import { check, type LimaFinding } from "../../shared/diagnostics.js";
+import { findingRange } from "../../shared/finding-range.js";
+import { extractFrontmatter } from "../../shared/frontmatter.js";
 
 export function activate(context: vscode.ExtensionContext): void {
   const collection = vscode.languages.createDiagnosticCollection("lima");
   context.subscriptions.push(collection);
 
-  const timers = new Map<string, NodeJS.Timeout>();
+  const debouncer = new KeyedDebouncer<string>(DEBOUNCE_MS);
+  context.subscriptions.push({ dispose: () => debouncer.disposeAll() });
 
   const schedule = (document: vscode.TextDocument) => {
     const key = document.uri.toString();
-    const existing = timers.get(key);
-    if (existing) clearTimeout(existing);
-    timers.set(
+    debouncer.schedule(
       key,
-      setTimeout(() => {
-        timers.delete(key);
-        refresh(document, collection);
-      }, DEBOUNCE_MS),
+      () => refresh(document, collection),
     );
   };
 
@@ -99,23 +95,19 @@ function toVscode(
   document: vscode.TextDocument,
   lineOffset: number,
 ): vscode.Diagnostic {
-  const line = Math.max(0, f.line - 1 + lineOffset);
-  const startCol = Math.max(0, f.column - 1);
-  const lineLength = safeLineLength(document, line);
-  const endCol =
-    f.length && f.length > 0
-      ? Math.min(lineLength, startCol + f.length)
-      : lineLength;
+  const range = findingRange(f, lineOffset, (line) =>
+    safeLineLength(document, line),
+  );
 
-  const range = new vscode.Range(
-    line,
-    Math.min(startCol, lineLength),
-    line,
-    Math.max(endCol, Math.min(startCol + 1, lineLength)),
+  const nativeRange = new vscode.Range(
+    range.start.line,
+    range.start.character,
+    range.end.line,
+    range.end.character,
   );
 
   const d = new vscode.Diagnostic(
-    range,
+    nativeRange,
     f.message,
     f.severity === "error"
       ? vscode.DiagnosticSeverity.Error

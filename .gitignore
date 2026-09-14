@@ -2,6 +2,7 @@
 node_modules/
 # Build artifact: rebuilt by `prepack`/`pretest` and in CI; not a source of truth.
 js/dist/
+editors/lsp/dist/
 
 # Rust
 rust/target/

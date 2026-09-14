@@ -6,11 +6,11 @@
  * so the checker and the published package never drift.
  */
 
-import { parse } from "../../../js/src/index.js";
+import { parse } from "../../js/src/index.js";
 // The package's public `Diagnostic` type is the spec-frozen `{ message, line }`
 // shape, but the objects actually delivered (to `onWarning`, and as thrown
 // `LimaError`s) are the richer internal `LimaDiagnostic`. Pull that in directly.
-import { LimaError, type LimaDiagnostic } from "../../../js/src/errors.js";
+import { LimaError, type LimaDiagnostic } from "../../js/src/errors.js";
 
 export type Severity = "error" | "warning";
 
