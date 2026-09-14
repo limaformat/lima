@@ -15,6 +15,20 @@ enum InstallDecision {
     StaleFallback(String),
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum NetworkDecision<T> {
+    Current(T),
+    StaleFallback(String),
+}
+
+fn network_decision<T>(result: Result<T>, server_exists_after: bool) -> Result<NetworkDecision<T>> {
+    match (result, server_exists_after) {
+        (Ok(value), _) => Ok(NetworkDecision::Current(value)),
+        (Err(error), true) => Ok(NetworkDecision::StaleFallback(error)),
+        (Err(error), false) => Err(error),
+    }
+}
+
 fn install_decision(result: Result<()>, server_exists_after: bool) -> Result<InstallDecision> {
     match (result, server_exists_after) {
         (Ok(()), true) => Ok(InstallDecision::Current),
@@ -41,11 +55,36 @@ impl LimaExtension {
             language_server_id,
             &zed::LanguageServerInstallationStatus::CheckingForUpdate,
         );
-        let latest_version = zed::npm_package_latest_version(PACKAGE_NAME)?;
+        let latest_version = match network_decision(
+            zed::npm_package_latest_version(PACKAGE_NAME),
+            self.server_exists(),
+        )? {
+            NetworkDecision::Current(version) => version,
+            NetworkDecision::StaleFallback(error) => {
+                return Ok(self.use_stale_server(language_server_id, "update check", error));
+            }
+        };
 
-        if !server_exists
-            || zed::npm_package_installed_version(PACKAGE_NAME)?.as_ref() != Some(&latest_version)
-        {
+        let server_exists = self.server_exists();
+        let installed_version = if server_exists {
+            match network_decision(
+                zed::npm_package_installed_version(PACKAGE_NAME),
+                self.server_exists(),
+            )? {
+                NetworkDecision::Current(version) => version,
+                NetworkDecision::StaleFallback(error) => {
+                    return Ok(self.use_stale_server(
+                        language_server_id,
+                        "installed-version check",
+                        error,
+                    ));
+                }
+            }
+        } else {
+            None
+        };
+
+        if !server_exists || installed_version.as_ref() != Some(&latest_version) {
             zed::set_language_server_installation_status(
                 language_server_id,
                 &zed::LanguageServerInstallationStatus::Downloading,
@@ -56,20 +95,29 @@ impl LimaExtension {
             )? {
                 InstallDecision::Current => {}
                 InstallDecision::StaleFallback(error) => {
-                    self.did_find_server = false;
-                    zed::set_language_server_installation_status(
-                        language_server_id,
-                        &zed::LanguageServerInstallationStatus::Failed(format!(
-                            "update failed ({error}); using the installed version and retrying on the next language-server start"
-                        )),
-                    );
-                    return Ok(SERVER_PATH.to_string());
+                    return Ok(self.use_stale_server(language_server_id, "update", error));
                 }
             }
         }
 
         self.did_find_server = true;
         Ok(SERVER_PATH.to_string())
+    }
+
+    fn use_stale_server(
+        &mut self,
+        language_server_id: &zed::LanguageServerId,
+        stage: &str,
+        error: String,
+    ) -> String {
+        self.did_find_server = false;
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &zed::LanguageServerInstallationStatus::Failed(format!(
+                "{stage} failed ({error}); using the installed version and retrying on the next language-server start"
+            )),
+        );
+        SERVER_PATH.to_string()
     }
 }
 
@@ -125,7 +173,31 @@ zed::register_extension!(LimaExtension);
 
 #[cfg(test)]
 mod tests {
-    use super::{install_decision, InstallDecision};
+    use super::{install_decision, network_decision, InstallDecision, NetworkDecision};
+
+    #[test]
+    fn failed_version_check_with_existing_server_uses_stale_fallback() {
+        assert_eq!(
+            network_decision::<String>(Err("offline".to_string()), true),
+            Ok(NetworkDecision::StaleFallback("offline".to_string())),
+        );
+    }
+
+    #[test]
+    fn failed_version_check_without_server_remains_a_hard_error() {
+        assert_eq!(
+            network_decision::<String>(Err("offline".to_string()), false),
+            Err("offline".to_string()),
+        );
+    }
+
+    #[test]
+    fn failed_installed_version_check_with_existing_server_uses_stale_fallback() {
+        assert_eq!(
+            network_decision::<Option<String>>(Err("offline".to_string()), true),
+            Ok(NetworkDecision::StaleFallback("offline".to_string())),
+        );
+    }
 
     #[test]
     fn failed_update_with_stale_server_keeps_retrying() {
