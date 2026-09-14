@@ -58,9 +58,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const reference = references.referenceAt(
           document,
           position,
-          vscode.workspace
-            .getConfiguration("lima", document)
-            .get<boolean>("diagnostics.strict", true),
+          documentStrict(document),
         );
         return reference
           ? new vscode.Hover(
@@ -75,9 +73,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const definition = references.referenceAt(
           document,
           position,
-          vscode.workspace
-            .getConfiguration("lima", document)
-            .get<boolean>("diagnostics.strict", true),
+          documentStrict(document),
         )?.definition;
         return definition
           ? new vscode.Location(document.uri, toVscodeRange(definition))
@@ -110,7 +106,7 @@ function refresh(
   }
 
   const findings = check(target.text, {
-    strict: cfg.get<boolean>("diagnostics.strict", true),
+    strict: documentStrict(document),
     ignoreUnresolvedReferences: cfg.get<boolean>(
       "diagnostics.ignoreUnresolvedReferences",
       true,
@@ -121,6 +117,12 @@ function refresh(
     document.uri,
     findings.map((f) => toVscode(f, document, target.lineOffset)),
   );
+}
+
+function documentStrict(document: vscode.TextDocument): boolean {
+  return vscode.workspace
+    .getConfiguration("lima", document)
+    .get<boolean>("diagnostics.strict", true);
 }
 
 function toVscode(

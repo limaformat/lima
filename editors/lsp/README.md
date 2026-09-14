@@ -20,11 +20,11 @@ documents whose language ID is `markdown` or `mdx` and checks a leading
 to this server is controlled by that editor's LSP client configuration, so
 embedded-frontmatter support is not available uniformly in every editor.
 
-The setups below provide diagnostics and document-reference navigation. They
-do not add syntax highlighting. Standalone `.lima` files are the reliable
-target; attaching the server to Markdown or MDX is possible only when a
-client's document-routing configuration can send those documents with the
-matching language ID.
+The setups below provide diagnostics and document-reference navigation.
+Sublime Text and Emacs can also use the syntax definitions shipped in this
+package. Standalone `.lima` files are the reliable target; attaching the
+server to Markdown or MDX is possible only when a client's document-routing
+configuration can send those documents with the matching language ID.
 
 ## Editor setup
 
@@ -110,6 +110,11 @@ on otherwise unhighlighted Lima text.
 
 ### Sublime Text
 
+Copy [`syntaxes/lima.sublime-syntax`](./syntaxes/lima.sublime-syntax) to
+`Packages/User/Lima.sublime-syntax` in your Sublime Text data directory. The
+syntax assigns `.lima` files the `source.lima` scope and highlights Lima Core
+1.0 plus active References 2.0 tokens.
+
 Install Sublime's [LSP package](https://lsp.sublimetext.io/), then add this
 client under `clients` in `Packages/User/LSP.sublime-settings`:
 
@@ -134,12 +139,9 @@ The same entry can be placed in Sublime LSP's current custom-server file,
 `clients` object; see the
 [client-configuration documentation](https://lsp.sublimetext.io/client_configuration/).
 
-The `source.lima` selector requires a `.sublime-syntax` file that associates
-`.lima` files with that scope. No such Lima syntax package exists yet, so this
-wiring becomes usable only after one is installed. Syntax highlighting is not
-available in this release; diagnostics would be squiggles and reference
-navigation would work on unhighlighted text. This release deliberately does
-not add the missing syntax file.
+The included syntax makes the `source.lima` selector usable for standalone
+`.lima` files. Markdown/MDX frontmatter injection is not included, so Sublime
+syntax highlighting is currently limited to standalone files.
 
 ### JetBrains IDEs
 
@@ -163,14 +165,15 @@ highlighting.
 
 ### Emacs 29+
 
-Eglot is built into Emacs 29. Add a minimal mode, file association, and server
-entry to your Emacs configuration:
+Add the directory containing [`emacs/lima-mode.el`](./emacs/lima-mode.el) to
+`load-path`, then load the mode. It derives from `prog-mode`, associates the
+`.lima` extension, and provides Lima Core 1.0 and active References 2.0
+font-lock highlighting. Eglot is built into Emacs 29; add its server entry and
+hook alongside the mode:
 
 ```elisp
-(define-derived-mode lima-mode fundamental-mode "Lima"
-  "Major mode for Lima files.")
-
-(add-to-list 'auto-mode-alist '("\\.lima\\'" . lima-mode))
+(add-to-list 'load-path "/path/to/lima/editors/lsp/emacs")
+(require 'lima-mode)
 
 (with-eval-after-load 'eglot
   (add-to-list 'eglot-server-programs
@@ -183,8 +186,6 @@ entry to your Emacs configuration:
 
 See the GNU Eglot manual's server-setup
 [documentation](https://www.gnu.org/software/emacs/manual/html_node/eglot/Setting-Up-LSP-Servers.html).
-The fundamental-mode-derived mode supplies the file association needed by
-Eglot but no syntax highlighting.
 
 ## Configuration
 

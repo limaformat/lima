@@ -19,7 +19,7 @@
   "bin": {
     "lima-language-server": "dist/server.js"
   },
-  "files": ["dist", "README.md", "CHANGELOG.md"],
+  "files": ["dist", "syntaxes", "emacs", "README.md", "CHANGELOG.md"],
   "engines": {
     "node": ">=18"
   },

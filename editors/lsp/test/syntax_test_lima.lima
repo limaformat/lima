@@ -1,0 +1,54 @@
+# SYNTAX TEST "Packages/User/Lima.sublime-syntax"
+
+title: ${site.name} / $(partial.name)
+# ^^^ entity.name.tag.lima
+#    ^ punctuation.separator.key-value.lima
+#      ^^^^^^^^^^^^ variable.other.reference.document.lima
+#                     ^^^^^^^^^^^^^^^ variable.other.reference.partial.lima
+
+quoted: "${site.name}" '$(partial.name)'
+#        ^^^^^^^^^^^^ string.quoted.double.lima - variable.other.reference
+#                       ^^^^^^^^^^^^^^^ string.quoted.single.lima - variable.other.reference
+
+plain: YAML's apostrophe does not start a string
+#          ^ source.lima - string.quoted.single.lima
+
+tight-comment: hello#${should_be_comment}
+#                   ^ comment.line.number-sign.lima
+#                    ^ comment.line.number-sign.lima - variable.other.reference
+escaped-hash: hello\#literal
+#                   ^ source.lima - comment.line.number-sign.lima
+quoted-hash: "hello#not-a-comment"
+#                  ^ string.quoted.double.lima - comment.line.number-sign.lima
+escaped-then-comment: hello\#literal#${actual_comment}
+#                                  ^ source.lima - comment.line.number-sign.lima
+#                                          ^ comment.line.number-sign.lima - variable.other.reference
+quoted-then-comment: "hello#literal"#${outer_comment}
+#                           ^ string.quoted.double.lima - comment.line.number-sign.lima
+#                                    ^ comment.line.number-sign.lima - variable.other.reference
+
+body: | # comment
+#     ^ keyword.operator.block-scalar.lima
+#       ^ comment.line.number-sign.lima
+  ^^continued
+# ^^ keyword.operator.line-continuation.lima
+
+not-a-block: >
+#            ^ source.lima - keyword.operator.block-scalar.lima
+
+double: "\n \q"
+#        ^^ constant.character.escape.lima
+#           ^^ invalid.illegal.unknown-escape.lima
+single: '\\ \''
+#        ^^ constant.character.escape.lima
+#           ^^ constant.character.escape.lima
+
+flow: [true, null, 12, 2026-09-14, {name: ${title}}]
+#     ^ punctuation.definition.sequence.begin.lima
+#      ^^^^ constant.language.boolean.lima
+#            ^^^^ constant.language.null.lima
+#                  ^^ constant.numeric.lima
+#                      ^^^^^^^^^^ constant.other.date.lima
+#                                  ^ punctuation.definition.mapping.begin.lima
+#                                   ^^^^ entity.name.tag.lima
+#                                         ^^^^^^^^ variable.other.reference.document.lima

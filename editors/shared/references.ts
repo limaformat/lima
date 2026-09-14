@@ -39,7 +39,8 @@ export interface ReferenceDocument {
   getText(): string;
 }
 
-type ReferenceIndex = PositionedReferenceParse & {
+type ReferenceIndex = Omit<PositionedReferenceParse, "references"> & {
+  referencesByLine: Map<number, ReferenceToken2[]>;
   lines: string[];
   strictInvalid: boolean;
   targets: Map<string, PositionedValue | undefined>;
@@ -128,7 +129,7 @@ function createReferenceIndex(
     const located = parseCoreWithPositionedReferences(text, { strict });
     return {
       document: located.document,
-      references: located.references,
+      referencesByLine: indexReferencesByLine(located.references),
       lines: text.split(/\r\n|\r|\n/),
       strictInvalid: false,
       targets: new Map(),
@@ -141,7 +142,7 @@ function createReferenceIndex(
       });
       return {
         document: located.document,
-        references: located.references,
+        referencesByLine: indexReferencesByLine(located.references),
         lines: text.split(/\r\n|\r|\n/),
         strictInvalid: true,
         targets: new Map(),
@@ -160,9 +161,8 @@ function referenceFromIndex(
   const localLine = position.line - lineOffset;
   if (localLine < 0) return null;
 
-  for (const token of index.references) {
+  for (const token of index.referencesByLine.get(localLine) ?? []) {
     const tokenLine = token.line - 1;
-    if (tokenLine !== localLine) continue;
     const startCharacter = codepointOffsetToUtf16(
       index.lines[tokenLine] ?? "",
       token.offset,
@@ -178,6 +178,22 @@ function referenceFromIndex(
   }
 
   return null;
+}
+
+function indexReferencesByLine(
+  references: ReferenceToken2[],
+): Map<number, ReferenceToken2[]> {
+  const byLine = new Map<number, ReferenceToken2[]>();
+  for (const reference of references) {
+    const line = reference.line - 1;
+    const lineReferences = byLine.get(line);
+    if (lineReferences) {
+      lineReferences.push(reference);
+    } else {
+      byLine.set(line, [reference]);
+    }
+  }
+  return byLine;
 }
 
 function describeReference(

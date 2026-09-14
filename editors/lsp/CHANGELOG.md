@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add standalone `.lima` syntax highlighting for Sublime Text and Emacs.
 - Add hover and go-to-definition for `${key}` document references.
 - Explain caller-supplied `$(key)` partial references on hover without
   advertising a definition target.

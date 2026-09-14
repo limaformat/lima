@@ -1,0 +1,141 @@
+%YAML 1.2
+---
+name: Lima
+file_extensions:
+  - lima
+scope: source.lima
+version: 2
+
+variables:
+  key: "[A-Za-z0-9_][A-Za-z0-9_:\\-]*|'[^']*'|\"[^\"]*\""
+
+contexts:
+  main:
+    - include: comments
+    - include: block-scalar
+    - include: mapping-key
+    - include: array-dash
+    - include: line-continuation
+    - include: values
+
+  comments:
+    - match: '(?<!\\)(#).*$'
+      scope: comment.line.number-sign.lima
+      captures:
+        1: punctuation.definition.comment.lima
+
+  block-scalar:
+    - match: '(?<=:\s)(\|)[ \t]*(?:(#).*)?$'
+      captures:
+        1: keyword.operator.block-scalar.lima
+        2: comment.line.number-sign.lima
+
+  line-continuation:
+    - match: '^(\s*)(\^\^)'
+      captures:
+        2: keyword.operator.line-continuation.lima
+
+  mapping-key:
+    - match: '^(\s*)({{key}})(\s*)(:)(?=\s|$)'
+      captures:
+        2: entity.name.tag.lima
+        4: punctuation.separator.key-value.lima
+
+  array-dash:
+    - match: '^(\s*)(-)(?=\s|$)'
+      captures:
+        2: punctuation.definition.list.begin.lima
+
+  values:
+    - include: reference-document
+    - include: reference-partial
+    - include: flow-sequence
+    - include: flow-mapping
+    - include: quoted-string-double
+    - include: quoted-string-single
+    - include: constant-null
+    - include: constant-bool
+    - include: date
+    - include: number
+
+  reference-document:
+    - match: '\$\{[A-Za-z0-9_][A-Za-z0-9_:\-]*(?:\.[A-Za-z0-9_][A-Za-z0-9_:\-]*)*\}'
+      scope: variable.other.reference.document.lima
+
+  reference-partial:
+    - match: '\$\([A-Za-z0-9_][A-Za-z0-9_:/\-]*(?:\.[A-Za-z0-9_][A-Za-z0-9_:\-]*)*\)'
+      scope: variable.other.reference.partial.lima
+
+  flow-sequence:
+    - match: '\['
+      scope: punctuation.definition.sequence.begin.lima
+      push: flow-sequence-body
+
+  flow-sequence-body:
+    - match: '\]'
+      scope: punctuation.definition.sequence.end.lima
+      pop: true
+    - include: comments
+    - include: values
+    - match: ','
+      scope: punctuation.separator.sequence.lima
+
+  flow-mapping:
+    - match: '\{'
+      scope: punctuation.definition.mapping.begin.lima
+      push: flow-mapping-body
+
+  flow-mapping-body:
+    - match: '\}'
+      scope: punctuation.definition.mapping.end.lima
+      pop: true
+    - include: comments
+    - match: '({{key}})(\s*)(:)(?=\s)'
+      captures:
+        1: entity.name.tag.lima
+        3: punctuation.separator.key-value.lima
+    - include: values
+    - match: ','
+      scope: punctuation.separator.mapping.lima
+
+  quoted-string-double:
+    - match: '(?<!\w)"'
+      scope: punctuation.definition.string.begin.lima
+      push:
+        - meta_scope: string.quoted.double.lima
+        - match: '"'
+          scope: punctuation.definition.string.end.lima
+          pop: true
+        - match: '\\(?:["\\/nrtbf]|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|x[0-9a-fA-F]{2})'
+          scope: constant.character.escape.lima
+        - match: '\\.'
+          scope: invalid.illegal.unknown-escape.lima
+
+  quoted-string-single:
+    - match: "(?<!\\w)'"
+      scope: punctuation.definition.string.begin.lima
+      push:
+        - meta_scope: string.quoted.single.lima
+        - match: "'"
+          scope: punctuation.definition.string.end.lima
+          pop: true
+        - match: '\\\\'
+          scope: constant.character.escape.lima
+        - match: "\\\\'"
+          scope: constant.character.escape.lima
+
+  constant-null:
+    - match: '(?<![\w\-])(null|~)(?![\w\-])'
+      scope: constant.language.null.lima
+
+  constant-bool:
+    - match: '(?<![\w\-])(true|false)(?![\w\-])'
+      scope: constant.language.boolean.lima
+
+  date:
+    - match: '(?<![\w\-])(?:\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:Z|[+\-]\d{2}:\d{2})?)?|\d{1,2}[.\/]\d{1,2}[.\/]\d{4}(?:[T ]\d{2}:\d{2}(?::\d{2})?)?)(?![\w])'
+      scope: constant.other.date.lima
+
+  number:
+    - match: '(?<![\w\-.])-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+\-]?\d+)?(?![\w\-.])'
+      scope: constant.numeric.lima
