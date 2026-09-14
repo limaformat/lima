@@ -1,7 +1,7 @@
 {
   "name": "@limaformat/lima-language-server",
   "version": "0.1.0",
-  "description": "Language Server Protocol diagnostics for Lima",
+  "description": "Language Server Protocol diagnostics and reference navigation for Lima",
   "keywords": ["lima", "language-server", "lsp", "frontmatter", "markdown"],
   "homepage": "https://limaformat.dev",
   "author": "Michael Kortstiege",

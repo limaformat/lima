@@ -65,6 +65,31 @@ const documentTarget = (root: Map<string, PositionedValue>, path: string): { roo
 	return { root: value, tail: segments.slice(index) }
 }
 
+/**
+ * Resolve one document-reference path with the same traversal, cycle checks,
+ * and edge budget used by the public References 2.0 parser. The returned
+ * positioned value retains the definition site's source line.
+ */
+export const resolveDocumentReferenceTarget = (
+	document: Map<string, PositionedValue>,
+	path: string,
+): PositionedValue | undefined => {
+	const target = documentTarget(document, path)
+	if (target === undefined) return undefined
+	const ctx: Context = { diagnostics: [], cache: new WeakMap() }
+	const stack = new Set<PositionedValue>([target.root])
+	const resolved = resolveNode(
+		target.root,
+		document,
+		new Map(),
+		ctx,
+		MAX_EDGES - 1,
+		stack,
+	)
+	if (!resolved.complete || ctx.diagnostics.length > 0) return undefined
+	return lookupPath(resolved.value, target.tail)
+}
+
 const lookupPartial = (partials: Map<string, PositionedValue>, path: string): PositionedValue | undefined => {
 	const dot = path.indexOf('.')
 	if (dot < 0) return partials.get(path)

@@ -1,7 +1,7 @@
 # Lima for VS Code
 
-Syntax highlighting and live diagnostics for [Lima](https://limaformat.dev)
-— the small, specified frontmatter format.
+Syntax highlighting, live diagnostics, and reference navigation for
+[Lima](https://limaformat.dev) — the small, specified frontmatter format.
 
 ## What it does
 
@@ -33,7 +33,15 @@ feedback). Settings:
 |---|---|---|
 | `lima.diagnostics.enable` | `true` | Turn diagnostics on/off. |
 | `lima.diagnostics.strict` | `true` | Strict mode. Off = match a non-strict runtime, which coerces instead of erroring. |
-| `lima.diagnostics.ignoreUnresolvedReferences` | `true` | Suppress unresolved-reference / partial findings — the editor has no cross-file or `partials` context. |
+| `lima.diagnostics.ignoreUnresolvedReferences` | `true` | Suppress unresolved-document-reference and partial findings. Partial values need caller-provided context; document paths can be checked locally but share this conservative default. |
+
+### Reference navigation
+
+Hover an active `${key}` or `${nested.path}` document reference to see its
+target, then use Go to Definition to jump to the target key's line. Hovering
+over `$(key)` instead explains that the partial value is supplied by the
+caller; partial references have no definition target. The same behavior is
+available in Lima frontmatter in Markdown and MDX.
 
 ## Not part of Lima (and so not highlighted)
 

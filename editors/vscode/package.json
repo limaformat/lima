@@ -1,7 +1,7 @@
 {
   "name": "vscode-lima",
   "displayName": "Lima",
-  "description": "Syntax highlighting and live diagnostics for Lima frontmatter — standalone .lima files and the frontmatter block of Markdown/MDX.",
+  "description": "Syntax highlighting, live diagnostics, and reference navigation for Lima frontmatter — standalone .lima files and Markdown/MDX.",
   "version": "0.1.0",
   "publisher": "limaformat",
   "license": "ISC",
@@ -66,7 +66,7 @@
         "lima.diagnostics.ignoreUnresolvedReferences": {
           "type": "boolean",
           "default": true,
-          "description": "Suppress unresolved-reference and partial diagnostics. The editor has no cross-document or partials context, so these are usually false positives."
+          "description": "Suppress unresolved-document-reference and partial diagnostics. Partial values need caller-provided context; document paths can be checked locally but share this conservative default."
         }
       }
     }

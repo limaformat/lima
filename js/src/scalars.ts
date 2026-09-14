@@ -42,6 +42,7 @@ export const hasActiveReferences2 = (value: PositionedValue): boolean =>
 
 /** The `ValueBuilder<PositionedValue>` — reconstructs today's annotated tree exactly, for References. */
 export const positionedBuilder: ValueBuilder<PositionedValue> = {
+	positions: true,
 	null: (line) => ({ kind: 'null', line }),
 	bool: (value, line) => ({ kind: 'bool', value, line }),
 	int: (value, line) => ({ kind: 'int', value, line }),

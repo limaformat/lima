@@ -5,6 +5,8 @@ import {
   DidChangeTextDocumentNotification,
   DidCloseTextDocumentNotification,
   DidOpenTextDocumentNotification,
+  DefinitionRequest,
+  HoverRequest,
   InitializeRequest,
   InitializedNotification,
   PublishDiagnosticsNotification,
@@ -34,7 +36,7 @@ function duplexPair(): [Duplex, Duplex] {
   return [left, right];
 }
 
-test("findings survive didOpen and debounced didChange over LSP", async () => {
+test("diagnostics and references survive the LSP round trip", async () => {
   const [clientStream, serverStream] = duplexPair();
   const server = createLimaLanguageServer(serverStream, serverStream);
   const client = createProtocolConnection(clientStream, clientStream);
@@ -51,13 +53,17 @@ test("findings survive didOpen and debounced didChange over LSP", async () => {
   const uri = "file:///broken.lima";
 
   try {
-    await client.sendRequest(InitializeRequest.type, {
+    const initializeResult = await client.sendRequest(InitializeRequest.type, {
       processId: null,
       rootUri: null,
       capabilities: {},
       initializationOptions: {
         lima: { diagnostics: { strict: false } },
       },
+    });
+    expect(initializeResult.capabilities).toMatchObject({
+      hoverProvider: true,
+      definitionProvider: true,
     });
     await client.sendNotification(InitializedNotification.type, {});
 
@@ -119,6 +125,109 @@ test("findings survive didOpen and debounced didChange over LSP", async () => {
       uri,
       diagnostics: [{ code: "DUPLICATE_KEY", severity: 2 }],
     });
+
+    const referencesChanged = nextDiagnostics();
+    await client.sendNotification(DidChangeTextDocumentNotification.type, {
+      textDocument: { uri, version: 4 },
+      contentChanges: [
+        {
+          text:
+            "title: Hello\n" +
+            "summary: ${title}\n" +
+            "missing: ${nonexistent}\n" +
+            "author: $(people/alice.name)\n",
+        },
+      ],
+    });
+    expect(await referencesChanged).toEqual({ uri, diagnostics: [] });
+
+    const hover = await client.sendRequest(HoverRequest.type, {
+      textDocument: { uri },
+      position: { line: 1, character: 12 },
+    });
+    expect(hover).toMatchObject({
+      contents: {
+        kind: "markdown",
+        value: expect.stringContaining("defined on line 1"),
+      },
+      range: {
+        start: { line: 1, character: 9 },
+        end: { line: 1, character: 17 },
+      },
+    });
+
+    expect(
+      await client.sendRequest(DefinitionRequest.type, {
+        textDocument: { uri },
+        position: { line: 1, character: 12 },
+      }),
+    ).toEqual({
+      uri,
+      range: {
+        start: { line: 0, character: 0 },
+        end: { line: 0, character: 0 },
+      },
+    });
+
+    const unresolvedHover = await client.sendRequest(HoverRequest.type, {
+      textDocument: { uri },
+      position: { line: 2, character: 12 },
+    });
+    expect(unresolvedHover?.contents).toMatchObject({
+      value: expect.stringContaining("No matching resolvable document path"),
+    });
+    expect(
+      await client.sendRequest(DefinitionRequest.type, {
+        textDocument: { uri },
+        position: { line: 2, character: 12 },
+      }),
+    ).toBeNull();
+
+    const partialHover = await client.sendRequest(HoverRequest.type, {
+      textDocument: { uri },
+      position: { line: 3, character: 14 },
+    });
+    expect(partialHover?.contents).toMatchObject({
+      value: expect.stringContaining("supplied by the caller"),
+    });
+    expect(
+      await client.sendRequest(DefinitionRequest.type, {
+        textDocument: { uri },
+        position: { line: 3, character: 14 },
+      }),
+    ).toBeNull();
+
+    const strictConfigRefresh = nextDiagnostics();
+    await client.sendNotification(DidChangeConfigurationNotification.type, {
+      settings: { lima: { diagnostics: { strict: true } } },
+    });
+    expect(await strictConfigRefresh).toEqual({ uri, diagnostics: [] });
+
+    const strictDocumentChanged = nextDiagnostics();
+    await client.sendNotification(DidChangeTextDocumentNotification.type, {
+      textDocument: { uri, version: 5 },
+      contentChanges: [
+        { text: "title: first\ntitle: second\nref: ${title}\n" },
+      ],
+    });
+    expect(await strictDocumentChanged).toMatchObject({
+      uri,
+      diagnostics: [{ code: "DUPLICATE_KEY", severity: 1 }],
+    });
+
+    const strictHover = await client.sendRequest(HoverRequest.type, {
+      textDocument: { uri },
+      position: { line: 2, character: 8 },
+    });
+    expect(strictHover?.contents).toMatchObject({
+      value: expect.stringContaining("configured strict mode"),
+    });
+    expect(
+      await client.sendRequest(DefinitionRequest.type, {
+        textDocument: { uri },
+        position: { line: 2, character: 8 },
+      }),
+    ).toBeNull();
 
     const closed = nextDiagnostics();
     await client.sendNotification(DidCloseTextDocumentNotification.type, {

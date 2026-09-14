@@ -1,8 +1,10 @@
 # Lima Language Server
 
-Language Server Protocol diagnostics for [Lima](https://limaformat.dev).
-The server reports parser errors and warnings for standalone `.lima` files
-and for Lima frontmatter in Markdown and MDX documents.
+Language Server Protocol support for [Lima](https://limaformat.dev). The
+server reports parser errors and warnings, explains References 2.0 tokens on
+hover, and navigates `${document.path}` references to their definitions.
+These features work in standalone `.lima` files and in Lima frontmatter in
+Markdown and MDX documents.
 
 ## Usage
 
@@ -16,13 +18,13 @@ Use the language ID `lima` for `.lima` files. The server also accepts
 documents whose language ID is `markdown` or `mdx` and checks a leading
 `---` frontmatter block. Whether an editor sends Markdown or MDX documents
 to this server is controlled by that editor's LSP client configuration, so
-embedded-frontmatter diagnostics are not available uniformly in every
-editor.
+embedded-frontmatter support is not available uniformly in every editor.
 
-The setups below provide diagnostics only. They do not add syntax
-highlighting. Standalone `.lima` files are the reliable target; attaching the
-server to Markdown or MDX is possible only when a client's document-routing
-configuration can send those documents with the matching language ID.
+The setups below provide diagnostics and document-reference navigation. They
+do not add syntax highlighting. Standalone `.lima` files are the reliable
+target; attaching the server to Markdown or MDX is possible only when a
+client's document-routing configuration can send those documents with the
+matching language ID.
 
 ## Editor setup
 
@@ -103,8 +105,8 @@ and [extension development guide](https://zed.dev/docs/extensions/developing-ext
 
 That packaging work is not included in this release. There is currently no
 ready-to-use Zed integration or Lima syntax highlighting; once an extension
-registers the server, diagnostics can appear as squiggles on otherwise
-unhighlighted Lima text.
+registers the server, diagnostics and document-reference navigation can work
+on otherwise unhighlighted Lima text.
 
 ### Sublime Text
 
@@ -135,8 +137,9 @@ The same entry can be placed in Sublime LSP's current custom-server file,
 The `source.lima` selector requires a `.sublime-syntax` file that associates
 `.lima` files with that scope. No such Lima syntax package exists yet, so this
 wiring becomes usable only after one is installed. Syntax highlighting is not
-available in this release; diagnostics would be squiggles on unhighlighted
-text. This release deliberately does not add the missing syntax file.
+available in this release; diagnostics would be squiggles and reference
+navigation would work on unhighlighted text. This release deliberately does
+not add the missing syntax file.
 
 ### JetBrains IDEs
 
@@ -154,8 +157,9 @@ Language ID: lima
 
 LSP4IJ's
 [user-defined server guide](https://github.com/redhat-developer/lsp4ij/blob/main/docs/UserDefinedLanguageServer.md)
-shows the corresponding Server and Mappings tabs. This provides diagnostics;
-it does not install Lima-specific syntax highlighting.
+shows the corresponding Server and Mappings tabs. This provides diagnostics
+and document-reference navigation; it does not install Lima-specific syntax
+highlighting.
 
 ### Emacs 29+
 
@@ -191,8 +195,18 @@ The server accepts these settings through `initializationOptions` or
 - `lima.diagnostics.ignoreUnresolvedReferences` (default: `true`)
 
 Unresolved document references and partial-related findings are hidden by
-default because an editor does not have the caller-provided partials context
-used when Lima is parsed at runtime.
+default. The shared setting is conservative: partial references need
+caller-provided context, while document references can be resolved locally.
 
-This release provides diagnostics only. It does not advertise hover or
-go-to-definition capabilities.
+## Reference navigation
+
+Hovering over an active `${key}` or `${nested.path}` token shows whether its
+document path resolves. Go to Definition jumps a resolved document reference
+to the line containing its target key. Lima's positioned parse tree records
+the target value's line but not the key's exact column, so the destination is
+the start of that line.
+
+Hovering over `$(key)` explains that it is a partial reference whose value is
+supplied by the caller. Partial references intentionally have no definition
+target because Lima specifies no source-file convention for them. Quoted or
+commented reference-shaped text remains literal and receives neither feature.

@@ -6,17 +6,19 @@ import {
   DiagnosticSeverity,
   type Diagnostic,
   type InitializeResult,
+  MarkupKind,
   TextDocumentSyncKind,
 } from "vscode-languageserver/node.js";
 import type { TextDocument } from "vscode-languageserver-textdocument";
-import { DEBOUNCE_MS, MARKDOWN_LANGS } from "../../shared/constants.js";
+import { DEBOUNCE_MS } from "../../shared/constants.js";
 import {
   check,
   type CheckOptions,
   type LimaFinding,
 } from "../../shared/diagnostics.js";
+import { limaDocumentText } from "../../shared/document-text.js";
 import { findingRange } from "../../shared/finding-range.js";
-import { extractFrontmatter } from "../../shared/frontmatter.js";
+import { ReferenceResolver } from "../../shared/references.js";
 import { DocumentStore } from "./document-store.js";
 
 const DEFAULT_CONFIG: Required<CheckOptions> = {
@@ -37,9 +39,10 @@ export function createLimaLanguageServer(
 ) {
   const connection = createConnection(input, output);
   let config = DEFAULT_CONFIG;
+  const references = new ReferenceResolver();
 
   const refresh = (document: TextDocument): void => {
-    const target = limaText(document);
+    const target = limaDocumentText(document.languageId, document.getText());
     const diagnostics = target
       ? check(target.text, config).map((finding) =>
           toDiagnostic(finding, document, target.lineOffset),
@@ -50,7 +53,10 @@ export function createLimaLanguageServer(
 
   const documents = new DocumentStore(
     refresh,
-    (uri) => void connection.sendDiagnostics({ uri, diagnostics: [] }),
+    (uri) => {
+      references.delete(uri);
+      void connection.sendDiagnostics({ uri, diagnostics: [] });
+    },
     options.debounceMs ?? DEBOUNCE_MS,
   );
 
@@ -62,6 +68,8 @@ export function createLimaLanguageServer(
       return {
         capabilities: {
           textDocumentSync: TextDocumentSyncKind.Incremental,
+          hoverProvider: true,
+          definitionProvider: true,
         },
         serverInfo: {
           name: "lima-language-server",
@@ -82,10 +90,41 @@ export function createLimaLanguageServer(
     }
   });
 
+  connection.onHover(({ textDocument, position }) => {
+    const document = documents.documents.get(textDocument.uri);
+    if (!document) return null;
+    const reference = references.referenceAt(
+      document,
+      position,
+      config.strict,
+    );
+    return reference
+      ? {
+          contents: { kind: MarkupKind.Markdown, value: reference.hover },
+          range: reference.range,
+        }
+      : null;
+  });
+
+  connection.onDefinition(({ textDocument, position }) => {
+    const document = documents.documents.get(textDocument.uri);
+    if (!document) return null;
+    const definition = references.referenceAt(
+      document,
+      position,
+      config.strict,
+    )?.definition;
+    return definition ? { uri: document.uri, range: definition } : null;
+  });
+
   connection.onShutdown(() => {
     documents.dispose();
+    references.clear();
   });
-  connection.onExit(() => documents.dispose());
+  connection.onExit(() => {
+    documents.dispose();
+    references.clear();
+  });
 
   documents.listen(connection);
   connection.listen();
@@ -95,24 +134,10 @@ export function createLimaLanguageServer(
     documents,
     dispose(): void {
       documents.dispose();
+      references.clear();
       connection.dispose();
     },
   };
-}
-
-function limaText(
-  document: TextDocument,
-): { text: string; lineOffset: number } | null {
-  if (document.languageId === "lima") {
-    return { text: document.getText(), lineOffset: 0 };
-  }
-  if (MARKDOWN_LANGS.has(document.languageId)) {
-    const frontmatter = extractFrontmatter(document.getText());
-    return frontmatter
-      ? { text: frontmatter.text, lineOffset: frontmatter.startLine }
-      : null;
-  }
-  return null;
 }
 
 function toDiagnostic(

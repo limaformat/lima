@@ -47,11 +47,25 @@ const NO_TOKENS: ReferenceToken2[] = []
 
 type DecodedMatch = { token: string; index: number; documentPath?: string; partialPath?: string }
 
+const utf16WidthAt = (text: string, offset: number): number =>
+	text.codePointAt(offset)! > 0xffff ? 2 : 1
+
 /** Codepoint length of the UTF-16 slice `[a, b)` of `s`. */
 const codepointLen = (s: string, a: number, b: number): number => {
 	let n = 0
-	for (let i = a; i < b; ) { i += s.codePointAt(i)! > 0xffff ? 2 : 1; n++ }
+	for (let i = a; i < b; ) { i += utf16WidthAt(s, i); n++ }
 	return n
+}
+
+/** Converts a 0-based codepoint offset to JavaScript/LSP UTF-16 units. */
+export const codepointOffsetToUtf16 = (text: string, codepointOffset: number): number => {
+	let utf16Offset = 0
+	let codepoints = 0
+	while (utf16Offset < text.length && codepoints < codepointOffset) {
+		utf16Offset += utf16WidthAt(text, utf16Offset)
+		codepoints++
+	}
+	return utf16Offset
 }
 
 /** Splice points (decoded value order): token text, UTF-16 index, path. */

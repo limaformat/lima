@@ -27,6 +27,8 @@
 import type { ReferenceSource } from './reference-tokens2.js'
 
 export interface ValueBuilder<V, M = Map<string, V>> {
+	/** Whether scalar builders need physical source anchors for editor positions. */
+	readonly positions?: boolean
 	null(line: number): V
 	bool(value: boolean, line: number): V
 	int(value: number, line: number): V

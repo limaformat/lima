@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add hover and go-to-definition for `${key}` document references.
+- Explain caller-supplied `$(key)` partial references on hover without
+  advertising a definition target.
+
 ## 0.1.0
 
 - Add diagnostics for `.lima` documents.

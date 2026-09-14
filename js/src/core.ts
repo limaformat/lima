@@ -34,6 +34,7 @@ import { buildBlockScalar } from './block-scalar.js'
 import { LimaError, type LimaDiagnostic } from './errors.js'
 import { KeyCursor, scanKeys } from './scanner.js'
 import type { ValueBuilder } from './builder.js'
+import type { ReferenceToken2 } from './reference-tokens2.js'
 
 export type { Diagnostic, ParseContext } from './normalize.js'
 export { NESTING_DEPTH_LIMIT, SCALAR_LENGTH_LIMIT } from './normalize.js'
@@ -204,7 +205,7 @@ const parseCoreGeneric = <V, M>(
 		// source line — the anchor for References 2.0 token positions (§2.4).
 		// References 2.0 token positions (§2.4): only build the source anchor
 		// for the annotated builder; `parseCore` (native) discards it.
-		const wantSource = builder === positionedBuilder
+		const wantSource = builder.positions === true
 		const valueLineStart = wantSource ? frontMatter.lastIndexOf('\n', rawStart - 1) + 1 : 0
 		const valueCol = wantSource ? [...frontMatter.slice(valueLineStart, rawStart)].length : 0
 		const lineTabAdjust = wantSource && ctx.tabAdjust ? [ctx.tabAdjust[line - 1] ?? 0] : undefined
@@ -349,6 +350,37 @@ const parseCoreGeneric = <V, M>(
  */
 export const parseCoreWithPositions = (frontMatter: string, ctx: ParseContext): Map<string, PositionedValue> =>
 	parseCoreGeneric(frontMatter, ctx, positionedBuilder, depthOfPositioned)
+
+export type PositionedReferenceParse = {
+	document: Map<string, PositionedValue>
+	references: ReferenceToken2[]
+}
+
+/**
+ * Position-aware Core parse plus every active References 2.0 token seen while
+ * values are built. Recording at construction time preserves tokens from
+ * earlier duplicate-key values even though the result map is last-value-wins.
+ */
+export const parseCoreWithPositionedReferences = (
+	frontMatter: string,
+	ctx: ParseContext,
+): PositionedReferenceParse => {
+	const references: ReferenceToken2[] = []
+	const recordingBuilder: ValueBuilder<PositionedValue> = {
+		...positionedBuilder,
+		string: (value, line, quoted, source) => {
+			const positioned = positionedBuilder.string(value, line, quoted, source)
+			if (positioned.kind === 'string' && positioned.references2) {
+				references.push(...positioned.references2)
+			}
+			return positioned
+		},
+	}
+	return {
+		document: parseCoreGeneric(frontMatter, ctx, recordingBuilder, depthOfPositioned),
+		references,
+	}
+}
 
 /** The public result shape (Core §11.1): every value `toNative*` can produce. */
 export type NativeValue =

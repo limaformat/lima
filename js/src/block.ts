@@ -12,7 +12,7 @@
 import { type ParseContext, checkKeyLength, checkDuplicateKey, NESTING_DEPTH_LIMIT } from './normalize.js'
 import {
 	stripKeyQuotes, stripComment, stripCommentKeepEscapes,
-	parseQuotedOrTyped, closingQuoteIndex, isValidKey, positionedBuilder,
+	parseQuotedOrTyped, closingQuoteIndex, isValidKey,
 } from './scalars.js'
 import { parseFlowMapping, parseFlowOrScalarValue } from './flow.js'
 import { buildBlockScalar } from './block-scalar.js'
@@ -64,7 +64,7 @@ const inlineOrBlockScalar = <V, M>(
 	raw: string, keyIndent: number, keyLine: number, valueCol: number, rawUndecoded: string,
 	cursor: BlockCursor, ctx: ParseContext, builder: ValueBuilder<V, M>,
 ): V => {
-	const wantSource = builder === positionedBuilder
+	const wantSource = builder.positions === true
 	if (raw !== '|') {
 		const value = parseFlowOrScalarValue(
 			raw, ctx, keyLine, builder, inlineSource(wantSource, ctx, keyLine, valueCol, rawUndecoded),
@@ -148,7 +148,7 @@ const parseCursorBlock = <V, M>(
 	cursor: BlockCursor, baseIndent: number, ctx: ParseContext, baseLine: number,
 	builder: ValueBuilder<V, M>,
 ): V | null => {
-	const wantSource = builder === positionedBuilder
+	const wantSource = builder.positions === true
 	let items: V[] | null = null
 	let entries: M | null = null
 	let pendingItem: M | null = null

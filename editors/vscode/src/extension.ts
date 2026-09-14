@@ -1,17 +1,20 @@
 /**
- * Lima for VS Code — live diagnostics.
+ * Lima for VS Code — live diagnostics and reference navigation.
  *
  * Runs the real Lima parser (bundled from the monorepo) over `.lima`
  * documents and the frontmatter block of Markdown / MDX, and reports the
  * spec's diagnostics — codes, messages, positions — as editor squiggles.
+ * Active References 2.0 tokens also provide hover information, and
+ * document references can navigate to their target line.
  */
 
 import * as vscode from "vscode";
-import { DEBOUNCE_MS, MARKDOWN_LANGS } from "../../shared/constants.js";
+import { DEBOUNCE_MS } from "../../shared/constants.js";
 import { KeyedDebouncer } from "../../shared/debounce.js";
 import { check, type LimaFinding } from "../../shared/diagnostics.js";
+import { limaDocumentText } from "../../shared/document-text.js";
 import { findingRange } from "../../shared/finding-range.js";
-import { extractFrontmatter } from "../../shared/frontmatter.js";
+import { ReferenceResolver } from "../../shared/references.js";
 
 export function activate(context: vscode.ExtensionContext): void {
   const collection = vscode.languages.createDiagnosticCollection("lima");
@@ -19,6 +22,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const debouncer = new KeyedDebouncer<string>(DEBOUNCE_MS);
   context.subscriptions.push({ dispose: () => debouncer.disposeAll() });
+  const references = new ReferenceResolver();
+  context.subscriptions.push({ dispose: () => references.clear() });
 
   const schedule = (document: vscode.TextDocument) => {
     const key = document.uri.toString();
@@ -31,11 +36,53 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument((e) => schedule(e.document)),
     vscode.workspace.onDidOpenTextDocument((doc) => refresh(doc, collection)),
-    vscode.workspace.onDidCloseTextDocument((doc) => collection.delete(doc.uri)),
+    vscode.workspace.onDidCloseTextDocument((doc) => {
+      collection.delete(doc.uri);
+      references.delete(doc.uri.toString());
+    }),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("lima.diagnostics")) {
         for (const doc of vscode.workspace.textDocuments) refresh(doc, collection);
       }
+    }),
+  );
+
+  const documentSelector: vscode.DocumentSelector = [
+    { language: "lima" },
+    { language: "markdown" },
+    { language: "mdx" },
+  ];
+  context.subscriptions.push(
+    vscode.languages.registerHoverProvider(documentSelector, {
+      provideHover(document, position) {
+        const reference = references.referenceAt(
+          document,
+          position,
+          vscode.workspace
+            .getConfiguration("lima", document)
+            .get<boolean>("diagnostics.strict", true),
+        );
+        return reference
+          ? new vscode.Hover(
+              new vscode.MarkdownString(reference.hover),
+              toVscodeRange(reference.range),
+            )
+          : null;
+      },
+    }),
+    vscode.languages.registerDefinitionProvider(documentSelector, {
+      provideDefinition(document, position) {
+        const definition = references.referenceAt(
+          document,
+          position,
+          vscode.workspace
+            .getConfiguration("lima", document)
+            .get<boolean>("diagnostics.strict", true),
+        )?.definition;
+        return definition
+          ? new vscode.Location(document.uri, toVscodeRange(definition))
+          : null;
+      },
     }),
   );
 
@@ -56,7 +103,7 @@ function refresh(
     return;
   }
 
-  const target = limaText(document);
+  const target = limaDocumentText(document.languageId, document.getText());
   if (!target) {
     collection.delete(document.uri);
     return;
@@ -76,20 +123,6 @@ function refresh(
   );
 }
 
-/** The Lima text to check, and the line offset to add to every finding. */
-function limaText(
-  document: vscode.TextDocument,
-): { text: string; lineOffset: number } | null {
-  if (document.languageId === "lima") {
-    return { text: document.getText(), lineOffset: 0 };
-  }
-  if (MARKDOWN_LANGS.has(document.languageId)) {
-    const fm = extractFrontmatter(document.getText());
-    return fm ? { text: fm.text, lineOffset: fm.startLine } : null;
-  }
-  return null;
-}
-
 function toVscode(
   f: LimaFinding,
   document: vscode.TextDocument,
@@ -99,15 +132,8 @@ function toVscode(
     safeLineLength(document, line),
   );
 
-  const nativeRange = new vscode.Range(
-    range.start.line,
-    range.start.character,
-    range.end.line,
-    range.end.character,
-  );
-
   const d = new vscode.Diagnostic(
-    nativeRange,
+    toVscodeRange(range),
     f.message,
     f.severity === "error"
       ? vscode.DiagnosticSeverity.Error
@@ -116,6 +142,18 @@ function toVscode(
   d.source = "lima";
   d.code = f.code;
   return d;
+}
+
+function toVscodeRange(range: {
+  start: { line: number; character: number };
+  end: { line: number; character: number };
+}): vscode.Range {
+  return new vscode.Range(
+    range.start.line,
+    range.start.character,
+    range.end.line,
+    range.end.character,
+  );
 }
 
 function safeLineLength(document: vscode.TextDocument, line: number): number {
