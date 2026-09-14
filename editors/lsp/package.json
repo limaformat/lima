@@ -13,6 +13,9 @@
   "bugs": "https://github.com/limaformat/lima/issues",
   "license": "ISC",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "lima-language-server": "dist/server.js"
   },
