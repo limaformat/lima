@@ -134,8 +134,7 @@ test("diagnostics and references survive the LSP round trip", async () => {
           text:
             "title: Hello\n" +
             "summary: ${title}\n" +
-            "missing: ${nonexistent}\n" +
-            "author: $(people/alice.name)\n",
+            "missing: ${nonexistent}\n",
         },
       ],
     });
@@ -183,9 +182,16 @@ test("diagnostics and references survive the LSP round trip", async () => {
       }),
     ).toBeNull();
 
+    const partialChanged = nextDiagnostics();
+    await client.sendNotification(DidChangeTextDocumentNotification.type, {
+      textDocument: { uri, version: 5 },
+      contentChanges: [{ text: "author: $(people/alice.name)\n" }],
+    });
+    expect(await partialChanged).toEqual({ uri, diagnostics: [] });
+
     const partialHover = await client.sendRequest(HoverRequest.type, {
       textDocument: { uri },
-      position: { line: 3, character: 14 },
+      position: { line: 0, character: 14 },
     });
     expect(partialHover?.contents).toMatchObject({
       value: expect.stringContaining("supplied by the caller"),
@@ -193,7 +199,7 @@ test("diagnostics and references survive the LSP round trip", async () => {
     expect(
       await client.sendRequest(DefinitionRequest.type, {
         textDocument: { uri },
-        position: { line: 3, character: 14 },
+        position: { line: 0, character: 14 },
       }),
     ).toBeNull();
 
@@ -205,7 +211,7 @@ test("diagnostics and references survive the LSP round trip", async () => {
 
     const strictDocumentChanged = nextDiagnostics();
     await client.sendNotification(DidChangeTextDocumentNotification.type, {
-      textDocument: { uri, version: 5 },
+      textDocument: { uri, version: 6 },
       contentChanges: [
         { text: "title: first\ntitle: second\nref: ${title}\n" },
       ],

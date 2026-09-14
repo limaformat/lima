@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { LimaError } from "../../js/src/errors.js";
 import { parse } from "../../js/src/references2.js";
 import { ReferenceResolver, referenceAtPosition } from "./references.js";
 
@@ -9,7 +10,6 @@ const DOCUMENT = [
   "    claim: Software, Tools, AI",
   "summary: ${title} / ${site.default.claim}",
   "missing: ${nonexistent}",
-  "author: $(people/alice.name)",
   "quoted: \"${title}\" # ${title}",
   "emoji: 😀 ${title}",
   "",
@@ -81,7 +81,10 @@ test("describes an unresolved document reference without a definition", () => {
 });
 
 test("explains partial references but never gives them a definition", () => {
-  const reference = referenceAtPosition(DOCUMENT, { line: 6, character: 14 });
+  const reference = referenceAtPosition("author: $(people/alice.name)\n", {
+    line: 0,
+    character: 14,
+  });
   expect(reference).toMatchObject({
     kind: "partial",
     path: "people/alice.name",
@@ -90,16 +93,24 @@ test("explains partial references but never gives them a definition", () => {
   expect(reference?.hover).toContain("supplied by the caller");
 });
 
+test("does not confidently resolve a document path when any partial is present", () => {
+  const text = "big: $(giant)\nsafe: value\nprobe: ${safe}\n";
+  const reference = referenceAtPosition(text, { line: 2, character: 10 });
+  expect(reference?.path).toBe("safe");
+  expect(reference?.definition).toBeUndefined();
+  expect(reference?.hover).toContain("No matching resolvable document path");
+});
+
 test("ignores quoted and commented reference-shaped text", () => {
-  expect(referenceAtPosition(DOCUMENT, { line: 7, character: 10 })).toBeNull();
-  expect(referenceAtPosition(DOCUMENT, { line: 7, character: 24 })).toBeNull();
+  expect(referenceAtPosition(DOCUMENT, { line: 6, character: 10 })).toBeNull();
+  expect(referenceAtPosition(DOCUMENT, { line: 6, character: 24 })).toBeNull();
 });
 
 test("converts the scanner's codepoint column to a UTF-16 editor position", () => {
-  const reference = referenceAtPosition(DOCUMENT, { line: 8, character: 12 });
+  const reference = referenceAtPosition(DOCUMENT, { line: 7, character: 12 });
   expect(reference?.range).toEqual({
-    start: { line: 8, character: 10 },
-    end: { line: 8, character: 18 },
+    start: { line: 7, character: 10 },
+    end: { line: 7, character: 18 },
   });
 });
 
@@ -175,6 +186,46 @@ test("matches the real resolver's unresolved result past the edge limit", () => 
 
   expect(parse(text).ref).toBe("${a.x}");
   const reference = referenceAtPosition(text, { line: 5, character: 9 });
+  expect(reference?.definition).toBeUndefined();
+  expect(reference?.hover).toContain("No matching resolvable document path");
+});
+
+test("does not resolve a safe path when resolution exceeds a document limit elsewhere", () => {
+  const text = [
+    "safe: value",
+    "probe: ${safe}",
+    "middle: ${base}",
+    "base:",
+    "  n0:",
+    "    n1:",
+    "      n2:",
+    "        n3:",
+    "          v: x",
+    "outer:",
+    "  n0:",
+    "    n1:",
+    "      n2:",
+    "        n3:",
+    "          n4:",
+    "            n5:",
+    "              n6:",
+    "                n7:",
+    "                  n8:",
+    "                    n9:",
+    "                      n10:",
+    "                        v: ${middle}",
+    "",
+  ].join("\n");
+
+  try {
+    parse(text);
+    throw new Error("expected the document to exceed a resource limit");
+  } catch (error) {
+    expect(error).toBeInstanceOf(LimaError);
+    expect((error as LimaError).code).toBe("RESOURCE_LIMIT");
+  }
+  const reference = referenceAtPosition(text, { line: 1, character: 10 });
+  expect(reference?.path).toBe("safe");
   expect(reference?.definition).toBeUndefined();
   expect(reference?.hover).toContain("No matching resolvable document path");
 });

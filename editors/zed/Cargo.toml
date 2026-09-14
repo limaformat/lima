@@ -1,0 +1,14 @@
+[package]
+name = "zed_lima"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "ISC"
+repository = "https://github.com/limaformat/lima"
+
+[lib]
+path = "src/lima.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "0.7.0"

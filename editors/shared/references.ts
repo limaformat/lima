@@ -39,7 +39,7 @@ export interface ReferenceDocument {
   getText(): string;
 }
 
-type ReferenceIndex = Omit<PositionedReferenceParse, "references"> & {
+type ReferenceIndex = PositionedReferenceParse & {
   referencesByLine: Map<number, ReferenceToken2[]>;
   lines: string[];
   strictInvalid: boolean;
@@ -127,30 +127,33 @@ function createReferenceIndex(
 ): ReferenceIndex | null {
   try {
     const located = parseCoreWithPositionedReferences(text, { strict });
-    return {
-      document: located.document,
-      referencesByLine: indexReferencesByLine(located.references),
-      lines: text.split(/\r\n|\r|\n/),
-      strictInvalid: false,
-      targets: new Map(),
-    };
+    return referenceIndex(located, text, false);
   } catch {
     if (!strict) return null;
     try {
       const located = parseCoreWithPositionedReferences(text, {
         strict: false,
       });
-      return {
-        document: located.document,
-        referencesByLine: indexReferencesByLine(located.references),
-        lines: text.split(/\r\n|\r|\n/),
-        strictInvalid: true,
-        targets: new Map(),
-      };
+      return referenceIndex(located, text, true);
     } catch {
       return null;
     }
   }
+}
+
+function referenceIndex(
+  located: PositionedReferenceParse,
+  text: string,
+  strictInvalid: boolean,
+): ReferenceIndex {
+  return {
+    document: located.document,
+    references: located.references,
+    referencesByLine: indexReferencesByLine(located.references),
+    lines: text.split(/\r\n|\r|\n/),
+    strictInvalid,
+    targets: new Map(),
+  };
 }
 
 function referenceFromIndex(
@@ -237,7 +240,7 @@ function describeReference(
   if (index.targets.has(path)) {
     target = index.targets.get(path);
   } else {
-    target = resolveDocumentReferenceTarget(index.document, path);
+    target = resolveDocumentReferenceTarget(index, path);
     index.targets.set(path, target);
   }
   if (target === undefined) {

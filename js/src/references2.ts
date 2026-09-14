@@ -6,7 +6,8 @@ import {
 } from './value.js'
 import {
 	NESTING_DEPTH_LIMIT, parseCore, parseCoreWithPositions, toPlainValue,
-	type CoreOptions, type Diagnostic, type InsertedAt, type PositionedValue,
+	type CoreOptions, type Diagnostic, type InsertedAt, type PositionedReferenceParse,
+	type PositionedValue,
 } from './core.js'
 import { hasActiveReferences2 } from './scalars.js'
 import { LimaError, type LimaDiagnostic } from './errors.js'
@@ -21,6 +22,10 @@ type Meta = Record<string, unknown>
 const PARTIAL_NAME = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*'
 const PARTIAL_NAME_RE = new RegExp(`^${PARTIAL_NAME}$`)
 const MAX_EDGES = 3
+// Positioned document maps are immutable after parsing. Cache the expensive
+// whole-document post-resolution limit check across hover/definition lookups
+// without retaining maps after their editor-version cache is discarded.
+const referenceResourceValidity = new WeakMap<Map<string, PositionedValue>, boolean>()
 
 type SourceDiagnostic = LimaDiagnostic & { line: number; offset: number }
 type Context = { diagnostics: SourceDiagnostic[]; cache?: WeakMap<PositionedValue, Map<number, Resolution>> }
@@ -71,11 +76,13 @@ const documentTarget = (root: Map<string, PositionedValue>, path: string): { roo
  * positioned value retains the definition site's source line.
  */
 export const resolveDocumentReferenceTarget = (
-	document: Map<string, PositionedValue>,
+	parsed: PositionedReferenceParse,
 	path: string,
 ): PositionedValue | undefined => {
+	const { document } = parsed
 	const target = documentTarget(document, path)
 	if (target === undefined) return undefined
+	if (!documentWithinReferenceResourceLimits(parsed)) return undefined
 	const ctx: Context = { diagnostics: [], cache: new WeakMap() }
 	const stack = new Set<PositionedValue>([target.root])
 	const resolved = resolveNode(
@@ -88,6 +95,75 @@ export const resolveDocumentReferenceTarget = (
 	)
 	if (!resolved.complete || ctx.diagnostics.length > 0) return undefined
 	return lookupPath(resolved.value, target.tail)
+}
+
+const resolveDocument = (
+	document: Map<string, PositionedValue>,
+	partials: Map<string, PositionedValue>,
+	ctx: Context,
+): Map<string, PositionedValue> => {
+	const resolved = new Map<string, PositionedValue>()
+	for (const [key, value] of document) {
+		const stack = new Set<PositionedValue>([value])
+		resolved.set(key, resolveNode(value, document, partials, ctx, MAX_EDGES, stack).value)
+	}
+	return resolved
+}
+
+const assertResolvedDocumentResourceLimits = (
+	resolved: Map<string, PositionedValue>,
+): ReadonlyArray<readonly [string, ReturnType<typeof finalizePositioned>]> => {
+	const finalized = [...resolved].map(([key, value]) => [key, finalizePositioned(value)] as const)
+	const depth = finalized.length === 0 ? 0 : Math.max(...finalized.map(([, value]) => value.depth))
+	if (depth > NESTING_DEPTH_LIMIT) {
+		const participants = finalized
+			.filter(([, value]) => value.depth === depth)
+			.flatMap(([, value]) => value.deepestParticipants)
+		const winner = earliestParticipant(participants)
+		throw new LimaError({
+			code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
+			...(winner?.offset !== undefined ? { column: winner.offset + 1 } : {}),
+			message: `Lima: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line ${winner?.line ?? 1}`,
+		})
+	}
+	let nodeCount = 1
+	for (const [, value] of finalized) nodeCount += value.nodeCount
+	if (nodeCount > RESULT_NODE_LIMIT) {
+		const participants: InsertedAt[] = []
+		for (const value of resolved.values()) collectAllParticipants(value, participants)
+		const winner = earliestParticipant(participants)
+		throw new LimaError({
+			code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
+			...(winner?.offset !== undefined ? { column: winner.offset + 1 } : {}),
+			message: `Lima: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line ${winner?.line ?? 1}`,
+		})
+	}
+	return finalized
+}
+
+const documentWithinReferenceResourceLimits = (
+	parsed: PositionedReferenceParse,
+): boolean => {
+	// Partial values are supplied by caller code and can change whole-document
+	// depth/node limits. With no file convention for them, editor tooling cannot
+	// prove that even an unrelated document reference is safe to resolve.
+	if (parsed.references.some((reference) => reference.partialPath !== undefined)) return false
+	const { document } = parsed
+	const cached = referenceResourceValidity.get(document)
+	if (cached !== undefined) return cached
+	const ctx: Context = { diagnostics: [], cache: new WeakMap() }
+	const resolved = resolveDocument(document, new Map(), ctx)
+	let valid = !ctx.diagnostics.some((diagnostic) => diagnostic.code === 'RESOURCE_LIMIT')
+	if (valid) {
+		try {
+			assertResolvedDocumentResourceLimits(resolved)
+		} catch (error) {
+			if (!(error instanceof LimaError) || error.code !== 'RESOURCE_LIMIT') throw error
+			valid = false
+		}
+	}
+	referenceResourceValidity.set(document, valid)
+	return valid
 }
 
 const lookupPartial = (partials: Map<string, PositionedValue>, path: string): PositionedValue | undefined => {
@@ -341,11 +417,7 @@ const parseInternal = <T extends Record<string, unknown> = Meta>(
 	}
 	const document = parseCoreWithPositions(frontMatter, { strict: options?.strict ?? false, onWarning: options?.onWarning })
 	const ctx: Context = { diagnostics: [], ...(useResolveCache ? { cache: new WeakMap() } : {}) }
-	const resolved = new Map<string, PositionedValue>()
-	for (const [key, value] of document) {
-		const stack = new Set<PositionedValue>([value])
-		resolved.set(key, resolveNode(value, document, partials, ctx, MAX_EDGES, stack).value)
-	}
+	const resolved = resolveDocument(document, partials, ctx)
 	if (options?.strict) for (const value of resolved.values()) scanUnresolved(value, ctx)
 	if (ctx.diagnostics.length > 0) {
 		ctx.diagnostics.sort((a, b) => a.line - b.line || a.offset - b.offset)
@@ -355,29 +427,7 @@ const parseInternal = <T extends Record<string, unknown> = Meta>(
 		throw new LimaError({ ...winner, column: winner.offset + 1 })
 	}
 
-	const finalized = [...resolved].map(([key, value]) => [key, finalizePositioned(value)] as const)
-	const depth = finalized.length === 0 ? 0 : Math.max(...finalized.map(([, value]) => value.depth))
-	if (depth > NESTING_DEPTH_LIMIT) {
-		const participants = finalized.filter(([, value]) => value.depth === depth).flatMap(([, value]) => value.deepestParticipants)
-		const winner = earliestParticipant(participants)
-		throw new LimaError({
-			code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
-			...(winner?.offset !== undefined ? { column: winner.offset + 1 } : {}),
-			message: `Lima: nesting depth exceeds maximum of ${NESTING_DEPTH_LIMIT} at line ${winner?.line ?? 1}`,
-		})
-	}
-	let nodeCount = 1
-	for (const [, value] of finalized) nodeCount += value.nodeCount
-	if (nodeCount > RESULT_NODE_LIMIT) {
-		const participants: InsertedAt[] = []
-		for (const value of resolved.values()) collectAllParticipants(value, participants)
-		const winner = earliestParticipant(participants)
-		throw new LimaError({
-			code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
-			...(winner?.offset !== undefined ? { column: winner.offset + 1 } : {}),
-			message: `Lima: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line ${winner?.line ?? 1}`,
-		})
-	}
+	const finalized = assertResolvedDocumentResourceLimits(resolved)
 	const out = emptyMapping()
 	for (const [key, value] of finalized) out[key] = value.native
 	return out as T

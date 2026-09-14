@@ -96,17 +96,18 @@ required, not optional.
 
 ### Zed
 
-Zed cannot register an arbitrary custom-language server through user settings
-alone. Lima needs a small Zed extension containing `extension.toml`, a language
-definition, and Rust code using the `zed_extension_api` crate to return the
-language-server command. See Zed's
-[language-extension documentation](https://zed.dev/docs/extensions/languages)
-and [extension development guide](https://zed.dev/docs/extensions/developing-extensions).
+The repository now includes a [Zed extension](../zed/) that associates `.lima`
+files with this server. It is not published in Zed's extension registry yet;
+install it from a checkout with **Extensions: Install Dev Extension** and select
+the `editors/zed` directory. Zed then installs and updates the npm language
+server in the extension's private working directory.
 
-That packaging work is not included in this release. There is currently no
-ready-to-use Zed integration or Lima syntax highlighting; once an extension
-registers the server, diagnostics and document-reference navigation can work
-on otherwise unhighlighted Lima text.
+The extension provides diagnostics and document-reference navigation. It uses
+tree-sitter-yaml only as the structural grammar needed to register the Lima
+language and does not claim accurate Lima syntax highlighting. See the
+[extension README](../zed/README.md) and Zed's
+[development guide](https://zed.dev/docs/extensions/developing-extensions) for
+the installation steps and current highlighting limitation.
 
 ### Sublime Text
 

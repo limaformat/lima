@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { parse, parseCore, parseReferences } from './index.js'
-import { __parseWithoutResolveCacheForTest } from './references2.js'
+import { __parseWithoutResolveCacheForTest, resolveDocumentReferenceTarget } from './references2.js'
 import { LimaError } from './errors.js'
-import { parseCoreWithPositions } from './core.js'
+import { parseCoreWithPositionedReferences, parseCoreWithPositions } from './core.js'
 import { hasActiveReferences2 } from './scalars.js'
 import { join } from 'node:path'
 
@@ -132,6 +132,21 @@ describe('References 2.0 public API', () => {
 	it('interprets $(key) as a partial rather than a document reference', () => {
 		expect(parse('source: document\ncopy: $(source)', { partials: { source: 'partial' } }))
 			.toEqual({ source: 'document', copy: 'partial' })
+	})
+
+	it('refuses an unrelated document target when even a shadowed partial makes limits unverifiable', () => {
+		const input = 'big: $(giant)\nbig: replacement\nsafe: value\nprobe: ${safe}\n'
+		const giant = Array.from({ length: 4097 }, () => null)
+		try {
+			parse(input, { partials: { giant } })
+			expect.unreachable()
+		} catch (error) {
+			expect(error).toBeInstanceOf(LimaError)
+			expect((error as LimaError).code).toBe('INVALID_PARTIAL')
+		}
+
+		const parsed = parseCoreWithPositionedReferences(input, { strict: false })
+		expect(resolveDocumentReferenceTarget(parsed, 'safe')).toBeUndefined()
 	})
 
 	it('records the source line of an active token inside a block scalar', () => {
