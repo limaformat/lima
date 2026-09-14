@@ -33,6 +33,11 @@ body: | # comment
   ^^continued
 # ^^ keyword.operator.line-continuation.lima
 
+body-spaces:  |
+#             ^ keyword.operator.block-scalar.lima
+body-tab:	 |
+#          ^ keyword.operator.block-scalar.lima
+
 not-a-block: >
 #            ^ source.lima - keyword.operator.block-scalar.lima
 

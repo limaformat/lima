@@ -25,10 +25,10 @@ contexts:
         1: punctuation.definition.comment.lima
 
   block-scalar:
-    - match: '(?<=:\s)(\|)[ \t]*(?:(#).*)?$'
+    - match: '(?<=:)([ \t]+)(\|)[ \t]*(?:(#).*)?$'
       captures:
-        1: keyword.operator.block-scalar.lima
-        2: comment.line.number-sign.lima
+        2: keyword.operator.block-scalar.lima
+        3: comment.line.number-sign.lima
 
   line-continuation:
     - match: '^(\s*)(\^\^)'
