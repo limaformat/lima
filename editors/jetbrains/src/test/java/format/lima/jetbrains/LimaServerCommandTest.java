@@ -24,6 +24,7 @@ final class LimaServerCommandTest {
         assertEquals(
                 List.of(
                         "cmd.exe",
+                        "/d",
                         "/c",
                         "npx",
                         "--yes",

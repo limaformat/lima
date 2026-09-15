@@ -22,6 +22,7 @@ final class LimaServerCommand {
         }
         return List.of(
                 "cmd.exe",
+                "/d",
                 "/c",
                 server.get(0),
                 server.get(1),

@@ -8,6 +8,6 @@ import org.jetbrains.annotations.NotNull;
 public final class LimaLanguageServerFactory implements LanguageServerFactory {
     @Override
     public @NotNull StreamConnectionProvider createConnectionProvider(@NotNull Project project) {
-        return new LimaLanguageServer();
+        return new LimaLanguageServer(project.getBasePath());
     }
 }
