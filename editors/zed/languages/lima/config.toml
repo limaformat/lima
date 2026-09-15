@@ -1,6 +1,6 @@
 name = "Lima"
 code_fence_block_name = "lima"
-grammar = "yaml"
+grammar = "lima"
 path_suffixes = ["lima"]
 line_comments = ["# "]
 tab_size = 2

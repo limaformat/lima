@@ -50,12 +50,10 @@ The extension forwards Zed's `initialization_options` and `settings` for the
 
 ## Syntax highlighting
 
-The extension uses tree-sitter-yaml as the structural grammar required to
-register a custom Zed language, but it deliberately does not ship YAML
-highlight queries as Lima highlighting. Lima's active References 2.0 tokens,
-`^^` markers, block-scalar rules, and escaping semantics need a Lima-aware
-grammar or queries. Until those exist, this extension provides LSP features
-without claiming accurate syntax highlighting.
+The extension pins the `tree-sitter-lima` grammar (repository, commit, and
+subdirectory in `extension.toml`) and ships its `highlights.scm` query,
+providing Lima-aware syntax highlighting for Core 1.0 and the active
+References 2.0 tokens.
 
 Markdown/MDX frontmatter is not registered by this extension. Standalone
 `.lima` files are the supported target.

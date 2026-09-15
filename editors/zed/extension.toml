@@ -11,6 +11,7 @@ name = "Lima Language Server"
 language = "Lima"
 language_ids = { Lima = "lima" }
 
-[grammars.yaml]
-repository = "https://github.com/tree-sitter-grammars/tree-sitter-yaml"
-commit = "a1c4812a73ec5e089de8e441fdea3a921e8d5079"
+[grammars.lima]
+repository = "https://github.com/limaformat/lima"
+commit = "dfcc22918d9d8e2a89d54409348414137739a6f6"
+path = "editors/tree-sitter-lima"

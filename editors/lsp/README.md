@@ -74,6 +74,84 @@ require("lspconfig").lima_ls.setup({})
 The legacy `require("lspconfig").…setup()` API is deprecated on Neovim 0.11
 and newer; prefer the first configuration there.
 
+#### Syntax highlighting
+
+The repository ships a [`tree-sitter-lima`](../tree-sitter-lima/) grammar. On
+nvim-treesitter's `main` branch (Neovim 0.12+), register it as a third-party
+parser so `:TSInstall lima` compiles it from the pinned monorepo commit and
+installs its highlight query:
+
+```lua
+vim.api.nvim_create_autocmd("User", {
+  pattern = "TSUpdate",
+  callback = function()
+    require("nvim-treesitter.parsers").lima = {
+      install_info = {
+        url = "https://github.com/limaformat/lima",
+        revision = "dfcc22918d9d8e2a89d54409348414137739a6f6",
+        location = "editors/tree-sitter-lima",
+        queries = "editors/tree-sitter-lima/queries",
+      },
+    }
+  end,
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "lima",
+  callback = function()
+    -- Neovim's own runtimepath scan for parsers and queries does not pick
+    -- up files that :TSInstall wrote earlier in the same session, so the
+    -- very first .lima file opened right after installing needs the
+    -- parser and query registered explicitly instead of relying on
+    -- vim.treesitter.start()'s auto-discovery — otherwise it fails with
+    -- "Parser could not be created for buffer ... and language 'lima'".
+    local install_dir = vim.fn.stdpath("data") .. "/site"
+    if not pcall(vim.treesitter.language.add, "lima", { path = install_dir .. "/parser/lima.so" }) then
+      return
+    end
+    if not vim.treesitter.query.get("lima", "highlights") then
+      local file = io.open(install_dir .. "/queries/lima/highlights.scm", "r")
+      if file then
+        vim.treesitter.query.set("lima", "highlights", file:read("*a"))
+        file:close()
+      end
+    end
+    vim.treesitter.start()
+  end,
+})
+```
+
+Highlighting is not enabled automatically, so the `FileType` autocmd above
+starts it. The explicit `language.add`/`query.set` calls are only needed
+because the parser was just installed in the same session — a Neovim
+restart after `:TSInstall lima` works fine with just `vim.treesitter.start()`.
+
+nvim-treesitter's frozen `master` branch (Neovim 0.11) uses a different custom
+parser API: `get_parser_configs()` with `files` and `revision`. It does not
+support `location` and does not copy queries from the grammar repository:
+
+```lua
+local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
+parser_config.lima = {
+  install_info = {
+    url = "https://github.com/limaformat/lima",
+    files = {
+      "editors/tree-sitter-lima/src/parser.c",
+      "editors/tree-sitter-lima/src/scanner.c",
+    },
+    revision = "dfcc22918d9d8e2a89d54409348414137739a6f6",
+  },
+}
+
+require("nvim-treesitter.configs").setup {
+  highlight = { enable = true },
+}
+```
+
+On `master`, also copy `editors/tree-sitter-lima/queries/highlights.scm` to
+`queries/lima/highlights.scm` on your runtime path, since that branch does not
+install queries from the grammar.
+
 ### Helix
 
 Add this to your [`languages.toml`](https://docs.helix-editor.com/languages.html):
@@ -89,10 +167,17 @@ language-servers = ["lima-ls"]
 [language-server.lima-ls]
 command = "npx"
 args = ["--yes", "@limaformat/lima-language-server", "--stdio"]
+
+[[grammar]]
+name = "lima"
+source = { git = "https://github.com/limaformat/lima", rev = "dfcc22918d9d8e2a89d54409348414137739a6f6", subpath = "editors/tree-sitter-lima" }
 ```
 
 Helix has no built-in `.lima` association, so the `[[language]]` block is
-required, not optional.
+required, not optional. After adding the `[[grammar]]` entry, run
+`hx --grammar fetch && hx --grammar build`. The grammar's
+`queries/highlights.scm` needs to be copied to
+`runtime/queries/lima/highlights.scm` for syntax highlighting.
 
 ### Zed
 
@@ -102,12 +187,12 @@ install it from a checkout with **Extensions: Install Dev Extension** and select
 the `editors/zed` directory. Zed then installs and updates the npm language
 server in the extension's private working directory.
 
-The extension provides diagnostics and document-reference navigation. It uses
-tree-sitter-yaml only as the structural grammar needed to register the Lima
-language and does not claim accurate Lima syntax highlighting. See the
+The extension provides diagnostics, document-reference navigation, and syntax
+highlighting backed by the `tree-sitter-lima` grammar, which the extension pins
+in its manifest. See the
 [extension README](../zed/README.md) and Zed's
 [development guide](https://zed.dev/docs/extensions/developing-extensions) for
-the installation steps and current highlighting limitation.
+the installation steps.
 
 ### Sublime Text
 
