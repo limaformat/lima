@@ -1,0 +1,299 @@
+==================
+core.api.parse-returns-mapping
+==================
+a: 1
+b: 2
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    value: (number)))
+
+==================
+core.block-mapping.nested-arbitrary-depth
+==================
+params:
+  social:
+    twitter: alice
+    github: alice-dev
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_mapping
+      (block_mapping_entry
+        key: (key)
+        (block_mapping
+          (block_mapping_entry
+            key: (key)
+            value: (plain_scalar))
+          (block_mapping_entry
+            key: (key)
+            value: (plain_scalar)))))))
+
+==================
+core.block-sequence.object-item-sibling-indentation
+==================
+authors:
+  - name: Alice
+    affiliation: MIT
+  - name: Bob
+    affiliation: Stanford
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        value: (plain_scalar)
+        (block_mapping_entry
+          key: (key)
+          value: (plain_scalar)))
+      (block_sequence_item
+        key: (key)
+        value: (plain_scalar)
+        (block_mapping_entry
+          key: (key)
+          value: (plain_scalar))))))
+
+==================
+core.block-scalar.continuation.basic
+==================
+description: |
+  This is long
+  ^^and continues.
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_scalar
+      body: (block_scalar_body
+        (continuation)))))
+
+==================
+core.block-scalar.dedent-comment-ends-scalar
+==================
+description: |
+  Text
+# top-level comment
+title: Hello
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_scalar
+      body: (block_scalar_body)))
+  (comment)
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))
+
+==================
+core.flow-mapping.empty-and-flat
+==================
+a: {}
+b: {x: 1, y: 2}
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping))
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key)
+      value: (number)
+      key: (flow_key)
+      value: (number))))
+
+==================
+core.flow-nesting.sequence-of-mappings-allowed
+==================
+menu: [{name: Home, url: /}, {name: About, url: /about}]
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_sequence
+      (flow_mapping
+        key: (flow_key)
+        value: (flow_plain_scalar)
+        key: (flow_key)
+        value: (flow_plain_scalar))
+      (flow_mapping
+        key: (flow_key)
+        value: (flow_plain_scalar)
+        key: (flow_key)
+        value: (flow_plain_scalar)))))
+
+==================
+core.keys.quoted.double-quoted-decodes-escapes
+==================
+"say \"hi\"": value
+---
+
+(document
+  (block_mapping_entry
+    key: (double_quoted_key
+      (escape_sequence)
+      (escape_sequence))
+    value: (plain_scalar)))
+
+==================
+core.null.all-forms
+==================
+a:
+b: null
+c: ~
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key))
+  (block_mapping_entry
+    key: (key)
+    value: (null))
+  (block_mapping_entry
+    key: (key)
+    value: (null)))
+
+==================
+references-2.interpolation.block-scalar.basic
+==================
+author: Alice
+description: |
+  Written by ${author}.
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    (block_scalar
+      body: (block_scalar_body
+        (document_reference)))))
+
+==================
+references-2.activity.quoted-token.inactive
+==================
+source: 42
+value: "${source}"
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    value: (double_quoted_string)))
+
+==================
+references-2.activity.flow-document-brace-boundaries
+==================
+a: hello
+b: world
+items: [${a}${b}, {nested: 1}, ${a}]
+map: {joined: ${a}${b}, tail: ${b}}
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (flow_sequence
+      (flow_plain_scalar
+        (document_reference)
+        (document_reference))
+      (flow_mapping
+        key: (flow_key)
+        value: (number))
+      (flow_plain_scalar
+        (document_reference))))
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key)
+      value: (flow_plain_scalar
+        (document_reference)
+        (document_reference))
+      key: (flow_key)
+      value: (flow_plain_scalar
+        (document_reference)))))
+
+==================
+references-2.partials.slash-name.mapping-path
+==================
+city: $(persons/alice.address.city)
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (partial_reference))))
+
+==================
+references-2.scanner.incomplete-token.literal-strict
+==================
+document: ${missing
+partial: $(missing
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))
+
+==================
+references-2.unsupported.references-in-keys-remain-literal
+==================
+a: hello
+"${a}": value
+m: {${a}: value2}
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (double_quoted_key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))

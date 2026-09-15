@@ -1,0 +1,18 @@
+{
+  "name": "tree-sitter-lima",
+  "version": "0.1.0",
+  "description": "Tree-sitter grammar for Lima (Core 1.0 + active References 2.0 tokens)",
+  "license": "ISC",
+  "scripts": {
+    "generate": "tree-sitter generate",
+    "build": "tree-sitter generate && tree-sitter build",
+    "test": "bun run scripts/test-native.ts",
+    "corpus:generate": "bun run scripts/gen-corpus.ts",
+    "corpus:check": "bun run scripts/gen-corpus.ts --check && bun run scripts/check-fixtures.ts",
+    "query:check": "bun run scripts/check-queries.ts",
+    "ci": "bun run generate && bun run corpus:check && bun run test && bun run query:check"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "0.26.13"
+  }
+}

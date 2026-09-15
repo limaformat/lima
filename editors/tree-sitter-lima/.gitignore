@@ -1,0 +1,7 @@
+node_modules/
+.tmp-tools/
+.cache/
+target/
+*.so
+*.wasm
+tree-sitter-lima.wasm

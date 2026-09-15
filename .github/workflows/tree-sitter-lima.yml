@@ -1,0 +1,31 @@
+name: Tree-sitter Lima
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "editors/tree-sitter-lima/**"
+      - "corpus/core/**"
+      - "corpus/references-2.0/**"
+      - "corpus/runner/src/generators/**"
+      - ".github/workflows/tree-sitter-lima.yml"
+  pull_request:
+    paths:
+      - "editors/tree-sitter-lima/**"
+      - "corpus/core/**"
+      - "corpus/references-2.0/**"
+      - "corpus/runner/src/generators/**"
+      - ".github/workflows/tree-sitter-lima.yml"
+
+jobs:
+  tree-sitter-lima:
+    name: grammar, corpus, queries
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: editors/tree-sitter-lima
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run ci
