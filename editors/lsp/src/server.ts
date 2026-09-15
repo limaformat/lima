@@ -1,4 +1,4 @@
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import type { Readable, Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import {
@@ -25,6 +25,18 @@ const DEFAULT_CONFIG: Required<CheckOptions> = {
   strict: true,
   ignoreUnresolvedReferences: true,
 };
+
+/**
+ * The published package's own version, read from package.json at startup
+ * instead of duplicated as a literal — a stale hardcoded string is exactly
+ * the drift this reads around (dist/server.js ships next to package.json
+ * in the npm tarball, see the "files" field).
+ */
+const SERVER_VERSION: string = (() => {
+  const packageJsonUrl = new URL("../package.json", import.meta.url);
+  const contents = readFileSync(fileURLToPath(packageJsonUrl), "utf8");
+  return (JSON.parse(contents) as { version: string }).version;
+})();
 
 export interface ServerOptions {
   /** The production default is 300 ms; tests may shorten it. */
@@ -73,7 +85,7 @@ export function createLimaLanguageServer(
         },
         serverInfo: {
           name: "lima-language-server",
-          version: "0.1.0",
+          version: SERVER_VERSION,
         },
       };
     },
