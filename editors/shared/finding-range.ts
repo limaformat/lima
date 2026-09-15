@@ -1,4 +1,5 @@
 import type { LimaFinding } from "./diagnostics.js";
+import { codepointOffsetToUtf16 } from "../../js/src/reference-tokens2.js";
 
 export interface RangeLike {
   start: { line: number; character: number };
@@ -6,31 +7,30 @@ export interface RangeLike {
 }
 
 /**
- * Maps a Lima finding to a 0-based range, given the length of the line it is
- * on. The caller supplies a line-length lookup because editor document APIs
- * expose it differently.
+ * Maps a Lima finding's 1-based codepoint position to a 0-based UTF-16 range.
+ * The caller supplies the source line because editor document APIs expose it
+ * differently.
  */
 export function findingRange(
   finding: LimaFinding,
   lineOffset: number,
-  lineLength: (line: number) => number,
+  lineText: (line: number) => string,
 ): RangeLike {
   const line = Math.max(0, finding.line - 1 + lineOffset);
-  const length = lineLength(line);
-  const startColumn = Math.max(0, finding.column - 1);
-  const endColumn =
+  const text = lineText(line);
+  const startCodepoint = Math.max(0, finding.column - 1);
+  const startCharacter = codepointOffsetToUtf16(text, startCodepoint);
+  const endCharacter =
     finding.length && finding.length > 0
-      ? Math.min(length, startColumn + finding.length)
-      : length;
+      ? codepointOffsetToUtf16(text, startCodepoint + finding.length)
+      : text.length;
+  const minimumEnd = codepointOffsetToUtf16(text, startCodepoint + 1);
 
   return {
-    start: { line, character: Math.min(startColumn, length) },
+    start: { line, character: startCharacter },
     end: {
       line,
-      character: Math.max(
-        endColumn,
-        Math.min(startColumn + 1, length),
-      ),
+      character: Math.max(endCharacter, minimumEnd),
     },
   };
 }

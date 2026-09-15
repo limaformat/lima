@@ -130,7 +130,7 @@ function toVscode(
   lineOffset: number,
 ): vscode.Diagnostic {
   const range = findingRange(f, lineOffset, (line) =>
-    safeLineLength(document, line),
+    safeLineText(document, line),
   );
 
   const d = new vscode.Diagnostic(
@@ -157,7 +157,7 @@ function toVscodeRange(range: {
   );
 }
 
-function safeLineLength(document: vscode.TextDocument, line: number): number {
-  if (line < 0 || line >= document.lineCount) return 0;
-  return document.lineAt(line).text.length;
+function safeLineText(document: vscode.TextDocument, line: number): string {
+  if (line < 0 || line >= document.lineCount) return "";
+  return document.lineAt(line).text;
 }

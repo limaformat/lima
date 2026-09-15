@@ -147,7 +147,7 @@ function toDiagnostic(
 ): Diagnostic {
   return {
     range: findingRange(finding, lineOffset, (line) =>
-      lspLineLength(document, line),
+      lspLineText(document, line),
     ),
     severity:
       finding.severity === "error"
@@ -159,8 +159,8 @@ function toDiagnostic(
   };
 }
 
-function lspLineLength(document: TextDocument, line: number): number {
-  if (line < 0 || line >= document.lineCount) return 0;
+function lspLineText(document: TextDocument, line: number): string {
+  if (line < 0 || line >= document.lineCount) return "";
   const start = { line, character: 0 };
   const endOffset =
     line + 1 < document.lineCount
@@ -170,7 +170,7 @@ function lspLineLength(document: TextDocument, line: number): number {
     start,
     end: document.positionAt(endOffset),
   });
-  return text.replace(/\r?\n$/, "").length;
+  return text.replace(/\r?\n$/, "");
 }
 
 function readConfig(
