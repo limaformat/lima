@@ -13,7 +13,7 @@
   ],
   "repository": {
     "comment": {
-      "comment": "Comment: an unescaped # outside quotes starts a comment and runs to end of line (Core 1.0 §6.1.4). No preceding whitespace is required.",
+      "comment": "Comment: an unescaped # outside quotes starts a comment and runs to end of line (Core 1.0 §6.1.4). No preceding whitespace is required. GENERATED:textmate-comment",
       "match": "(?<!\\\\)(#).*$",
       "captures": {
         "1": { "name": "punctuation.definition.comment.lima" }
@@ -39,8 +39,8 @@
     },
 
     "mapping-key": {
-      "comment": "key: — unquoted, single-quoted, or double-quoted key followed by a colon and a space or end of line. A double-quoted key's backslash escapes (Core §5.2) keep an escaped quote from closing it early.",
-      "match": "^(\\s*)([A-Za-z0-9_][A-Za-z0-9_:\\-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")(\\s*)(:)(?=\\s|$)",
+      "comment": "key: — unquoted, single-quoted, or double-quoted key followed by a colon and a space or end of line. A double-quoted key's backslash escapes (Core §5.2) keep an escaped quote from closing it early. GENERATED:textmate-mapping-key",
+      "match": "^(\\s*)([a-zA-Z0-9_][a-zA-Z0-9_:-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")(\\s*)(:)(?=\\s|$)",
       "captures": {
         "2": { "name": "entity.name.tag.lima" },
         "4": { "name": "punctuation.separator.key-value.lima" }
@@ -71,14 +71,14 @@
     },
 
     "reference-document": {
-      "comment": "Lima References 2.0 §2.1: ${document.path} reads a value from the current document. Inactive (literal) inside quoted strings.",
-      "match": "\\$\\{[A-Za-z0-9_][A-Za-z0-9_:\\-]*(?:\\.[A-Za-z0-9_][A-Za-z0-9_:\\-]*)*\\}",
+      "comment": "Lima References 2.0 §2.1: ${document.path} reads a value from the current document. Inactive (literal) inside quoted strings. GENERATED:textmate-document-reference",
+      "match": "\\$\\{[a-zA-Z0-9_][a-zA-Z0-9_:-]*(?:\\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*)*\\}",
       "name": "variable.other.reference.document.lima"
     },
 
     "reference-partial": {
-      "comment": "Lima References 2.0 §2.2: $(partial.path) reads from the partials option.",
-      "match": "\\$\\([A-Za-z0-9_][A-Za-z0-9_:/\\-]*(?:\\.[A-Za-z0-9_][A-Za-z0-9_:\\-]*)*\\)",
+      "comment": "Lima References 2.0 §2.2: $(partial.path) reads from the partials option. GENERATED:textmate-partial-reference",
+      "match": "\\$\\([a-zA-Z0-9_][a-zA-Z0-9_:/-]*(?:\\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*)*\\)",
       "name": "variable.other.reference.partial.lima"
     },
 
@@ -113,7 +113,8 @@
       "patterns": [
         { "include": "#comment" },
         {
-          "match": "([A-Za-z0-9_][A-Za-z0-9_:\\-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")(\\s*)(:)(?=\\s)",
+          "comment": "GENERATED:textmate-flow-mapping-key",
+          "match": "([a-zA-Z0-9_][a-zA-Z0-9_:-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")(\\s*)(:)(?=\\s)",
           "captures": {
             "1": { "name": "entity.name.tag.lima" },
             "3": { "name": "punctuation.separator.key-value.lima" }

@@ -37,10 +37,10 @@ export type ReferenceToken2 = {
  */
 export type ReferenceSource = { raw?: string; line: number; col: number; tabAdjust?: number[] }
 
-const SEGMENT = '[a-zA-Z0-9_][a-zA-Z0-9_:-]*'
-const DOC_PATH = `${SEGMENT}(?:\\.${SEGMENT})*`
-const PARTIAL_NAME = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*'
-const PARTIAL_PATH = `${PARTIAL_NAME}(?:\\.${SEGMENT})*`
+export const SEGMENT = '[a-zA-Z0-9_][a-zA-Z0-9_:-]*'
+export const DOC_PATH = `${SEGMENT}(?:\\.${SEGMENT})*`
+export const PARTIAL_NAME = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*'
+export const PARTIAL_PATH = `${PARTIAL_NAME}(?:\\.${SEGMENT})*`
 export const PURE_REFERENCE_2 = new RegExp(`^(?:\\$\\{(${DOC_PATH})\\}|\\$\\((${PARTIAL_PATH})\\))$`)
 const REFERENCE_2 = new RegExp(`\\$\\{(${DOC_PATH})\\}|\\$\\((${PARTIAL_PATH})\\)`, 'g')
 const NO_TOKENS: ReferenceToken2[] = []

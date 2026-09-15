@@ -141,6 +141,9 @@ jobs:
         working-directory: editors/lsp
       - run: bunx tsc --noEmit
         working-directory: editors/lsp
+      - run: bun run generate:grammar-fragments
+        working-directory: editors/lsp
+      - run: git diff --exit-code
       # The framework-free checker moved to editors/shared; keep its direct
       # parser and frontmatter tests in CI alongside the server that consumes it.
       - run: bun test ../shared

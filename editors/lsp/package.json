@@ -26,6 +26,7 @@
   "scripts": {
     "build": "bun build --target=node --format=esm --outfile=dist/server.js --banner='#!/usr/bin/env node' src/server.ts",
     "generate:corpus-tests": "bun run ../shared/scripts/generate-corpus-syntax-tests.ts",
+    "generate:grammar-fragments": "bun run ../shared/scripts/generate-grammar-fragments.ts",
     "prepack": "bun run build",
     "prepublishOnly": "bunx tsc --noEmit && bun test && bun run build",
     "test": "bun test"

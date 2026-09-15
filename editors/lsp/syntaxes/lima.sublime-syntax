@@ -9,7 +9,8 @@ version: 2
 variables:
   # A double-quoted key's backslash escapes (Core §5.2) keep an escaped
   # quote from closing it early; a single-quoted key is fully literal.
-  key: "[A-Za-z0-9_][A-Za-z0-9_:\\-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\""
+  # GENERATED:sublime-key
+  key: "[a-zA-Z0-9_][a-zA-Z0-9_:-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\""
 
 contexts:
   main:
@@ -21,6 +22,7 @@ contexts:
     - include: values
 
   comments:
+    # GENERATED:sublime-comment
     - match: '(?<!\\)(#).*$'
       scope: comment.line.number-sign.lima
       captures:
@@ -61,11 +63,13 @@ contexts:
     - include: number
 
   reference-document:
-    - match: '\$\{[A-Za-z0-9_][A-Za-z0-9_:\-]*(?:\.[A-Za-z0-9_][A-Za-z0-9_:\-]*)*\}'
+    # GENERATED:sublime-document-reference
+    - match: '\$\{[a-zA-Z0-9_][a-zA-Z0-9_:-]*(?:\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*)*\}'
       scope: variable.other.reference.document.lima
 
   reference-partial:
-    - match: '\$\([A-Za-z0-9_][A-Za-z0-9_:/\-]*(?:\.[A-Za-z0-9_][A-Za-z0-9_:\-]*)*\)'
+    # GENERATED:sublime-partial-reference
+    - match: '\$\([a-zA-Z0-9_][a-zA-Z0-9_:/-]*(?:\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*)*\)'
       scope: variable.other.reference.partial.lima
 
   flow-sequence:

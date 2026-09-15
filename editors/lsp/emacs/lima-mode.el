@@ -15,14 +15,17 @@
   "Editing Lima data files."
   :group 'languages)
 
+;; GENERATED:emacs-key
 (defconst lima--key-regexp
-  "[A-Za-z0-9_][A-Za-z0-9_:-]*\\|'[^']*'\\|\"[^\"]*\"")
+  "[a-zA-Z0-9_][a-zA-Z0-9_:-]*\\|'[^']*'\\|\"\\(?:\\\\.\\|[^\"\\\\]\\)*\"")
 
+;; GENERATED:emacs-document-reference
 (defconst lima--document-reference-regexp
-  "\\${[A-Za-z0-9_][A-Za-z0-9_:-]*\\(?:\\.[A-Za-z0-9_][A-Za-z0-9_:-]*\\)*}")
+  "\\${[a-zA-Z0-9_][a-zA-Z0-9_:-]*\\(?:\\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*\\)*}")
 
+;; GENERATED:emacs-partial-reference
 (defconst lima--partial-reference-regexp
-  "\\$([A-Za-z0-9_][A-Za-z0-9_:/-]*\\(?:\\.[A-Za-z0-9_][A-Za-z0-9_:-]*\\)*)")
+  "\\$([a-zA-Z0-9_][a-zA-Z0-9_:/-]*\\(?:\\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*\\)*)")
 
 (defconst lima--mapping-key-regexp
   (concat "^\\([ \t]*\\)\\(" lima--key-regexp
