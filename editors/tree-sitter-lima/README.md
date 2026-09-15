@@ -40,20 +40,17 @@ The single `queries/highlights.scm` uses capture names shared by Neovim,
 Helix, and Zed. `bun run query:check` compiles it and verifies representative
 captures.
 
-## Local editor integration
+## Editor integration
 
-Until Phase 2b pins a real commit, keep integration configuration outside the
-tracked tree:
+This grammar is registered against real, published commit pins — see
+[`editors/lsp/README.md`](../lsp/README.md#syntax-highlighting) for the
+Neovim (`main` and frozen `master` branches) and Helix setup, and
+[`editors/zed/`](../zed/) for the Zed extension, which pins this directory
+directly in its `extension.toml`.
 
-- Neovim: register `install_info.path` as this directory, generate/install the
-  parser as `lima`, and copy `queries/highlights.scm` to a temporary runtime's
-  `queries/lima/highlights.scm`.
-- Helix: add a temporary `[[grammar]]` entry whose `source.path` is this
-  directory and copy the query into that temporary runtime's
-  `queries/lima/highlights.scm` before `hx --grammar build`.
-- Zed: copy `editors/zed` outside the repository, change only that copy to use
-  a `[grammars.lima]` entry with `path = "editors/tree-sitter-lima"`, set the
-  language grammar to `lima`, and add the query beside its language config.
-
-The production registrations and commit/revision pins are intentionally
-deferred to Phase 2b.
+For local development on the grammar itself (before a change is committed
+and has a real commit to pin), point an editor at this directory instead of
+a git URL: Neovim's `install_info.path`, Helix's `source.path`, or a
+temporarily patched Zed extension copy with a `[grammars.lima]` entry whose
+`path` is this directory — the same approach used to develop and test this
+grammar in the first place.
