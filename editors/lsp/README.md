@@ -11,7 +11,7 @@ Markdown and MDX documents.
 Configure an LSP client to run:
 
 ```sh
-npx @limaformat/lima-language-server --stdio
+npx --yes @limaformat/lima-language-server --stdio
 ```
 
 Use the language ID `lima` for `.lima` files. The server also accepts
@@ -38,7 +38,7 @@ vim.filetype.add({
 })
 
 vim.lsp.config("lima_ls", {
-  cmd = { "npx", "@limaformat/lima-language-server", "--stdio" },
+  cmd = { "npx", "--yes", "@limaformat/lima-language-server", "--stdio" },
   filetypes = { "lima" },
 })
 
@@ -60,7 +60,7 @@ local util = require("lspconfig.util")
 if not configs.lima_ls then
   configs.lima_ls = {
     default_config = {
-      cmd = { "npx", "@limaformat/lima-language-server", "--stdio" },
+      cmd = { "npx", "--yes", "@limaformat/lima-language-server", "--stdio" },
       filetypes = { "lima" },
       root_dir = util.root_pattern(".git"),
       single_file_support = true,
@@ -88,7 +88,7 @@ language-servers = ["lima-ls"]
 
 [language-server.lima-ls]
 command = "npx"
-args = ["@limaformat/lima-language-server", "--stdio"]
+args = ["--yes", "@limaformat/lima-language-server", "--stdio"]
 ```
 
 Helix has no built-in `.lima` association, so the `[[language]]` block is
@@ -126,6 +126,7 @@ client under `clients` in `Packages/User/LSP.sublime-settings`:
       "enabled": true,
       "command": [
         "npx",
+        "--yes",
         "@limaformat/lima-language-server",
         "--stdio"
       ],
@@ -146,14 +147,20 @@ syntax highlighting is currently limited to standalone files.
 
 ### JetBrains IDEs
 
-Install [LSP4IJ](https://plugins.jetbrains.com/plugin/23257-lsp4ij) in IntelliJ
-IDEA, WebStorm, or another compatible JetBrains IDE. Under **Settings |
-Languages & Frameworks | Language Servers**, add a user-defined (Generic LSP)
-server with:
+The repository includes a [JetBrains companion plugin](../jetbrains/) that
+registers this server and maps `*.lima` automatically through
+[LSP4IJ](https://plugins.jetbrains.com/plugin/23257-lsp4ij). Until it is
+published to JetBrains Marketplace, build and install its ZIP from disk as
+described in the [companion README](../jetbrains/README.md). No Generic LSP
+Server settings are needed after installing it.
+
+For a manual setup without the companion, install LSP4IJ and add a user-defined
+(Generic LSP) server under **Settings | Languages & Frameworks | Language
+Servers** with:
 
 ```text
 Name: Lima
-Command: npx @limaformat/lima-language-server --stdio
+Command: npx --yes @limaformat/lima-language-server --stdio
 Mapping: file name pattern *.lima
 Language ID: lima
 ```
@@ -161,7 +168,7 @@ Language ID: lima
 LSP4IJ's
 [user-defined server guide](https://github.com/redhat-developer/lsp4ij/blob/main/docs/UserDefinedLanguageServer.md)
 shows the corresponding Server and Mappings tabs. This provides diagnostics
-and document-reference navigation; it does not install Lima-specific syntax
+and document-reference navigation. Neither setup installs Lima-specific syntax
 highlighting.
 
 ### Emacs 29+
@@ -179,6 +186,7 @@ hook alongside the mode:
 (with-eval-after-load 'eglot
   (add-to-list 'eglot-server-programs
                '(lima-mode . ("npx"
+                              "--yes"
                               "@limaformat/lima-language-server"
                               "--stdio"))))
 
