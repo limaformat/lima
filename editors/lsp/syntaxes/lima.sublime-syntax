@@ -7,7 +7,9 @@ scope: source.lima
 version: 2
 
 variables:
-  key: "[A-Za-z0-9_][A-Za-z0-9_:\\-]*|'[^']*'|\"[^\"]*\""
+  # A double-quoted key's backslash escapes (Core §5.2) keep an escaped
+  # quote from closing it early; a single-quoted key is fully literal.
+  key: "[A-Za-z0-9_][A-Za-z0-9_:\\-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\""
 
 contexts:
   main:

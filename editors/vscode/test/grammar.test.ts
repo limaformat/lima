@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { expect, test } from "bun:test";
 import * as oniguruma from "vscode-oniguruma";
 import * as textmate from "vscode-textmate";
+import { CORPUS_GRAMMAR_CASES } from "../../shared/corpus-grammar-cases.js";
 
 const HERE = import.meta.dir;
 const GRAMMAR = join(HERE, "..", "syntaxes", "lima.tmLanguage.json");
@@ -31,16 +32,18 @@ const registry = new textmate.Registry({
       : null,
 });
 
-async function scopesFor(code: string): Promise<Array<[string, string[]]>> {
+type ScopedToken = [string, string[], number, number];
+
+async function scopesFor(code: string): Promise<ScopedToken[]> {
   const grammar = await registry.loadGrammar("source.lima");
   if (!grammar) throw new Error("grammar failed to load");
-  const out: Array<[string, string[]]> = [];
+  const out: ScopedToken[] = [];
   let ruleStack = textmate.INITIAL;
   for (const line of code.split("\n")) {
     const r = grammar.tokenizeLine(line, ruleStack);
     for (const t of r.tokens) {
       const text = line.slice(t.startIndex, t.endIndex);
-      if (text.trim() !== "") out.push([text, t.scopes]);
+      out.push([text, t.scopes, t.startIndex, t.endIndex]);
     }
     ruleStack = r.ruleStack;
   }
@@ -49,7 +52,7 @@ async function scopesFor(code: string): Promise<Array<[string, string[]]>> {
 
 /** Does any emitted token whose text === `text` carry a scope matching `scope`? */
 function has(
-  tokens: Array<[string, string[]]>,
+  tokens: ScopedToken[],
   text: string,
   scope: string,
 ): boolean {
@@ -58,12 +61,103 @@ function has(
   );
 }
 
+function scopesAt(tokens: ScopedToken[], offset: number): string[] {
+  const token = tokens.find(
+    ([, , start, end]) => start <= offset && offset < end,
+  );
+  if (!token) throw new Error(`no TextMate token at UTF-16 offset ${offset}`);
+  return token[1];
+}
+
+function carries(scopes: string[], scope: string): boolean {
+  return scopes.some((candidate) => candidate.includes(scope));
+}
+
+test("comment and quote boundaries match the conformance corpus", async () => {
+  const mismatches: string[] = [];
+  for (const fixture of CORPUS_GRAMMAR_CASES) {
+    const tokens = await scopesFor(fixture.input);
+    for (let offset = 0; offset < fixture.input.length; offset++) {
+      const shouldBeComment =
+        fixture.commentStart !== null && offset >= fixture.commentStart;
+      const hasComment = carries(scopesAt(tokens, offset), "comment");
+      if (hasComment !== shouldBeComment) {
+        mismatches.push(
+          `${fixture.id}: comment scope at offset ${offset} was ${hasComment}, expected ${shouldBeComment}`,
+        );
+      }
+
+      const quote = fixture.quoteRanges.find(
+        ({ range: [start, end] }) => start <= offset && offset < end,
+      );
+      const scopes = scopesAt(tokens, offset);
+      if (quote?.kind === "string") {
+        if (!carries(scopes, `string.quoted.${quote.quote}`)) {
+          mismatches.push(
+            `${fixture.id}: missing ${quote.quote}-string scope at offset ${offset}`,
+          );
+        }
+      } else if (quote?.kind === "key") {
+        if (!carries(scopes, "entity.name.tag.lima")) {
+          mismatches.push(
+            `${fixture.id}: missing quoted-key scope at offset ${offset}`,
+          );
+        }
+      } else if (!shouldBeComment) {
+        if (carries(scopes, "string.quoted")) {
+          mismatches.push(
+            `${fixture.id}: unexpected quote scope at offset ${offset}`,
+          );
+        }
+      }
+    }
+  }
+  expect(mismatches).toEqual([]);
+});
+
 test("keys, comments, and the key/value colon", async () => {
   const t = await scopesFor("title: Hello # trailing\n# whole line\n");
   expect(has(t, "title", "entity.name.tag.lima")).toBe(true);
   expect(has(t, ":", "punctuation.separator.key-value.lima")).toBe(true);
   expect(t.some(([x, s]) => x.includes("trailing") && s.some((y) => y.includes("comment")))).toBe(true);
   expect(t.some(([x, s]) => x.includes("whole line") && s.some((y) => y.includes("comment")))).toBe(true);
+});
+
+test("a # need not be preceded by whitespace to start a comment", async () => {
+  const t = await scopesFor("tight-comment: hello#literal\n");
+  expect(has(t, "#", "comment.line.number-sign.lima")).toBe(true);
+  expect(has(t, "literal", "comment.line.number-sign.lima")).toBe(true);
+  expect(
+    t.some(([x, s]) => x.includes("hello") && s.some((y) => y.includes("comment"))),
+  ).toBe(false);
+});
+
+test("an escaped \\# stays literal; a real # after it still starts a comment", async () => {
+  const t = await scopesFor(
+    "escaped-hash: hello\\#literal\nescaped-then-comment: hello\\#literal#actual\n",
+  );
+  expect(
+    t.some(([x, s]) => x.includes("\\#literal") && s.some((y) => y.includes("comment"))),
+  ).toBe(false);
+  expect(has(t, "#", "comment.line.number-sign.lima")).toBe(true);
+  expect(has(t, "actual", "comment.line.number-sign.lima")).toBe(true);
+});
+
+test("a # inside a quoted string stays literal; one right after the closing quote is a comment", async () => {
+  const t = await scopesFor(
+    'quoted-hash: "hello#not-a-comment"\nquoted-then-comment: "hello#literal"#outer\n',
+  );
+  expect(
+    t.some(
+      ([x, s]) =>
+        x.includes("#not-a-comment") &&
+        s.some((y) => y.includes("string.quoted.double")) &&
+        !s.some((y) => y.includes("comment")),
+    ),
+  ).toBe(true);
+  expect(
+    t.some(([x, s]) => x.includes("outer") && s.some((y) => y.includes("comment"))),
+  ).toBe(true);
 });
 
 test("scalars: bool, null, number, date", async () => {
