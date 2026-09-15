@@ -101,4 +101,34 @@
   (should (eq (lima-test--face-at lima-test--document "${outer_comment}")
               'font-lock-comment-face)))
 
+(ert-deftest lima-mode-highlights-every-element-in-dense-flow-sequences ()
+  (should (eq (lima-test--face-at "a: [10,20]" "a: [10,20]" 4)
+              'font-lock-constant-face))
+  (should (eq (lima-test--face-at "a: [10,20]" "a: [10,20]" 7)
+              'font-lock-constant-face))
+  (should (eq (lima-test--face-at "b: [true,false]" "true")
+              'font-lock-constant-face))
+  (should (eq (lima-test--face-at "b: [true,false]" "false")
+              'font-lock-constant-face))
+  (should (eq (lima-test--face-at "c: [null,null]" "c: [null,null]" 4)
+              'font-lock-constant-face))
+  (should (eq (lima-test--face-at "c: [null,null]" "c: [null,null]" 9)
+              'font-lock-constant-face))
+  (should (eq (lima-test--face-at
+               "d: [2026-09-14,2026-09-15]" "2026-09-14")
+              'font-lock-constant-face))
+  (should (eq (lima-test--face-at
+               "d: [2026-09-14,2026-09-15]" "2026-09-15")
+              'font-lock-constant-face))
+  (should (eq (lima-test--face-at "e: [-5,-6]" "-5")
+              'font-lock-constant-face))
+  (should (eq (lima-test--face-at "e: [-5,-6]" "-6")
+              'font-lock-constant-face)))
+
+(ert-deftest lima-mode-highlights-every-string-in-a-dense-flow-sequence ()
+  (should (eq (lima-test--face-at "a: [x,\"b\",\"c\"]" "\"b\"" 1)
+              'font-lock-string-face))
+  (should (eq (lima-test--face-at "a: [x,\"b\",\"c\"]" "\"c\"" 1)
+              'font-lock-string-face)))
+
 ;;; lima-mode-test.el ends here

@@ -46,22 +46,56 @@
 
 (defconst lima--date-regexp
   (concat
-   "\\(?:^\\|[^[:word:]-]\\)\\("
    "[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}"
    "\\(?:[T ][0-9]\\{2\\}:[0-9]\\{2\\}"
    "\\(?::[0-9]\\{2\\}\\)?"
    "\\(?:Z\\|[+-][0-9]\\{2\\}:[0-9]\\{2\\}\\)?\\)?"
    "\\|[0-9]\\{1,2\\}[./][0-9]\\{1,2\\}[./][0-9]\\{4\\}"
    "\\(?:[T ][0-9]\\{2\\}:[0-9]\\{2\\}"
-   "\\(?::[0-9]\\{2\\}\\)?\\)?"
-   "\\)\\(?:$\\|[^[:word:]]\\)"))
+   "\\(?::[0-9]\\{2\\}\\)?\\)?"))
 
 (defconst lima--number-regexp
   (concat
-   "\\(?:^\\|[^[:word:].-]\\)\\("
    "-?\\(?:0\\|[1-9][0-9]*\\)"
-   "\\(?:\\.[0-9]+\\)?\\(?:[eE][+-]?[0-9]+\\)?"
-   "\\)\\(?:$\\|[^[:word:].-]\\)"))
+   "\\(?:\\.[0-9]+\\)?\\(?:[eE][+-]?[0-9]+\\)?"))
+
+(defconst lima--literal-regexp "\\(?:null\\|~\\|true\\|false\\)")
+
+(defun lima--boundary-character-p (character class)
+  "Return non-nil when CHARACTER belongs to boundary-disallowing CLASS."
+  (and character
+       (string-match-p class (char-to-string character))))
+
+(defun lima--match-bounded (regexp before-class after-class limit)
+  "Find REGEXP before LIMIT without consuming its surrounding boundary.
+BEFORE-CLASS and AFTER-CLASS name characters disallowed on each side."
+  (let (found)
+    (while (and (not found) (re-search-forward regexp limit t))
+      (let ((start (match-beginning 0))
+            (end (match-end 0)))
+        (when (and
+               (not (lima--boundary-character-p
+                     (char-before start) before-class))
+               (not (lima--boundary-character-p
+                     (char-after end) after-class)))
+          (set-match-data (list start end))
+          (setq found t))))
+    found))
+
+(defun lima--match-literal (limit)
+  "Find the next null or Boolean literal before LIMIT."
+  (lima--match-bounded
+   lima--literal-regexp "[[:word:]-]" "[[:word:]-]" limit))
+
+(defun lima--match-date (limit)
+  "Find the next date literal before LIMIT."
+  (lima--match-bounded
+   lima--date-regexp "[[:word:]-]" "[[:word:]]" limit))
+
+(defun lima--match-number (limit)
+  "Find the next number literal before LIMIT."
+  (lima--match-bounded
+   lima--number-regexp "[[:word:].-]" "[[:word:].-]" limit))
 
 (defun lima--context-at (position)
   "Return the lexical context at POSITION on its line.
@@ -172,14 +206,12 @@ at a value boundary, so apostrophes in words such as YAML's stay literal."
      (0 font-lock-preprocessor-face))
     ("[][{}]" (0 font-lock-builtin-face))
     ("," (0 font-lock-builtin-face))
-    ("\\(?:^\\|[^[:word:]-]\\)\\(null\\|~\\)\\(?:$\\|[^[:word:]-]\\)"
-     (1 font-lock-constant-face))
-    ("\\(?:^\\|[^[:word:]-]\\)\\(true\\|false\\)\\(?:$\\|[^[:word:]-]\\)"
-     (1 font-lock-constant-face))
-    (,lima--date-regexp
-     (1 font-lock-constant-face))
-    (,lima--number-regexp
-     (1 font-lock-constant-face))
+    (lima--match-literal
+     (0 font-lock-constant-face))
+    (lima--match-date
+     (0 font-lock-constant-face))
+    (lima--match-number
+     (0 font-lock-constant-face))
     (,lima--double-string-regexp
      (1 font-lock-string-face t))
     (,lima--single-string-regexp
