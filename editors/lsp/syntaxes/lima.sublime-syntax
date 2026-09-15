@@ -29,6 +29,7 @@ contexts:
         1: punctuation.definition.comment.lima
 
   block-scalar:
+    # GENERATED:sublime-block-scalar
     - match: '(?<=:)([ \t]+)(\|)[ \t]*(?:(#).*)?$'
       captures:
         2: keyword.operator.block-scalar.lima

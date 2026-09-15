@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  BLOCK_SCALAR,
   COMMENT,
   DOCUMENT_REFERENCE,
   EMACS_DOCUMENT_REFERENCE,
@@ -34,6 +35,7 @@ function update(path: string, generate: (source: string) => string): void {
 function generateTextMate(source: string): string {
   const generated = [
     ["textmate-comment", COMMENT],
+    ["textmate-block-scalar", BLOCK_SCALAR],
     ["textmate-mapping-key", String.raw`^(\s*)(${KEY})(\s*)(:)(?=\s|$)`],
     ["textmate-document-reference", DOCUMENT_REFERENCE],
     ["textmate-partial-reference", PARTIAL_REFERENCE],
@@ -56,6 +58,7 @@ function generateSublime(source: string): string {
   return [
     ["sublime-key", "key", yamlDoubleQuoted(KEY)],
     ["sublime-comment", "- match", yamlSingleQuoted(COMMENT)],
+    ["sublime-block-scalar", "- match", yamlSingleQuoted(BLOCK_SCALAR)],
     [
       "sublime-document-reference",
       "- match",

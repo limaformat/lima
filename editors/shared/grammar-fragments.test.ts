@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+  BLOCK_SCALAR,
   COMMENT,
   DOCUMENT_REFERENCE,
   DOUBLE_QUOTED_KEY,
@@ -24,6 +25,7 @@ test("canonical grammar fragments cover keys, references, and comments", () => {
   );
   expect(new RegExp(COMMENT).exec("value#comment")?.index).toBe(5);
   expect(new RegExp(COMMENT).test(String.raw`value\#literal`)).toBe(false);
+  expect(new RegExp(BLOCK_SCALAR).exec("query:    |")?.[2]).toBe("|");
 });
 
 test("the supported Oniguruma subset renders to Emacs syntax", () => {

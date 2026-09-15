@@ -195,8 +195,15 @@ test("a reference inside a double-quoted string stays literal", async () => {
 });
 
 test("literal block scalar marker is |, folded > is not a marker", async () => {
-  const t = await scopesFor("text: |\n  body line\n");
+  const t = await scopesFor("one: |\ntwo:  |\nfour:    |\ntab:\t |\n");
   expect(has(t, "|", "keyword.operator.block-scalar.lima")).toBe(true);
+  expect(
+    t.filter(
+      ([text, scopes]) =>
+        text === "|" &&
+        scopes.some((scope) => scope.includes("keyword.operator.block-scalar.lima")),
+    ),
+  ).toHaveLength(4);
   const folded = await scopesFor("text: >\n  body line\n");
   expect(has(folded, ">", "keyword.operator.block-scalar.lima")).toBe(false);
 });

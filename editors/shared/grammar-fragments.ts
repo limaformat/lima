@@ -20,6 +20,9 @@ export const PARTIAL_REFERENCE = String.raw`\$\(${PARTIAL_PATH}\)`;
 /** Oniguruma form; Emacs keeps its procedural comment matcher. */
 export const COMMENT = String.raw`(?<!\\)(#).*$`;
 
+/** Core §15.7 literal block-scalar marker and its optional comment. */
+export const BLOCK_SCALAR = String.raw`(?<=:)([ \t]+)(\|)[ \t]*(?:(#).*)?$`;
+
 /** Translate the mechanically shared fragment subset to Emacs regexp syntax. */
 export function onigurumaFragmentToEmacs(fragment: string): string {
   return fragment

@@ -22,11 +22,11 @@
     },
 
     "block-scalar": {
-      "comment": "Literal block scalar: exactly `|` as the complete inline value (Lima Core §15.7). `>` folded scalars are not supported.",
-      "match": "(?<=:\\s)(\\|)[ \\t]*(?:(#).*)?$",
+      "comment": "Literal block scalar: exactly `|` as the complete inline value (Lima Core §15.7). `>` folded scalars are not supported. GENERATED:textmate-block-scalar",
+      "match": "(?<=:)([ \\t]+)(\\|)[ \\t]*(?:(#).*)?$",
       "captures": {
-        "1": { "name": "keyword.operator.block-scalar.lima" },
-        "2": { "name": "comment.line.number-sign.lima" }
+        "2": { "name": "keyword.operator.block-scalar.lima" },
+        "3": { "name": "comment.line.number-sign.lima" }
       }
     },
 
