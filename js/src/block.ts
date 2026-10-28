@@ -14,7 +14,7 @@ import {
 	stripKeyQuotes, stripComment, stripCommentKeepEscapes,
 	parseQuotedOrTyped, closingQuoteIndex, isValidKey,
 } from './scalars.js'
-import { parseFlowMapping, parseFlowOrScalarValue, parseFlowSequence } from './flow.js'
+import { parseFlowOrScalarValue, parseFlowSequence } from './flow.js'
 import { buildBlockScalar } from './block-scalar.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
@@ -60,12 +60,13 @@ const inlineSource = (
 	tabAdjust: ctx.tabAdjust ? [ctx.tabAdjust[keyLine - 1] ?? 0] : undefined,
 }) : undefined
 
+/** An inline value, or a `|` block scalar when `marker`: the value is `|` alone (§6.1.5; `| # c` is the string `|`). */
 const inlineOrBlockScalar = <V, M>(
-	raw: string, keyIndent: number, keyLine: number, valueCol: number, rawUndecoded: string,
+	raw: string, marker: boolean, keyIndent: number, keyLine: number, valueCol: number, rawUndecoded: string,
 	cursor: BlockCursor, ctx: ParseContext, builder: ValueBuilder<V, M>,
 ): V => {
 	const wantSource = builder.positions === true
-	if (raw !== '|') {
+	if (!marker) {
 		const value = parseFlowOrScalarValue(
 			raw, ctx, keyLine, builder, inlineSource(wantSource, ctx, keyLine, valueCol, rawUndecoded),
 		)
@@ -211,7 +212,7 @@ const parseCursorBlock = <V, M>(
 					let raw = rawUndecoded
 					if (raw !== '|' && raw.includes('#')) raw = stripComment(raw)
 					const valueCol = wantSource ? cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2)) : 0
-					builder.setMapping(pendingItem, key, inlineOrBlockScalar(raw, indent, line, valueCol, rawUndecoded, cursor, ctx, builder))
+					builder.setMapping(pendingItem, key, inlineOrBlockScalar(raw, rawUndecoded === '|', indent, line, valueCol, rawUndecoded, cursor, ctx, builder))
 				} else if (bareKey) {
 					const key = stripKeyQuotes(keyRaw, ctx.strict, line)
 					checkKeyLength(key, line)
@@ -256,7 +257,12 @@ const parseCursorBlock = <V, M>(
 				raw: physicalRaw(afterDashRaw), line, col: afterDashCol, tabAdjust: afterDashTab,
 			}) : undefined
 			const first = afterDash.charCodeAt(0)
-			// an item's value is an inline value (§15.3); a flow sequence there is a sequence in a sequence (§7.2)
+			// an item's value is an inline value (§15.3): a flow mapping, or what an unclosed one falls back to (§7.5); a
+			// flow sequence there is a sequence in a sequence (§7.2)
+			if (first === 123) {
+				items.push(parseFlowOrScalarValue(afterDash, ctx, line, builder, dashSource))
+				cursor.next(); continue
+			}
 			if (first === 91) {
 				const sequence = parseFlowSequence(afterDash, ctx, line, builder, dashSource)
 				if (sequence === null) items.push(parseFlowOrScalarValue(afterDash, ctx, line, builder, dashSource))
@@ -265,16 +271,13 @@ const parseCursorBlock = <V, M>(
 				else items.push(builder.null(line))
 				cursor.next(); continue
 			}
-			if (first !== 34 && first !== 39 && first !== 45 && first !== 123 &&
+			if (first !== 34 && first !== 39 && first !== 45 &&
 				afterDash.indexOf(': ') === -1 && !afterDash.endsWith(':')) {
 				items.push(parseQuotedOrTyped(afterDash, ctx, line, builder, dashSource))
 				cursor.next(); continue
 			}
-			const flowMap = parseFlowMapping(afterDash, ctx, line, builder, dashSource)
 			const colonPos = findKeySep(afterDash)
-			if (flowMap !== null) {
-				items.push(flowMap); cursor.next()
-			} else if (afterDash === '-' || DASH_PREFIX_RE.test(afterDash)) {
+			if (afterDash === '-' || DASH_PREFIX_RE.test(afterDash)) {
 				if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
 					message: `Lima: nested block sequence at line ${line}: "${cursorContent(cursor)}"` })
 				items.push(builder.null(line)); cursor.next()
@@ -295,7 +298,7 @@ const parseCursorBlock = <V, M>(
 				// The key sits after `- `, two columns past the dash.
 				const valueCol = wantSource ? afterDashCol + valueStart + leadingWsLen(afterDash.slice(valueStart)) : 0
 				pendingItem = builder.createMappingWith(key,
-					inlineOrBlockScalar(raw, baseIndent + 2, line, valueCol,
+					inlineOrBlockScalar(raw, trimSlice(afterDashRaw, valueStart, afterDashRaw.length) === '|', baseIndent + 2, line, valueCol,
 						wantSource ? afterDashRaw.slice(valueStart) : raw, cursor, ctx, builder))
 				while (cursor.valid && cursor.indent > baseIndent) {
 					const continuationLine = baseLine + cursor.lineIndex
@@ -317,7 +320,7 @@ const parseCursorBlock = <V, M>(
 					// the value's column is the indent plus its offset in contLine.
 					const cValueCol = wantSource ? cursor.indent + csep + 2 + leadingWsLen(contLine.slice(csep + 2)) : 0
 					builder.setMapping(pendingItem, ckey,
-						inlineOrBlockScalar(value, ckeyIndent, continuationLine, cValueCol, valueUndecoded, cursor, ctx, builder))
+						inlineOrBlockScalar(value, valueUndecoded === '|', ckeyIndent, continuationLine, cValueCol, valueUndecoded, cursor, ctx, builder))
 				}
 			} else if (afterDash.endsWith(':') && isValidKey(trimSlice(afterDash, 0, afterDash.length - 1))) {
 				const key = stripKeyQuotes(trimSlice(afterDash, 0, afterDash.length - 1), ctx.strict, line)
@@ -367,7 +370,7 @@ const parseCursorBlock = <V, M>(
 				let raw = rawUndecoded
 				if (raw !== '|' && raw.includes('#')) raw = stripComment(raw)
 				const valueCol = wantSource ? cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2)) : 0
-				builder.setMapping(entries, key, inlineOrBlockScalar(raw, baseIndent, line, valueCol, rawUndecoded, cursor, ctx, builder))
+				builder.setMapping(entries, key, inlineOrBlockScalar(raw, rawUndecoded === '|', baseIndent, line, valueCol, rawUndecoded, cursor, ctx, builder))
 			} else if (bareKey) {
 				if (entries === null) entries = builder.createMapping()
 				const key = stripKeyQuotes(keyRaw, ctx.strict, line)

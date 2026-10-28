@@ -10,9 +10,7 @@ use crate::block_scalar::build_block_scalar;
 use crate::chars::is_trim_whitespace;
 use crate::core::tab_adjust_slice;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
-use crate::flow::{
-    parse_flow_mapping_checked, parse_flow_or_scalar_value_checked, parse_flow_sequence_checked,
-};
+use crate::flow::{parse_flow_or_scalar_value_checked, parse_flow_sequence_checked};
 use crate::normalize::{check_duplicate_key, check_key_length, NESTING_DEPTH_LIMIT};
 use crate::scalars::{
     closing_quote_index, is_valid_key, parse_quoted_or_typed, physical_raw, strip_comment,
@@ -39,8 +37,12 @@ fn unrecognized_key_line(line: u32, trimmed: &str) -> LimaError {
     )
 }
 
+/// An inline value, or a `|` block scalar when `marker`: the value is `|`
+/// alone (§6.1.5; `| # c` is the string `|`).
+#[allow(clippy::too_many_arguments)]
 fn inline_or_block_scalar<'a, B: Builder, const CHECK_DUPLICATES: bool>(
     raw: &str,
+    marker: bool,
     key_indent: usize,
     key_line: u32,
     value_col: usize,
@@ -48,7 +50,7 @@ fn inline_or_block_scalar<'a, B: Builder, const CHECK_DUPLICATES: bool>(
     cursor: &mut BlockCursor<'a>,
     strict: bool,
 ) -> Result<B::Value, LimaError> {
-    if raw != "|" {
+    if !marker {
         let source = B::POSITIONED.then(|| ReferenceSource {
             raw: Some(physical_raw(raw_undecoded)),
             line: key_line,
@@ -299,6 +301,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     };
                     let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                         &raw,
+                        raw_undecoded == "|",
                         key_indent,
                         line,
                         value_col,
@@ -383,8 +386,19 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 })
             };
             let first = after_dash.as_bytes().first().copied();
-            // an item's value is an inline value (§15.3); a flow sequence
-            // there is a sequence in a sequence (§7.2)
+            // an item's value is an inline value (§15.3): a flow mapping, or
+            // what an unclosed one falls back to (§7.5); a flow sequence there
+            // is a sequence in a sequence (§7.2)
+            if first == Some(b'{') {
+                items.push(parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                    &after_dash,
+                    strict,
+                    line,
+                    dash_src(cursor.indent + dash_prefix_len(cursor)),
+                )?);
+                cursor.next();
+                continue;
+            }
             if first == Some(b'[') {
                 let src = dash_src(cursor.indent + dash_prefix_len(cursor));
                 match parse_flow_sequence_checked::<B, CHECK_DUPLICATES>(
@@ -412,7 +426,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 cursor.next();
                 continue;
             }
-            if !matches!(first, Some(b'"') | Some(b'\'') | Some(b'-') | Some(b'{'))
+            if !matches!(first, Some(b'"') | Some(b'\'') | Some(b'-'))
                 && !after_dash.contains(": ")
                 && !after_dash.ends_with(':')
             {
@@ -426,17 +440,8 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 continue;
             }
 
-            let flow_map = parse_flow_mapping_checked::<B, CHECK_DUPLICATES>(
-                &after_dash,
-                strict,
-                line,
-                dash_src(cursor.indent + dash_prefix_len(cursor)),
-            )?;
             let colon_pos = find_key_sep(&after_dash);
-            if let Some(flow_map) = flow_map {
-                items.push(flow_map);
-                cursor.next();
-            } else if is_dash_only_or_prefixed(&after_dash) {
+            if is_dash_only_or_prefixed(&after_dash) {
                 if strict {
                     let content = cursor_content(cursor).to_string();
                     return Err(LimaError::new(
@@ -472,8 +477,12 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 } else {
                     0
                 };
+                let marker = after_dash_raw
+                    .get(value_start..)
+                    .is_some_and(|v| v.trim_matches(is_trim_whitespace) == "|");
                 let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                     raw,
+                    marker,
                     base_indent + 2,
                     line,
                     value_col,
@@ -516,6 +525,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     };
                     let cvalue = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                         &cvalue,
+                        cvalue_undecoded == "|",
                         ckey_indent,
                         continuation_line,
                         cvalue_col,
@@ -601,6 +611,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 };
                 let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                     &raw,
+                    raw_undecoded == "|",
                     base_indent,
                     line,
                     value_col,

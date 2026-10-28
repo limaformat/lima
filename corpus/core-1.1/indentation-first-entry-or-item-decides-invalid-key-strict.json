@@ -1,0 +1,24 @@
+{
+  "id": "core.indentation.first-entry-or-item-decides-invalid-key.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "A first line whose key the key grammar rejects is unrecognised in strict mode (§5.1).",
+  "input": "a:\n  a.b: 1\n  - item\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "indentation",
+    "block-sequence",
+    "keys",
+    "error",
+    "strict"
+  ]
+}

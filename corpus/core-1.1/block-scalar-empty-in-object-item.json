@@ -1,0 +1,23 @@
+{
+  "id": "core.block-scalar.empty-in-object-item",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "A `|` with no content lines is '' as the later key of an object item too (Go read \"|\").",
+  "input": "l:\n  - a: 1\n    b: |\nc: 1\n",
+  "expect": {
+    "result": {
+      "l": [
+        {
+          "a": 1,
+          "b": ""
+        }
+      ],
+      "c": 1
+    }
+  },
+  "tags": [
+    "block-scalar",
+    "object-item"
+  ]
+}

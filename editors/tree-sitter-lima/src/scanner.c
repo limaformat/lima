@@ -131,10 +131,21 @@ void tree_sitter_lima_external_scanner_deserialize(void *p, const char *buffer, 
 
 // ---- block scalar marker ----
 
-static bool scan_block_scalar_marker(Scanner *s, TSLexer *lexer) {
+static bool scan_block_scalar_marker(Scanner *s, TSLexer *lexer, const bool *valid_symbols) {
   if (lexer->lookahead != '|') return false;
   lexer->advance(lexer, false);
-  skip_hws(lexer);
+  // Not skipped: a `|` that is no marker stays the start of the value's token.
+  lexer->mark_end(lexer);
+  bool spaced = false;
+  while (is_ws(lexer->lookahead)) {
+    lexer->advance(lexer, false);
+    spaced = true;
+  }
+  // `| # c` is the string `|` and a comment: the marker stands alone (§6.1.5).
+  if (spaced && lexer->lookahead == '#' && valid_symbols[PLAIN_TEXT]) {
+    lexer->result_symbol = PLAIN_TEXT;
+    return true;
+  }
   if (lexer->lookahead != '\n' && lexer->lookahead != '\r' && lexer->lookahead != 0) {
     return false;
   }
@@ -850,7 +861,7 @@ bool tree_sitter_lima_external_scanner_scan(void *payload, TSLexer *lexer, const
   }
 
   if (c == '|' && valid_symbols[BLOCK_SCALAR_MARKER]) {
-    if (scan_block_scalar_marker(s, lexer)) {
+    if (scan_block_scalar_marker(s, lexer, valid_symbols)) {
       s->line_start = false;
       return true;
     }

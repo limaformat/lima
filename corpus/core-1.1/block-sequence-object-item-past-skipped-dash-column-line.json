@@ -1,0 +1,22 @@
+{
+  "id": "core.block-sequence.object-item-past-skipped-dash-column-line",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "A line at the dash's column that is no item is skipped in non-strict mode and ends no object item: the deeper key after it is the item's.",
+  "input": "l:\n  - a: 1\n  freetext\n    b: 2\n",
+  "expect": {
+    "result": {
+      "l": [
+        {
+          "a": 1,
+          "b": 2
+        }
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "object-item"
+  ]
+}

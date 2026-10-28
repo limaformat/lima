@@ -1,0 +1,23 @@
+{
+  "id": "core.block-scalar.marker-with-comment-nested.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "`| # c` is no block scalar marker (the `|` must be alone, §6.1.5, §15.7) at a nested level either: the value is the string `|`.",
+  "input": "m:\n  a: | # c\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "m": {
+        "a": "|"
+      }
+    }
+  },
+  "tags": [
+    "block-scalar",
+    "comments",
+    "strict"
+  ]
+}

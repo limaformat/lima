@@ -1,0 +1,23 @@
+{
+  "id": "core.block-sequence.object-item-past-skipped-dash-column-line.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "A line at the dash's column that is no item throws in strict mode (§7.1).",
+  "input": "l:\n  - a: 1\n  freetext\n    b: 2\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 3,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "object-item",
+    "error",
+    "strict"
+  ]
+}

@@ -336,7 +336,7 @@ skips the whitespace after `: ` before any scalar path and before the
 References 2.0 source column is taken, in `core.ts` and `core.rs`; the
 reported columns were already physical and stay identical in all three.
 
-## Core 1.1 (2026-10-28) — C-255–C-276, `corpus/core-1.1/`
+## Core 1.1 (2026-10-28) — C-255–C-283, `corpus/core-1.1/`
 
 Strict mode rejects a content line that belongs to no structure
 ([decision](../../decisions/top-level-indentation-after-inline-value.md)).
@@ -370,6 +370,13 @@ and the default run leaves them out.
 | C-274 | §7.2, §7.4 | Block sequence | Any other item value that begins with `[` is an inline value: string fallback, or `INVALID_FLOW_SYNTAX` (TypeScript and Rust accepted it in strict mode) | pair | both |
 | C-275 | §7.1 rule 6 | Indentation | A line of spaces only, in a block mapping or a sequence, is a blank line (Go panicked) | positive | both |
 | C-276 | §7.1 rules 6–7, §7.2 | Block sequence | An object item's keys go on past a blank, whitespace-only or comment line (Go lost them) | positive | both |
+| C-277 | §7.2 | Block sequence | An item whose value is a negative number is that number, not a nested sequence (Go read `null`) | positive | both |
+| C-278 | §6.1.5 | Block scalar | A `\|` with no content lines is `''` as a later key of an object item (Go read `"\|"`) | positive | both |
+| C-279 | §6.1.5, §15.7 | Block scalar | `\| # c` is no marker below the top level — nested, first and later key of an object item: the string `"\|"`, and a deeper line after it is skipped or throws (all three read a block scalar somewhere) | pair | both |
+| C-280 | §7.2, §7.5 | Block sequence | An item value that begins with `{` and does not close is a string fallback, or `INVALID_FLOW_SYNTAX` (TypeScript and Rust accepted it in strict mode) | pair | both |
+| C-281 | §7.1 | Indentation | The first entry or item decides a block's kind; freetext or an invalid key before it does not (Go read `null`) | pair | both |
+| C-282 | §7.1 | Block sequence | A line non-strict mode skips inside an object item ends it not; strict mode throws for it (Go lost the later keys) | pair | both |
+| C-283 | §7.1 | Block sequence | A line at the dash's column that is no item ends no object item in non-strict mode; strict mode throws | pair | both |
 
 Found while implementing: the TypeScript scanner took a top-level `key:` at the
 very end of the input for no key (it wanted a newline or a space after the
@@ -380,7 +387,10 @@ both since fixed (`editors/tree-sitter-lima/src/scanner.c`).
 
 C-268–C-276 come from Codex's second review and a three-way differential test
 of random documents (TypeScript, Rust and Go on the same inputs, about 400,000
-parses). One divergence remains, outside Core 1.1: a line indented by ASCII
+parses); C-277–C-283 from the third review and the differential test in CI
+(§14 of the design README), whose structured documents found what the random
+lines had not. C-279 is the one where all three implementations agreed and the
+specification said otherwise: agreement is not correctness. One divergence remains, outside Core 1.1: a line indented by ASCII
 spaces and then Unicode whitespace such as U+00A0 is read differently by the
 three; §3 defines indentation by spaces and tabs only, and leaves such a line
 open. The tree-sitter grammar does not show a compact sequence as a sequence

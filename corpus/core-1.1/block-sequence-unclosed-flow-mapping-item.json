@@ -1,0 +1,19 @@
+{
+  "id": "core.block-sequence.unclosed-flow-mapping-item",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "An item value that begins with `{` but does not close is read as an inline value is: a string fallback in non-strict mode (§7.5).",
+  "input": "l:\n  - {a: 1\n",
+  "expect": {
+    "result": {
+      "l": [
+        "{a: 1"
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "flow-mapping"
+  ]
+}

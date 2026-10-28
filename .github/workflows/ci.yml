@@ -75,6 +75,32 @@ jobs:
     # Go toolchain to verify it first. If the initial run fails on `go vet`,
     # fix the reported issue rather than dropping the step.
 
+  differential:
+    name: differential (TypeScript, Rust and Go on random documents)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+      - run: bun install
+        working-directory: js
+      - run: bun install
+        working-directory: corpus/runner
+      - run: cargo build --release --example differential
+        working-directory: rust
+      - run: go build -o "$RUNNER_TEMP/lima-differential-go" ./internal/differential
+        working-directory: go
+      # Fixed seeds: a failure here reproduces locally with the same command,
+      # and each disagreement is printed shrunk to the lines it needs.
+      - run: >-
+          bun src/differential.ts
+          --rust ../../rust/target/release/examples/differential
+          --go "$RUNNER_TEMP/lima-differential-go"
+          --seeds 1,2,3,4 --docs 25000
+        working-directory: corpus/runner
+
   pack-smoke:
     name: js (pack + import smoke test)
     runs-on: ubuntu-latest

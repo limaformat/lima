@@ -1,0 +1,21 @@
+{
+  "id": "core.block-sequence.negative-number-items",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "An item whose value begins with `-` but is no item (`-7`, `-0.5`) is a scalar, not a nested sequence (Go read null).",
+  "input": "l:\n  - -7\n  - -0.5\n  - -1e3\n",
+  "expect": {
+    "result": {
+      "l": [
+        -7,
+        -0.5,
+        -1000
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "numbers"
+  ]
+}

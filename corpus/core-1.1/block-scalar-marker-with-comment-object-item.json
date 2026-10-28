@@ -1,0 +1,23 @@
+{
+  "id": "core.block-scalar.marker-with-comment-object-item",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "`| # c` is no block scalar marker for the first or a later key of an object item either.",
+  "input": "l:\n  - a: | # c\n    b: | # c\n",
+  "expect": {
+    "result": {
+      "l": [
+        {
+          "a": "|",
+          "b": "|"
+        }
+      ]
+    }
+  },
+  "tags": [
+    "block-scalar",
+    "comments",
+    "object-item"
+  ]
+}

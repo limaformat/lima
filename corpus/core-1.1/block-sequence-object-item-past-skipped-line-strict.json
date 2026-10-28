@@ -1,0 +1,23 @@
+{
+  "id": "core.block-sequence.object-item-past-skipped-line.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "A marker line inside an object item is inconsistently indented in strict mode.",
+  "input": "l:\n  - a: 1\n    ---\n    b: 2\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 3,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "object-item",
+    "error",
+    "strict"
+  ]
+}

@@ -52,6 +52,27 @@ const EXPECTED_TREES: Record<string, string> = {
     (block_scalar
       body: (block_scalar_body
         (continuation)))))`,
+  // `| # c` is no marker (the `|` stands alone, Core §6.1.5): a plain scalar and a comment, at every level.
+  "core.block-scalar.marker-with-comment-nested": `(document
+  (block_mapping_entry
+    key: (key)
+    (block_mapping
+      (block_mapping_entry
+        key: (key)
+        value: (plain_scalar)
+        (comment)))))`,
+  "core.block-scalar.marker-with-comment-object-item": `(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        value: (plain_scalar)
+        (comment)
+        (block_mapping_entry
+          key: (key)
+          value: (plain_scalar)
+          (comment))))))`,
   "core.block-scalar.dedent-comment-ends-scalar": `(document
   (block_mapping_entry
     key: (key)

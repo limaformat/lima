@@ -2,9 +2,9 @@
   "suite": "core-1.1",
   "frozen": true,
   "baselineVersion": "1.1.0",
-  "baselineCaseCount": 73,
+  "baselineCaseCount": 94,
   "specVersion": "1.1.0",
-  "caseCount": 73,
+  "caseCount": 94,
   "supersedes": [
     "core.block-scalar.chomping-indicator-unsupported.strict",
     "core.block-scalar.folded-marker-unsupported.strict",
@@ -47,6 +47,18 @@
       "since": "1.1.0"
     },
     {
+      "path": "core-1.1/block-scalar-empty-in-object-item-strict.json",
+      "id": "core.block-scalar.empty-in-object-item.strict",
+      "sha256": "f585e8a21ebd188a9ec901ebebcf00e015a63cb689aee25aebba3d30e4fad4c9",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-empty-in-object-item.json",
+      "id": "core.block-scalar.empty-in-object-item",
+      "sha256": "d4347fba120c081bb9eb62dc8684967837667a686cf8c55567f042184348341b",
+      "since": "1.1.0"
+    },
+    {
       "path": "core-1.1/block-scalar-empty-nested-strict.json",
       "id": "core.block-scalar.empty-nested.strict",
       "sha256": "98b5cf6d3af87f563de90768758372874e07a930a9c1e3d26239cb320131501d",
@@ -74,6 +86,42 @@
       "path": "core-1.1/block-scalar-folded-marker-strict.json",
       "id": "core.block-scalar.folded-marker.strict",
       "sha256": "a1eb0a2ae828e136a12ea8e537ab3f3feff00ca7ef1ab776b507f3564474d2be",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-marker-with-comment-nested-body-strict.json",
+      "id": "core.block-scalar.marker-with-comment-nested-body.strict",
+      "sha256": "260d85bd6a4ae6f844249ab331534aa17c1e6c517f365ba2d8fe98f5d1262470",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-marker-with-comment-nested-body.json",
+      "id": "core.block-scalar.marker-with-comment-nested-body",
+      "sha256": "4922d1ccee10d81ff88cf333d986d10345d6d9e0b3e3c35ca6da59b182d90742",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-marker-with-comment-nested-strict.json",
+      "id": "core.block-scalar.marker-with-comment-nested.strict",
+      "sha256": "e2c146d2ebc1c1e3e5f03ab2d6fb5d867d8c5d99e82939e316312ce650111bf8",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-marker-with-comment-nested.json",
+      "id": "core.block-scalar.marker-with-comment-nested",
+      "sha256": "f676d1acee7294cd24e617cfd7bfd4d586bf4a67e3ffc621b0f78b92478e893e",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-marker-with-comment-object-item-strict.json",
+      "id": "core.block-scalar.marker-with-comment-object-item.strict",
+      "sha256": "201377f8ba4bd93a287928050cbfe847c2bae1e1d34ab48309eb03dc72e6d26f",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-marker-with-comment-object-item.json",
+      "id": "core.block-scalar.marker-with-comment-object-item",
+      "sha256": "de4dd891f3d4617c8a9df859e1999a172e531981383f5a76e667a322097f67f7",
       "since": "1.1.0"
     },
     {
@@ -203,6 +251,18 @@
       "since": "1.1.0"
     },
     {
+      "path": "core-1.1/block-sequence-negative-number-items-strict.json",
+      "id": "core.block-sequence.negative-number-items.strict",
+      "sha256": "e734b3e63cc923f2523d3e318c332eaf172c22a6707e34df476b4449f1f18eb7",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-negative-number-items.json",
+      "id": "core.block-sequence.negative-number-items",
+      "sha256": "5d382bc064cd009c26e1ec31e054de504a01135a73e1291eab61dc383cfabc93",
+      "since": "1.1.0"
+    },
+    {
       "path": "core-1.1/block-sequence-object-item-blank-line-strict.json",
       "id": "core.block-sequence.object-item.blank-line.strict",
       "sha256": "139b7f24737aafbd87ae51c543e84aa6e59731ce7372b0238b61c637608f9794",
@@ -224,6 +284,48 @@
       "path": "core-1.1/block-sequence-object-item-comment-line.json",
       "id": "core.block-sequence.object-item.comment-line",
       "sha256": "75e6c198dd5ac6672ec7fdd594c8e6bfa49b1169f232a0446b51af4f02c3fb0e",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-object-item-past-skipped-dash-column-line-strict.json",
+      "id": "core.block-sequence.object-item-past-skipped-dash-column-line.strict",
+      "sha256": "2a6ba9269b11f659522196c28f71521a50c8bcdc63e0f814c87a5dc1fd300d23",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-object-item-past-skipped-dash-column-line.json",
+      "id": "core.block-sequence.object-item-past-skipped-dash-column-line",
+      "sha256": "be46407c3b49b3ace09a09bacdbb87428a19db53b61c43247fd0f9da5e904fff",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-object-item-past-skipped-key-strict.json",
+      "id": "core.block-sequence.object-item-past-skipped-key.strict",
+      "sha256": "336bde8547555d9b5bdf04cc6c8ba060d4ea75fe4a66f67e7f03338c1ed6ce68",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-object-item-past-skipped-line-strict.json",
+      "id": "core.block-sequence.object-item-past-skipped-line.strict",
+      "sha256": "a9f2a9070ba98495e2fb0a0db88d8434f587a10a761cca0b8a2ab064786ae559",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-object-item-past-skipped-line.json",
+      "id": "core.block-sequence.object-item-past-skipped-line",
+      "sha256": "2631edc150470edc256ce828a691839465bd2e4db16aaefdb2878f70a332f52c",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-unclosed-flow-mapping-item-strict.json",
+      "id": "core.block-sequence.unclosed-flow-mapping-item.strict",
+      "sha256": "ff6d2d47828cd2f3f1f558677505cf1de4127a63950511c05bee7d02506d3bb6",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-unclosed-flow-mapping-item.json",
+      "id": "core.block-sequence.unclosed-flow-mapping-item",
+      "sha256": "b4c2ca8ddb35c130cb201b52c680d2d303da4edf9b32351eb7576c1aa57aa120",
       "since": "1.1.0"
     },
     {
@@ -296,6 +398,30 @@
       "path": "core-1.1/indentation-before-first-key-strict.json",
       "id": "core.indentation.before-first-key.strict",
       "sha256": "5cd86c59ce8dc52ba2fa12b98afb45dc09c71646d3f1e9fae6fe03e75bfc3e87",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-first-entry-or-item-decides-invalid-key-strict.json",
+      "id": "core.indentation.first-entry-or-item-decides-invalid-key.strict",
+      "sha256": "0f1cce693249f2bd9bd941c8104d637fe74ecfaa73d3dd9b36145854b81bcae6",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-first-entry-or-item-decides-invalid-key.json",
+      "id": "core.indentation.first-entry-or-item-decides-invalid-key",
+      "sha256": "d27957ddb08c82ef60d815555609aae46616c4f615b8e88ccd7d12c4a1761a45",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-first-entry-or-item-decides-strict.json",
+      "id": "core.indentation.first-entry-or-item-decides.strict",
+      "sha256": "53fc7cd2a48ecbd6d87eac34290646653f378cc6b85b54d4f7bee0ea26aeb838",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-first-entry-or-item-decides.json",
+      "id": "core.indentation.first-entry-or-item-decides",
+      "sha256": "0e45e41c5eb37f6cf46736f3dd0f7689db7ec7b30f15cb5a8fcda05f4d0f52ea",
       "since": "1.1.0"
     },
     {

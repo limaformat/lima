@@ -1,0 +1,23 @@
+{
+  "id": "core.indentation.first-entry-or-item-decides.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "Freetext as a block's first line throws in strict mode, before any line after it decides anything.",
+  "input": "a:\n  freetext\n  - item\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "indentation",
+    "block-sequence",
+    "error",
+    "strict"
+  ]
+}

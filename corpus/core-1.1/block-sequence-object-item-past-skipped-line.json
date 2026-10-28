@@ -1,0 +1,22 @@
+{
+  "id": "core.block-sequence.object-item-past-skipped-line",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "A line non-strict mode skips inside an object item is as if absent: the item's next key still belongs to it (Go lost it).",
+  "input": "l:\n  - a: 1\n    ---\n    x.y: 1\n    b: 2\n",
+  "expect": {
+    "result": {
+      "l": [
+        {
+          "a": 1,
+          "b": 2
+        }
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "object-item"
+  ]
+}

@@ -51,11 +51,15 @@ non-strict results change with them (below).
 - A block of mapping entries with a sequence item in it, or the reverse, was
   an empty sequence in non-strict mode, all its entries lost; the first kind
   wins and a line of the other kind is skipped (Core 1.1 §7.1).
-- An item value that begins with `[` but is no flow sequence (`- [x] done`)
-  throws `INVALID_FLOW_SYNTAX` in strict mode, as an inline value does.
+- An item value that begins with `[` but is no flow sequence (`- [x] done`),
+  or with `{` and does not close (`- {a: 1`), throws `INVALID_FLOW_SYNTAX`
+  in strict mode, as an inline value does.
+- `key: | # c` below the top level, in a block mapping or an object item,
+  was a block scalar; it is the string `"|"`, as at the top level — the
+  marker stands alone (§6.1.5).
 
-The shared conformance corpus is at 283 Core cases: the 218 Core 1.0 cases
-without the 8 that Core 1.1 supersedes, plus 73 Core 1.1 cases
+The shared conformance corpus is at 304 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 94 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

@@ -83,6 +83,45 @@ description: |
         (continuation)))))
 
 ==================
+core.block-scalar.marker-with-comment-nested
+==================
+m:
+  a: | # c
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_mapping
+      (block_mapping_entry
+        key: (key)
+        value: (plain_scalar)
+        (comment)))))
+
+==================
+core.block-scalar.marker-with-comment-object-item
+==================
+l:
+  - a: | # c
+    b: | # c
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        value: (plain_scalar)
+        (comment)
+        (block_mapping_entry
+          key: (key)
+          value: (plain_scalar)
+          (comment))))))
+
+==================
 core.block-scalar.dedent-comment-ends-scalar
 ==================
 description: |

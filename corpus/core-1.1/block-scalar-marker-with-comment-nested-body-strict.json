@@ -1,0 +1,24 @@
+{
+  "id": "core.block-scalar.marker-with-comment-nested-body.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "`| # c` opens no block scalar, so a deeper line after it is inconsistently indented (§7.1 rule 5).",
+  "input": "m:\n  a: | # c\n    text\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 3,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "block-scalar",
+    "comments",
+    "indentation",
+    "error",
+    "strict"
+  ]
+}

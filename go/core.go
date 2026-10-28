@@ -205,13 +205,19 @@ func inlineRefSource(capture bool, l sourceLine, rawFrom string, col int) *refer
 	}
 }
 
-func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int, indent int, strict bool, onWarning func(Diagnostic), captureReferences bool) error {
+func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int, indent int, strict bool, onWarning func(Diagnostic), captureReferences bool, compact bool) error {
+	// blank and comment lines are skipped (§7.1 rules 6 and 7), and in
+	// non-strict mode a line at the dash's column that is no item, which the
+	// sequence skips (§7.1) — unless it ends a compact sequence (§7.2)
+	skipped := func(l sourceLine) bool {
+		return isBlankOrComment(l.text) ||
+			(!strict && !compact && lineStructuralIndent(l) == indent && !isSequenceItem(lineContent(l)))
+	}
 	for *idx < len(lines) {
-		// blank and comment lines are skipped (§7.1 rules 6 and 7): the
-		// item goes on when the next content line is deeper than its dash
-		if isBlankOrComment(lines[*idx].text) {
+		// the item goes on when the next content line is deeper than its dash
+		if skipped(lines[*idx]) {
 			next := *idx + 1
-			for next < len(lines) && isBlankOrComment(lines[next].text) {
+			for next < len(lines) && skipped(lines[next]) {
 				next++
 			}
 			if next == len(lines) || lineStructuralIndent(lines[next]) <= indent {
@@ -229,6 +235,13 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 		keyEnd := s
 		if s < 0 {
 			if !strings.HasSuffix(cc, ":") || len(cc) < 2 {
+				// freetext, a stray item or marker deeper than the dash:
+				// skipped in non-strict mode; in strict mode the block
+				// parser reports its indentation
+				if !strict {
+					*idx++
+					continue
+				}
 				break
 			}
 			keyEnd = len(cc) - 1
@@ -240,7 +253,8 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 			if strict {
 				return unrecognizedKeyLine(cl.number, cc)
 			}
-			break
+			*idx++
+			continue
 		}
 		ck, e := stripKeyQuotes(ckRaw, strict, cl.number)
 		if e != nil {
@@ -257,8 +271,12 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 			// not Go's `strings.TrimSpace` (which also eats U+0085 etc.), so
 			// raw and decoded scans stay in lockstep (§2.4).
 			valueByte := cl.indent + s + 2 + leadingWsBytes(rvRaw)
-			src := inlineRefSource(captureReferences, cl, cl.text[valueByte:], valueColOf(cl.text, valueByte))
-			cv, e = parseFlowOrScalar(stripComment(trimWhitespace(rvRaw)), strict, cl.number, onWarning, captureReferences, src)
+			if bv, ok, be := blockScalarValue(trimWhitespace(rvRaw), cl.indent, cl.number, lines, idx, captureReferences); ok {
+				cv, e = bv, be
+			} else {
+				src := inlineRefSource(captureReferences, cl, cl.text[valueByte:], valueColOf(cl.text, valueByte))
+				cv, e = parseFlowOrScalar(stripComment(trimWhitespace(rvRaw)), strict, cl.number, onWarning, captureReferences, src)
+			}
 		}
 		if e != nil {
 			return e
@@ -266,6 +284,34 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 		setP(item, ck, cv)
 	}
 	return nil
+}
+
+// firstIsItem reports whether the first item or mapping entry at indent, from
+// line i on, is an item; lines that are neither, or deeper, do not count.
+func firstIsItem(lines []sourceLine, i, indent int) bool {
+	for ; i < len(lines); i++ {
+		if isBlankOrComment(lines[i].text) {
+			continue
+		}
+		switch li := lineStructuralIndent(lines[i]); {
+		case li < indent:
+			return false
+		case li > indent:
+			continue
+		}
+		c := lineContent(lines[i])
+		if isSequenceItem(c) {
+			return true
+		}
+		sep := findSep(c)
+		if sep < 0 && strings.HasSuffix(c, ":") {
+			sep = len(c) - 1
+		}
+		if sep >= 0 && isValidKey(trimWhitespace(c[:sep])) {
+			return false
+		}
+	}
+	return false
 }
 
 // parseBlock parses the block at indent; a compact sequence (Core 1.1 §7.2,
@@ -279,7 +325,9 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 		return nil, nil
 	}
 	start := lines[*idx].number
-	isArray := isSequenceItem(lineContent(lines[*idx]))
+	// the first entry or item decides (Core 1.1 §7.1); in strict mode a line
+	// that is neither throws before any other
+	isArray := isSequenceItem(lineContent(lines[*idx])) || (!strict && firstIsItem(lines, *idx, indent))
 	var arr []*pvalue
 	var m []pentry
 	for *idx < len(lines) {
@@ -315,7 +363,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 			}
 			rest := trimWhitespace(strings.TrimPrefix(c, "-"))
 			rest = stripComment(rest)
-			if strings.HasPrefix(rest, "-") {
+			if isSequenceItem(rest) {
 				if strict {
 					return nil, limaError(InvalidIndentation, l.number, fmt.Sprintf("Lima: nested block sequence at line %d: %q", l.number, c))
 				}
@@ -337,12 +385,15 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 					return nil, e0
 				}
 				rawVal := trimWhitespace(rest[sep+2:])
+				// `|` alone is a block scalar marker; `| # c` is the string `|` (§6.1.5)
+				afterDash := trimWhitespace(strings.TrimPrefix(c, "-"))
+				commented := trimWhitespace(stripCommentKeepEscapes(afterDash)) != afterDash
 				*idx++
 				var v *pvalue
 				var e error
 				// The key sits after `- `, two columns past the dash.
-				if bv, ok, be := blockScalarValue(rawVal, indent+2, l.number, lines, idx, captureReferences); ok {
-					v, e = bv, be
+				if rawVal == "|" && !commented {
+					v, _, e = blockScalarValue(rawVal, indent+2, l.number, lines, idx, captureReferences)
 				} else {
 					restByteInC := 1 + leadingWsBytes(c[1:])
 					valueByte := l.indent + restByteInC + sep + 2 + leadingWsBytes(rest[sep+2:])
@@ -353,7 +404,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 					return nil, e
 				}
 				item := []pentry{{key, v}}
-				if e := parseArrayItemContinuationKeys(&item, lines, idx, indent, strict, onWarning, captureReferences); e != nil {
+				if e := parseArrayItemContinuationKeys(&item, lines, idx, indent, strict, onWarning, captureReferences, compact); e != nil {
 					return nil, e
 				}
 				arr = append(arr, &pvalue{line: l.number, mapping: item})
@@ -377,7 +428,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 					return nil, e
 				}
 				item := []pentry{{key, v}}
-				if e := parseArrayItemContinuationKeys(&item, lines, idx, indent, strict, onWarning, captureReferences); e != nil {
+				if e := parseArrayItemContinuationKeys(&item, lines, idx, indent, strict, onWarning, captureReferences, compact); e != nil {
 					return nil, e
 				}
 				arr = append(arr, &pvalue{line: l.number, mapping: item})

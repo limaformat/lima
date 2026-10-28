@@ -1,0 +1,20 @@
+{
+  "id": "core.indentation.first-entry-or-item-decides-invalid-key",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "A first line whose key the key grammar rejects does not decide a block's kind either.",
+  "input": "a:\n  a.b: 1\n  - item\n",
+  "expect": {
+    "result": {
+      "a": [
+        "item"
+      ]
+    }
+  },
+  "tags": [
+    "indentation",
+    "block-sequence",
+    "keys"
+  ]
+}

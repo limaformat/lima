@@ -47,9 +47,20 @@ non-strict results change with them (below).
 - An object item's keys after a blank or comment line were lost (`- a: 1` /
   blank / `  b: 2` read `{a: 1}`, and threw in strict mode); the item goes on
   past such a line, as in TypeScript and Rust.
+- An item whose value is a negative number (`- -7`, `- -0.5`) was read as a
+  nested sequence, `null` and an error in strict mode; it is the number.
+- `b: |` with no content lines as a later key of an object item was `"|"`;
+  it is `""`. `- a: | # c` was a block scalar; it is the string `"|"`, the
+  marker stands alone (§6.1.5).
+- A block whose first line is freetext or an invalid key was always a
+  mapping; the first entry or item decides (Core 1.1 §7.1), so
+  `a:` / `  freetext` / `  - item` is `["item"]`.
+- A line non-strict mode skips — freetext, a marker, an invalid key, or a line
+  at the dash's column that is no item — ended the object item before it, and
+  its later keys were lost; it is as if absent (Core 1.1 §7.1).
 
-The shared conformance corpus is at 283 Core cases: the 218 Core 1.0 cases
-without the 8 that Core 1.1 supersedes, plus 73 Core 1.1 cases
+The shared conformance corpus is at 304 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 94 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

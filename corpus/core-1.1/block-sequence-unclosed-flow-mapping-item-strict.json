@@ -1,0 +1,23 @@
+{
+  "id": "core.block-sequence.unclosed-flow-mapping-item.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "An item value that begins with `{` but does not close throws in strict mode, as an inline value does (TypeScript and Rust accepted it).",
+  "input": "l:\n  - {a: 1\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "flow-mapping",
+    "error",
+    "strict"
+  ]
+}
