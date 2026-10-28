@@ -182,3 +182,25 @@ block scalar, which §6.1.5 and §15.7 rule out (the marker stands alone); the t
 node, and dropped the `|` of `a: | x`. All are fixed, with corpus cases (and two pinned tree-sitter trees); the gate
 runs four seeds of 25,000 documents with no disagreement, and sixteen more seeds (about 770,000 parses per
 implementation) found none either.
+
+## Review 4 (Codex CLI, 2026-10-28)
+
+No blocker. The findings, and what was done:
+
+1. The new §7.1 sentence said that a line non-strict mode skips is as if it were absent, which contradicted the dedent
+   rule, the block-scalar extent and the end of a compact sequence; all three implementations already follow those
+   rules. The sentence now says what they do: a skipped line decides nothing about what a block holds, but its
+   indentation counts as any line's — less indented than a block it ends the block, as a bare key's first line it opens
+   the key's block only when deeper, and it ends a `|` scalar or a compact sequence as §6.1.5 and §7.2 say; otherwise
+   it ends neither the block nor the object item before it. No result changes.
+2. The differential test compared values in a form that could not tell an integer from a float, nor a date from a
+   mapping that looks like one. Every type is now tagged; Rust and Go must agree on integer or float, TypeScript (one
+   number type) by value.
+3. Its exclusion of Unicode-whitespace indentation also left out the content of `|` scalars, where such whitespace is
+   defined; it no longer does.
+4. Its generator reached none of the resource limits; it now writes documents just below, at and above each of them.
+   They found at once that Go read a duplicate key among more than 128 top-level entries before the key-count limit;
+   it now counts first, as TypeScript and Rust do.
+5. Shrinking could turn one disagreement into another; it now keeps the mode and the odd one out.
+6. `a: | x` had no tree-sitter tree pinned; it has one now. Pinning the skipped-line cases also showed that the
+   grammar made a line skipped between an object item's keys an error node; it is an unrecognised line there now.
