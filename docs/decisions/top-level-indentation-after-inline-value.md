@@ -204,3 +204,21 @@ No blocker. The findings, and what was done:
 5. Shrinking could turn one disagreement into another; it now keeps the mode and the odd one out.
 6. `a: | x` had no tree-sitter tree pinned; it has one now. Pinning the skipped-line cases also showed that the
    grammar made a line skipped between an object item's keys an error node; it is an unrecognised line there now.
+
+## Indentation by Unicode whitespace
+
+The differential test had left out one divergence as open: a line indented by spaces and then other whitespace, such
+as U+00A0, which §3 did not define. Strict mode already rejected every such line in all three implementations; in
+non-strict mode TypeScript counted the whitespace as indentation, Rust in one case read such a line at column 0 as part
+of the block before it, and Go did neither.
+
+Decided (the maintainer, 2026-10-28), in Core 1.1: indentation is spaces only (§7.1). Other whitespace before content is
+no indentation but starts the content, so the line is unrecognised — skipped in non-strict mode, an error in strict
+mode — and its indentation is its spaces. A blank or comment line stays one, and in a `|` scalar such whitespace is
+content, where only a line of spaces is empty (§6.1.5). §1 now defines whitespace once: the set all three already used,
+ECMAScript's WhiteSpace and LineTerminator. Such whitespace in an indentation is nearly always pasted from a web page or
+a word processor; counted as a space, it would shift the structure without notice.
+
+Found on the way, by the generator's new lines of U+00A0: in TypeScript and Rust, a `|` scalar that such a line ended
+let the block parser take the lines after it as the scalar's, so strict mode dropped a deeper line without an error.
+The test now runs without an exclusion.

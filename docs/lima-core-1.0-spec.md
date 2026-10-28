@@ -8,7 +8,7 @@ This document is the normative specification for Lima Core 1.1. It defines the s
 
 Lima is not a general-purpose data format. It is a small, predictable frontmatter format — the part of YAML that frontmatter actually needs, with well-defined types and no surprises.
 
-**Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented where no block level is open, at the top level as one level down (§7.1 rule 5), an unindented line that matches no key pattern (§4), and a line of a block mapping whose key the key grammar rejects (§5.1). Non-strict mode skips these lines, as before. Core 1.1 also settles what Core 1.0 left unsaid, where implementations differed: a bare key's sequence may start at the key's own column, as YAML writes it (§7.2); a block holds mapping entries or sequence items, as its first entry or item decides, and a line non-strict mode skips ends neither the block nor the object item before it unless it is less indented (§7.1); an item whose value is a flow sequence is a nested sequence (§7.2); a `|` with no content lines is `''` (§6.1.5); and the end of the input ends the last line as a line terminator does (§4), so a last `key:` is a bare key.
+**Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented where no block level is open, at the top level as one level down (§7.1 rule 5), an unindented line that matches no key pattern (§4), and a line of a block mapping whose key the key grammar rejects (§5.1). Non-strict mode skips these lines, as before. Core 1.1 also settles what Core 1.0 left unsaid, where implementations differed: a bare key's sequence may start at the key's own column, as YAML writes it (§7.2); a block holds mapping entries or sequence items, as its first entry or item decides, and a line non-strict mode skips ends neither the block nor the object item before it unless it is less indented (§7.1); an item whose value is a flow sequence is a nested sequence (§7.2); a `|` with no content lines is `''` (§6.1.5); indentation is spaces only, so a line indented by other whitespace, such as U+00A0, is unrecognised (§7.1), with whitespace defined once (§1); and the end of the input ends the last line as a line terminator does (§4), so a last `key:` is a bare key.
 
 ---
 
@@ -33,6 +33,8 @@ Lima is not a general-purpose data format. It is a small, predictable frontmatte
 **Flow form:** An inline mapping (`{...}`) or sequence (`[...]`) written on a single line.
 
 **Block form:** A mapping or sequence written across multiple indented lines.
+
+**Whitespace:** The characters U+0009, U+000A–U+000D, U+0020, U+00A0, U+1680, U+2000–U+200A, U+2028, U+2029, U+202F, U+205F, U+3000 and U+FEFF — ECMAScript's WhiteSpace and LineTerminator. A blank line is a line of whitespace only. Indentation is spaces only (§7.1).
 
 **UTC Instant:** An abstract point in time expressed in UTC with second precision and zero milliseconds. The concrete representation depends on the host language (see §6.5.3).
 
@@ -259,7 +261,7 @@ description: |
 
 The `|` must appear alone on its line (after the key separator).
 
-**Block scalar extent:** A line belongs to a block scalar if and only if its indentation is strictly greater than the indentation of the key that introduced the scalar. This rule applies to all lines, including lines beginning with `#`. An indented `#` line is literal scalar content; a dedented `#` line ends the scalar and is processed as a Lima comment by the surrounding structure. Empty lines between scalar content lines belong to the scalar regardless of their indentation.
+**Block scalar extent:** A line belongs to a block scalar if and only if its indentation is strictly greater than the indentation of the key that introduced the scalar. This rule applies to all lines, including lines beginning with `#`. An indented `#` line is literal scalar content; a dedented `#` line ends the scalar and is processed as a Lima comment by the surrounding structure. Empty lines between scalar content lines belong to the scalar regardless of their indentation. An empty line here is one of spaces only, or none: other whitespace, such as U+00A0, is scalar content, and a line of it at the key's column or less ends the scalar like any content line.
 
 Examples:
 ```yaml
@@ -495,6 +497,8 @@ Lima uses indentation to determine block structure. The following rules apply:
 A block holds mapping entries or sequence items, as its first entry or item decides. A line of the other kind at its base indentation is skipped in non-strict mode, and what the block holds stays; strict mode throws. A line non-strict mode skips — of the other kind, freetext, a line whose key the key grammar rejects — decides nothing about what a block holds, but its indentation counts as any line's does: less indented than a block, it ends the block (rule 4); as the first content line after a bare key, it opens the key's block only when it is deeper (rule 3) and then sets the block's base indentation (rule 1); and it ends a `|` scalar or a compact sequence as §6.1.5 and §7.2 say. Otherwise, at a block's base indentation or deeper, it ends neither the block nor the object item before it. A bare key's sequence may also start at the key's own column instead of deeper (§7.2, compact sequences).
 
 Minimum indentation is one space. There is no required indentation increment — two spaces is conventional but not normative.
+
+Indentation is the run of spaces at the start of a line, after §3 has replaced its tabs. Other whitespace there, such as U+00A0, is no indentation: on a line with content, it starts the content, so the line is no entry and no item but an unrecognised line (§4, §5.1), skipped in non-strict mode and an error in strict mode, and its indentation is its spaces. A blank line stays empty (rule 6), and a line whose first non-whitespace character is `#` a comment line (rule 7), whatever whitespace precedes it. In a `|` scalar such whitespace is content (§6.1.5).
 
 ### 7.2 Block Sequences (Arrays)
 
@@ -904,7 +908,7 @@ object-entry-head  = key, inline-separator, inline-value
 sequence-continuation
                   = block-mapping ;
 
-item-separator     = ? one or more whitespace characters (§7.2) ? ;
+item-separator     = ? one or more whitespace characters (§1, §7.2) ? ;
 
 ignored-line       = ? blank or comment-only line outside a block scalar ? ;
 ```
