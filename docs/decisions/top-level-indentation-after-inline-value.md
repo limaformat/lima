@@ -222,3 +222,22 @@ a word processor; counted as a space, it would shift the structure without notic
 Found on the way, by the generator's new lines of U+00A0: in TypeScript and Rust, a `|` scalar that such a line ended
 let the block parser take the lines after it as the scalar's, so strict mode dropped a deeper line without an error.
 The test now runs without an exclusion.
+
+## Review 5 (Codex CLI, 2026-10-28)
+
+No blocker. The findings, and what was done:
+
+1. An object item's later keys must stand at its first key's column (§7.2), but all three implementations took any
+   line deeper than the dash as a key of the item. The maintainer decided to follow §7.2: a deeper line is
+   inconsistently indented and skipped in non-strict mode, the item going on; a less indented one ends the item
+   (§7.1 rule 4); strict mode throws for either. §7.2 now says so. No site has such a line; one Core 1.1 case
+   written after review 4 had pinned the old reading and now pins the new one.
+2. The differential test read any object with a key such as `$int` as a number tag, so a mapping with a key of that
+   name could hide a difference. Tags are now recognised by their exact shape, and the generator writes such keys.
+3. Appendix D's `item-separator` admitted a line terminator; it no longer does.
+4. Stale counts in the tree-sitter documentation; they are gone rather than updated, since the scripts know them.
+
+Also after this review: strict mode had become 16–19 % slower than in 0.5.1 in TypeScript and Rust, and Go 6 % in both
+modes, measured on the hadley sites' front matter. The checks now work on positions and reuse what the parser already
+found: TypeScript +4 % (Core) and +6 % (References), Rust +10 %, Go ±0, non-strict within ±3 %. The cross-language
+benchmarks gain strict scenarios, so that the next such regression shows.

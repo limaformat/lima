@@ -522,7 +522,7 @@ values:
 
 Type coercion applies to each item.
 
-**Object items:** A sequence item may be a mapping (object). The base indentation for sibling keys within an object item is the column of the first key following the `- ` prefix. All subsequent sibling keys must begin at that same column.
+**Object items:** A sequence item may be a mapping (object). The base indentation for sibling keys within an object item is the column of the first key following the `- ` prefix. All subsequent sibling keys must begin at that same column. A line of the item that no nested block or `|` scalar takes, at another column deeper than the dash, is inconsistently indented (§7.1 rule 5): deeper than the key column, it is skipped in non-strict mode and the item goes on; less indented, it ends the item (§7.1 rule 4). Strict mode throws for either.
 
 ```yaml
 authors:
@@ -908,7 +908,8 @@ object-entry-head  = key, inline-separator, inline-value
 sequence-continuation
                   = block-mapping ;
 
-item-separator     = ? one or more whitespace characters (§1, §7.2) ? ;
+item-separator     = ? one or more whitespace characters other than a line
+                       terminator (§1, §7.2) ? ;
 
 ignored-line       = ? blank or comment-only line outside a block scalar ? ;
 ```
