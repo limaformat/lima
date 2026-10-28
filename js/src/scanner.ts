@@ -81,6 +81,9 @@ const matchSeparator = (s: string, pos: number): number => {
 	let i = pos
 	while (i < s.length && s.charCodeAt(i) === 32) i++ // consume spaces
 	if (i < s.length && s.charCodeAt(i) === 10) return i + 1
+	// Core 1.1: the end of the input ends the key's line as a newline does, so a last `key:` is `key: null`, as it
+	// is at any nested level (it was no key at all at the top level before)
+	if (i === s.length) return i
 	// Backtracking a pure-space run can never reveal a `\n` the maximal
 	// scan didn't already see (every intermediate position is followed by
 	// either another space or the same non-`\n` stop character) — so

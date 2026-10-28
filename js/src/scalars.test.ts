@@ -45,12 +45,11 @@ describe('strings', () => {
 		expect(result.description).toBe('First line.')
 	})
 
-	it('an inline value followed by a freetext line is unchanged in strict mode — not on the closed strict-error list (Core §10.1)', () => {
-		const result = parse(`
-			description: First line.
-			  Second line.
-		`, { strict: true })
-		expect(result.description).toBe('First line.')
+	it('an inline value followed by an indented line throws in strict mode (Core 1.1 §7.1 rule 5)', () => {
+		// Until Core 1.1 the line was skipped in strict mode too, as an unrecognised line (Core 1.0 §4).
+		expect(() => parse('description: First line.\n  Second line.', { strict: true })).toThrow(
+			/unexpected indentation at line 2/,
+		)
 	})
 
 	it('supports | as explicit block scalar — trims all lines equally', () => {
@@ -71,9 +70,10 @@ describe('strings', () => {
 		expect(result.desc).toBe('>')
 	})
 
-	it('a freetext line after `>` is unchanged in strict mode — not on the closed strict-error list (Core §10.1)', () => {
-		const result = parse('desc: >\n  Hello\n  World', { strict: true })
-		expect(result.desc).toBe('>')
+	it('a freetext line after `>` throws in strict mode, naming the YAML folded scalar (Core 1.1 §7.1 rule 5)', () => {
+		expect(() => parse('desc: >\n  Hello\n  World', { strict: true })).toThrow(
+			/unexpected indentation at line 2: "Hello" \(">" is YAML's folded scalar; Lima writes "\|"/,
+		)
 	})
 
 	it('attaches a line beginning with ^^ to the preceding line (Core §6.1.6)', () => {

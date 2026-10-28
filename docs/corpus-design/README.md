@@ -1,9 +1,10 @@
 # Lima Conformance Corpus – Design Package
 
 **Status:** implemented — a byte-frozen 149-case Core 1.0.0 baseline with
-additive Core errata through 1.0.10 on top (218 Core cases total), plus a
-separate 136-case References 2.0 final corpus; all counts are pinned by
-tests. The baseline also includes 101 byte-frozen References 1.0 cases: that
+additive Core errata through 1.0.10 on top (218 Core 1.0 cases total), a
+frozen 21-case Core 1.1 corpus that supersedes 6 of them (233 Core 1.1 cases
+in all), plus a separate 136-case References 2.0 final corpus; all counts are
+pinned by tests. The baseline also includes 101 byte-frozen References 1.0 cases: that
 extension was published briefly in mid-2026 and superseded almost immediately
 by References 2.0, so the 1.0 corpus is kept and still run as a regression
 guard on internal code, not as a conformance target anyone is asked to claim.
@@ -13,7 +14,7 @@ built from; §11's "Implementation order" is a historical record of how
 that happened, not an open plan. Where this document and the actual
 corpus disagree, the corpus and its passing tests are authoritative — file
 an issue rather than trusting stale prose here.
-**Normative basis:** Lima Core 1.0, Lima References 1.0, and Lima References
+**Normative basis:** Lima Core 1.1 (1.0 for its frozen baseline), Lima References 1.0, and Lima References
 2.0 Final as a separate conformance target
 **First implementation:** TypeScript/Bun (`@limaformat/lima`)
 **Long-term goal:** the same corpus validates TypeScript, Rust, and further implementations
@@ -55,9 +56,10 @@ Versioned suite layout:
 
 ```text
 corpus/core/             # Core 1.0, frozen
+corpus/core-1.1/         # Core 1.1, frozen; its manifest names the Core 1.0 cases it supersedes
 corpus/references/       # References 1.0, frozen
 corpus/references-2.0/   # References 2.0 Final
-corpus/manifests/        # byte-level protection for both 1.0 suites
+corpus/manifests/        # byte-level protection for the frozen suites
 ```
 
 The legacy directories were intentionally not moved. Their paths remain stable,
@@ -342,6 +344,7 @@ export type LimaDiagnosticCode =
   | "INVALID_NUMBER"
   | "INVALID_REFERENCE_SHAPE"
   | "INVALID_INDENTATION"
+  | "UNRECOGNIZED_LINE"
   | "INVALID_FLOW_SYNTAX"
   | "DUPLICATE_KEY"
   | "RESOURCE_LIMIT"
@@ -426,6 +429,7 @@ the actual corpus:
 ```text
 corpus/
 ├── core/             # frozen Core 1.0
+├── core-1.1/         # frozen Core 1.1 (supersedes 6 Core 1.0 cases)
 ├── references/       # frozen References 1.0
 ├── references-2.0/   # References 2.0 Final
 ├── manifests/        # frozen-suite hashes and stable IDs
@@ -444,8 +448,12 @@ bun run run:references-1
 bun run run:references-2
 ```
 
-The default `bun run run` runs the current conformance target: Core 1.0
-(218 cases through errata 1.0.10) plus References 2.0 (136). `bun run
+The default `bun run run` runs the current conformance target: Core 1.1
+(233 cases: the 218 Core 1.0 cases through errata 1.0.10 without the 6 that
+`corpus/manifests/core-1.1.json` lists under `supersedes`, plus the 21 of
+`corpus/core-1.1/`) plus References 2.0 (136). `bun run run:core-1` runs the
+frozen Core 1.0 corpus alone, whose 6 superseded cases a Core 1.1 parser
+fails by design. `bun run
 run:references-1` still runs the frozen References 1.0 baseline (101) as an
 internal regression guard, but it is not part of the default and not a
 target anyone claims. TypeScript, Rust, and Go all pass the default target

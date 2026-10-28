@@ -21,6 +21,7 @@ pub enum LimaDiagnosticCode {
     InvalidNumber,
     InvalidReferenceShape,
     InvalidIndentation,
+    UnrecognizedLine,
     InvalidFlowSyntax,
     DuplicateKey,
     ResourceLimit,

@@ -1,0 +1,16 @@
+{
+  "id": "core.indentation.after-inline-value.non-strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "Non-strict mode skips an indented line after a top-level inline value, with no warning.",
+  "input": "title: A\n  author: B\n",
+  "expect": {
+    "result": {
+      "title": "A"
+    }
+  },
+  "tags": [
+    "indentation"
+  ]
+}

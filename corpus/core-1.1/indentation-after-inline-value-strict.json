@@ -1,0 +1,22 @@
+{
+  "id": "core.indentation.after-inline-value.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "An indented line after a top-level key with an inline value corresponds to no open block level (§7.1 rule 5): strict mode throws, as it does one level down (core.indentation.inconsistent.strict).",
+  "input": "title: A\n  author: B\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "indentation"
+  ]
+}

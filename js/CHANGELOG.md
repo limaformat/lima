@@ -12,6 +12,32 @@ are both frozen regardless of what this file shows.
 
 ## [Unreleased]
 
+Lima Core 1.1: strict mode rejects a content line that belongs to no
+structure, which Core 1.0 skipped in both modes. Non-strict mode is
+unchanged.
+
+### Changed
+
+- Strict mode throws `INVALID_INDENTATION` for a line indented after a
+  top-level key with an inline value — the lines after a YAML `>`, `|-` or
+  `|+`, a key indented by a tab, freetext after a value — as it already did
+  one level down; the message names the YAML marker and what Lima writes
+  instead.
+- Strict mode throws the new `UNRECOGNIZED_LINE` for an unindented line that
+  matches no key pattern: a key without its `: `, a dotted or otherwise
+  invalid key, a YAML `---` / `...` marker, a quoted key broken by a newline.
+- `LimaDiagnosticCode` gains `'UNRECOGNIZED_LINE'`.
+
+### Fixed
+
+- A top-level `key:` at the very end of the input, without a line
+  terminator, was no key at all and vanished; it is `null`, as at any nested
+  level and in the Rust and Go implementations.
+
+The shared conformance corpus is at 233 Core cases: the 218 Core 1.0 cases
+without the 6 that Core 1.1 supersedes, plus 21 Core 1.1 cases
+(`corpus/core-1.1/`).
+
 ## [0.5.1] — 2026-10-28
 
 Core errata `1.0.10`: aligned top-level values are trimmed, as Core 1.0

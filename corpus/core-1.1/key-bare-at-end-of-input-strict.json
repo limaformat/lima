@@ -1,0 +1,21 @@
+{
+  "id": "core.keys.bare.end-of-input.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "4",
+  "description": "The same in strict mode: the last line is a key, not an unrecognised line.",
+  "input": "a: 1\nb:",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "a": 1,
+      "b": null
+    }
+  },
+  "tags": [
+    "strict",
+    "keys"
+  ]
+}

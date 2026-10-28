@@ -34,7 +34,7 @@
  *   (see wordcount.md's note on core.ts's `parseCoreGeneric`).
  *
  * Usage:
- *   bun run scripts/wordcount.ts --manifest scripts/wordcount.manifest.json --bucket lima-core-1.0
+ *   bun run scripts/wordcount.ts --manifest scripts/wordcount.manifest.json --bucket lima-core-1.1
  *   bun run scripts/wordcount.ts --manifest scripts/wordcount.manifest.json --bucket js-yaml-load --root /path/to/js-yaml-5.2.3/src
  *
  * Requires the classic TypeScript Compiler API (`ts.createSourceFile`,

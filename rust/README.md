@@ -34,7 +34,7 @@ The public entry points are:
 
 - `parse(input, options)` — Lima References 2.0 by default: `${key}` reads
   document values and `$(partial)` reads supplied partials.
-- `parse_core(input, options)` — Lima Core 1.0 only.
+- `parse_core(input, options)` — Lima Core 1.1 only.
 - `parse_references(input, options)` — deprecated References 2.0 alias for
   `parse`.
 
@@ -47,13 +47,13 @@ Both return `Result<LimaValue, LimaError>` — `LimaError` implements
 (`LimaDiagnosticCode`) for programmatic error handling, alongside a
 human-readable message.
 
-The crate implements Lima Core 1.0 and Lima References 2.0. Rust API docs:
+The crate implements Lima Core 1.1 and Lima References 2.0. Rust API docs:
 **[docs.rs/lima](https://docs.rs/lima)**.
 
 Why Lima exists, the case against YAML, and security rationale:
 **[repository README](https://github.com/limaformat/lima#readme)**.
 
-The [Lima Core 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
+The [Lima Core 1.1](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
 and [Lima References 2.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
 specifications are the normative source of truth — this crate implements
 them exactly, verified against the same

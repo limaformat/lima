@@ -1,0 +1,23 @@
+{
+  "id": "core.indentation.after-inline-value.tab.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "3",
+  "description": "A tab before a key is indentation (§3 makes it two spaces), so the line after an inline value opens no block: strict mode throws.",
+  "input": "title: A\n\tauthor: B\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "indentation",
+    "normalization"
+  ]
+}

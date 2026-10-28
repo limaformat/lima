@@ -13,6 +13,7 @@ export type LimaDiagnosticCode =
   | "INVALID_NUMBER"
   | "INVALID_REFERENCE_SHAPE"
   | "INVALID_INDENTATION"
+  | "UNRECOGNIZED_LINE"
   | "INVALID_FLOW_SYNTAX"
   | "DUPLICATE_KEY"
   | "RESOURCE_LIMIT"
@@ -80,6 +81,7 @@ exposes the two-field shape the spec requires.
 - `INVALID_NUMBER`
 - `INVALID_REFERENCE_SHAPE`
 - `INVALID_INDENTATION`
+- `UNRECOGNIZED_LINE` (Core 1.1)
 - `INVALID_FLOW_SYNTAX`
 - `DUPLICATE_KEY`
 - `RESOURCE_LIMIT`
@@ -88,7 +90,9 @@ exposes the two-field shape the spec requires.
 - `INVALID_PARTIAL`
 
 The codes stay deliberately coarse. Detail lives in `message` and the
-optional context fields. `INVALID_QUOTE` covers quote-structure errors
+optional context fields. `UNRECOGNIZED_LINE` (Core 1.1) is a strict-mode
+error for an unindented line that matches no key pattern (Core §4, §10.1);
+an indented line that no block owns stays `INVALID_INDENTATION`. `INVALID_QUOTE` covers quote-structure errors
 that are not about escape-sequence content: non-whitespace content after
 a closing quote, and an unterminated quoted string (Core §10.1) — added
 after the corpus surfaced that neither condition had a clean fit among

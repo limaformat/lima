@@ -2,7 +2,7 @@
 
 A practical walkthrough of Lima syntax, the References Extension, resource
 limits, and the JavaScript/TypeScript API. This guide is descriptive, not
-normative — [Lima Core 1.0](lima-core-1.0-spec.md) and the
+normative — [Lima Core 1.1](lima-core-1.0-spec.md) and the
 [Lima References 2.0 specification](lima-references-2.0-spec.md) are the source of truth.
 Where this guide and a spec disagree, the spec wins.
 
@@ -387,6 +387,11 @@ limits](#resource-limits) above, flow nesting deeper than one level (Core
 reference/interpolation/partial conditions (below). Check the "Non-strict"
 column of each table; don't assume it always means "never throws".
 
+Since Core 1.1, strict mode has one plain rule for lines: every line with
+content belongs to the structure. A line it cannot place — a key without its
+`: `, a YAML document marker, a line indented after a value that opens no
+block — is an error with its line, where non-strict mode skips it silently.
+
 | Condition | Non-strict | Strict |
 |---|---|---|
 | Duplicate key | warn + last value wins | throw |
@@ -400,7 +405,8 @@ column of each table; don't assume it always means "never throws".
 | Empty flow element | `null` / skipped | throw |
 | Unknown or malformed escape sequence | left intact | throw |
 | Unterminated quoted string | string fallback | throw |
-| Inconsistent indentation | skipped | throw |
+| Inconsistent indentation (also a line indented after a top-level inline value, such as the lines after a YAML `>`) | skipped | throw |
+| Unrecognised line: an unindented line that is no key (`author Odile`, `---`) | skipped | throw |
 | Space before colon in a quoted block key | skipped | throw |
 | Content after a closing quote on an inline value | string fallback | throw |
 
@@ -513,7 +519,7 @@ version, until that's a documented, stable export.
 
 ## Where to go next
 
-- [Lima Core 1.0](lima-core-1.0-spec.md) and the
+- [Lima Core 1.1](lima-core-1.0-spec.md) and the
   [Lima References 2.0](lima-references-2.0-spec.md) — the normative specs;
   this guide simplifies, they decide.
 - [Repository README](../README.md) — why Lima exists, the case against

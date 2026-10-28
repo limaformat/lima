@@ -1,0 +1,22 @@
+{
+  "id": "core.document.unrecognized-line.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "10.1",
+  "description": "Core 1.1: an unindented line that matches no key pattern is on the strict error list (§4, §10.1). Replaces core.document.unrecognized-line.skipped-both-modes and core.strict-list.is-closed, which had this input.",
+  "input": "title: Hello\nthis is not a key line at all\ncount: 42",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "document"
+  ]
+}

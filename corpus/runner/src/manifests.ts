@@ -18,7 +18,7 @@ export interface ManifestEntry {
 }
 
 export interface SuiteManifest {
-	suite: 'core-1.0' | 'references-1.0'
+	suite: 'core-1.0' | 'core-1.1' | 'references-1.0'
 	frozen: true
 	/** The immutable baseline revision. */
 	baselineVersion: string
@@ -27,11 +27,13 @@ export interface SuiteManifest {
 	/** The highest revision represented in `cases`. */
 	specVersion: string
 	caseCount: number
+	/** Core 1.1: the ids of the Core 1.0 cases this suite replaces; they stay in the frozen 1.0 baseline. */
+	supersedes?: string[]
 	cases: ManifestEntry[]
 }
 
 const directoryFor = (suite: SuiteManifest['suite']): string =>
-	suite === 'core-1.0' ? 'core' : 'references'
+	suite === 'core-1.0' ? 'core' : suite === 'core-1.1' ? 'core-1.1' : 'references'
 
 /**
  * SHA-256 over the baseline set — every entry whose `since` equals
@@ -58,12 +60,15 @@ export function baselineFingerprint(
 }
 
 /**
- * The frozen baseline fingerprint of each 1.0 suite. Set once when the
+ * The frozen baseline fingerprint of each suite. Set once when the
  * baseline is declared; changing a value here is the same act as breaking
  * the freeze, and must be reviewed as such.
  */
 export const BASELINE_DIGESTS: Record<SuiteManifest['suite'], string> = {
 	'core-1.0': '35957b2f1803b76eeb328b687b3dd9231d192523598c1ada46b47c914b48cd68',
+	// Core 1.1 (2026-10-28): lines that belong to no structure throw in strict mode; the six Core 1.0 cases it
+	// replaces stay in the 1.0 baseline above (docs/decisions/top-level-indentation-after-inline-value.md).
+	'core-1.1': '50569576d5850439135e92a3bcfa4d08c3ef753e8a9e565132e0eaf84fb17824',
 	// References 1.0 baseline amended once, 2026-09: the §5.1 key-grammar fix
 	// (MAJOR 1) drops the unquoted `{($a): v}` flow key in
 	// references/unsupported-references-in-keys-remain-literal.json — a case
@@ -175,6 +180,7 @@ export function regenerateManifest(
 		baselineCaseCount,
 		specVersion,
 		caseCount: cases.length,
+		...('supersedes' in prior && prior.supersedes ? { supersedes: prior.supersedes } : {}),
 		cases,
 	}
 }

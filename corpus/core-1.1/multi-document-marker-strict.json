@@ -1,0 +1,23 @@
+{
+  "id": "core.document.multi-document-marker.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "12",
+  "description": "A YAML document marker is an unrecognised line (Appendix A): strict mode throws at the first.",
+  "input": "---\ntitle: A\n...\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "document",
+    "appendix-a"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "core.document.unrecognized-line.missing-separator.non-strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "4",
+  "description": "Non-strict mode skips a line that matches no key pattern, with no warning.",
+  "input": "title: A\nauthor Odile\n",
+  "expect": {
+    "result": {
+      "title": "A"
+    }
+  },
+  "tags": [
+    "document"
+  ]
+}

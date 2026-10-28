@@ -1,0 +1,144 @@
+{
+  "suite": "core-1.1",
+  "frozen": true,
+  "baselineVersion": "1.1.0",
+  "baselineCaseCount": 21,
+  "specVersion": "1.1.0",
+  "caseCount": 21,
+  "supersedes": [
+    "core.block-scalar.chomping-indicator-unsupported.strict",
+    "core.block-scalar.folded-marker-unsupported.strict",
+    "core.document.unrecognized-line.skipped-both-modes",
+    "core.keys.quoted.raw-newline-double-quoted-not-a-key.strict",
+    "core.keys.top-level.dot-invalid",
+    "core.strict-list.is-closed"
+  ],
+  "cases": [
+    {
+      "path": "core-1.1/block-scalar-chomping-indicator-strict.json",
+      "id": "core.block-scalar.chomping-indicator.strict",
+      "sha256": "cd632c7a3735ce5f3dd91a73ec7e8646fb57f397d71afc9b847bbb0b6f7e58a5",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-folded-marker-strict.json",
+      "id": "core.block-scalar.folded-marker.strict",
+      "sha256": "a1eb0a2ae828e136a12ea8e537ab3f3feff00ca7ef1ab776b507f3564474d2be",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-after-flow-sequence-strict.json",
+      "id": "core.indentation.after-flow-sequence.strict",
+      "sha256": "152068b1f6f3560d6fe3bf63fd1dc03a23a7dcd5061deb4224d75b896e93d6f3",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-after-inline-value-non-strict.json",
+      "id": "core.indentation.after-inline-value.non-strict",
+      "sha256": "01b038e49cdd15cb0426a99840d3e2436ef9a6b449d7b0aefa1bd11c24290466",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-after-inline-value-strict.json",
+      "id": "core.indentation.after-inline-value.strict",
+      "sha256": "6c2ae9a24c8d1da9cbefefb92ed19c1d52798404720fb644cb886c87e2ce8a1b",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-after-inline-value-tab-strict.json",
+      "id": "core.indentation.after-inline-value.tab.strict",
+      "sha256": "3f63aad2c97f85816248e324937e279036311892883a294efdd4da3e2cf72099",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-after-quoted-value-strict.json",
+      "id": "core.indentation.after-quoted-value.strict",
+      "sha256": "ddd34369f1ca7ab36ff4ae31ce1fbbab94671f9687406b39a86d2fbb746ab67b",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-before-first-key-non-strict.json",
+      "id": "core.indentation.before-first-key.non-strict",
+      "sha256": "7f85178ecae9b1f7c6fddf2b0dd647d4c4f182ef4cb96488df05f23eb24992a1",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-before-first-key-strict.json",
+      "id": "core.indentation.before-first-key.strict",
+      "sha256": "5cd86c59ce8dc52ba2fa12b98afb45dc09c71646d3f1e9fae6fe03e75bfc3e87",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/key-bare-at-end-of-input-strict.json",
+      "id": "core.keys.bare.end-of-input.strict",
+      "sha256": "b21a3f7a54c0e111cc528ca8322db53c275a7b0e6c9e0e161275db6563dc55d2",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/key-bare-at-end-of-input.json",
+      "id": "core.keys.bare.end-of-input",
+      "sha256": "cc0036817b2de25efb130a2b9957775fbd6d04e01f7e1e6dbc858ebd52ce67bc",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/key-raw-newline-double-quoted-strict.json",
+      "id": "core.keys.quoted.raw-newline-double-quoted.strict",
+      "sha256": "e3bde885c10901d0f56a8b84409cd937ac26d53b8a9f5fda4589a141fb0c322b",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/key-top-level-dot-strict.json",
+      "id": "core.keys.top-level.dot.strict",
+      "sha256": "cb0d43b0c78fdb51556336f11ceaaf8a4bfa37a2bba492f1de3b537686f6f652",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/multi-document-marker-strict.json",
+      "id": "core.document.multi-document-marker.strict",
+      "sha256": "e901f0154d3736d631155ca59e38edb5079634ec72893171695fcf8306688db6",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/strict-blank-and-comment-lines-accepted.json",
+      "id": "core.document.blank-and-comment-lines.strict",
+      "sha256": "e49ef2f738ae192bcc7fd0fa66b064bd69ec5df7758ada6b247dcc21c7968d32",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/unrecognized-line-after-block-mapping-strict.json",
+      "id": "core.document.unrecognized-line.after-block-mapping.strict",
+      "sha256": "1c1e6394c48dedab732bb13368c93c270890f20967eff2c0b26cb7a9ac8a7efd",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/unrecognized-line-after-block-scalar-strict.json",
+      "id": "core.document.unrecognized-line.after-block-scalar.strict",
+      "sha256": "9e7eaa4bed1277e20dd6b479b5eb6ca2cf8274aa3e54b98db9195e886cd45395",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/unrecognized-line-missing-separator-non-strict.json",
+      "id": "core.document.unrecognized-line.missing-separator.non-strict",
+      "sha256": "68a0766645285f04add1131a389bf2b0ac65f701132307f2fa707d8abc58599f",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/unrecognized-line-missing-separator-strict.json",
+      "id": "core.document.unrecognized-line.missing-separator.strict",
+      "sha256": "28fd132a11a81b9c02b7bd00a62bb51f9a2a40d6606ac0672fc4f5cd3f9b197d",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/unrecognized-line-only-strict.json",
+      "id": "core.document.unrecognized-line.only.strict",
+      "sha256": "1b2ec70b0dbd6383cac8b760d1f07b88dd4f6fa9b4eb78b7a0279b0c5fb128ac",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/unrecognized-line-strict.json",
+      "id": "core.document.unrecognized-line.strict",
+      "sha256": "2d834681af9ff6e888bb9837f02983c022c747a56054a63859e92de873daa1fd",
+      "since": "1.1.0"
+    }
+  ]
+}

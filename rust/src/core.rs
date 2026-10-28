@@ -24,6 +24,7 @@ use crate::normalize::{
     DOCUMENT_SIZE_LIMIT, NESTING_DEPTH_LIMIT, TOP_LEVEL_KEY_LIMIT,
 };
 use crate::scalars::{is_valid_key, physical_raw, strip_comment, strip_key_quotes};
+use crate::structure::{check_range_lines, RangeOwner};
 use crate::value::{
     Builder, LimaValue, PlainBuilder, PositionedBuilder, PositionedValue, ReferenceSource,
 };
@@ -304,6 +305,14 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
         ));
     }
 
+    // Core 1.1: before the first key no line belongs to any structure (structure.rs)
+    if strict {
+        let first = top_keys
+            .first()
+            .map_or(front_matter.len(), |tk| tk.key_start);
+        check_range_lines(front_matter, 0, first, 1, RangeOwner::None, "")?;
+    }
+
     let mut root: B::Mapping = B::m_create();
     let mut depth_risk = false;
     let mut top_keys = top_keys.into_iter().peekable();
@@ -442,6 +451,37 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                 }
             }
         };
+        // Core 1.1: the lines after the key's own line, up to the next key,
+        // belong to its block or to nothing
+        if strict {
+            if tk.is_block {
+                check_range_lines(
+                    front_matter,
+                    tk.value_start,
+                    next_start,
+                    tk.line + 1,
+                    RangeOwner::Block,
+                    "",
+                )?;
+            } else if let Some(nl) = front_matter[tk.value_start..next_start].find('\n') {
+                let line_end = tk.value_start + nl;
+                let inline_value =
+                    front_matter[tk.value_start..line_end].trim_matches(is_trim_whitespace);
+                let owner = if inline_value == "|" {
+                    RangeOwner::Block
+                } else {
+                    RangeOwner::Inline
+                };
+                check_range_lines(
+                    front_matter,
+                    line_end + 1,
+                    next_start,
+                    tk.line + 1,
+                    owner,
+                    inline_value,
+                )?;
+            }
+        }
         B::m_set(&mut root, tk.key, value);
     }
 
@@ -629,14 +669,15 @@ mod tests {
     }
 
     #[test]
-    fn unrecognized_top_level_lines_are_skipped_even_strict() {
-        let v = parse_core(
-            "title: Hello\nthis is not a key line at all\ncount: 42",
-            true,
-        )
-        .unwrap();
+    fn unrecognized_top_level_lines_are_skipped_non_strict_and_throw_strict() {
+        // Core 1.1 §10.1: until Core 1.1 strict mode skipped the line too.
+        let input = "title: Hello\nthis is not a key line at all\ncount: 42";
+        let v = parse_core(input, false).unwrap();
         assert_eq!(get(&v, "title"), &LimaValue::String("Hello".into()));
         assert_eq!(get(&v, "count"), &LimaValue::Int(42));
+        let error = parse_core(input, true).unwrap_err();
+        assert_eq!(error.code, Code::UnrecognizedLine);
+        assert_eq!(error.line, Some(2));
     }
 
     #[test]

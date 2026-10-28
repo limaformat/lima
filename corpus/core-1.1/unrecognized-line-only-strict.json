@@ -1,0 +1,22 @@
+{
+  "id": "core.document.unrecognized-line.only.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "4",
+  "description": "A document with no key at all and one unrecognised line: strict mode throws at it.",
+  "input": "author Odile",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "document"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "core.document.unrecognized-line.missing-separator.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "4",
+  "description": "A line whose key lacks its \": \" separator matches no key pattern: strict mode throws.",
+  "input": "title: A\nauthor Odile\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "document"
+  ]
+}

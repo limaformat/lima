@@ -1,0 +1,22 @@
+{
+  "id": "core.indentation.after-quoted-value.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "An indented line after a quoted inline value opens no block: strict mode throws.",
+  "input": "title: \"A\"\n  more\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "indentation"
+  ]
+}

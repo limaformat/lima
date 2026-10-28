@@ -1,0 +1,23 @@
+{
+  "id": "core.indentation.after-flow-sequence.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.4",
+  "description": "A flow sequence ends on its own line; an indented line after it opens no block: strict mode throws.",
+  "input": "tags: [a, b]\n  c\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "indentation",
+    "flow"
+  ]
+}

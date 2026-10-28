@@ -34,6 +34,7 @@ import { parseBlockRange, type BlockDepthRisk } from './block.js'
 import { buildBlockScalar } from './block-scalar.js'
 import { LimaError, type LimaDiagnostic } from './errors.js'
 import { KeyCursor, scanKeys } from './scanner.js'
+import { checkRangeLines, isBlockScalarMarker } from './structure.js'
 import type { ValueBuilder } from './builder.js'
 import type { ReferenceToken2 } from './reference-tokens2.js'
 
@@ -325,6 +326,8 @@ const parseCoreGeneric = <V, M>(
 	} else {
 		const matches = scanKeys(frontMatter)
 		const keyCount = matches.length
+		// Core 1.1: before the first key no line belongs to any structure (structure.ts)
+		if (strict) checkRangeLines(frontMatter, 0, keyCount === 0 ? frontMatter.length : matches[0].matchStart, 1, 'none')
 		if (keyCount === 0) return root
 		if (keyCount > TOP_LEVEL_KEY_LIMIT) {
 			throw new LimaError({
@@ -336,8 +339,17 @@ const parseCoreGeneric = <V, M>(
 			const m = matches[i]
 			const rawDQ = m.doubleQuotedRaw
 			const key = m.unquoted ?? m.singleQuoted ?? (rawDQ !== undefined ? unescapeDQ(rawDQ, strict, m.line) : undefined)
-			if (key !== undefined) parseEntry(key, m.line, m.rawStart, m.isBlock, m.inlineEnd,
-				i + 1 < keyCount ? matches[i + 1].matchStart : frontMatter.length)
+			const nextStart = i + 1 < keyCount ? matches[i + 1].matchStart : frontMatter.length
+			if (key !== undefined) parseEntry(key, m.line, m.rawStart, m.isBlock, m.inlineEnd, nextStart)
+			// Core 1.1: the lines after the key's own line, up to the next key, belong to its block or to nothing
+			if (strict) {
+				const lineEnd = m.isBlock ? m.rawStart - 1 : (m.inlineEnd ?? frontMatter.indexOf('\n', m.rawStart))
+				if (lineEnd !== -1 && lineEnd < nextStart) {
+					const inline = !m.isBlock && !isBlockScalarMarker(frontMatter, m.rawStart, lineEnd)
+					const value = inline ? frontMatter.slice(m.rawStart, lineEnd).trim() : ''
+					checkRangeLines(frontMatter, lineEnd + 1, nextStart, m.line + 1, inline ? 'inline' : 'block', value)
+				}
+			}
 		}
 	}
 

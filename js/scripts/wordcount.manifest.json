@@ -1,6 +1,6 @@
 {
   "buckets": {
-    "lima-core-1.0": {
+    "lima-core-1.1": {
       "description": "Everything reachable from parseCore() — the nativeBuilder fast path. Three References 2.0 §2.4 positioned-source helpers that parseCore never executes (they are only reached inside a `wantSource` / `source === undefined` guard that is always false/undefined on this path) are attributed to References 2.0 even though they live in shared files: `stripCommentKeepEscapes`, `physicalRaw`, `rawOffsetOf`. `inlineSource` and `elementSource` stay here — parseCore does call them (they return `undefined` immediately when there is no positioned source). Run with --root pointed at the repo root (the default).",
       "entries": [
         { "file": "js/src/block.ts", "exclude": ["physicalRaw"] },
@@ -8,6 +8,7 @@
         { "file": "js/src/normalize.ts" },
         { "file": "js/src/errors.ts" },
         { "file": "js/src/scanner.ts" },
+        { "file": "js/src/structure.ts" },
         { "file": "js/src/builder.ts" },
         { "file": "js/src/chars.ts" },
         { "file": "js/src/block-cursor.ts" },

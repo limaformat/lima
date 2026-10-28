@@ -1,0 +1,17 @@
+{
+  "id": "core.keys.bare.end-of-input",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "4",
+  "description": "A top-level bare key at the end of the input, without a line terminator, is null, as it is at any nested level.",
+  "input": "a: 1\nb:",
+  "expect": {
+    "result": {
+      "a": 1,
+      "b": null
+    }
+  },
+  "tags": [
+    "keys"
+  ]
+}

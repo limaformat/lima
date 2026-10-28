@@ -45,6 +45,7 @@ pub mod normalize;
 mod references;
 pub mod references2;
 pub mod scalars;
+mod structure;
 pub mod value;
 
 pub use crate::core::{parse_core, CoreOptions};

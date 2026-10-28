@@ -1,4 +1,4 @@
-# Coverage Matrix: Lima Core 1.0
+# Coverage Matrix: Lima Core 1.0 and 1.1
 This matrix derives the corpus work directly from the normative Core rules. The IDs are coverage IDs, not necessarily later case IDs.
 ## Legend
 - **positive**: valid success case
@@ -335,6 +335,36 @@ one space after a top-level separator, and a unit test in
 skips the whitespace after `: ` before any scalar path and before the
 References 2.0 source column is taken, in `core.ts` and `core.rs`; the
 reported columns were already physical and stay identical in all three.
+
+## Core 1.1 (2026-10-28) — C-255–C-275, `corpus/core-1.1/`
+
+Strict mode rejects a content line that belongs to no structure
+([decision](../../decisions/top-level-indentation-after-inline-value.md)).
+Core 1.0 skipped such a line in both modes at the top level, while one level
+down the same construct already threw (C-124, `core.indentation.inconsistent.strict`).
+The six Core 1.0 cases that pinned the old strict behaviour stay in the frozen
+1.0 baseline; `corpus/manifests/core-1.1.json` lists them under `supersedes`,
+and the default run leaves them out.
+
+| ID | Spec | Area | Normative assertion | Kind | Mode |
+|---|---|---|---|---|---|
+| C-255 | §7.1 rule 5 | Indentation | A line indented after a top-level inline value throws `INVALID_INDENTATION` (with the tab, the quoted value and the flow sequence variants) | error | strict |
+| C-256 | §7.1 rule 5 | Indentation | … and is skipped without a warning | fallback | non-strict |
+| C-257 | §7.1 rule 5 | Indentation | An indented line before the first key throws, or is skipped | pair | both |
+| C-258 | §7.1 rule 5, App. A | Block scalar | The lines after `>`, `\|-`, `\|+` throw (replaces the two `*-unsupported.strict` cases) | error | strict |
+| C-259 | §4, §10.1 | Document | An unindented line that matches no key pattern throws `UNRECOGNIZED_LINE` (missing `: `, the only line, after a block mapping, after a `\|` scalar) | error | strict |
+| C-260 | §4 | Document | … and is skipped without a warning | fallback | non-strict |
+| C-261 | §5.1, §5.2 | Keys | A dotted key and a quoted key broken by a newline are unrecognised lines (replace `core.keys.top-level.dot-invalid` and `core.keys.quoted.raw-newline-double-quoted-not-a-key.strict`) | error | strict |
+| C-262 | App. A | Document | A `---` / `...` marker is an unrecognised line | error | strict |
+| C-263 | §7.1 rules 6–7, §8 | Document | Blank and comment lines, indented or not, need no structure | positive | strict |
+| C-264 | §4 | Keys | A top-level bare key at the end of the input, without a line terminator, is `null` (TypeScript dropped it; Rust and Go already read it so) | positive | both |
+
+Found while implementing: the TypeScript scanner took a top-level `key:` at the
+very end of the input for no key (it wanted a newline or a space after the
+colon), where every nested level and the other implementations read it as
+`null`; and the tree-sitter grammar opened a block at a comment indented after
+an inline value, and failed at a blank line after a top-level comment line —
+both since fixed (`editors/tree-sitter-lima/src/scanner.c`).
 
 ## Known implementation gaps
 

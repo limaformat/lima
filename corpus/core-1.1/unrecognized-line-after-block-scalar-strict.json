@@ -1,0 +1,22 @@
+{
+  "id": "core.document.unrecognized-line.after-block-scalar.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1",
+  "description": "An unindented line ends a `|` block scalar and is unrecognised: strict mode throws (core.block-scalar.dedent-freetext-ends-scalar is its non-strict twin).",
+  "input": "note: |\n  kept\nloose freetext\nafter: value\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 3,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "block-scalar"
+  ]
+}

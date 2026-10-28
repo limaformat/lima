@@ -1,0 +1,21 @@
+{
+  "id": "core.document.blank-and-comment-lines.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "8",
+  "description": "Blank lines and comment lines, indented or not, belong to no structure and need none: strict mode accepts them anywhere between keys.",
+  "input": "title: A\n\n  # an indented comment\n# a comment\n\nb: 1\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "title": "A",
+      "b": 1
+    }
+  },
+  "tags": [
+    "strict",
+    "comments"
+  ]
+}

@@ -8,7 +8,7 @@ import type { DiagnosticExpectation } from './errors'
 export interface LoadedCase {
 	id: string
 	spec: 'core' | 'references'
-	specVersion: '1.0' | '2.0'
+	specVersion: '1.0' | '1.1' | '2.0'
 	section: string
 	description: string
 	input: string
@@ -52,7 +52,7 @@ export function loadCase(jsonPath: string): LoadResult {
 	const d = doc as {
 		id: string
 		spec: 'core' | 'references'
-		specVersion?: '1.0' | '2.0'
+		specVersion?: '1.0' | '1.1' | '2.0'
 		section: string
 		description: string
 		input?: string
@@ -146,20 +146,31 @@ export interface LoadedCorpus {
 
 /**
  * Loads every case in the selected versioned suite directories. The default
- * is the current conformance target: Core 1.0 + References 2.0. The frozen
- * References 1.0 baseline is still loadable on request (`--suite
- * references-1.0`) as an internal regression guard. A single malformed case
- * is reported as a failure rather than aborting the whole load.
+ * is the current conformance target: Core 1.1 + References 2.0. Core 1.1 is
+ * the Core 1.0 corpus without the cases `corpus/manifests/core-1.1.json`
+ * lists as superseded, plus `corpus/core-1.1/`; loading `core-1.1` drops the
+ * superseded cases from a `core-1.0` loaded with it. The frozen 1.0
+ * baselines alone stay loadable on request (`--suite core-1.0`, `--suite
+ * references-1.0`). A single malformed case is reported as a failure rather
+ * than aborting the whole load.
  */
 export const SUITE_DIRECTORIES = {
 	'core-1.0': 'core',
+	'core-1.1': 'core-1.1',
 	'references-1.0': 'references',
 	'references-2.0': 'references-2.0',
 } as const
 
 export type SuiteName = keyof typeof SUITE_DIRECTORIES
 
-export const DEFAULT_SUITES: readonly SuiteName[] = ['core-1.0', 'references-2.0']
+export const DEFAULT_SUITES: readonly SuiteName[] = ['core-1.0', 'core-1.1', 'references-2.0']
+
+/** The ids of the Core 1.0 cases Core 1.1 replaces (`supersedes` in its manifest). */
+export const supersededByCore11 = (corpusRoot: string): ReadonlySet<string> =>
+	new Set(
+		(JSON.parse(readFileSync(join(corpusRoot, 'manifests', 'core-1.1.json'), 'utf8')) as { supersedes: string[] })
+			.supersedes,
+	)
 
 export function loadCorpus(
 	corpusRoot: string,
@@ -167,6 +178,7 @@ export function loadCorpus(
 ): LoadedCorpus {
 	const cases: LoadedCase[] = []
 	const failures: LoadedCorpus['failures'] = []
+	const superseded = suites.includes('core-1.1') ? supersededByCore11(corpusRoot) : new Set<string>()
 
 	for (const suite of suites) {
 		const area = SUITE_DIRECTORIES[suite]
@@ -181,7 +193,8 @@ export function loadCorpus(
 			if (!entry.endsWith('.json')) continue
 			const result = loadCase(join(dir, entry))
 			if (result.ok) {
-				const expectedVersion = suite.endsWith('-2.0') ? '2.0' : '1.0'
+				if (suite === 'core-1.0' && superseded.has(result.case.id)) continue
+				const expectedVersion = suite.endsWith('-2.0') ? '2.0' : suite === 'core-1.1' ? '1.1' : '1.0'
 				if (result.case.specVersion !== expectedVersion) {
 					failures.push({
 						sourceFile: result.case.sourceFile,

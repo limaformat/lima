@@ -438,9 +438,14 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 	lines := sourceLines(input)
 	var root []pentry
 	entryCount := 0
+	// Core 1.1: what the lines after the last top-level key belong to (structure.go)
+	owner, ownerValue := ownerNone, ""
 	for i := 0; i < len(lines); {
 		l := lines[i]
 		if l.indent > 0 || trimWhitespace(l.text) == "" || strings.HasPrefix(l.text, "#") {
+			if strict && l.indent > 0 && owner != ownerBlock && !isBlankOrComment(l.text) {
+				return nil, indentedLine(l, ownerValue)
+			}
 			i++
 			continue
 		}
@@ -459,12 +464,18 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 			bare = true
 		}
 		if sep < 0 {
+			if strict && !isBlankOrComment(c) {
+				return nil, unrecognizedLine(l)
+			}
 			i++
 			continue
 		}
 		if !isValidKey(c[:sep]) {
-			// §5.1: not a usable key — unrecognised line, skipped in both
-			// modes (§10's strict list is closed and does not cover this).
+			// §5.1: not a usable key — an unrecognised line, skipped in
+			// non-strict mode and an error in strict mode (Core 1.1 §10.1).
+			if strict {
+				return nil, unrecognizedLine(l)
+			}
 			i++
 			continue
 		}
@@ -493,6 +504,7 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 		var v *pvalue
 		var e error
 		if bare {
+			owner, ownerValue = ownerBlock, ""
 			j := i
 			// Core §4 rule 7 / §6.1.3: comment lines do not affect base
 			// indentation and are skipped — including here, in the lookahead
@@ -512,7 +524,9 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 			raw := trimWhitespace(c[sep+2:])
 			valueByte := sep + 2 + leadingWsBytes(c[sep+2:])
 			vcol := valueColOf(c, valueByte)
+			owner, ownerValue = ownerInline, raw
 			if bv, ok, be := blockScalarValue(raw, 0, l.number, lines, &i, captureReferences); ok {
+				owner, ownerValue = ownerBlock, ""
 				v, e = bv, be
 			} else {
 				v, e = parseFlowOrScalar(stripComment(raw), strict, l.number, onWarning, captureReferences, inlineRefSource(captureReferences, l, c[valueByte:], vcol))

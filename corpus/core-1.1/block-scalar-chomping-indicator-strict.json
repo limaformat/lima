@@ -1,0 +1,23 @@
+{
+  "id": "core.block-scalar.chomping-indicator.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "Core 1.1: `|-` and `|+` are ordinary strings, so the indented lines after them open no block; strict mode throws at the first (§7.1 rule 5). Replaces core.block-scalar.chomping-indicator-unsupported.strict.",
+  "input": "a: |-\n  Hello\nb: |+\n  World\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "block-scalar",
+    "indentation"
+  ]
+}

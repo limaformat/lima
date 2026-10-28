@@ -57,7 +57,7 @@ public API. The normative rules are defined in the
 Why Lima exists, the case against YAML, and security rationale:
 **[repository README](https://github.com/limaformat/lima#readme)**.
 
-The [Lima Core 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
+The [Lima Core 1.1](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
 and [Lima References 2.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
 specifications are the source of truth for these public entry points. The
 frozen References 1.0 implementation remains available internally to run its

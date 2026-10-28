@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(354)
+		expect(outcomes).toHaveLength(369)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -36,7 +36,7 @@ describe('runCorpus', () => {
 		// diffed value-for-value; an error case must throw the same
 		// diagnostic code at the same line through parse() too. A regression
 		// surfaces as a FAIL whose reason starts with "parse()".
-		const { outcomes } = runCorpus(corpusRoot, ['core-1.0'])
+		const { outcomes } = runCorpus(corpusRoot, ['core-1.0', 'core-1.1'])
 		const crossCheckFailures = outcomes.filter(
 			(o) => o.classification === 'FAIL' && o.reasons.some((r) => r.startsWith('parse()')),
 		)
@@ -524,7 +524,8 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		expect(counts).toEqual({ PASS: 354, FAIL: 0, BLOCKED: 0 })
+		// Core 1.1 (2026-10-28): 354 → 369, six Core 1.0 cases superseded by 21 Core 1.1.0 cases.
+		expect(counts).toEqual({ PASS: 369, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

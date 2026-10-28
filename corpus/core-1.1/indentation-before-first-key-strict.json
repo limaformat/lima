@@ -1,0 +1,22 @@
+{
+  "id": "core.indentation.before-first-key.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "An indented line before the first key belongs to no block: strict mode throws.",
+  "input": "  stray\ntitle: A\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "indentation"
+  ]
+}

@@ -41,6 +41,7 @@ fn code_name(code: LimaDiagnosticCode) -> &'static str {
         InvalidNumber => "INVALID_NUMBER",
         InvalidReferenceShape => "INVALID_REFERENCE_SHAPE",
         InvalidIndentation => "INVALID_INDENTATION",
+        UnrecognizedLine => "UNRECOGNIZED_LINE",
         InvalidFlowSyntax => "INVALID_FLOW_SYNTAX",
         DuplicateKey => "DUPLICATE_KEY",
         ResourceLimit => "RESOURCE_LIMIT",
@@ -251,10 +252,45 @@ fn core_matches_conformance_corpus() {
         "Core corpus case count does not match the manifest",
     );
 
+    // Core 1.1: the Core 1.0 cases it supersedes are left out, and its own
+    // cases (corpus/core-1.1/, count-pinned against its manifest) join.
+    let manifest_11: Json = serde_json::from_str(
+        &fs::read_to_string(
+            corpus_dir()
+                .join("..")
+                .join("manifests")
+                .join("core-1.1.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let superseded: std::collections::HashSet<String> = manifest_11["supersedes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|id| id.as_str().unwrap().to_string())
+        .collect();
+    let mut entries_11: Vec<_> = fs::read_dir(corpus_dir().join("..").join("core-1.1"))
+        .expect("corpus/core-1.1 directory should exist")
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("json"))
+        .collect();
+    entries_11.sort();
+    assert_eq!(
+        entries_11.len(),
+        manifest_11["caseCount"].as_u64().unwrap() as usize,
+        "Core 1.1 corpus case count does not match the manifest",
+    );
+    entries.extend(entries_11);
+
     for path in entries {
         let text = fs::read_to_string(&path).unwrap();
         let fixture: Json = serde_json::from_str(&text).unwrap();
         let id = fixture["id"].as_str().unwrap_or("<unknown>").to_string();
+        if superseded.contains(&id) {
+            continue;
+        }
         let Some(input) = resolve_input(&fixture) else {
             skip += 1;
             continue;

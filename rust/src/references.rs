@@ -1094,6 +1094,7 @@ mod corpus_tests {
             InvalidNumber => "INVALID_NUMBER",
             InvalidReferenceShape => "INVALID_REFERENCE_SHAPE",
             InvalidIndentation => "INVALID_INDENTATION",
+            UnrecognizedLine => "UNRECOGNIZED_LINE",
             InvalidFlowSyntax => "INVALID_FLOW_SYNTAX",
             DuplicateKey => "DUPLICATE_KEY",
             ResourceLimit => "RESOURCE_LIMIT",

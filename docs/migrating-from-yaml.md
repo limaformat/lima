@@ -86,11 +86,14 @@ error — the risky category, because nothing will visibly fail:
 
 These throw or silently fall through — check [Appendix
 A](lima-core-1.0-spec.md#12-appendix-a-what-lima-core-does-not-support) for
-the complete, reasoned list. The ones most likely to actually appear in
-real frontmatter:
+the complete, reasoned list. Since Core 1.1, strict mode reports the ones
+that are lines of their own (the lines after `>`, `|-` or `|+`, a `---`
+marker) with their line number and, for these, what Lima writes instead;
+non-strict mode skips them silently. Parse migrated files strictly at least
+once. The ones most likely to actually appear in real frontmatter:
 
 - `>` folded block scalar — use `|` with `^^` line-continuation instead.
-- Chomping indicators `|-` / `|+`.
+- Chomping indicators `|-` / `|+` — use `|`.
 - Nested flow structures (`[[1, 2]]`, `{a: {b: 1}}` as a value) and
   nested block sequences (array-in-array).
 - YAML anchors/aliases (`&anchor`, `*alias`) and tags (`!!str`, `!!int`).

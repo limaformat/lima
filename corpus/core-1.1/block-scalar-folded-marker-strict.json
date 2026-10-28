@@ -1,0 +1,23 @@
+{
+  "id": "core.block-scalar.folded-marker.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "Core 1.1: `>` is no block scalar marker, so the indented lines after it open no block; strict mode throws at the first (§7.1 rule 5). Replaces core.block-scalar.folded-marker-unsupported.strict.",
+  "input": "desc: >\n  Hello\n  World\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "block-scalar",
+    "indentation"
+  ]
+}

@@ -308,8 +308,11 @@ describe('key with embedded colon, backtracking-dependent cases', () => {
 		expect(parse('a:b:c:d: value')).toEqual({ 'a:b:c:d': 'value' })
 	})
 
-	it('a bare key with no separator at all (no trailing space or newline) is not recognized', () => {
-		expect(parse('key:')).toEqual({})
+	it('a bare key at the end of the input is null, as it is at any nested level (Core 1.1)', () => {
+		// Until Core 1.1 this asserted {}: the top-level scanner wanted a newline or a space after the colon, where the
+		// nested parser took the end of the input for the end of the line.
+		expect(parse('key:')).toEqual({ key: null })
+		expect(parse('a: 1\nkey:', { strict: true })).toEqual({ a: 1, key: null })
 	})
 
 	it('two spaces after the colon: the separator consumes one, and the value is trimmed (§4 step 3, §5.1 example)', () => {

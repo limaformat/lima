@@ -1,0 +1,22 @@
+{
+  "id": "core.keys.quoted.raw-newline-double-quoted.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "5.2",
+  "description": "Core 1.1: a double-quoted key whose line ends before its closing quote is an unrecognised line (§4, §5.2), which strict mode rejects. Replaces core.keys.quoted.raw-newline-double-quoted-not-a-key.strict.",
+  "input": "\"a\nb\": value\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "keys"
+  ]
+}

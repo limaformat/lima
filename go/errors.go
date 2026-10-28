@@ -16,6 +16,8 @@ const (
 	InvalidReferenceShape LimaDiagnosticCode = "INVALID_REFERENCE_SHAPE"
 	// InvalidIndentation reports invalid block indentation or collection mixing.
 	InvalidIndentation LimaDiagnosticCode = "INVALID_INDENTATION"
+	// UnrecognizedLine reports, in strict mode, an unindented line that matches no key pattern (Core 1.1).
+	UnrecognizedLine LimaDiagnosticCode = "UNRECOGNIZED_LINE"
 	// InvalidFlowSyntax reports malformed or forbidden flow syntax.
 	InvalidFlowSyntax LimaDiagnosticCode = "INVALID_FLOW_SYNTAX"
 	// DuplicateKey reports a repeated mapping key in strict mode.

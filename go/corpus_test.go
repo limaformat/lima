@@ -268,6 +268,26 @@ func frozenManifestCaseCount(t *testing.T, manifestPath string) int {
 	return m.CaseCount
 }
 
+// supersededByCore11 is the set of Core 1.0 case ids Core 1.1 replaces.
+func supersededByCore11(t *testing.T) map[string]bool {
+	t.Helper()
+	b, err := os.ReadFile("../corpus/manifests/core-1.1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m struct {
+		Supersedes []string `json:"supersedes"`
+	}
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatal(err)
+	}
+	set := make(map[string]bool, len(m.Supersedes))
+	for _, id := range m.Supersedes {
+		set[id] = true
+	}
+	return set
+}
+
 func TestCoreCorpus(t *testing.T) {
 	paths, globErr := filepath.Glob("../corpus/core/*.json")
 	if globErr != nil {
@@ -277,6 +297,18 @@ func TestCoreCorpus(t *testing.T) {
 	if manifestCount := frozenManifestCaseCount(t, "../corpus/manifests/core-1.0.json"); len(paths) != manifestCount {
 		t.Fatalf("Core corpus count does not match the manifest: %d != %d", len(paths), manifestCount)
 	}
+	// Core 1.1: the Core 1.0 cases it supersedes are left out, and its own
+	// cases (corpus/core-1.1/, count-pinned against its manifest) join.
+	paths11, globErr := filepath.Glob("../corpus/core-1.1/*.json")
+	if globErr != nil {
+		t.Fatal(globErr)
+	}
+	sort.Strings(paths11)
+	if manifestCount := frozenManifestCaseCount(t, "../corpus/manifests/core-1.1.json"); len(paths11) != manifestCount {
+		t.Fatalf("Core 1.1 corpus count does not match the manifest: %d != %d", len(paths11), manifestCount)
+	}
+	superseded := supersededByCore11(t)
+	paths = append(paths, paths11...)
 	pass := 0
 	skip := 0
 	for _, path := range paths {
@@ -287,6 +319,9 @@ func TestCoreCorpus(t *testing.T) {
 		var c corpusCase
 		if e := json.Unmarshal(b, &c); e != nil {
 			t.Fatal(e)
+		}
+		if superseded[c.ID] {
+			continue
 		}
 		input, ok := corpusInput(c, filepath.Dir(path))
 		if !ok {
@@ -314,13 +349,13 @@ func TestCoreCorpus(t *testing.T) {
 			pass++
 		}
 	}
-	if pass+skip != len(paths) {
-		t.Fatalf("core corpus accounting mismatch: %d passed + %d skipped != %d fixtures", pass, skip, len(paths))
+	if pass+skip != len(paths)-len(superseded) {
+		t.Fatalf("core corpus accounting mismatch: %d passed + %d skipped != %d fixtures", pass, skip, len(paths)-len(superseded))
 	}
 	if skip != 0 {
 		t.Fatalf("Core corpus skipped %d cases", skip)
 	}
-	t.Logf("core corpus: %d/%d (%d skipped)", pass, len(paths), skip)
+	t.Logf("core corpus: %d/%d (%d skipped)", pass, len(paths)-len(superseded), skip)
 	_ = math.NaN()
 }
 func errorAs(err error, target **LimaError) bool {

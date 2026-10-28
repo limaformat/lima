@@ -46,7 +46,7 @@ mean repeating that reconstruction.
 
 ```bash
 # from js/
-bun run wordcount -- --manifest scripts/wordcount.manifest.json --bucket lima-core-1.0
+bun run wordcount -- --manifest scripts/wordcount.manifest.json --bucket lima-core-1.1
 bun run wordcount -- --manifest scripts/wordcount.manifest.json --bucket lima-references-2.0-additions
 
 # js-yaml: not vendored in this repo — clone the exact pinned tag first
@@ -68,17 +68,18 @@ part of "the current public implementation" this table measures.
 
 ## Current reproduced values
 
-Current as of `@limaformat/lima` 0.5.0 (Core errata 1.0.9, References 2.0
-corpus at 136).
+Current as of Core 1.1 (2026-10-28, before the 0.6.0 release; References
+2.0 corpus at 136). The 0.5.0 figures had drifted with the errata since; the
+npm tarball is still 0.5.0's until 0.6.0 is packed.
 
 | Measurement | Words |
 |---|---:|
-| Lima Core 1.0 specification | 7,784 |
+| Lima Core 1.1 specification | 7,941 |
 | Lima References 2.0 specification | 3,018 |
-| Lima Core implementation code | 7,471 |
-| Lima Core implementation comments | 4,136 |
-| Lima References 2.0 additions code | 3,503 |
-| Lima References 2.0 additions comments | 1,305 |
+| Lima Core implementation code | 7,987 |
+| Lima Core implementation comments | 4,643 |
+| Lima References 2.0 additions code | 3,904 |
+| Lima References 2.0 additions comments | 1,453 |
 | npm tarball (`@limaformat/lima` 0.5.0) | 53,446 bytes (53.4 KB) |
 
 ## Calibration

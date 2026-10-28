@@ -1,0 +1,16 @@
+{
+  "id": "core.indentation.before-first-key.non-strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "Non-strict mode skips an indented line before the first key, with no warning.",
+  "input": "  stray\ntitle: A\n",
+  "expect": {
+    "result": {
+      "title": "A"
+    }
+  },
+  "tags": [
+    "indentation"
+  ]
+}
