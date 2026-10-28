@@ -1,12 +1,14 @@
-# Lima Core 1.0 — Normative Specification
+# Lima Core 1.1 — Normative Specification
 
 **Status:** Final  
-**Version:** 1.0.0  
-**Date:** 2026-07-31
+**Version:** 1.1.0  
+**Date:** 2026-10-28
 
-This document is the normative specification for Lima Core 1.0. It defines the syntax, semantics, and error behaviour of the Lima frontmatter format. All conforming implementations must produce identical output for any given valid input.
+This document is the normative specification for Lima Core 1.1. It defines the syntax, semantics, and error behaviour of the Lima frontmatter format. All conforming implementations must produce identical output for any given valid input.
 
 Lima is not a general-purpose data format. It is a small, predictable frontmatter format — the part of YAML that frontmatter actually needs, with well-defined types and no surprises.
+
+**Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented after a top-level key with an inline value (§7.1 rule 5) and an unindented line that matches no key pattern (§4, §10.1). Non-strict mode is unchanged.
 
 ---
 
@@ -97,9 +99,7 @@ The separator between key and value is `: ` (colon followed by a single space) f
 1. Scan left-to-right, tracking quoted regions (single and double quotes with their respective escape rules).
 2. The first unescaped `#` outside a quoted region begins a comment — it and everything following it are removed.
 3. Trim leading and trailing spaces from the remaining text.
-4. If the remaining text begins with a quote character, it is a quoted value **only** when the matching closing quote is the final remaining character after trimming. Any non-whitespace content after the closing quote is invalid:
-   - Non-strict: string fallback (entire remaining text returned as string).
-   - Strict: throw.
+4. If the remaining text begins with a quote character, it is a quoted value **only** when the matching closing quote is the final remaining character after trimming. Any non-whitespace content after the closing quote is invalid: non-strict mode falls back to a string (the entire remaining text), strict mode throws.
 5. For quoted values: strip the surrounding delimiters and apply the appropriate escape processing (see §6.1.2, §6.1.3). Content inside the quotes is never trimmed or further comment-stripped.
 6. For unquoted values: trim leading and trailing spaces again (a second trim, to handle trailing spaces left after comment removal). If the result is empty, produce `null`. Apply scalar type conversion.
 
@@ -112,7 +112,7 @@ title:   Hello World   # comment   # → 'Hello World'     (unquoted; both trims
 title: 42              # comment   # → 42                (number after double trim)
 ```
 
-Lines that do not match any key pattern and are not part of a block value are silently skipped in both strict and non-strict mode. Top-level unrecognised lines are not in the strict error list (see §10).
+An unindented line that does not match any key pattern is unrecognised: non-strict mode skips it silently, strict mode throws (see §10.1). An indented line that is not part of a block value is inconsistently indented (§7.1 rule 5).
 
 ---
 
@@ -160,7 +160,7 @@ The key in the output object is the content between the quotes — delimiters ar
 
 Non-strict: treat as unrecognised line, skip. Strict: throw.
 
-A raw line terminator inside a quoted key is not a valid quoted-key character (§15.6, which excludes U+000A from both single- and double-quoted-key characters). A physical line whose quoted key does not close on that same line is unrecognised and skipped in both modes — it is not diagnosed. The `\n` escape in a double-quoted key is unaffected: it decodes to a key containing U+000A, exactly as in a double-quoted value.
+A raw line terminator inside a quoted key is not a valid quoted-key character (§15.6, which excludes U+000A from both single- and double-quoted-key characters). A physical line whose quoted key does not close on that same line is unrecognised (§4): skipped in non-strict mode, an error in strict mode. The `\n` escape in a double-quoted key is unaffected: it decodes to a key containing U+000A, exactly as in a double-quoted value.
 
 ### 5.3 Duplicate Keys
 
@@ -308,7 +308,7 @@ Rules:
 - A `^^` line with no further content (bare `^^`) is silently dropped — no trailing space is added to the previous line.
 - `^^` on the first content line of a block has no previous line to append to — the marker is stripped and the content is kept as-is.
 - `^^` is only valid inside `|` blocks. It has no special meaning in plain scalars or quoted strings.
-- A line that must literally begin with `^^` cannot be represented in Lima Core 1.0 — this is a documented limitation.
+- A line that must literally begin with `^^` cannot be represented in Lima Core — this is a documented limitation.
 
 The folded block scalar `>` is not supported. Lines joining via `>` must be rewritten using `|` + `^^`.
 
@@ -486,7 +486,7 @@ Lima uses indentation to determine block structure. The following rules apply:
 2. All direct children of a block must have exactly this base indentation.
 3. A line indented deeper than the base indentation belongs to the immediately preceding key's value as a nested block.
 4. A line whose indentation is less than the base indentation ends the current block and returns to the parent level.
-5. A line whose indentation does not correspond to any currently open block level is inconsistently indented — silently skipped in non-strict; throw in strict.
+5. A line whose indentation does not correspond to any currently open block level is inconsistently indented — silently skipped in non-strict; throw in strict. This holds at the top level as at any other: a key with an inline value opens no block, so a line indented after it corresponds to no open block level.
 6. Empty lines (blank or whitespace-only) do not affect base indentation and are skipped.
 7. Comment lines (first non-whitespace character is `#`) do not affect base indentation and are skipped.
 
@@ -697,7 +697,8 @@ Lima has two parse modes: non-strict (default) and strict.
 | Unknown escape sequence (e.g. `\q`, `\z`) | leave intact (backslash preserved) | throw |
 | Incomplete or invalid escape sequence (e.g. `\u12`, `\xZZ`) | leave intact | throw |
 | Unterminated quoted string | string fallback | throw |
-| Inconsistent indentation | skip | throw |
+| Inconsistent indentation (§7.1 rule 5, at any level) | skip | throw |
+| Unrecognised line: an unindented line that matches no key pattern (§4) | skip | throw |
 | Space before colon in quoted block key | skip | throw |
 | Non-whitespace content after closing quote in an inline value | string fallback for entire value | throw |
 
@@ -753,8 +754,8 @@ The following constructs are explicitly outside Lima Core. Their absence is inte
 
 | Construct | Reason |
 |-----------|--------|
-| `>` folded block scalar | Confusing semantics; `\|` + `^^` covers the use case |
-| Chomping indicators (`\|-`, `\|+`) | Not needed without `>` |
+| `>` folded block scalar | Confusing semantics; `\|` + `^^` covers the use case. The lines that follow the marker are inconsistently indented (§7.1 rule 5) |
+| Chomping indicators (`\|-`, `\|+`) | Not needed without `>`. The lines that follow the marker are inconsistently indented (§7.1 rule 5) |
 | Nested flow structures (depth > 1) | Not needed for frontmatter; block syntax is clearer |
 | Nested sequences (array-in-array) | No real frontmatter use case |
 | Space separator in ISO datetime | Non-standard; `T` separator required for ISO forms |
@@ -768,7 +769,7 @@ The following constructs are explicitly outside Lima Core. Their absence is inte
 | `partials` option in Core API | References Extension only — see §13 |
 | YAML anchors and aliases (`&`, `*`) | Out of scope |
 | YAML tags (`!!str`, `!!int`) | Out of scope |
-| Multi-document streams (`---`, `...`) | Out of scope |
+| Multi-document streams (`---`, `...`) | Out of scope. A `---` or `...` line is unrecognised (§4) |
 | Transitive references | References Extension only; one hop maximum |
 | BigInt / arbitrary-precision integers | Not part of Lima type system |
 | Non-finite float output | Lima never produces `Infinity` or `NaN`. The literal strings `Infinity` and `NaN` are never parsed as numbers (grammar mismatch). A syntactic float that overflows to a non-finite value falls back to string in non-strict mode and throws in strict mode (see §6.4.2 and §10.1). |
