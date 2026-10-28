@@ -1,0 +1,22 @@
+{
+  "id": "core.keys.nested.dot.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "5.1",
+  "description": "Core 1.1: a dotted key in a block mapping matches no key pattern (§5.1); the line is unrecognised and strict mode throws, as at the top level. Replaces core.keys.nested.dot-invalid.",
+  "input": "outer:\n  a.b: value\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "keys"
+  ]
+}

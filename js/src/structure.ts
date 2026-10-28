@@ -4,17 +4,22 @@
  *
  *   - unrecognised (`UNRECOGNIZED_LINE`) when it starts at column 0: it matches no key pattern, or the scanner would
  *     have ended the range at it;
- *   - inconsistently indented (`INVALID_INDENTATION`) when it is indented and the range belongs to no block: before
- *     the first key, or after a key with an inline value other than `|`, which opens no block.
+ *   - inconsistently indented (`INVALID_INDENTATION`) when it is indented and no block owns it: before the first key;
+ *     after a key with an inline value other than `|`, which opens no block; under a block mapping, but less indented
+ *     than its first line (its base indentation, §7.1 rule 1), where the block parser stops; or after a `|` scalar
+ *     that a line at column 0 ended (§6.1.5).
  *
- * The indented lines under a block value or a `|` scalar are its own and are checked where they are parsed. Non-strict
- * mode skips all of these lines, as Core 1.0 did in both modes.
+ * The lines a block mapping or a `|` scalar owns are checked where they are parsed. Non-strict mode skips all of
+ * these lines, as Core 1.0 did in both modes.
  */
 import { isTrimWhitespace } from './chars.js'
 import { LimaError } from './errors.js'
 
-/** Whether the lines after a key belong to it: `block` (a nested block or a `|` scalar) or `inline` (they do not). */
-export type RangeOwner = 'none' | 'inline' | 'block'
+/**
+ * What the lines after a key belong to: nothing (`none`, before the first key; `inline`, after an inline value), a
+ * block mapping or sequence (`mapping`, after a bare key) or a `|` scalar (`scalar`).
+ */
+export type RangeOwner = 'none' | 'inline' | 'mapping' | 'scalar'
 
 /**
  * Checks the lines of `frontMatter` from `start` (a line start) to `end` that follow a key owned as `owner`; `line`
@@ -26,25 +31,38 @@ export function checkRangeLines(
 ): void {
 	let pos = start
 	let current = line
+	let base = -1 // a block mapping's base indentation, once its first content line set it
+	let scalarOpen = owner === 'scalar'
 	while (pos < end) {
 		const lineEnd = frontMatter.indexOf('\n', pos)
 		const stop = lineEnd === -1 || lineEnd > end ? end : lineEnd
 		const text = frontMatter.slice(pos, stop)
+		let indent = 0
+		while (indent < text.length && text.charCodeAt(indent) === 32) indent++
+		// §6.1.5: a `|` scalar holds every line up to the first non-empty one at its key's column (0), `#` included
+		if (scalarOpen && (indent === text.length || indent > 0)) {
+			pos = lineEnd + 1
+			current++
+			if (lineEnd === -1 || lineEnd >= end) break
+			continue
+		}
+		scalarOpen = false
 		// blank and comment lines by Lima's own whitespace; indentation by ASCII space only (§3 expanded the tabs)
 		let first = 0
 		while (first < text.length && isTrimWhitespace(text.charCodeAt(first))) first++
 		const content = text.slice(first)
 		if (content !== '' && !content.startsWith('#')) {
-			if (!text.startsWith(' ')) {
+			if (indent === 0) {
 				throw new LimaError({
 					code: 'UNRECOGNIZED_LINE', line: current,
 					message: `Lima: unrecognised line at line ${current}: "${text}"${hint(text)}`,
 				})
 			}
-			if (owner !== 'block') {
+			if (owner === 'mapping' && base === -1) base = indent
+			if (!(owner === 'mapping' && indent >= base)) {
 				throw new LimaError({
 					code: 'INVALID_INDENTATION', line: current,
-					message: `Lima: unexpected indentation at line ${current}: "${content}"${yamlHint(inlineValue)}`,
+					message: `Lima: unexpected indentation at line ${current}: "${content}"${owner === 'inline' ? yamlHint(inlineValue) : ''}`,
 				})
 			}
 		}
@@ -61,6 +79,7 @@ export const isBlockScalarMarker = (frontMatter: string, rawStart: number, lineE
 /** What a reader likely meant by an unrecognised line, as a hint after the message; none for anything else. */
 const hint = (text: string): string => {
 	if (text === '---' || text === '...') return ' (a YAML document marker; Lima has one document)'
+	if (text === '-' || text.startsWith('- ')) return ' (a sequence item is indented under its key)'
 	if (text.startsWith('"') || text.startsWith("'")) return ' (a quoted key closes on its own line)'
 	// `author Odile`, `key:value`: key characters, but no ": " after them
 	if (!text.includes(':') || /^[a-zA-Z0-9_][a-zA-Z0-9_:-]*$/.test(text.split(' ')[0]!)) return ' (a key needs ": " after it)'

@@ -27,10 +27,14 @@ unchanged.
 - Strict mode throws the new `UNRECOGNIZED_LINE` for an unindented line that
   matches no key pattern: a key without its `: `, a dotted or otherwise
   invalid key, a YAML `---` / `...` marker, a quoted key broken by a newline.
+- A line of a block mapping whose key the key grammar rejects (`a.b: value`,
+  `bad key: value`), skipped in strict mode until now, throws `UNRECOGNIZED_LINE`
+  too; an indented line below a block mapping's base indentation, or after a
+  `|` scalar a column-0 comment ended, throws `INVALID_INDENTATION`.
 - New diagnostic code constant `UnrecognizedLine` (`"UNRECOGNIZED_LINE"`).
 
-The shared conformance corpus is at 233 Core cases: the 218 Core 1.0 cases
-without the 6 that Core 1.1 supersedes, plus 21 Core 1.1 cases
+The shared conformance corpus is at 239 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 29 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

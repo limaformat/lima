@@ -1,0 +1,22 @@
+{
+  "id": "core.keys.nested.deeper-dot.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "5.1",
+  "description": "A dotted key two levels down is unrecognised as well: strict mode throws.",
+  "input": "outer:\n  x:\n    a.b: v\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 3,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "keys"
+  ]
+}

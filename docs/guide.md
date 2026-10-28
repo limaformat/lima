@@ -406,7 +406,7 @@ block — is an error with its line, where non-strict mode skips it silently.
 | Unknown or malformed escape sequence | left intact | throw |
 | Unterminated quoted string | string fallback | throw |
 | Inconsistent indentation (also a line indented after a top-level inline value, such as the lines after a YAML `>`) | skipped | throw |
-| Unrecognised line: an unindented line that is no key (`author Odile`, `---`) | skipped | throw |
+| Unrecognised line: an unindented line that is no key (`author Odile`, `---`), or a key the key grammar rejects (`a.b: value`) at any level | skipped | throw |
 | Space before colon in a quoted block key | skipped | throw |
 | Content after a closing quote on an inline value | string fallback | throw |
 

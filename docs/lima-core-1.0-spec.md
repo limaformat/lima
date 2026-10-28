@@ -8,7 +8,7 @@ This document is the normative specification for Lima Core 1.1. It defines the s
 
 Lima is not a general-purpose data format. It is a small, predictable frontmatter format — the part of YAML that frontmatter actually needs, with well-defined types and no surprises.
 
-**Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented after a top-level key with an inline value (§7.1 rule 5) and an unindented line that matches no key pattern (§4, §10.1). Non-strict mode is unchanged.
+**Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented where no block level is open, at the top level as one level down (§7.1 rule 5), an unindented line that matches no key pattern (§4), and a line of a block mapping whose key the key grammar rejects (§5.1). Non-strict mode is unchanged. The end of the input ends the last line as a line terminator does (§4), so a last `key:` is a bare key; Core 1.0 left that unsaid.
 
 ---
 
@@ -92,7 +92,7 @@ key:
   block content
 ```
 
-The separator between key and value is `: ` (colon followed by a single space) for inline values, or `:\n` (colon followed by a newline) for block values. Trailing spaces after the colon are ignored.
+The separator between key and value is `: ` (colon followed by a single space) for inline values, or `:\n` (colon followed by a newline) for block values. Trailing spaces after the colon are ignored. The end of the input ends the last line as a line terminator does: a last `key:` is a bare key, `null` without a block.
 
 **Inline value processing:** The inline value scanner processes the full source value while respecting quote boundaries:
 
@@ -128,7 +128,9 @@ An unquoted key matches the following pattern:
 
 Valid examples: `title`, `firstName`, `h1`, `_draft`, `snake_case`, `kebab-case`, `og:title`, `1st`, `42`
 
-**Key-value separator rule:** Since unquoted keys may contain colons, the key-value separator is the first `: ` (colon followed by exactly one space) or `:\n` (colon followed by a newline) that is not inside a quoted key. Everything before it is the key; everything after is the value.
+**Key-value separator rule:** Since unquoted keys may contain colons, the key-value separator is the first `: ` (colon followed by exactly one space) or `:\n` (colon followed by a newline, or the end of the input, §4) that is not inside a quoted key. Everything before it is the key; everything after is the value.
+
+A line with a separator whose key matches neither this pattern nor a quoted key (§5.2) is unrecognised (§4): skipped in non-strict mode, an error in strict mode — at the top level and in a block mapping alike.
 
 Examples:
 ```yaml
@@ -698,7 +700,7 @@ Lima has two parse modes: non-strict (default) and strict.
 | Incomplete or invalid escape sequence (e.g. `\u12`, `\xZZ`) | leave intact | throw |
 | Unterminated quoted string | string fallback | throw |
 | Inconsistent indentation (§7.1 rule 5, at any level) | skip | throw |
-| Unrecognised line: an unindented line that matches no key pattern (§4) | skip | throw |
+| Unrecognised line: an unindented line that matches no key pattern (§4), or a line of a block mapping whose key the key grammar rejects (§5.1) | skip | throw |
 | Space before colon in quoted block key | skip | throw |
 | Non-whitespace content after closing quote in an inline value | string fallback for entire value | throw |
 
@@ -845,7 +847,7 @@ Quoted text denotes a literal terminal. `? ... ?` denotes a lexical condition or
 The scanner operates on the normalised input and supplies these structural tokens:
 
 ```ebnf
-NL      = ? U+000A line ending ? ;
+NL      = ? U+000A line ending; the last line of the input needs none (§4) ? ;
 INDENT  = ? entry into a deeper block level under §7.1 ? ;
 DEDENT  = ? return to a shallower block level under §7.1 ? ;
 EOF     = ? end of input ? ;

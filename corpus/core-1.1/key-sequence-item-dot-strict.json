@@ -1,0 +1,23 @@
+{
+  "id": "core.keys.sequence-item.dot.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "A dotted sibling key of an object item in a block sequence is unrecognised: strict mode throws.",
+  "input": "outer:\n  - k: 1\n    a.b: v\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 3,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "keys",
+    "block-sequence"
+  ]
+}

@@ -2,13 +2,15 @@
   "suite": "core-1.1",
   "frozen": true,
   "baselineVersion": "1.1.0",
-  "baselineCaseCount": 21,
+  "baselineCaseCount": 29,
   "specVersion": "1.1.0",
-  "caseCount": 21,
+  "caseCount": 29,
   "supersedes": [
     "core.block-scalar.chomping-indicator-unsupported.strict",
     "core.block-scalar.folded-marker-unsupported.strict",
     "core.document.unrecognized-line.skipped-both-modes",
+    "core.keys.nested.dot-invalid",
+    "core.keys.nested.unquoted-space-invalid",
     "core.keys.quoted.raw-newline-double-quoted-not-a-key.strict",
     "core.keys.top-level.dot-invalid",
     "core.strict-list.is-closed"
@@ -24,6 +26,30 @@
       "path": "core-1.1/block-scalar-folded-marker-strict.json",
       "id": "core.block-scalar.folded-marker.strict",
       "sha256": "a1eb0a2ae828e136a12ea8e537ab3f3feff00ca7ef1ab776b507f3564474d2be",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-after-block-mapping-non-strict.json",
+      "id": "core.indentation.after-block-mapping.non-strict",
+      "sha256": "f12e6bd00a653f1b2b6c19880814de56cb296ac2f8bd28e36c9c448c44054dbd",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-after-block-mapping-strict.json",
+      "id": "core.indentation.after-block-mapping.strict",
+      "sha256": "7d4534ffd830c4f8fc25e8d585ca440dca528e908faefd25bcda2201d8bd6083",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-after-ended-block-scalar-non-strict.json",
+      "id": "core.indentation.after-ended-block-scalar.non-strict",
+      "sha256": "e4382d672eb9f080359032ea3a3b629987cd021e09ea420c585d2cd3862dae97",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-after-ended-block-scalar-strict.json",
+      "id": "core.indentation.after-ended-block-scalar.strict",
+      "sha256": "5579816d7838b6a4232291d96c6930182b6daaf9e8d0a2be56686ff7f26a330c",
       "since": "1.1.0"
     },
     {
@@ -81,9 +107,33 @@
       "since": "1.1.0"
     },
     {
+      "path": "core-1.1/key-nested-deeper-dot-strict.json",
+      "id": "core.keys.nested.deeper-dot.strict",
+      "sha256": "867ce0b6b7d14fb47d6ac8d968325f3efc7f31fbbf7cf4c079bf5f42b90c61fd",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/key-nested-dot-strict.json",
+      "id": "core.keys.nested.dot.strict",
+      "sha256": "852eb103118b60f3ebf821d9ef0cf85675ed1f3cad306a6cba1108756328c7fe",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/key-nested-unquoted-space-strict.json",
+      "id": "core.keys.nested.unquoted-space.strict",
+      "sha256": "16598e92be97a276f266f3232d926aa066925ac83e0a4755b62cb588a7d9f0b8",
+      "since": "1.1.0"
+    },
+    {
       "path": "core-1.1/key-raw-newline-double-quoted-strict.json",
       "id": "core.keys.quoted.raw-newline-double-quoted.strict",
       "sha256": "e3bde885c10901d0f56a8b84409cd937ac26d53b8a9f5fda4589a141fb0c322b",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/key-sequence-item-dot-strict.json",
+      "id": "core.keys.sequence-item.dot.strict",
+      "sha256": "2c66e63678bd8906bb377c34fb36de1c58f820397f5bba2bc96612ef9b34fe76",
       "since": "1.1.0"
     },
     {

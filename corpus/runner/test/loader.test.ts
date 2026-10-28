@@ -106,19 +106,19 @@ describe('loadCorpus', () => {
 	it('loads the default target (Core 1.1 + References 2.0) with zero failures', () => {
 		const { cases, failures } = loadCorpus(corpusRoot)
 		expect(failures).toEqual([])
-		// 149 Core 1.0.0 + 62 Core 1.0.1-1.0.9 (2026-09 review errata) + 7 Core 1.0.10, without the 6 Core 1.1
-		// supersedes, + 21 Core 1.1.0 + 136 References 2.0.
-		expect(cases.length).toBe(369)
+		// 149 Core 1.0.0 + 62 Core 1.0.1-1.0.9 (2026-09 review errata) + 7 Core 1.0.10, without the 8 Core 1.1
+		// supersedes, + 29 Core 1.1.0 + 136 References 2.0.
+		expect(cases.length).toBe(375)
 	})
 
 	it('drops the Core 1.0 cases Core 1.1 supersedes, which the 1.0 suite alone still holds', () => {
 		const superseded = supersededByCore11(corpusRoot)
-		expect(superseded.size).toBe(6)
+		expect(superseded.size).toBe(8)
 		const core10 = loadCorpus(corpusRoot, ['core-1.0']).cases.map((c) => c.id)
 		for (const id of superseded) expect(core10).toContain(id)
 		const core11 = loadCorpus(corpusRoot, ['core-1.0', 'core-1.1']).cases.map((c) => c.id)
 		for (const id of superseded) expect(core11).not.toContain(id)
-		expect(core11).toHaveLength(218 - 6 + 21)
+		expect(core11).toHaveLength(218 - 8 + 29)
 	})
 
 	it('produces unique, stable case IDs', () => {

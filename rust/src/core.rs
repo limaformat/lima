@@ -460,7 +460,7 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                     tk.value_start,
                     next_start,
                     tk.line + 1,
-                    RangeOwner::Block,
+                    RangeOwner::Mapping,
                     "",
                 )?;
             } else if let Some(nl) = front_matter[tk.value_start..next_start].find('\n') {
@@ -468,7 +468,7 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                 let inline_value =
                     front_matter[tk.value_start..line_end].trim_matches(is_trim_whitespace);
                 let owner = if inline_value == "|" {
-                    RangeOwner::Block
+                    RangeOwner::Scalar
                 } else {
                     RangeOwner::Inline
                 };

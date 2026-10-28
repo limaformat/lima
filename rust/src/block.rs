@@ -26,6 +26,17 @@ use crate::value::{Builder, ReferenceSource};
 /// `raw`'s first character (References §2.4). §6.1.5 places no top-level
 /// restriction on block scalars, so this is the same primitive `core.rs`
 /// uses at the top level.
+/// Core 1.1 §10.1: a line in a block whose key the key grammar (§5.1) rejects, in strict mode.
+fn unrecognized_key_line(line: u32, trimmed: &str) -> LimaError {
+    LimaError::new(
+        Code::UnrecognizedLine,
+        line,
+        format!(
+            "Lima: unrecognised line at line {line}: \"{trimmed}\" (an unquoted key has letters, digits, \"_\", \"-\" and \":\" only; quote any other)"
+        ),
+    )
+}
+
 fn inline_or_block_scalar<'a, B: Builder, const CHECK_DUPLICATES: bool>(
     raw: &str,
     key_indent: usize,
@@ -216,7 +227,11 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     },
                 };
                 if !key_raw.is_empty() && !is_valid_key(key_raw) {
-                    // §5.1: not a usable key — skipped in both modes, as at the top level.
+                    // §5.1: not a usable key — an unrecognised line, skipped in non-strict mode and an
+                    // error in strict mode, as at the top level (Core 1.1 §10.1)
+                    if strict {
+                        return Err(unrecognized_key_line(line, trimmed));
+                    }
                     cursor.next();
                 } else if let Some(colon_pos) = colon_pos {
                     let key = strip_key_quotes(key_raw, strict, line)?;
@@ -490,8 +505,12 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 .map(|c| trim_slice(&trimmed, 0, c))
                 .or_else(|| trimmed.strip_suffix(':').filter(|k| !k.is_empty()));
             if key_attempt.is_some_and(|k| !is_valid_key(k)) {
-                // §5.1: not a usable key — unrecognised line, skipped in both
-                // modes (§10's strict list is closed and does not cover this).
+                // §5.1: not a usable key — an unrecognised line, skipped in
+                // non-strict mode and an error in strict mode, as at the top
+                // level (Core 1.1 §10.1)
+                if strict {
+                    return Err(unrecognized_key_line(line, &trimmed));
+                }
                 cursor.next();
             } else if let Some(colon_pos) = colon_pos {
                 let entries = entries.get_or_insert_with(B::m_create);

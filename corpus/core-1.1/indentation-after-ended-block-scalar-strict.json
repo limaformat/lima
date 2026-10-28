@@ -1,0 +1,23 @@
+{
+  "id": "core.indentation.after-ended-block-scalar.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1",
+  "description": "A comment at column 0 ends a `|` scalar (§6.1.5); an indented line after it belongs to no block: strict mode throws.",
+  "input": "a: |\n  kept\n# ends the scalar\n  stray\nz: ok\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 4,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "block-scalar",
+    "indentation"
+  ]
+}

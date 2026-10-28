@@ -1,0 +1,19 @@
+{
+  "id": "core.indentation.after-block-mapping.non-strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "Non-strict mode skips that line, with no warning.",
+  "input": "a:\n  b: c\n x: y\nz: ok\n",
+  "expect": {
+    "result": {
+      "a": {
+        "b": "c"
+      },
+      "z": "ok"
+    }
+  },
+  "tags": [
+    "indentation"
+  ]
+}

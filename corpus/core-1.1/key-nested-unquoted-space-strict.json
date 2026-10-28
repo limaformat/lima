@@ -1,0 +1,22 @@
+{
+  "id": "core.keys.nested.unquoted-space.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "5.1",
+  "description": "Core 1.1: an unquoted key with a space in a block mapping is unrecognised, and strict mode throws. Replaces core.keys.nested.unquoted-space-invalid.",
+  "input": "outer:\n  bad key: value\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "strict",
+    "error",
+    "keys"
+  ]
+}

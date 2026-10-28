@@ -91,8 +91,9 @@ exposes the two-field shape the spec requires.
 
 The codes stay deliberately coarse. Detail lives in `message` and the
 optional context fields. `UNRECOGNIZED_LINE` (Core 1.1) is a strict-mode
-error for an unindented line that matches no key pattern (Core §4, §10.1);
-an indented line that no block owns stays `INVALID_INDENTATION`. `INVALID_QUOTE` covers quote-structure errors
+error for an unindented line that matches no key pattern, or a line of a
+block mapping whose key the key grammar rejects (Core §4, §5.1, §10.1); an
+indented line that no block owns stays `INVALID_INDENTATION`. `INVALID_QUOTE` covers quote-structure errors
 that are not about escape-sequence content: non-whitespace content after
 a closing quote, and an unterminated quoted string (Core §10.1) — added
 after the corpus surfaced that neither condition had a clean fit among

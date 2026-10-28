@@ -19,7 +19,7 @@ describe('frozen Lima corpus manifests', () => {
 	it('core-1.1 supersedes only Core 1.0 cases, which keep their place in the frozen 1.0 baseline', () => {
 		const core10 = new Set(loadManifest('core-1.0').cases.map((c) => c.id))
 		const { supersedes } = loadManifest('core-1.1')
-		expect(supersedes?.length).toBe(6)
+		expect(supersedes?.length).toBe(8)
 		for (const id of supersedes ?? []) expect(core10.has(id)).toBe(true)
 	})
 

@@ -1,0 +1,18 @@
+{
+  "id": "core.indentation.after-ended-block-scalar.non-strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1",
+  "description": "Non-strict mode skips that line, with no warning.",
+  "input": "a: |\n  kept\n# ends the scalar\n  stray\nz: ok\n",
+  "expect": {
+    "result": {
+      "a": "kept",
+      "z": "ok"
+    }
+  },
+  "tags": [
+    "block-scalar",
+    "indentation"
+  ]
+}

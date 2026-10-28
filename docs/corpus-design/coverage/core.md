@@ -336,13 +336,13 @@ skips the whitespace after `: ` before any scalar path and before the
 References 2.0 source column is taken, in `core.ts` and `core.rs`; the
 reported columns were already physical and stay identical in all three.
 
-## Core 1.1 (2026-10-28) — C-255–C-275, `corpus/core-1.1/`
+## Core 1.1 (2026-10-28) — C-255–C-267, `corpus/core-1.1/`
 
 Strict mode rejects a content line that belongs to no structure
 ([decision](../../decisions/top-level-indentation-after-inline-value.md)).
 Core 1.0 skipped such a line in both modes at the top level, while one level
 down the same construct already threw (C-124, `core.indentation.inconsistent.strict`).
-The six Core 1.0 cases that pinned the old strict behaviour stay in the frozen
+The eight Core 1.0 cases that pinned the old strict behaviour stay in the frozen
 1.0 baseline; `corpus/manifests/core-1.1.json` lists them under `supersedes`,
 and the default run leaves them out.
 
@@ -358,6 +358,9 @@ and the default run leaves them out.
 | C-262 | App. A | Document | A `---` / `...` marker is an unrecognised line | error | strict |
 | C-263 | §7.1 rules 6–7, §8 | Document | Blank and comment lines, indented or not, need no structure | positive | strict |
 | C-264 | §4 | Keys | A top-level bare key at the end of the input, without a line terminator, is `null` (TypeScript dropped it; Rust and Go already read it so) | positive | both |
+| C-265 | §5.1, §10.1 | Keys | In a block mapping, at any depth and in a sequence object item, a line whose key the key grammar rejects throws `UNRECOGNIZED_LINE` (replaces `core.keys.nested.dot-invalid` and `core.keys.nested.unquoted-space-invalid`) | error | strict |
+| C-266 | §7.1 rule 5 | Indentation | A line below a block mapping's base indentation, after the mapping ended there, throws, or is skipped | pair | both |
+| C-267 | §6.1.5, §7.1 rule 5 | Block scalar | An indented line after a `\|` scalar that a comment at column 0 ended throws, or is skipped | pair | both |
 
 Found while implementing: the TypeScript scanner took a top-level `key:` at the
 very end of the input for no key (it wanted a newline or a space after the

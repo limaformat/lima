@@ -345,9 +345,10 @@ const parseCoreGeneric = <V, M>(
 			if (strict) {
 				const lineEnd = m.isBlock ? m.rawStart - 1 : (m.inlineEnd ?? frontMatter.indexOf('\n', m.rawStart))
 				if (lineEnd !== -1 && lineEnd < nextStart) {
-					const inline = !m.isBlock && !isBlockScalarMarker(frontMatter, m.rawStart, lineEnd)
-					const value = inline ? frontMatter.slice(m.rawStart, lineEnd).trim() : ''
-					checkRangeLines(frontMatter, lineEnd + 1, nextStart, m.line + 1, inline ? 'inline' : 'block', value)
+					const owner = m.isBlock ? 'mapping'
+						: isBlockScalarMarker(frontMatter, m.rawStart, lineEnd) ? 'scalar' : 'inline'
+					const value = owner === 'inline' ? frontMatter.slice(m.rawStart, lineEnd).trim() : ''
+					checkRangeLines(frontMatter, lineEnd + 1, nextStart, m.line + 1, owner, value)
 				}
 			}
 		}

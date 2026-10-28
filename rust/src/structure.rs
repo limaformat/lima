@@ -7,25 +7,30 @@
 //!   matches no key pattern, or the top-level scan would have ended the
 //!   range at it;
 //! - inconsistently indented (`InvalidIndentation`) when it is indented and
-//!   the range belongs to no block: before the first key, or after a key
-//!   with an inline value other than `|`, which opens no block.
+//!   no block owns it: before the first key; after a key with an inline
+//!   value other than `|`, which opens no block; under a block mapping but
+//!   less indented than its first line (its base indentation, §7.1 rule 1),
+//!   where the block parser stops; or after a `|` scalar that a line at
+//!   column 0 ended (§6.1.5).
 //!
-//! The indented lines under a block value or a `|` scalar are its own and
-//! are checked where they are parsed. Non-strict mode skips all of these
-//! lines, as Core 1.0 did in both modes.
+//! The lines a block mapping or a `|` scalar owns are checked where they are
+//! parsed. Non-strict mode skips all of these lines, as Core 1.0 did in both
+//! modes.
 
 use crate::chars::is_trim_whitespace;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
 
-/// Whether the lines after a key belong to it.
+/// What the lines after a key belong to.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RangeOwner {
-    /// Before the first key: no key owns the lines.
+    /// Before the first key: nothing.
     None,
-    /// After a key with an inline value other than `|`: it opens no block.
+    /// After a key with an inline value other than `|`: nothing, it opens no block.
     Inline,
-    /// After a key with a nested block or a `|` scalar: the indented lines are its own.
-    Block,
+    /// After a bare key: a block mapping or sequence from its base indentation on.
+    Mapping,
+    /// After a `|` marker: a scalar, up to the first non-empty line at column 0.
+    Scalar,
 }
 
 /// Checks the lines of `source` from `start` (a line start) to `end` that
@@ -42,32 +47,49 @@ pub(crate) fn check_range_lines(
 ) -> Result<(), LimaError> {
     let mut pos = start;
     let mut current = line;
+    // a block mapping's base indentation, once its first content line set it
+    let mut base: Option<usize> = None;
+    let mut scalar_open = owner == RangeOwner::Scalar;
     while pos < end {
         let line_end = source[pos..end].find('\n').map(|p| pos + p);
         let text = &source[pos..line_end.unwrap_or(end)];
-        // blank and comment lines by Lima's own whitespace; indentation by
-        // ASCII space only (§3 expanded the tabs)
-        let content = text.trim_start_matches(is_trim_whitespace);
-        if !content.is_empty() && !content.starts_with('#') {
-            if !text.starts_with(' ') {
-                return Err(LimaError::new(
-                    Code::UnrecognizedLine,
-                    current,
-                    format!(
-                        "Lima: unrecognised line at line {current}: \"{text}\"{}",
-                        hint(text)
-                    ),
-                ));
-            }
-            if owner != RangeOwner::Block {
-                return Err(LimaError::new(
-                    Code::InvalidIndentation,
-                    current,
-                    format!(
-                        "Lima: unexpected indentation at line {current}: \"{content}\"{}",
+        let indent = text.bytes().take_while(|&b| b == b' ').count();
+        // §6.1.5: a `|` scalar holds every line up to the first non-empty
+        // one at its key's column (0), `#` included
+        let belongs_to_scalar = scalar_open && (indent == text.len() || indent > 0);
+        if !belongs_to_scalar {
+            scalar_open = false;
+            // blank and comment lines by Lima's own whitespace; indentation
+            // by ASCII space only (§3 expanded the tabs)
+            let content = text.trim_start_matches(is_trim_whitespace);
+            if !content.is_empty() && !content.starts_with('#') {
+                if indent == 0 {
+                    return Err(LimaError::new(
+                        Code::UnrecognizedLine,
+                        current,
+                        format!(
+                            "Lima: unrecognised line at line {current}: \"{text}\"{}",
+                            hint(text)
+                        ),
+                    ));
+                }
+                if owner == RangeOwner::Mapping && base.is_none() {
+                    base = Some(indent);
+                }
+                if !(owner == RangeOwner::Mapping && base.is_some_and(|b| indent >= b)) {
+                    let marker = if owner == RangeOwner::Inline {
                         yaml_hint(inline_value)
-                    ),
-                ));
+                    } else {
+                        String::new()
+                    };
+                    return Err(LimaError::new(
+                        Code::InvalidIndentation,
+                        current,
+                        format!(
+                            "Lima: unexpected indentation at line {current}: \"{content}\"{marker}"
+                        ),
+                    ));
+                }
             }
         }
         match line_end {
@@ -85,6 +107,9 @@ pub(crate) fn check_range_lines(
 fn hint(text: &str) -> &'static str {
     if text == "---" || text == "..." {
         return " (a YAML document marker; Lima has one document)";
+    }
+    if text == "-" || text.starts_with("- ") {
+        return " (a sequence item is indented under its key)";
     }
     if text.starts_with('"') || text.starts_with('\'') {
         return " (a quoted key closes on its own line)";

@@ -14,7 +14,7 @@ are both frozen regardless of what this file shows.
 
 Lima Core 1.1: strict mode rejects a content line that belongs to no
 structure, which Core 1.0 skipped in both modes. Non-strict mode is
-unchanged.
+unchanged but for the end of the input (below).
 
 ### Changed
 
@@ -26,16 +26,21 @@ unchanged.
 - Strict mode throws the new `UNRECOGNIZED_LINE` for an unindented line that
   matches no key pattern: a key without its `: `, a dotted or otherwise
   invalid key, a YAML `---` / `...` marker, a quoted key broken by a newline.
+- A line of a block mapping whose key the key grammar rejects (`a.b: value`,
+  `bad key: value`), skipped in strict mode until now, throws `UNRECOGNIZED_LINE`
+  too; an indented line below a block mapping's base indentation, or after a
+  `|` scalar a column-0 comment ended, throws `INVALID_INDENTATION`.
 - `LimaDiagnosticCode` gains `'UNRECOGNIZED_LINE'`.
 
 ### Fixed
 
 - A top-level `key:` at the very end of the input, without a line
   terminator, was no key at all and vanished; it is `null`, as at any nested
-  level and in the Rust and Go implementations.
+  level and in the Rust and Go implementations, and as Core 1.1 §4 now says.
+  This changes a non-strict result too.
 
-The shared conformance corpus is at 233 Core cases: the 218 Core 1.0 cases
-without the 6 that Core 1.1 supersedes, plus 21 Core 1.1 cases
+The shared conformance corpus is at 239 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 29 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

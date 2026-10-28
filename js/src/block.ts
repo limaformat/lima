@@ -143,6 +143,12 @@ const cursorAfterDash = (cursor: BlockCursor): string => {
 	return cursor.source.slice(content, end)
 }
 
+/** Core 1.1 §10.1: a line in a block whose key the key grammar (§5.1) rejects, in strict mode. */
+const unrecognizedKeyLine = (line: number, trimmed: string): LimaError => new LimaError({
+	code: 'UNRECOGNIZED_LINE', line,
+	message: `Lima: unrecognised line at line ${line}: "${trimmed}" (an unquoted key has letters, digits, "_", "-" and ":" only; quote any other)`,
+})
+
 /** Shared block grammar consuming one mutable physical-line cursor. */
 const parseCursorBlock = <V, M>(
 	cursor: BlockCursor, baseIndent: number, ctx: ParseContext, baseLine: number,
@@ -169,7 +175,9 @@ const parseCursorBlock = <V, M>(
 					? trimSlice(trimmed, 0, colonPos)
 					: bareKey ? trimSlice(trimmed, 0, trimmed.length - 1) : ''
 				if (keyRaw !== '' && !isValidKey(keyRaw)) {
-					// §5.1: not a usable key — skipped in both modes, as at the top level.
+					// §5.1: not a usable key — an unrecognised line, skipped in non-strict mode and an error in strict
+					// mode, as at the top level (Core 1.1 §10.1)
+					if (ctx.strict) throw unrecognizedKeyLine(line, trimmed)
 					cursor.next()
 				} else if (colonPos !== -1) {
 					const key = stripKeyQuotes(keyRaw, ctx.strict, line)
@@ -311,8 +319,9 @@ const parseCursorBlock = <V, M>(
 				? trimSlice(trimmed, 0, colonPos)
 				: bareKey ? trimSlice(trimmed, 0, trimmed.length - 1) : ''
 			if (keyRaw !== '' && !isValidKey(keyRaw)) {
-				// §5.1: not a usable key — unrecognised line, skipped in both
-				// modes (§10's strict list is closed and does not cover this).
+				// §5.1: not a usable key — an unrecognised line, skipped in non-strict mode and an error in strict
+				// mode, as at the top level (Core 1.1 §10.1)
+				if (ctx.strict) throw unrecognizedKeyLine(line, trimmed)
 				cursor.next()
 			} else if (colonPos !== -1) {
 				if (entries === null) entries = builder.createMapping()
