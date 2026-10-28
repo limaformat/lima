@@ -2,7 +2,7 @@
 
 **Status:** implemented — a byte-frozen 149-case Core 1.0.0 baseline with
 additive Core errata through 1.0.10 on top (218 Core 1.0 cases total), a
-frozen 94-case Core 1.1 corpus that supersedes 8 of them (304 Core 1.1 cases
+frozen 100-case Core 1.1 corpus that supersedes 8 of them (310 Core 1.1 cases
 in all), plus a separate 136-case References 2.0 final corpus; all counts are
 pinned by tests. The baseline also includes 101 byte-frozen References 1.0 cases: that
 extension was published briefly in mid-2026 and superseded almost immediately
@@ -449,8 +449,8 @@ bun run run:references-2
 ```
 
 The default `bun run run` runs the current conformance target: Core 1.1
-(304 cases: the 218 Core 1.0 cases through errata 1.0.10 without the 8 that
-`corpus/manifests/core-1.1.json` lists under `supersedes`, plus the 94 of
+(310 cases: the 218 Core 1.0 cases through errata 1.0.10 without the 8 that
+`corpus/manifests/core-1.1.json` lists under `supersedes`, plus the 100 of
 `corpus/core-1.1/`) plus References 2.0 (136). `bun run run:core-1` runs the
 frozen Core 1.0 corpus alone, whose 8 superseded cases a Core 1.1 parser
 fails by design. `bun run
@@ -469,12 +469,17 @@ The corpus pins what someone thought of. `corpus/runner/src/differential.ts`
 looks for what nobody did: it generates random documents from fixed seeds —
 half nested the way front matter is and then disturbed (stray and invalid
 lines, shifted indentation, tabs, CR and CRLF line ends), half random lines in
-random order — and parses each with TypeScript in-process and with the Rust
+random order, and rarely one at a resource limit of §9, just below, at or
+above it — and parses each with TypeScript in-process and with the Rust
 and Go probes (`rust/examples/differential.rs`, `go/internal/differential`),
 in both modes. It compares the value, the lines of the warnings, and the
-error code and line. A disagreement is a defect in one implementation or a
-place the specification leaves open; the script prints each with its input
-shrunk to the lines it needs, and which implementation is the odd one out.
+error code and line. Values keep every type apart (a mapping, a date, an
+integer and a float are each tagged); TypeScript has one number type, so it is
+compared by value, while Rust and Go must also agree on integer or float. A
+disagreement is a defect in one implementation or a place the specification
+leaves open; the script prints each with its input shrunk to the lines it
+needs — keeping the same mode and odd one out, so that the input shown is the
+one for the fault found — and which implementation is the odd one out.
 
 ```text
 cargo build --release --example differential        # in rust/
@@ -487,4 +492,4 @@ CI runs it with seeds 1–4 and 25,000 documents each and fails on any
 disagreement. Agreement is not correctness — three implementations can share
 a mistake — so a disagreement found here becomes a corpus case once it is
 decided. Left out as known and open: content indented by Unicode whitespace
-other than space and tab (`docs/follow-ups.md`).
+other than space and tab, outside a `|` scalar (`docs/follow-ups.md`).

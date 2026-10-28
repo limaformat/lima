@@ -13,6 +13,17 @@ No failing case is currently known; this predates the same-top-level fix.
 near line 72, preventing the reference benchmark from running. Repair it and
 add a stable References 2.0 benchmark suitable for before/after comparisons.
 
+## Tree-sitter grammar after Core 1.1
+
+The editor grammar (`editors/tree-sitter-lima`) does not show a compact
+sequence (Core 1.1 §7.2) as a sequence: its items are missing from the tree,
+with no error node. Nor does it show a key that follows a skipped line under a
+bare key of an object item (`- a:` / `    freetext` / `      c: 1`), which
+Core reads as a later key of the item. Both parse without an error node; the
+missing nodes only lose their highlighting. Teach the scanner both, pin the
+trees in `scripts/gen-corpus.ts`, and move the Zed extension's grammar
+commit with the next release.
+
 ## Indentation by Unicode whitespace
 
 Core §3 normalises tabs in leading indentation and §7.1 counts spaces, but no

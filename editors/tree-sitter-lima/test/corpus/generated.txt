@@ -122,6 +122,43 @@ l:
           (comment))))))
 
 ==================
+core.block-scalar.marker-with-trailing-text
+==================
+a: | x
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))
+
+==================
+core.block-sequence.object-item-past-skipped-line
+==================
+l:
+  - a: 1
+    ---
+    x.y: 1
+    b: 2
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        value: (number)
+        (block_mapping_entry
+          key: (key)
+          value: (number))
+        (block_mapping_entry
+          key: (key)
+          value: (number))))))
+
+==================
 core.block-scalar.dedent-comment-ends-scalar
 ==================
 description: |

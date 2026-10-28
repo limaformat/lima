@@ -139,8 +139,39 @@ function soup(rng: Rng): string[] {
 	return lines
 }
 
-/** One random document: half nested like front matter, half random lines; mostly `\n` line ends and a final one. */
+/**
+ * A document at one of Core's resource limits (§9), just below, at or just above it: nesting depth, top-level key
+ * count, key and scalar length, document size.
+ */
+function atLimit(rng: Rng): string[] {
+	const near = (limit: number): number => limit - 1 + below(rng, 3)
+	switch (below(rng, 5)) {
+		case 0: {
+			const depth = near(16)
+			const lines = Array.from({ length: depth - 1 }, (_, i) => pad(i) + 'k' + i + ':')
+			return [...lines, pad(depth - 1) + 'leaf: ' + pick(rng, ['[1]', '{a: 1}', 'x'])]
+		}
+		case 1:
+			return Array.from({ length: near(128) }, (_, i) => 'k' + below(rng, i + 1) + ': ' + i)
+		case 2:
+			return ['k' + 'x'.repeat(near(128) - 1) + ': v']
+		case 3:
+			return ['v: ' + pick(rng, ['', '"']) + 'x'.repeat(near(16_384))]
+		default: {
+			// four scalars below their limit; the last one sized to put the document at 65,535 to 65,537 bytes
+			const lines = Array.from({ length: 3 }, (_, i) => 'k' + i + ': ' + 'x'.repeat(16_000))
+			const used = lines.reduce((n, l) => n + l.length + 1, 0) + 'k3: '.length
+			return [...lines, 'k3: ' + 'x'.repeat(near(65_536) - used)]
+		}
+	}
+}
+
+/**
+ * One random document: nested like front matter or random lines, about half each, and rarely one at a resource limit;
+ * mostly `\n` line ends and a final one.
+ */
 export function generateDocument(rng: Rng): string {
+	if (chance(rng, 0.004)) return atLimit(rng).join('\n')
 	const lines = chance(rng, 0.5) ? structured(rng) : soup(rng)
 	const end = chance(rng, 0.1) ? '\r\n' : chance(rng, 0.02) ? '\r' : '\n'
 	return lines.join(end) + (chance(rng, 0.8) ? end : '')
@@ -149,29 +180,45 @@ export function generateDocument(rng: Rng): string {
 /**
  * Known and open, so left out rather than reported every run: content indented by Unicode whitespace other than space
  * and tab, such as U+00A0, which §3 does not define and the implementations read differently (docs/follow-ups.md).
+ * Inside a `|` scalar such whitespace is content (§6.1.5) and stays in.
  */
-export const isKnownOpen = (document: string): boolean =>
-	document.split(/\r\n|\r|\n/).some((line) => {
-		const i = line.search(/[^ \t]/)
-		if (i === -1 || !isTrimWhitespace(line.charCodeAt(i))) return false
-		let j = i
-		while (j < line.length && isTrimWhitespace(line.charCodeAt(j))) j++
-		return j < line.length
-	})
+export function isKnownOpen(document: string): boolean {
+	let scalarKey = -1 // the column of the key whose `|` scalar is open, or -1
+	for (const raw of document.split(/\r\n|\r|\n/)) {
+		const line = raw.replace(/^[ \t]+/, (ws) => ws.replaceAll('\t', '  ')) // §3
+		const indent = line.search(/[^ ]/)
+		if (scalarKey >= 0 && (indent === -1 || indent > scalarKey)) continue
+		scalarKey = -1
+		if (indent !== -1 && isTrimWhitespace(line.charCodeAt(indent))) {
+			let j = indent
+			while (j < line.length && isTrimWhitespace(line.charCodeAt(j))) j++
+			if (j < line.length) return true
+		}
+		const marker = /^( *(?:-[ \t]+)?)[^ \t#].*?:[ \t]+\|[ \t]*$/.exec(line)
+		if (marker) scalarKey = marker[1]!.length
+	}
+	return false
+}
 
-/** A value as the probes write it: plain JSON, a date as `{"$date": "YYYY-MM-DDTHH:MM:SSZ"}`. */
+/**
+ * The probes' value form, which keeps every type apart: `{"$map": …}`, `{"$date": "YYYY-MM-DDTHH:MM:SSZ"}`,
+ * `{"$int": "…"}` and `{"$float": …}` beside plain strings, booleans, null and arrays. TypeScript has one number type,
+ * so its numbers are `{"$number": …}`, and the comparison with it reads `$int` and `$float` as that.
+ */
 const encode = (v: unknown): unknown =>
 	v instanceof Date ? { $date: v.toISOString().replace('.000Z', 'Z') }
-		: Array.isArray(v) ? v.map(encode)
-			: v !== null && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, encode(x)]))
-				: v
+		: typeof v === 'number' ? { $number: v }
+			: Array.isArray(v) ? v.map(encode)
+				: v !== null && typeof v === 'object'
+					? { $map: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, encode(x)])) }
+					: v
 
 export function typescriptOutcomes(document: string): Outcome[] {
 	return [false, true].map((strict): Outcome => {
 		const warnings: number[] = []
 		try {
 			const value = parseCore(document, { strict, onWarning: (d) => { warnings.push(d.line) } })
-			return { value: JSON.parse(JSON.stringify(encode(value))), warnings }
+			return { value: encode(value), warnings }
 		} catch (e) {
 			if (e instanceof LimaError) return { error: e.code, line: e.line ?? null }
 			return { crash: String(e) }
@@ -186,10 +233,7 @@ export function typescriptOutcomes(document: string): Outcome[] {
 export function probeOutcomes(probe: string, documents: string[]): Outcome[] {
 	if (documents.length === 0) return []
 	const run = spawnSync(probe, { input: JSON.stringify(documents), maxBuffer: 1 << 30, timeout: 600_000 })
-	if (run.status === 0) {
-		return (JSON.parse(run.stdout.toString()) as Outcome[]).map((o) =>
-			'line' in o ? { error: o.error, line: o.line || null } : o)
-	}
+	if (run.status === 0) return JSON.parse(run.stdout.toString()) as Outcome[]
 	if (documents.length === 1) {
 		const reason = (run.error?.message ?? run.stderr.toString().split('\n').find((l) => l.trim()) ?? `exit ${run.status}`)
 		return [{ crash: reason }, { crash: reason }]
@@ -198,46 +242,66 @@ export function probeOutcomes(probe: string, documents: string[]): Outcome[] {
 	return [...probeOutcomes(probe, documents.slice(0, half)), ...probeOutcomes(probe, documents.slice(half))]
 }
 
-const sortKeys = (v: unknown): unknown =>
-	Array.isArray(v) ? v.map(sortKeys)
-		: v !== null && typeof v === 'object'
-			? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys((v as Record<string, unknown>)[k])]))
-			: v
+/** A number as text, `-0` kept apart from `0`. */
+const numberText = (n: number): string => Object.is(n, -0) ? '-0' : String(n)
 
-/** The comparable form of an outcome: keys sorted, since member order is not significant (§1). */
-export const canonical = (o: Outcome): string => JSON.stringify(sortKeys(o))
+/** Mapping keys sorted, since member order is not significant (§1); numbers as text, typed or as one `$number`. */
+const normalize = (v: unknown, typed: boolean): unknown => {
+	if (Array.isArray(v)) return v.map((x) => normalize(x, typed))
+	if (v === null || typeof v !== 'object') return v
+	const o = v as Record<string, unknown>
+	if ('$int' in o) return typed ? o : { $number: numberText(Number(o.$int)) }
+	if ('$float' in o) return typed ? { $float: numberText(o.$float as number) } : { $number: numberText(o.$float as number) }
+	if ('$number' in o) return { $number: numberText(o.$number as number) }
+	return Object.fromEntries(Object.keys(o).sort().map((k) => [k, normalize(o[k], typed)]))
+}
+
+/** The comparable form of an outcome; `typed` keeps Rust's and Go's integers and floats apart. */
+export const canonical = (o: Outcome, typed = false): string => JSON.stringify(normalize(o, typed))
 
 export interface Probes { rust: string; go: string }
 
-/** Which implementation reads a document differently from the other two, or `all` when no two agree. */
-export type Odd = 'ts' | 'rust' | 'go' | 'all'
+/**
+ * Which implementation reads a document differently from the other two: `all` when no two agree, `type` when all
+ * three agree on every number's value but Rust and Go not on whether it is an integer or a float.
+ */
+export type Odd = 'ts' | 'rust' | 'go' | 'all' | 'type'
 
-export interface Disagreement { document: string; odd: Odd }
+/** One mode's disagreement: 0 non-strict, 1 strict. */
+export interface Fault { mode: number; odd: Odd }
 
-/** The documents, of `documents`, on which the three implementations do not agree in either mode. */
+export interface Disagreement { document: string; faults: Fault[] }
+
+/** The documents, of `documents`, on which the three implementations do not agree, with each mode's fault. */
 export function disagreements(documents: string[], probes: Probes): Disagreement[] {
 	const rust = probeOutcomes(probes.rust, documents)
 	const go = probeOutcomes(probes.go, documents)
 	const out: Disagreement[] = []
 	documents.forEach((document, i) => {
 		const ts = typescriptOutcomes(document)
-		for (const m of [0, 1]) {
-			const [t, r, g] = [canonical(ts[m]!), canonical(rust[2 * i + m]!), canonical(go[2 * i + m]!)]
-			if (t === r && r === g) continue
-			out.push({ document, odd: r === g ? 'ts' : t === g ? 'rust' : t === r ? 'go' : 'all' })
-			return
+		const faults: Fault[] = []
+		for (const mode of [0, 1]) {
+			const [ro, go_] = [rust[2 * i + mode]!, go[2 * i + mode]!]
+			const [t, r, g] = [canonical(ts[mode]!), canonical(ro), canonical(go_)]
+			if (t !== r || r !== g) faults.push({ mode, odd: r === g ? 'ts' : t === g ? 'rust' : t === r ? 'go' : 'all' })
+			else if (canonical(ro, true) !== canonical(go_, true)) faults.push({ mode, odd: 'type' })
 		}
+		if (faults.length > 0) out.push({ document, faults })
 	})
 	return out
 }
 
-/** Removes lines from `document` while the implementations still disagree on it; a few probe runs per step. */
-export function shrink(document: string, probes: Probes): string {
+/**
+ * Removes lines from `document` while the implementations still disagree on it the same way — the same mode, the
+ * same odd one out as `fault` — so that the input shown is the one for the fault found; a few probe runs per step.
+ */
+export function shrink(document: string, fault: Fault, probes: Probes): string {
 	let lines = document.split('\n')
+	const same = (d: Disagreement) => d.faults.some((f) => f.mode === fault.mode && f.odd === fault.odd)
 	for (let progress = true; progress && lines.length > 1;) {
 		progress = false
 		const candidates = lines.map((_, i) => [...lines.slice(0, i), ...lines.slice(i + 1)].join('\n'))
-		const still = new Set(disagreements(candidates, probes).map((d) => d.document))
+		const still = new Set(disagreements(candidates, probes).filter(same).map((d) => d.document))
 		const smaller = candidates.find((c) => still.has(c))
 		if (smaller !== undefined) { lines = smaller.split('\n'); progress = true }
 	}
@@ -248,7 +312,8 @@ function report(document: string, probes: Probes): string {
 	const ts = typescriptOutcomes(document)
 	const [rust, go] = [probeOutcomes(probes.rust, [document]), probeOutcomes(probes.go, [document])]
 	return ['non-strict', 'strict'].map((mode, m) =>
-		`  ${mode}\n    ts   ${canonical(ts[m]!)}\n    rust ${canonical(rust[m]!)}\n    go   ${canonical(go[m]!)}`).join('\n')
+		`  ${mode}\n    ts   ${canonical(ts[m]!)}\n    rust ${canonical(rust[m]!, true)}\n    go   ${canonical(go[m]!, true)}`)
+		.join('\n')
 }
 
 function main(argv: string[]): number {
@@ -279,12 +344,12 @@ function main(argv: string[]): number {
 		parses += documents.length * 2
 		const bad = disagreements(documents, probes)
 		total += bad.length
-		const odd = (o: Odd) => bad.filter((d) => d.odd === o).length
-		console.log(`seed ${seed}: ${documents.length} documents, ${bad.length} disagreeing ` +
-			`(odd one out: ts ${odd('ts')}, rust ${odd('rust')}, go ${odd('go')}, all differ ${odd('all')})`)
-		for (const { document } of bad) {
+		const odd = (o: Odd) => bad.filter((d) => d.faults[0]!.odd === o).length
+		console.log(`seed ${seed}: ${documents.length} documents, ${bad.length} disagreeing (odd one out: ` +
+			`ts ${odd('ts')}, rust ${odd('rust')}, go ${odd('go')}, all differ ${odd('all')}, number type ${odd('type')})`)
+		for (const { document, faults } of bad) {
 			if (found.size >= show) break
-			found.add(shrink(document, probes))
+			found.add(shrink(document, faults[0]!, probes))
 		}
 	}
 	for (const document of found) console.log(`\n${JSON.stringify(document)}\n${report(document, probes)}`)

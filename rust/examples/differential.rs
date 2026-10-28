@@ -1,8 +1,8 @@
 //! The Rust side of the differential test (`corpus/runner/src/differential.ts`):
 //! reads a JSON array of documents from stdin and writes, for each, the
-//! non-strict and the strict `parse_core` outcome as JSON — the value (a date
-//! as `{"$date": …}`) with the lines of its warnings, or the error's code and
-//! line.
+//! non-strict and the strict `parse_core` outcome as JSON — the value, with
+//! the lines of its warnings, or the error's code and line. Values keep every
+//! type apart: `{"$map": …}`, `{"$date": …}`, `{"$int": "…"}`, `{"$float": …}`.
 
 use lima::value::LimaValue;
 use serde_json::{json, Map, Value};
@@ -14,16 +14,16 @@ fn encode(v: &LimaValue) -> Value {
     match v {
         LimaValue::Null => Value::Null,
         LimaValue::Bool(b) => json!(b),
-        LimaValue::Int(i) => json!(i),
-        LimaValue::Float(f) => json!(f),
+        LimaValue::Int(i) => json!({ "$int": i.to_string() }),
+        LimaValue::Float(f) => json!({ "$float": f }),
         LimaValue::String(s) => json!(s),
         LimaValue::Instant(i) => json!({ "$date": i.to_iso_string() }),
         LimaValue::Array(a) => Value::Array(a.iter().map(encode).collect()),
-        LimaValue::Mapping(m) => Value::Object(
-            m.iter()
+        LimaValue::Mapping(m) => json!({
+            "$map": m.iter()
                 .map(|(k, v)| (k.clone(), encode(v)))
-                .collect::<Map<_, _>>(),
-        ),
+                .collect::<Map<_, _>>()
+        }),
     }
 }
 

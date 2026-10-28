@@ -55,8 +55,8 @@ non-strict results change with them (below).
   was a block scalar; it is the string `"|"`, as at the top level — the
   marker stands alone (§6.1.5).
 
-The shared conformance corpus is at 304 Core cases: the 218 Core 1.0 cases
-without the 8 that Core 1.1 supersedes, plus 94 Core 1.1 cases
+The shared conformance corpus is at 310 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 100 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

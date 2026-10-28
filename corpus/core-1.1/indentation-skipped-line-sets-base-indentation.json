@@ -1,0 +1,16 @@
+{
+  "id": "core.indentation.skipped-line-sets-base-indentation",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "A skipped line as the first content line after a bare key opens the key's block when it is deeper and sets its base indentation; a line less indented than that ends the block.",
+  "input": "a:\n    freetext\n  b: 1\n",
+  "expect": {
+    "result": {
+      "a": null
+    }
+  },
+  "tags": [
+    "indentation"
+  ]
+}

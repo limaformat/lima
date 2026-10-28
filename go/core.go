@@ -523,6 +523,27 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 	return &pvalue{line: start, mapping: m}, nil
 }
 
+// topLevelKeyCount counts the top-level key entries in lines, duplicates
+// included (§9): the lines at column 0 the loop in parseCorePositioned reads
+// as keys.
+func topLevelKeyCount(lines []sourceLine) int {
+	n := 0
+	for _, l := range lines {
+		c := l.text
+		if l.indent > 0 || trimWhitespace(c) == "" || strings.HasPrefix(c, "#") || spaceBeforeColon(c) {
+			continue
+		}
+		sep := findSep(c)
+		if sep < 0 && strings.HasSuffix(c, ":") && len(c) > 1 {
+			sep = len(c) - 1
+		}
+		if sep >= 0 && isValidKey(c[:sep]) {
+			n++
+		}
+	}
+	return n
+}
+
 func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), captureReferences bool) ([]pentry, error) {
 	if len(input) > documentSizeLimit {
 		return nil, limaError(ResourceLimit, 1, fmt.Sprintf("Lima: document exceeds maximum size of %d bytes at line 1", documentSizeLimit))
@@ -582,10 +603,12 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 		if e0 != nil {
 			return nil, e0
 		}
-		entryCount++
-		if entryCount > topLevelKeyLimit {
+		// §9: the top-level key entries are counted before the first is
+		// read, so that the limit, not a later error, rejects the document
+		if entryCount == 0 && topLevelKeyCount(lines[i:]) > topLevelKeyLimit {
 			return nil, limaError(ResourceLimit, 1, fmt.Sprintf("Lima: too many top-level key entries (max %d) at line 1", topLevelKeyLimit))
 		}
+		entryCount++
 		if e := checkKeyLength(key, l.number); e != nil {
 			return nil, e
 		}

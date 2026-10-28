@@ -55,12 +55,15 @@ non-strict results change with them (below).
 - A block whose first line is freetext or an invalid key was always a
   mapping; the first entry or item decides (Core 1.1 §7.1), so
   `a:` / `  freetext` / `  - item` is `["item"]`.
+- More than 128 top-level key entries with a duplicate among them threw
+  `DUPLICATE_KEY` in strict mode; the key count is checked before any entry is
+  read, so it throws `RESOURCE_LIMIT`, as in TypeScript and Rust.
 - A line non-strict mode skips — freetext, a marker, an invalid key, or a line
   at the dash's column that is no item — ended the object item before it, and
   its later keys were lost; it is as if absent (Core 1.1 §7.1).
 
-The shared conformance corpus is at 304 Core cases: the 218 Core 1.0 cases
-without the 8 that Core 1.1 supersedes, plus 94 Core 1.1 cases
+The shared conformance corpus is at 310 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 100 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

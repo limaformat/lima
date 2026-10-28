@@ -1,0 +1,23 @@
+{
+  "id": "core.limits.key-count-before-duplicates.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "9",
+  "description": "The top-level key count is checked before any entry is read: 129 entries with a duplicate among the first throw the limit at line 1, not the duplicate (Go threw DUPLICATE_KEY).",
+  "input": "k0: 0\nk1: 1\nk2: 2\nk3: 3\nk4: 4\nk5: 5\nk6: 6\nk7: 7\nk8: 8\nk9: 9\nk10: 10\nk11: 11\nk12: 12\nk13: 13\nk14: 14\nk15: 15\nk16: 16\nk17: 17\nk18: 18\nk19: 19\nk20: 20\nk21: 21\nk22: 22\nk23: 23\nk24: 24\nk25: 25\nk26: 26\nk27: 27\nk28: 28\nk29: 29\nk30: 30\nk31: 31\nk32: 32\nk33: 33\nk34: 34\nk35: 35\nk36: 36\nk37: 37\nk38: 38\nk39: 39\nk40: 40\nk41: 41\nk42: 42\nk43: 43\nk44: 44\nk45: 45\nk46: 46\nk47: 47\nk48: 48\nk49: 49\nk50: 50\nk51: 51\nk52: 52\nk53: 53\nk54: 54\nk55: 55\nk56: 56\nk57: 57\nk58: 58\nk59: 59\nk60: 60\nk61: 61\nk62: 62\nk63: 63\nk64: 64\nk65: 65\nk66: 66\nk67: 67\nk68: 68\nk69: 69\nk70: 70\nk71: 71\nk72: 72\nk73: 73\nk74: 74\nk75: 75\nk76: 76\nk77: 77\nk78: 78\nk79: 79\nk80: 80\nk81: 81\nk82: 82\nk83: 83\nk84: 84\nk85: 85\nk86: 86\nk87: 87\nk88: 88\nk89: 89\nk90: 90\nk91: 91\nk92: 92\nk93: 93\nk94: 94\nk95: 95\nk96: 96\nk97: 97\nk98: 98\nk99: 99\nk0: 100\nk1: 101\nk2: 102\nk3: 103\nk4: 104\nk5: 105\nk6: 106\nk7: 107\nk8: 108\nk9: 109\nk10: 110\nk11: 111\nk12: 112\nk13: 113\nk14: 114\nk15: 115\nk16: 116\nk17: 117\nk18: 118\nk19: 119\nk20: 120\nk21: 121\nk22: 122\nk23: 123\nk24: 124\nk25: 125\nk26: 126\nk27: 127\nk28: 128\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 1,
+      "code": "RESOURCE_LIMIT"
+    }
+  },
+  "tags": [
+    "limit",
+    "error",
+    "keys",
+    "strict"
+  ]
+}

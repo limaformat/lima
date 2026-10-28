@@ -2,9 +2,9 @@
   "suite": "core-1.1",
   "frozen": true,
   "baselineVersion": "1.1.0",
-  "baselineCaseCount": 94,
+  "baselineCaseCount": 100,
   "specVersion": "1.1.0",
-  "caseCount": 94,
+  "caseCount": 100,
   "supersedes": [
     "core.block-scalar.chomping-indicator-unsupported.strict",
     "core.block-scalar.folded-marker-unsupported.strict",
@@ -122,6 +122,18 @@
       "path": "core-1.1/block-scalar-marker-with-comment-object-item.json",
       "id": "core.block-scalar.marker-with-comment-object-item",
       "sha256": "de4dd891f3d4617c8a9df859e1999a172e531981383f5a76e667a322097f67f7",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-marker-with-trailing-text-strict.json",
+      "id": "core.block-scalar.marker-with-trailing-text.strict",
+      "sha256": "a62ea2aaa951ffd27f9b3b34a90672d41aaaabee77f3c3483db5443a424ad5eb",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-marker-with-trailing-text.json",
+      "id": "core.block-scalar.marker-with-trailing-text",
+      "sha256": "e20a81263ecbf388d2e767351ca9b926c0cdd71e267fcfd69d1063c5a781bc8d",
       "since": "1.1.0"
     },
     {
@@ -317,6 +329,12 @@
       "since": "1.1.0"
     },
     {
+      "path": "core-1.1/block-sequence-skipped-line-under-bare-item-key.json",
+      "id": "core.block-sequence.skipped-line-under-bare-item-key",
+      "sha256": "173684b42ab6c5659aa3bc31ef9fc8ff7f6e23da57f039afb883575c79b93bff",
+      "since": "1.1.0"
+    },
+    {
       "path": "core-1.1/block-sequence-unclosed-flow-mapping-item-strict.json",
       "id": "core.block-sequence.unclosed-flow-mapping-item.strict",
       "sha256": "ff6d2d47828cd2f3f1f558677505cf1de4127a63950511c05bee7d02506d3bb6",
@@ -461,6 +479,18 @@
       "since": "1.1.0"
     },
     {
+      "path": "core-1.1/indentation-skipped-line-ends-block-when-less-indented.json",
+      "id": "core.indentation.skipped-line-ends-block-when-less-indented",
+      "sha256": "a33cee8fe452e016af657d260b8bedf5e7e3cf9126456cff7a10fe9bc326f6ce",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-skipped-line-sets-base-indentation.json",
+      "id": "core.indentation.skipped-line-sets-base-indentation",
+      "sha256": "06b1b2e6012d82feef4b3460528bfccba88b822495092dfe3d95496cc56433c5",
+      "since": "1.1.0"
+    },
+    {
       "path": "core-1.1/indentation-whitespace-only-line-in-mapping-strict.json",
       "id": "core.indentation.whitespace-only-line-in-mapping.strict",
       "sha256": "cc90daf345159594b7830d02632ec49e06976aed05d818041546ce83bb47aa9b",
@@ -530,6 +560,12 @@
       "path": "core-1.1/key-top-level-dot-strict.json",
       "id": "core.keys.top-level.dot.strict",
       "sha256": "cb0d43b0c78fdb51556336f11ceaaf8a4bfa37a2bba492f1de3b537686f6f652",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/limits-key-count-before-duplicates-strict.json",
+      "id": "core.limits.key-count-before-duplicates.strict",
+      "sha256": "4194f09ec15f2e47682d1a06b0926609570380d9b14b93e58fcd847ed3eb8c71",
       "since": "1.1.0"
     },
     {

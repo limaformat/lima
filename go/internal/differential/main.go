@@ -1,14 +1,16 @@
 // Command differential is the Go side of the differential test
 // (corpus/runner/src/differential.ts): it reads a JSON array of documents
 // from stdin and writes, for each, the non-strict and the strict ParseCore
-// outcome as JSON — the value (a date as {"$date": …}) with the lines of its
-// warnings, or the error's code and line.
+// outcome as JSON — the value, with the lines of its warnings, or the error's
+// code and line (null for none). Values keep every type apart: {"$map": …},
+// {"$date": …}, {"$int": "…"}, {"$float": …}.
 package main
 
 import (
 	"encoding/json"
 	"errors"
 	"os"
+	"strconv"
 
 	lima "github.com/limaformat/lima/go"
 )
@@ -20,9 +22,9 @@ func encode(v lima.Value) any {
 	case lima.Bool:
 		return bool(x)
 	case lima.Int64:
-		return int64(x)
+		return map[string]string{"$int": strconv.FormatInt(int64(x), 10)}
 	case lima.Float64:
-		return float64(x)
+		return map[string]float64{"$float": float64(x)}
 	case lima.String:
 		return string(x)
 	case lima.Instant:
@@ -38,7 +40,7 @@ func encode(v lima.Value) any {
 		for _, e := range x {
 			out[e.Key] = encode(e.Value)
 		}
-		return out
+		return map[string]any{"$map": out}
 	}
 	panic("differential: unknown value type")
 }
@@ -59,7 +61,11 @@ func main() {
 			var le *lima.LimaError
 			switch {
 			case errors.As(err, &le):
-				out = append(out, map[string]any{"error": string(le.Code), "line": le.Line})
+				var line any // Line is zero when no line applies
+				if le.Line != 0 {
+					line = le.Line
+				}
+				out = append(out, map[string]any{"error": string(le.Code), "line": line})
 			case err != nil:
 				panic(err)
 			default:

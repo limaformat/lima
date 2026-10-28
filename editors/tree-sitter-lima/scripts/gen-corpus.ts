@@ -73,6 +73,25 @@ const EXPECTED_TREES: Record<string, string> = {
           key: (key)
           value: (plain_scalar)
           (comment))))))`,
+  // `| x` keeps its `|`: the scanner looks past it for a marker without moving the value's start.
+  "core.block-scalar.marker-with-trailing-text": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))`,
+  // A line non-strict mode skips inside an object item (`---`) is no error node and ends no item (Core 1.1 §7.1).
+  "core.block-sequence.object-item-past-skipped-line": `(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        value: (number)
+        (block_mapping_entry
+          key: (key)
+          value: (number))
+        (block_mapping_entry
+          key: (key)
+          value: (number))))))`,
   "core.block-scalar.dedent-comment-ends-scalar": `(document
   (block_mapping_entry
     key: (key)

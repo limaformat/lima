@@ -1,0 +1,16 @@
+{
+  "id": "core.indentation.skipped-line-ends-block-when-less-indented",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "A line non-strict mode skips still has its indentation: at column 0 it ends the bare key's block before it ever opens, and the deeper line after it belongs to no block.",
+  "input": "a:\nfreetext\n  b: 1\n",
+  "expect": {
+    "result": {
+      "a": null
+    }
+  },
+  "tags": [
+    "indentation"
+  ]
+}

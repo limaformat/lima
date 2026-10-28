@@ -74,7 +74,7 @@ npm tarball is still 0.5.0's until 0.6.0 is packed.
 
 | Measurement | Words |
 |---|---:|
-| Lima Core 1.1 specification | 8,580 |
+| Lima Core 1.1 specification | 8,658 |
 | Lima References 2.0 specification | 3,036 |
 | Lima Core implementation code | 8,321 |
 | Lima Core implementation comments | 5,067 |

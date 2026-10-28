@@ -91,7 +91,7 @@ Numbers instead of adjectives. Word count is the most robust metric here (line c
 
 | JSON (RFC 8259) | TOML | Lima Core 1.1 | YAML 1.2.2 |
 |---:|---:|---:|---:|
-| 3,998 words | 4,254 words | 8,580 words | 21,961 words |
+| 3,998 words | 4,254 words | 8,658 words | 21,961 words |
 
 **TypeScript implementation:**
 
@@ -108,7 +108,7 @@ Numbers instead of adjectives. Word count is the most robust metric here (line c
 
 Both figures count the committed TypeScript source — not the bundled, minified, or generated `dist/` output that ships — measured from code transitively reachable from the relevant public entry point rather than by whole-file boundaries. The js-yaml measurement covers its actual `load()` parse path (parser, constructor, schema, and tag resolvers), not serialization. Package size is necessarily measured for the complete published packages: Core and References always ship together in `@limaformat/lima`, so the Lima package figure is a conservative comparison against the Core-only implementation measurement.
 
-The Lima Core 1.1 spec is **~2.6× shorter** than YAML 1.2.2 (8,580 words vs. 21,961) and about twice JSON's or TOML's — it still documents type coercion, date parsing, resource limits, and a full strict-mode error catalogue that the simpler formats skip, and it still reads in one sitting.
+The Lima Core 1.1 spec is **~2.5× shorter** than YAML 1.2.2 (8,658 words vs. 21,961) and about twice JSON's or TOML's — it still documents type coercion, date parsing, resource limits, and a full strict-mode error catalogue that the simpler formats skip, and it still reads in one sitting.
 
 js-yaml's `load()` path is ~11,800 words of TypeScript because it also contains support for anchors and aliases, merge keys (`<<`), multi-document streams, `%YAML`/`%TAG` directives, and 21 tag implementations across its four exposed schemas. Ordinary frontmatter does not require those features; tags and anchors/aliases are also the constructs implicated in the two concrete CVEs discussed below. Lima Core is about **7,500 words of code** for the subset that's actually left, plus about **4,100 words of comments** — comments are roughly 36% of the counted committed source, and many tie an implementation detail directly to a spec section. Being smaller is the easy part to measure; the part that matters is that the machinery that isn't there can't misbehave.
 
@@ -127,7 +127,7 @@ Reproduce the implementation counts from `js/` with `bun run wordcount -- --mani
 - **Hard resource limits are part of the normative spec**, not an implementation afterthought: document size, key length, scalar length, and nesting depth are all specified limits, checked in both parse modes.
 - **A closed strict-mode error list** (Core §10.1) — strict mode validates an explicit, enumerated set of conditions, not "everything a parser feels like flagging." Since Core 1.1 that set includes one plain rule: every content line belongs to the structure, so a typo or a YAML-only construct is reported where it stands instead of being dropped.
 - **A grammar expressible without regex backtracking.** The TypeScript implementation's tokenizer uses zero lookahead/lookbehind/backreference constructs and zero genuinely backtracking-dependent matching — verifiably RE2-representable, the same property linear-time engines like Google's RE2 and Rust's `regex` crate require. Not a claim about immunity to slow input in general, just that the grammar itself doesn't force a backtracking engine the way some regex-heavy formats do.
-- **An implementation-independent conformance corpus** with 304 Core 1.1 cases (the 218 Core 1.0 cases — a byte-frozen 149-case 1.0.0 baseline plus additive errata through 1.0.10 — without the 8 that Core 1.1 supersedes, plus 94 Core 1.1 cases) and 136 References 2.0 cases, all count-pinned and passed by TypeScript, Rust, and Go. Reproduce the independently runnable targets from `corpus/runner/`.
+- **An implementation-independent conformance corpus** with 310 Core 1.1 cases (the 218 Core 1.0 cases — a byte-frozen 149-case 1.0.0 baseline plus additive errata through 1.0.10 — without the 8 that Core 1.1 supersedes, plus 100 Core 1.1 cases) and 136 References 2.0 cases, all count-pinned and passed by TypeScript, Rust, and Go. Reproduce the independently runnable targets from `corpus/runner/`.
 
 None of this makes Lima a YAML replacement — it's deliberately scoped to frontmatter, not general-purpose data serialisation, and the constructs it leaves out are exactly the ones YAML-parsing frontmatter rarely needs in the first place. The trade-off is explicit, not hidden: see [Appendix A](docs/lima-core-1.0-spec.md#12-appendix-a-what-lima-core-does-not-support) for the full, reasoned list.
 
@@ -146,7 +146,7 @@ Worth being precise about the threat model this actually matters for: both CVEs 
 
 - [x] Lima Core 1.1 specification — final ([`docs/lima-core-1.0-spec.md`](docs/lima-core-1.0-spec.md), under its 1.0 name so that published links keep working)
 - [x] Frozen Core 1.0 conformance baseline — a byte-identical 149-case 1.0.0 baseline, count-pinned and content-hash protected, with additive Core errata through 1.0.10 on top ([`corpus/`](corpus/), design rationale in [`docs/corpus-design/`](docs/corpus-design/))
-- [x] Frozen Core 1.1 conformance corpus — 94 cases in `corpus/core-1.1/`, pinned the same way, superseding 8 Core 1.0 cases ([decision](docs/decisions/top-level-indentation-after-inline-value.md))
+- [x] Frozen Core 1.1 conformance corpus — 100 cases in `corpus/core-1.1/`, pinned the same way, superseding 8 Core 1.0 cases ([decision](docs/decisions/top-level-indentation-after-inline-value.md))
 - [x] Differential test in CI — TypeScript, Rust, and Go parse the same random documents (about 190,000 per implementation and run) and must agree on every value, warning and error ([`docs/corpus-design/`](docs/corpus-design/README.md#14-differential-test))
 - [x] Lima References 2.0 specification — final with a 136-case corpus; TypeScript, Rust, and Go pass the complete suite through their public References 2.0 APIs ([spec](docs/lima-references-2.0-spec.md), [coverage](docs/corpus-design/coverage/references-2.0.md))
 - [x] TypeScript/JavaScript implementation — published as [`@limaformat/lima`](js/)
@@ -185,7 +185,7 @@ The specifications are self-contained; no design-history documents are part of t
 
 ## Conformance corpus
 
-Lima ships an implementation-independent conformance test corpus so that every implementation can be verified against the same normative cases. TypeScript, Rust, and Go each pass all 304 Core 1.1 and 136 References 2.0 cases, plus a frozen 101-case References 1.0 regression corpus (see Status). The corpus itself lives in [`corpus/`](corpus/); its architecture, diagnostic model, and coverage matrix are documented in [`docs/corpus-design/README.md`](docs/corpus-design/README.md).
+Lima ships an implementation-independent conformance test corpus so that every implementation can be verified against the same normative cases. TypeScript, Rust, and Go each pass all 310 Core 1.1 and 136 References 2.0 cases, plus a frozen 101-case References 1.0 regression corpus (see Status). The corpus itself lives in [`corpus/`](corpus/); its architecture, diagnostic model, and coverage matrix are documented in [`docs/corpus-design/README.md`](docs/corpus-design/README.md).
 
 ## Packages
 

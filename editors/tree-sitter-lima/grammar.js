@@ -79,12 +79,13 @@ module.exports = grammar({
       choice(
         // simple item: "- value"
         seq(optional(field('value', $._inline_value)), $._newline),
-        // object item: "- key: ..." followed by sibling keys at the key column
+        // object item: "- key: ..." followed by sibling keys at the key column,
+        // and the lines non-strict mode skips between them (Core 1.1 §7.1)
         seq(
           field('key', $._key),
           ':',
           $._entry_value,
-          seq(repeat($.block_mapping_entry), $._dedent),
+          seq(repeat(choice($.block_mapping_entry, $._unrecognized_line)), $._dedent),
         ),
       ),
     ),

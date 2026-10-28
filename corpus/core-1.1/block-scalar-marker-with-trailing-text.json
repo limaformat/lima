@@ -1,0 +1,16 @@
+{
+  "id": "core.block-scalar.marker-with-trailing-text",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "`| x` is no block scalar marker: the value is the string `| x`.",
+  "input": "a: | x\n",
+  "expect": {
+    "result": {
+      "a": "| x"
+    }
+  },
+  "tags": [
+    "block-scalar"
+  ]
+}

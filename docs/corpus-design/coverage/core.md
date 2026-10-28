@@ -336,7 +336,7 @@ skips the whitespace after `: ` before any scalar path and before the
 References 2.0 source column is taken, in `core.ts` and `core.rs`; the
 reported columns were already physical and stay identical in all three.
 
-## Core 1.1 (2026-10-28) — C-255–C-283, `corpus/core-1.1/`
+## Core 1.1 (2026-10-28) — C-255–C-286, `corpus/core-1.1/`
 
 Strict mode rejects a content line that belongs to no structure
 ([decision](../../decisions/top-level-indentation-after-inline-value.md)).
@@ -377,6 +377,9 @@ and the default run leaves them out.
 | C-281 | §7.1 | Indentation | The first entry or item decides a block's kind; freetext or an invalid key before it does not (Go read `null`) | pair | both |
 | C-282 | §7.1 | Block sequence | A line non-strict mode skips inside an object item ends it not; strict mode throws for it (Go lost the later keys) | pair | both |
 | C-283 | §7.1 | Block sequence | A line at the dash's column that is no item ends no object item in non-strict mode; strict mode throws | pair | both |
+| C-284 | §7.1 | Indentation | A skipped line's indentation counts: at column 0 it ends a bare key's block before it opens; as a bare key's first, deeper line it sets the block's base indentation; at an object item's key column it gives a bare key there no block | positive | non-strict |
+| C-285 | §9 | Limits | The top-level key count is checked before any entry is read: a duplicate among 129 entries does not come first (Go threw `DUPLICATE_KEY`) | error | strict |
+| C-286 | §6.1.5 | Block scalar | `\| x` is the string `"\| x"` (the tree-sitter scanner dropped its `\|`) | positive | both |
 
 Found while implementing: the TypeScript scanner took a top-level `key:` at the
 very end of the input for no key (it wanted a newline or a space after the
