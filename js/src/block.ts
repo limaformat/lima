@@ -195,6 +195,8 @@ const parseCursorBlock = <V, M>(
 	let items: V[] | null = null
 	let entries: M | null = null
 	let pendingItem: M | null = null
+	// the column of the pending object item's keys: its first key's, after `- ` (§7.2)
+	let pendingColumn = 0
 	const startLine = cursor.lineIndex
 
 	while (cursor.valid) {
@@ -205,6 +207,16 @@ const parseCursorBlock = <V, M>(
 
 		if (indent > baseIndent) {
 			const trimmed = cursorContent(cursor)
+			// §7.2: an object item's keys stand at its first key's column. A line less indented ends the item (§7.1
+			// rule 4); a deeper one, which no nested block took, is inconsistently indented (rule 5) and the item goes on
+			if (pendingItem !== null && indent < pendingColumn) {
+				items!.push(builder.mapping(pendingItem, line)); pendingItem = null
+			}
+			if (pendingItem !== null && indent > pendingColumn) {
+				if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
+					message: `Lima: unexpected indentation at line ${line}: "${trimmed}"` })
+				cursor.next(); continue
+			}
 			if (items !== null && pendingItem !== null) {
 				const bareKey = trimmed.charCodeAt(trimmed.length - 1) === 58
 				const colonPos = bareKey && trimmed.indexOf(' ') === -1 ? -1 : findKeySep(trimmed)
@@ -308,10 +320,12 @@ const parseCursorBlock = <V, M>(
 					? afterDash.slice(valueStart) : trimSlice(afterDash, valueStart, afterDash.length)
 				// The key sits after `- `, two columns past the dash.
 				const valueCol = wantSource ? afterDashCol + valueStart + leadingWsLen(afterDash.slice(valueStart)) : 0
+				pendingColumn = cursor.indent + dashPrefixLen(cursor)
 				pendingItem = builder.createMappingWith(key,
 					inlineOrBlockScalar(raw, trimSlice(afterDashRaw, valueStart, afterDashRaw.length) === '|', baseIndent + 2, line, valueCol,
 						wantSource ? afterDashRaw.slice(valueStart) : raw, cursor, ctx, builder))
-				while (cursor.valid && cursor.indent > baseIndent) {
+				// the item's later keys at its key column; any other line is the block loop's (§7.2)
+				while (cursor.valid && cursor.indent === pendingColumn) {
 					const continuationLine = baseLine + cursor.lineIndex
 					const ckeyIndent = cursor.asciiIndent
 					const cfirst = cursor.source.charCodeAt(cursor.contentStart)
@@ -347,6 +361,7 @@ const parseCursorBlock = <V, M>(
 				cursor.next()
 				skipEmptyAndCommentLines(cursor)
 				const nested = blockOfBareKey(cursor, keyColumn, ctx, baseLine, builder)
+				pendingColumn = keyColumn
 				pendingItem = builder.createMappingWith(key, nested ?? builder.null(line))
 			} else {
 				// A quoted-or-typed scalar item — parseQuotedOrTyped enforces

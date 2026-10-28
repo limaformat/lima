@@ -1,0 +1,27 @@
+{
+  "id": "core.block-sequence.object-item-key-after-wide-dash.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "The key column is where the first key starts after the dash and its whitespace, however wide.",
+  "input": "list:\n  -   a: 1\n      b: 2\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "list": [
+        {
+          "a": 1,
+          "b": 2
+        }
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "object-item",
+    "indentation",
+    "strict"
+  ]
+}

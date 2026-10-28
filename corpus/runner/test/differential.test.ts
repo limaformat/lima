@@ -66,6 +66,13 @@ describe('typescriptOutcomes', () => {
 			.toEqual({ value: { $map: { d: { $date: '2026-10-28T12:30:00Z' } } }, warnings: [] })
 	})
 
+	it('reads no key of a mapping as a tag, so a key named "$int" hides no difference', () => {
+		const outcome = (x: number) => ({ value: { $map: { $int: { $int: '1' }, x: { $int: String(x) } } }, warnings: [] })
+		expect(canonical(outcome(2))).not.toBe(canonical(outcome(3)))
+		const [nonStrict] = typescriptOutcomes('"$int": 1\nx: 2\n')
+		expect(canonical(nonStrict!)).toContain('"x"')
+	})
+
 	it('keeps a date apart from a mapping that looks like one', () => {
 		const date = typescriptOutcomes('a: 2026-10-28\n')[0]!
 		const mapping = typescriptOutcomes('a:\n  "$date": "2026-10-28T00:00:00Z"\n')[0]!

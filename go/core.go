@@ -209,7 +209,7 @@ func inlineRefSource(capture bool, l sourceLine, rawFrom string, col int) *refer
 	}
 }
 
-func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int, indent int, strict bool, onWarning func(Diagnostic), captureReferences bool, compact bool) error {
+func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int, indent, keyColumn int, strict bool, onWarning func(Diagnostic), captureReferences bool, compact bool) error {
 	// blank and comment lines are skipped (§7.1 rules 6 and 7), and in
 	// non-strict mode a line at the dash's column that is no item, which the
 	// sequence skips (§7.1) — unless it ends a compact sequence (§7.2)
@@ -229,8 +229,19 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 			}
 			*idx = next
 		}
-		if lineStructuralIndent(lines[*idx]) <= indent {
-			break
+		// §7.2: the item's keys stand at its first key's column. A line less
+		// indented ends the item (§7.1 rule 4), and the block parser reads
+		// it; a deeper one, which no nested block took, is inconsistently
+		// indented (rule 5) and the item goes on
+		switch li := lineStructuralIndent(lines[*idx]); {
+		case li < keyColumn:
+			return nil
+		case li > keyColumn:
+			if strict {
+				return limaError(InvalidIndentation, lines[*idx].number, fmt.Sprintf("Lima: unexpected indentation at line %d: %q", lines[*idx].number, lineContent(lines[*idx])))
+			}
+			*idx++
+			continue
 		}
 		cl := lines[*idx]
 		cc := lineContent(cl)
@@ -288,6 +299,15 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 		setP(item, ck, cv)
 	}
 	return nil
+}
+
+// itemKeyColumn is the column of an object item's first key, after `- `
+// (§7.2), where its later keys stand. Codepoints: a multi-byte space after
+// the dash counts as one column, matching the TypeScript reference (CR-M2).
+func itemKeyColumn(l sourceLine, c string) int {
+	afterDash := c[1:]
+	dashWs := afterDash[:len(afterDash)-len(trimLeftWhitespace(afterDash))]
+	return lineStructuralIndent(l) + 1 + utf8.RuneCountInString(dashWs)
 }
 
 // firstIsItem reports whether the first item or mapping entry at indent, from
@@ -408,7 +428,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 					return nil, e
 				}
 				item := []pentry{{key, v}}
-				if e := parseArrayItemContinuationKeys(&item, lines, idx, indent, strict, onWarning, captureReferences, compact); e != nil {
+				if e := parseArrayItemContinuationKeys(&item, lines, idx, indent, itemKeyColumn(l, c), strict, onWarning, captureReferences, compact); e != nil {
 					return nil, e
 				}
 				arr = append(arr, &pvalue{line: l.number, mapping: item})
@@ -421,18 +441,13 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				}
 				// §7.2: the item's sibling keys align at the first key's
 				// column, after `- `; a nested block must be deeper than that.
-				afterDash := c[1:]
-				// Codepoints: a multi-byte space after the dash counts as one
-				// column, matching the TypeScript reference (CR-M2 / §7.2).
-				dashWs := afterDash[:len(afterDash)-len(trimLeftWhitespace(afterDash))]
-				keyColumn := lineStructuralIndent(l) + 1 + utf8.RuneCountInString(dashWs)
 				*idx++
-				v, e := bareNestedValue(keyColumn, l.number, lines, idx, strict, onWarning, captureReferences)
+				v, e := bareNestedValue(itemKeyColumn(l, c), l.number, lines, idx, strict, onWarning, captureReferences)
 				if e != nil {
 					return nil, e
 				}
 				item := []pentry{{key, v}}
-				if e := parseArrayItemContinuationKeys(&item, lines, idx, indent, strict, onWarning, captureReferences, compact); e != nil {
+				if e := parseArrayItemContinuationKeys(&item, lines, idx, indent, itemKeyColumn(l, c), strict, onWarning, captureReferences, compact); e != nil {
 					return nil, e
 				}
 				arr = append(arr, &pvalue{line: l.number, mapping: item})

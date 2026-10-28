@@ -7,7 +7,7 @@ const SOURCE_ROOT = join(ROOT, "..", "..", "corpus");
 const OUTPUT = join(ROOT, "test", "corpus", "generated.txt");
 
 // These trees are deliberately maintained expectations, not snapshots made by
-// parsing with the grammar under test. The full 347-fixture error contract is
+// parsing with the grammar under test. The full fixture error contract is
 // checked separately by check-fixtures.ts.
 const EXPECTED_TREES: Record<string, string> = {
   "core.api.parse-returns-mapping": `(document

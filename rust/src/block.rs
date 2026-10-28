@@ -262,6 +262,9 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
     let mut items: Option<Vec<B::Value>> = None;
     let mut entries: Option<B::Mapping> = None;
     let mut pending_item: Option<B::Mapping> = None;
+    // the column of the pending object item's keys: its first key's, after
+    // `- ` (§7.2)
+    let mut pending_column = 0;
     let start_line = cursor.line_index;
 
     while cursor.valid {
@@ -277,6 +280,26 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
 
         if indent > base_indent {
             let trimmed = cursor_content(cursor);
+            // §7.2: an object item's keys stand at its first key's column. A
+            // line less indented ends the item (§7.1 rule 4); a deeper one,
+            // which no nested block took, is inconsistently indented (rule 5)
+            // and the item goes on
+            if indent < pending_column {
+                if let Some(item) = pending_item.take() {
+                    items.as_mut().unwrap().push(B::v_mapping(item, line));
+                }
+            }
+            if pending_item.is_some() && indent > pending_column {
+                if strict {
+                    return Err(LimaError::new(
+                        Code::InvalidIndentation,
+                        line,
+                        format!("Lima: unexpected indentation at line {line}: \"{trimmed}\""),
+                    ));
+                }
+                cursor.next();
+                continue;
+            }
             if let (true, Some(pending)) = (items.is_some(), pending_item.as_mut()) {
                 let colon_pos = find_key_sep(trimmed);
                 let key_raw = match colon_pos {
@@ -489,6 +512,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 } else {
                     0
                 };
+                let item_key_column = cursor.indent + dash_prefix_len(cursor);
                 let marker = after_dash_raw
                     .get(value_start..)
                     .is_some_and(|v| v.trim_matches(is_trim_whitespace) == "|");
@@ -503,7 +527,10 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     strict,
                 )?;
                 let mut item = B::m_create_with(key, value);
-                while cursor.valid && cursor.indent > base_indent {
+                pending_column = item_key_column;
+                // the item's later keys at its key column; any other line is
+                // the block loop's (§7.2)
+                while cursor.valid && cursor.indent == pending_column {
                     let continuation_line = (base_line as i64 + cursor.line_index) as u32;
                     let ckey_indent = cursor.ascii_indent;
                     let cfirst = cursor.source.as_bytes()[cursor.content_start];
@@ -565,6 +592,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     cursor, key_column, strict, base_line,
                 )?
                 .unwrap_or(B::v_null(line));
+                pending_column = key_column;
                 pending_item = Some(B::m_create_with(key, value));
             } else {
                 // A quoted-or-typed scalar item — parse_quoted_or_typed enforces

@@ -44,6 +44,10 @@ non-strict results change with them (below).
   skipped in non-strict mode, an error in strict mode. Whitespace is defined
   once (§1), as the set every check already used.
   TypeScript counted such whitespace as indentation.
+- An object item's later keys stand at its first key's column (§7.2): a line
+  of the item deeper than that is skipped in non-strict mode, and one less
+  indented ends the item; strict mode throws `INVALID_INDENTATION` for
+  either. Any deeper line was taken as a key of the item.
 
 ### Fixed
 
@@ -66,8 +70,8 @@ non-strict results change with them (below).
   was a block scalar; it is the string `"|"`, as at the top level — the
   marker stands alone (§6.1.5).
 
-The shared conformance corpus is at 328 Core cases: the 218 Core 1.0 cases
-without the 8 that Core 1.1 supersedes, plus 118 Core 1.1 cases
+The shared conformance corpus is at 334 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 124 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

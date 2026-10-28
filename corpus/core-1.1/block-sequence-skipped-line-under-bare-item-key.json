@@ -3,14 +3,13 @@
   "spec": "core",
   "specVersion": "1.1",
   "section": "7.1",
-  "description": "A skipped line at an object item's key column is no deeper than the bare key, so the key gets no block; the item goes on past it.",
+  "description": "A skipped line at an object item's key column is no deeper than the bare key, so the key gets no block; the deeper line after it is at no key column of the item (§7.2) and is skipped too.",
   "input": "list:\n  - a:\n    freetext\n      c: 1\n",
   "expect": {
     "result": {
       "list": [
         {
-          "a": null,
-          "c": 1
+          "a": null
         }
       ]
     }

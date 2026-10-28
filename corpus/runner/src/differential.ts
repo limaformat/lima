@@ -39,7 +39,7 @@ const pick = <T>(rng: Rng, items: readonly T[]): T => items[below(rng, items.len
 const chance = (rng: Rng, p: number): boolean => rng() < p
 const pad = (n: number): string => ' '.repeat(n)
 
-const KEYS = ['a', 'b', 'c', 'title', 'tags', 'x_1', 'k-2', 'a:b', '9', '"quoted key"', "'single key'", '"esc\\tkey"']
+const KEYS = ['a', 'b', 'c', 'title', 'tags', 'x_1', 'k-2', 'a:b', '9', '"quoted key"', "'single key'", '"esc\\tkey"', '"$int"', '"$map"']
 
 /** Inline values: every scalar type and its edges, quoting and escapes, flow collections, and YAML-only syntax. */
 const VALUES = [
@@ -98,7 +98,7 @@ function entry(rng: Rng, indent: number, depth: number, lines: string[]): void {
 function sequence(rng: Rng, indent: number, depth: number, lines: string[]): void {
 	for (let n = 1 + below(rng, 4); n > 0; n--) {
 		const r = rng()
-		const dash = pad(indent) + (chance(rng, 0.05) ? '-\t' : '- ')
+		const dash = pad(indent) + (chance(rng, 0.9) ? '- ' : pick(rng, ['-\t', '-   ', '-\u00a0']))
 		if (r < 0.4 || depth >= 3) {
 			lines.push(dash + pick(rng, VALUES))
 		} else if (r < 0.5) {
@@ -224,19 +224,34 @@ export function probeOutcomes(probe: string, documents: string[]): Outcome[] {
 /** A number as text, `-0` kept apart from `0`. */
 const numberText = (n: number): string => Object.is(n, -0) ? '-0' : String(n)
 
-/** Mapping keys sorted, since member order is not significant (§1); numbers as text, typed or as one `$number`. */
-const normalize = (v: unknown, typed: boolean): unknown => {
-	if (Array.isArray(v)) return v.map((x) => normalize(x, typed))
+/**
+ * A value in its comparable form: mapping members sorted, since member order is not significant (§1), and numbers as
+ * text, typed or as one `$number`. A tag is an object with exactly one key, the tag; a mapping's members are inside its
+ * `$map`, so a key named like a tag is never read as one. Anything else no probe writes, and it compares as it is.
+ */
+const normalizeValue = (v: unknown, typed: boolean): unknown => {
+	if (Array.isArray(v)) return v.map((x) => normalizeValue(x, typed))
 	if (v === null || typeof v !== 'object') return v
-	const o = v as Record<string, unknown>
-	if ('$int' in o) return typed ? o : { $number: numberText(Number(o.$int)) }
-	if ('$float' in o) return typed ? { $float: numberText(o.$float as number) } : { $number: numberText(o.$float as number) }
-	if ('$number' in o) return { $number: numberText(o.$number as number) }
-	return Object.fromEntries(Object.keys(o).sort().map((k) => [k, normalize(o[k], typed)]))
+	const keys = Object.keys(v)
+	const x = (v as Record<string, unknown>)[keys[0]!]
+	if (keys.length === 1) {
+		switch (keys[0]) {
+			case '$map': {
+				const m = x as Record<string, unknown>
+				return { $map: Object.fromEntries(Object.keys(m).sort().map((k) => [k, normalizeValue(m[k], typed)])) }
+			}
+			case '$date': return v
+			case '$int': return typed ? v : { $number: numberText(Number(x)) }
+			case '$float': return typed ? { $float: numberText(x as number) } : { $number: numberText(x as number) }
+			case '$number': return { $number: numberText(x as number) }
+		}
+	}
+	return { $unexpected: v }
 }
 
 /** The comparable form of an outcome; `typed` keeps Rust's and Go's integers and floats apart. */
-export const canonical = (o: Outcome, typed = false): string => JSON.stringify(normalize(o, typed))
+export const canonical = (o: Outcome, typed = false): string =>
+	JSON.stringify('value' in o ? { value: normalizeValue(o.value, typed), warnings: o.warnings } : o)
 
 export interface Probes { rust: string; go: string }
 

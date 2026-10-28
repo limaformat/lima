@@ -42,6 +42,10 @@ non-strict results change with them (below).
   by other whitespace, such as U+00A0, before its content is unrecognised —
   skipped in non-strict mode, an error in strict mode. Whitespace is defined
   once (§1), as the set every check already used.
+- An object item's later keys stand at its first key's column (§7.2): a line
+  of the item deeper than that is skipped in non-strict mode, and one less
+  indented ends the item; strict mode throws `INVALID_INDENTATION` for
+  either. Any deeper line was taken as a key of the item.
 
 ### Fixed
 
@@ -66,8 +70,8 @@ non-strict results change with them (below).
   at the dash's column that is no item — ended the object item before it, and
   its later keys were lost; it is as if absent (Core 1.1 §7.1).
 
-The shared conformance corpus is at 328 Core cases: the 218 Core 1.0 cases
-without the 8 that Core 1.1 supersedes, plus 118 Core 1.1 cases
+The shared conformance corpus is at 334 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 124 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

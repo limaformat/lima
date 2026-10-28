@@ -1,0 +1,22 @@
+{
+  "id": "core.block-sequence.object-item-key-deeper",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "An object item's later keys stand at its first key's column (§7.2); a key deeper than that is inconsistently indented — skipped, or an error in strict mode (all three implementations took it as the item's).",
+  "input": "list:\n  - a: 1\n      c: 2\n",
+  "expect": {
+    "result": {
+      "list": [
+        {
+          "a": 1
+        }
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "object-item",
+    "indentation"
+  ]
+}

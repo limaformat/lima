@@ -2,9 +2,9 @@
   "suite": "core-1.1",
   "frozen": true,
   "baselineVersion": "1.1.0",
-  "baselineCaseCount": 118,
+  "baselineCaseCount": 124,
   "specVersion": "1.1.0",
-  "caseCount": 118,
+  "caseCount": 124,
   "supersedes": [
     "core.block-scalar.chomping-indicator-unsupported.strict",
     "core.block-scalar.folded-marker-unsupported.strict",
@@ -323,6 +323,42 @@
       "since": "1.1.0"
     },
     {
+      "path": "core-1.1/block-sequence-object-item-key-after-wide-dash-strict.json",
+      "id": "core.block-sequence.object-item-key-after-wide-dash.strict",
+      "sha256": "a69085011810c85a8cfddee8e144b5216dab293475023f87cd581a0f04569fb5",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-object-item-key-after-wide-dash.json",
+      "id": "core.block-sequence.object-item-key-after-wide-dash",
+      "sha256": "06d47ffa5b9f9cd9b10ba8444eb3ea79f61e7e2584f49942b4f053a4f87ee7b9",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-object-item-key-deeper-strict.json",
+      "id": "core.block-sequence.object-item-key-deeper.strict",
+      "sha256": "38cd9ff7e4990b406cde19275eb632b58463b516d5b6dfee4aaee665531806a2",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-object-item-key-deeper.json",
+      "id": "core.block-sequence.object-item-key-deeper",
+      "sha256": "9b51cf6263862ccacfe76d6cf435852cac14885959f0c4212815c33012e56120",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-object-item-key-shallower-strict.json",
+      "id": "core.block-sequence.object-item-key-shallower.strict",
+      "sha256": "fda44bf6ac769cc705dcd29f3c5d3bed0fa48d293395d62f80a333b5413f2ed4",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-object-item-key-shallower.json",
+      "id": "core.block-sequence.object-item-key-shallower",
+      "sha256": "ff9014721b6d332d563938eb450214d7beeccd5d3455f5294555c64d3528e9c3",
+      "since": "1.1.0"
+    },
+    {
       "path": "core-1.1/block-sequence-object-item-past-skipped-dash-column-line-strict.json",
       "id": "core.block-sequence.object-item-past-skipped-dash-column-line.strict",
       "sha256": "2a6ba9269b11f659522196c28f71521a50c8bcdc63e0f814c87a5dc1fd300d23",
@@ -355,7 +391,7 @@
     {
       "path": "core-1.1/block-sequence-skipped-line-under-bare-item-key.json",
       "id": "core.block-sequence.skipped-line-under-bare-item-key",
-      "sha256": "173684b42ab6c5659aa3bc31ef9fc8ff7f6e23da57f039afb883575c79b93bff",
+      "sha256": "de30ddafc57c3c5d49c00dc62eace36ea4d38a5cab434bd88696b77cf2bb31d4",
       "since": "1.1.0"
     },
     {

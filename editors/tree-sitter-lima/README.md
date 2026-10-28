@@ -26,13 +26,14 @@ bun install --frozen-lockfile
 bun run ci
 ```
 
-`bun run corpus:check` materializes all 347 fixtures in `corpus/core` and
-`corpus/references-2.0`, including generator-backed limit fixtures. Successful
+`bun run corpus:check` materializes every fixture in `corpus/core`,
+`corpus/core-1.1` and `corpus/references-2.0`, including generator-backed
+limit fixtures. Successful
 and semantic-only cases must have no `ERROR`/`MISSING`; syntax-error fixtures
 may use tolerant recovery, but any emitted error must start on the fixture's
 expected line.
 
-`scripts/gen-corpus.ts` converts 15 selected real fixtures into native
+`scripts/gen-corpus.ts` converts selected real fixtures into native
 `test/corpus/generated.txt` cases using manually maintained structural
 expectations. It never derives expected trees from the parser under test.
 
