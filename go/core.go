@@ -91,8 +91,11 @@ func lineStructuralIndent(l sourceLine) int {
 	// content starts the content, and only a blank or comment line looks past
 	// it, as at a zero ASCII indent.
 	c := lineContent(l)
+	if l.indent == 0 || (c != "" && c[0] > 0x20 && c[0] < 0x7f) {
+		return l.indent
+	}
 	rest := trimLeftWhitespace(c)
-	if l.indent == 0 || (rest != "" && rest[0] != '#') {
+	if rest != "" && rest[0] != '#' {
 		return l.indent
 	}
 	return l.indent + len(c) - len(rest)
@@ -606,7 +609,9 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 		}
 		// §9: the top-level key entries are counted before the first is
 		// read, so that the limit, not a later error, rejects the document
-		if entryCount == 0 && topLevelKeyCount(lines[i:]) > topLevelKeyLimit {
+		// (each entry has a line of its own, so no more lines than the
+		// limit need no count)
+		if entryCount == 0 && len(lines)-i > topLevelKeyLimit && topLevelKeyCount(lines[i:]) > topLevelKeyLimit {
 			return nil, limaError(ResourceLimit, 1, fmt.Sprintf("Lima: too many top-level key entries (max %d) at line 1", topLevelKeyLimit))
 		}
 		entryCount++

@@ -25,11 +25,11 @@ export type RangeOwner = 'none' | 'inline' | 'mapping' | 'scalar'
 
 /**
  * Checks the lines of `frontMatter` from `start` (a line start) to `end` that follow a key owned as `owner`; `line`
- * is the 1-based line at `start`; `inlineValue` is the value of that key, for the hint a YAML marker earns. Throws for
- * the first line that belongs to no structure.
+ * is the 1-based line at `start`; `valueStart` to `valueEnd` is the inline value of that key, read only for the hint a
+ * YAML marker earns in the error. Throws for the first line that belongs to no structure.
  */
 export function checkRangeLines(
-	frontMatter: string, start: number, end: number, line: number, owner: RangeOwner, inlineValue = '',
+	frontMatter: string, start: number, end: number, line: number, owner: RangeOwner, valueStart = 0, valueEnd = 0,
 ): void {
 	let pos = start
 	let current = line
@@ -38,11 +38,12 @@ export function checkRangeLines(
 	while (pos < end) {
 		const lineEnd = frontMatter.indexOf('\n', pos)
 		const stop = lineEnd === -1 || lineEnd > end ? end : lineEnd
-		const text = frontMatter.slice(pos, stop)
-		let indent = 0
-		while (indent < text.length && text.charCodeAt(indent) === 32) indent++
+		// positions, not substrings: a line is read out of `frontMatter` only for an error message
+		let spaces = pos
+		while (spaces < stop && frontMatter.charCodeAt(spaces) === 32) spaces++
+		const indent = spaces - pos
 		// §6.1.5: a `|` scalar holds every line up to the first non-empty one at its key's column (0), `#` included
-		if (scalarOpen && (indent === text.length || indent > 0)) {
+		if (scalarOpen && (spaces === stop || indent > 0)) {
 			pos = lineEnd + 1
 			current++
 			if (lineEnd === -1 || lineEnd >= end) break
@@ -50,15 +51,15 @@ export function checkRangeLines(
 		}
 		scalarOpen = false
 		// blank and comment lines by Lima's own whitespace; indentation by ASCII space only (§3 expanded the tabs)
-		let first = 0
-		while (first < text.length && isTrimWhitespace(text.charCodeAt(first))) first++
-		const content = text.slice(first)
-		if (content !== '' && !content.startsWith('#')) {
+		let first = pos
+		while (first < stop && isTrimWhitespace(frontMatter.charCodeAt(first))) first++
+		if (first < stop && frontMatter.charCodeAt(first) !== 35) {
 			// §7.2: a bare key's sequence may start at its own column, 0 here; it ends at the first line there that is no
 			// item
-			const item = indent === 0 && isItem(text)
+			const item = indent === 0 && isItemAt(frontMatter, pos, stop)
 			if (owner === 'mapping' && base === -1 && item) base = 0
 			if (indent === 0 && !(base === 0 && item)) {
+				const text = frontMatter.slice(pos, stop)
 				throw new LimaError({
 					code: 'UNRECOGNIZED_LINE', line: current,
 					message: `Lima: unrecognised line at line ${current}: "${text}"${hint(text)}`,
@@ -68,7 +69,8 @@ export function checkRangeLines(
 			if (indent > 0 && !(owner === 'mapping' && indent >= base)) {
 				throw new LimaError({
 					code: 'INVALID_INDENTATION', line: current,
-					message: `Lima: unexpected indentation at line ${current}: "${content}"${owner === 'inline' ? yamlHint(inlineValue) : ''}`,
+					message: `Lima: unexpected indentation at line ${current}: "${frontMatter.slice(first, stop)}"${
+						owner === 'inline' ? yamlHint(frontMatter.slice(valueStart, valueEnd).trim()) : ''}`,
 				})
 			}
 		}
@@ -79,8 +81,12 @@ export function checkRangeLines(
 }
 
 /** Whether the inline value that starts at `rawStart` and ends its line at `lineEnd` is a `|` block scalar marker. */
-export const isBlockScalarMarker = (frontMatter: string, rawStart: number, lineEnd: number): boolean =>
-	frontMatter.slice(rawStart, lineEnd).trim() === '|'
+export const isBlockScalarMarker = (frontMatter: string, rawStart: number, lineEnd: number): boolean => {
+	let i = rawStart, j = lineEnd
+	while (i < j && isTrimWhitespace(frontMatter.charCodeAt(i))) i++
+	while (j > i && isTrimWhitespace(frontMatter.charCodeAt(j - 1))) j--
+	return j - i === 1 && frontMatter.charCodeAt(i) === 124
+}
 
 /** What a reader likely meant by an unrecognised line, as a hint after the message; none for anything else. */
 const hint = (text: string): string => {
@@ -101,5 +107,7 @@ const yamlHint = (value: string): string => {
 }
 
 /** §7.2: `-` alone or `-` followed by whitespace begins a sequence item (Core 1.1); `---` or `-x` does not. */
-const isItem = (text: string): boolean =>
-	text.charCodeAt(0) === 45 && (text.length === 1 || isTrimWhitespace(text.charCodeAt(1)))
+const isItemAt = (s: string, start: number, end: number): boolean =>
+	s.charCodeAt(start) === 45 && (end - start === 1 || isTrimWhitespace(s.charCodeAt(start + 1)))
+
+const isItem = (text: string): boolean => isItemAt(text, 0, text.length)

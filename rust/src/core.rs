@@ -326,6 +326,9 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             check_duplicate_key(B::m_has_key(&root, &tk.key), &tk.key, tk.line, strict)?;
         }
 
+        // an inline value's line end and whether it is a `|` marker, for the
+        // strict check below
+        let mut inline_line: Option<(usize, bool)> = None;
         let value = if tk.is_block {
             parse_block_range_checked::<B, CHECK_DUPLICATES>(
                 front_matter,
@@ -377,7 +380,9 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             // dedented comment or freetext before that key ends the scalar
             // instead of being absorbed.
             let first_line = &front_matter[value_start..first_newline.unwrap_or(span_end)];
-            if first_line.trim_matches(is_trim_whitespace) == "|" {
+            let marker = first_line.trim_matches(is_trim_whitespace) == "|";
+            inline_line = first_newline.map(|nl| (nl, marker));
+            if marker {
                 let body: Vec<&str> = match first_newline {
                     Some(nl) => front_matter[nl + 1..span_end].split('\n').collect(),
                     None => Vec::new(),
@@ -422,11 +427,12 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                     RangeOwner::Mapping,
                     "",
                 )?;
-            } else if let Some(nl) = front_matter[tk.value_start..next_start].find('\n') {
-                let line_end = tk.value_start + nl;
-                let inline_value =
-                    front_matter[tk.value_start..line_end].trim_matches(is_trim_whitespace);
-                let owner = if inline_value == "|" {
+            } else if let Some((line_end, marker)) =
+                inline_line.filter(|&(nl, _)| nl + 1 < next_start)
+            {
+                // lines follow the key's own line; the inline value is read
+                // only for the hint an error earns
+                let owner = if marker {
                     RangeOwner::Scalar
                 } else {
                     RangeOwner::Inline
@@ -437,7 +443,7 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                     next_start,
                     tk.line + 1,
                     owner,
-                    inline_value,
+                    front_matter[tk.value_start..line_end].trim_matches(is_trim_whitespace),
                 )?;
             }
         }

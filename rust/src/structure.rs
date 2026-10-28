@@ -61,8 +61,13 @@ pub(crate) fn check_range_lines(
         if !belongs_to_scalar {
             scalar_open = false;
             // blank and comment lines by Lima's own whitespace; indentation
-            // by ASCII space only (§3 expanded the tabs)
-            let content = text.trim_start_matches(is_trim_whitespace);
+            // by ASCII space only (§3 expanded the tabs). Printable ASCII
+            // after the spaces starts the content at once, as in BlockCursor;
+            // only other bytes need the whitespace predicate.
+            let content = match text.as_bytes().get(indent) {
+                Some(&b) if b > 0x20 && b < 0x7f => &text[indent..],
+                _ => text.trim_start_matches(is_trim_whitespace),
+            };
             if !content.is_empty() && !content.starts_with('#') {
                 // §7.2: a bare key's sequence may start at its own column, 0
                 // here; it ends at the first line there that is no item
