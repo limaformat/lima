@@ -234,10 +234,20 @@ No blocker. The findings, and what was done:
    written after review 4 had pinned the old reading and now pins the new one.
 2. The differential test read any object with a key such as `$int` as a number tag, so a mapping with a key of that
    name could hide a difference. Tags are now recognised by their exact shape, and the generator writes such keys.
-3. Appendix D's `item-separator` admitted a line terminator; it no longer does.
+3. Appendix D's `item-separator` admitted the newline that ends the line; it no longer does. (Review 6: it first
+   excluded every line terminator of §1, U+2028 and U+2029 too, which §7.2 and all three implementations accept
+   after a dash; it now excludes U+000A only, the one character that ends a line after §3.)
 4. Stale counts in the tree-sitter documentation; they are gone rather than updated, since the scripts know them.
 
 Also after this review: strict mode had become 16–19 % slower than in 0.5.1 in TypeScript and Rust, and Go 6 % in both
 modes, measured on the hadley sites' front matter. The checks now work on positions and reuse what the parser already
 found: TypeScript +4 % (Core) and +6 % (References), Rust +10 %, Go ±0, non-strict within ±3 %. The cross-language
 benchmarks gain strict scenarios, so that the next such regression shows.
+
+## Review 6 (Codex CLI, 2026-10-28)
+
+No blocker. A `|` scalar as an object item's first key measured its body from the dash plus two columns in all three
+implementations, so after wider whitespace (`-   a: |`) it took the item's next key as text — already so in 0.5.1, and
+now measured from the key's column. Appendix D's `item-separator` is corrected once more (Review 5, item 3), and the
+Go benchmark inventory lists the strict scenarios. The performance commit was checked to change no outcome: 400,000
+outcomes each in TypeScript and Go, messages and hints included, matched those before it.

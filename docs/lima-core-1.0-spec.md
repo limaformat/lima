@@ -908,8 +908,8 @@ object-entry-head  = key, inline-separator, inline-value
 sequence-continuation
                   = block-mapping ;
 
-item-separator     = ? one or more whitespace characters other than a line
-                       terminator (§1, §7.2) ? ;
+item-separator     = ? one or more whitespace characters (§1, §7.2) other
+                       than U+000A, which alone ends a line after §3 ? ;
 
 ignored-line       = ? blank or comment-only line outside a block scalar ? ;
 ```
