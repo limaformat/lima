@@ -1,0 +1,18 @@
+{
+  "id": "core.value.top-level-spaces.quoted",
+  "spec": "core",
+  "section": "4",
+  "description": "An aligned top-level quoted value is a quoted value (§4 step 4): its delimiters are removed and its content is not trimmed.",
+  "input": "a:    \"x  y\"\nb:    'z '\n",
+  "expect": {
+    "result": {
+      "a": "x  y",
+      "b": "z "
+    }
+  },
+  "tags": [
+    "positive",
+    "value",
+    "quoted"
+  ]
+}

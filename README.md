@@ -127,7 +127,7 @@ Reproduce the implementation counts from `js/` with `bun run wordcount -- --mani
 - **Hard resource limits are part of the normative spec**, not an implementation afterthought: document size, key length, scalar length, and nesting depth are all specified limits, checked in both parse modes.
 - **A closed strict-mode error list** (Core §10.1) — strict mode validates an explicit, enumerated set of conditions, not "everything a parser feels like flagging."
 - **A grammar expressible without regex backtracking.** The TypeScript implementation's tokenizer uses zero lookahead/lookbehind/backreference constructs and zero genuinely backtracking-dependent matching — verifiably RE2-representable, the same property linear-time engines like Google's RE2 and Rust's `regex` crate require. Not a claim about immunity to slow input in general, just that the grammar itself doesn't force a backtracking engine the way some regex-heavy formats do.
-- **An implementation-independent conformance corpus** with 211 Core 1.0 cases (a byte-frozen 149-case 1.0.0 baseline plus additive errata through 1.0.9) and 136 References 2.0 cases, all count-pinned and passed by TypeScript, Rust, and Go. Reproduce the independently runnable targets from `corpus/runner/`.
+- **An implementation-independent conformance corpus** with 218 Core 1.0 cases (a byte-frozen 149-case 1.0.0 baseline plus additive errata through 1.0.10) and 136 References 2.0 cases, all count-pinned and passed by TypeScript, Rust, and Go. Reproduce the independently runnable targets from `corpus/runner/`.
 
 None of this makes Lima a YAML replacement — it's deliberately scoped to frontmatter, not general-purpose data serialisation, and the constructs it leaves out are exactly the ones YAML-parsing frontmatter rarely needs in the first place. The trade-off is explicit, not hidden: see [Appendix A](docs/lima-core-1.0-spec.md#12-appendix-a-what-lima-core-does-not-support) for the full, reasoned list.
 
@@ -145,14 +145,14 @@ Worth being precise about the threat model this actually matters for: both CVEs 
 ## Status
 
 - [x] Lima Core 1.0 specification — final ([`docs/lima-core-1.0-spec.md`](docs/lima-core-1.0-spec.md))
-- [x] Frozen Core 1.0 conformance baseline — a byte-identical 149-case 1.0.0 baseline, count-pinned and content-hash protected, with additive Core errata through 1.0.9 on top ([`corpus/`](corpus/), design rationale in [`docs/corpus-design/`](docs/corpus-design/))
+- [x] Frozen Core 1.0 conformance baseline — a byte-identical 149-case 1.0.0 baseline, count-pinned and content-hash protected, with additive Core errata through 1.0.10 on top ([`corpus/`](corpus/), design rationale in [`docs/corpus-design/`](docs/corpus-design/))
 - [x] Lima References 2.0 specification — final with a 136-case corpus; TypeScript, Rust, and Go pass the complete suite through their public References 2.0 APIs ([spec](docs/lima-references-2.0-spec.md), [coverage](docs/corpus-design/coverage/references-2.0.md))
 - [x] TypeScript/JavaScript implementation — published as [`@limaformat/lima`](js/)
 - [x] Rust implementation — published as [`lima`](rust/)
 - [x] Go implementation — published as [`github.com/limaformat/lima/go`](go/)
 
 The Core 1.0 specification is frozen. Corrections ship only as additive errata
-revisions (Core is currently at 1.0.9), driven by the conformance corpus rather
+revisions (Core is currently at 1.0.10), driven by the conformance corpus rather
 than any single implementation, and never altering the byte-frozen 1.0.0
 baseline.
 
@@ -178,7 +178,7 @@ The specifications are self-contained; no design-history documents are part of t
 
 ## Conformance corpus
 
-Lima ships an implementation-independent conformance test corpus so that every implementation can be verified against the same normative cases. TypeScript, Rust, and Go each pass all 211 Core 1.0 and 136 References 2.0 cases, plus a frozen 101-case References 1.0 regression corpus (see Status). The corpus itself lives in [`corpus/`](corpus/); its architecture, diagnostic model, and coverage matrix are documented in [`docs/corpus-design/README.md`](docs/corpus-design/README.md).
+Lima ships an implementation-independent conformance test corpus so that every implementation can be verified against the same normative cases. TypeScript, Rust, and Go each pass all 218 Core 1.0 and 136 References 2.0 cases, plus a frozen 101-case References 1.0 regression corpus (see Status). The corpus itself lives in [`corpus/`](corpus/); its architecture, diagnostic model, and coverage matrix are documented in [`docs/corpus-design/README.md`](docs/corpus-design/README.md).
 
 ## Packages
 

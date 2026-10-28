@@ -1,7 +1,7 @@
 # Lima Conformance Corpus – Design Package
 
 **Status:** implemented — a byte-frozen 149-case Core 1.0.0 baseline with
-additive Core errata through 1.0.9 on top (211 Core cases total), plus a
+additive Core errata through 1.0.10 on top (218 Core cases total), plus a
 separate 136-case References 2.0 final corpus; all counts are pinned by
 tests. The baseline also includes 101 byte-frozen References 1.0 cases: that
 extension was published briefly in mid-2026 and superseded almost immediately
@@ -445,7 +445,7 @@ bun run run:references-2
 ```
 
 The default `bun run run` runs the current conformance target: Core 1.0
-(211 cases through errata 1.0.9) plus References 2.0 (136). `bun run
+(218 cases through errata 1.0.10) plus References 2.0 (136). `bun run
 run:references-1` still runs the frozen References 1.0 baseline (101) as an
 internal regression guard, but it is not part of the default and not a
 target anyone claims. TypeScript, Rust, and Go all pass the default target

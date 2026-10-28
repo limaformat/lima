@@ -1,0 +1,23 @@
+{
+  "id": "core.value.top-level-spaces.flow",
+  "spec": "core",
+  "section": "7.4",
+  "description": "An aligned top-level flow sequence and flow mapping are parsed as collections.",
+  "input": "tags:    [a, b]\nmeta:    {k: v}\n",
+  "expect": {
+    "result": {
+      "tags": [
+        "a",
+        "b"
+      ],
+      "meta": {
+        "k": "v"
+      }
+    }
+  },
+  "tags": [
+    "positive",
+    "value",
+    "flow"
+  ]
+}

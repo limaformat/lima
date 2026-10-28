@@ -312,8 +312,10 @@ describe('key with embedded colon, backtracking-dependent cases', () => {
 		expect(parse('key:')).toEqual({})
 	})
 
-	it('two spaces after the colon: separator consumes exactly one, the rest is part of the value', () => {
-		expect(parse('key:  value')).toEqual({ key: ' value' })
+	it('two spaces after the colon: the separator consumes one, and the value is trimmed (§4 step 3, §5.1 example)', () => {
+		// Until errata 1.0.10 this asserted ' value': the top-level path left the extra spaces in, against §4 and the
+		// §5.1 example `title:  Hello` → 'Hello'.
+		expect(parse('key:  value')).toEqual({ key: 'value' })
 	})
 })
 

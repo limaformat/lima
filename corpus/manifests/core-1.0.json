@@ -3,8 +3,8 @@
   "frozen": true,
   "baselineVersion": "1.0.0",
   "baselineCaseCount": 149,
-  "specVersion": "1.0.9",
-  "caseCount": 211,
+  "specVersion": "1.0.10",
+  "caseCount": 218,
   "cases": [
     {
       "path": "core/api-parse-core-never-resolves-references.json",
@@ -1265,6 +1265,48 @@
       "id": "core.strings.double-quote.utf16-surrogate.strict",
       "sha256": "acd772b006e0df3c7db9bde815bcab4ecc381ea86c45138be2abda65266d5cc8",
       "since": "1.0.0"
+    },
+    {
+      "path": "core/value-top-level-spaces-empty.json",
+      "id": "core.value.top-level-spaces.empty",
+      "sha256": "51e25be8874bdc75dbe0827374f50a0b5b28a675a0a8abd61a032b0250ba1ff5",
+      "since": "1.0.10"
+    },
+    {
+      "path": "core/value-top-level-spaces-flow.json",
+      "id": "core.value.top-level-spaces.flow",
+      "sha256": "966727cc1af3faf31ad696464ae7d786e79585ce911e59f72f45b403c8ec1718",
+      "since": "1.0.10"
+    },
+    {
+      "path": "core/value-top-level-spaces-quoted.json",
+      "id": "core.value.top-level-spaces.quoted",
+      "sha256": "f3ad5c5b600e4ecaf4f0718792af235514f26bcad6affdf0146b060fc8b38ab6",
+      "since": "1.0.10"
+    },
+    {
+      "path": "core/value-top-level-spaces-scalars.json",
+      "id": "core.value.top-level-spaces.scalars",
+      "sha256": "0c8378daed6507a6b1b007c025a96e61ebf5672d0b142c81814d4f179f5fb20c",
+      "since": "1.0.10"
+    },
+    {
+      "path": "core/value-top-level-spaces-spec-example.json",
+      "id": "core.value.top-level-spaces.spec-example",
+      "sha256": "76406ecd6e2cc6b17b176943dec6776eb649c08556c59ddc44e203051aaf35b0",
+      "since": "1.0.10"
+    },
+    {
+      "path": "core/value-top-level-spaces-string-strict.json",
+      "id": "core.value.top-level-spaces.string.strict",
+      "sha256": "58d0d1e0cb0a8858e320b0d3a4bc9aaf1884cce7d18ead5dbfbf3f59d10b12aa",
+      "since": "1.0.10"
+    },
+    {
+      "path": "core/value-top-level-spaces-string.json",
+      "id": "core.value.top-level-spaces.string",
+      "sha256": "24ba371f33a31edae79792c6394306fc3944b1f0c5c8d1e55ddfcc45f4fe9d76",
+      "since": "1.0.10"
     },
     {
       "path": "core/yaml-anchor-alias-tag-unsupported.json",

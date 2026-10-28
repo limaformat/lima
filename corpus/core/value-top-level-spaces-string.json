@@ -1,0 +1,17 @@
+{
+  "id": "core.value.top-level-spaces.string",
+  "spec": "core",
+  "section": "4",
+  "description": "More than one space after `: ` at the top level is trimmed (§4 step 3), as at every other level.",
+  "input": "a:    mko\nb: x\n",
+  "expect": {
+    "result": {
+      "a": "mko",
+      "b": "x"
+    }
+  },
+  "tags": [
+    "positive",
+    "value"
+  ]
+}

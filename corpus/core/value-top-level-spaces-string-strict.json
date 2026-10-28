@@ -1,0 +1,20 @@
+{
+  "id": "core.value.top-level-spaces.string.strict",
+  "spec": "core",
+  "section": "4",
+  "description": "Aligned top-level values are read identically in strict mode.",
+  "input": "a:    mko\nb: x\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "a": "mko",
+      "b": "x"
+    }
+  },
+  "tags": [
+    "strict",
+    "value"
+  ]
+}

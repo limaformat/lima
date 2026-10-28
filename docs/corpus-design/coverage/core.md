@@ -178,6 +178,12 @@ This matrix derives the corpus work directly from the normative Core rules. The 
 | C-246 | §5.1 (1.0.5) | Keys | `:`, `-`, leading `_`, and trailing digits stay valid unquoted-key characters in nested and flow mappings, not only at the top level | positive | both |
 | C-247 | §7.2 (1.0.6) | Block sequence | A line at a bare *first* key's own column is the next sibling key, not the key's nested block — the bare key is `null`; strict does not throw | positive | strict |
 | C-248 | §7.2 (1.0.6) | Block sequence | The same for a sibling key that carries an inline value | positive | both |
+| C-249 | §4 (1.0.10) | Inline values | The §4 example verbatim: spaces after `: ` and before a trailing comment are trimmed at the top level | positive | both |
+| C-250 | §4 (1.0.10) | Inline values | More than one space after `: ` at the top level is trimmed, as at every nested level | positive | pair |
+| C-251 | §4 (1.0.10) | Inline values | Aligned top-level scalars keep their types: int, float, boolean, null, date | positive | both |
+| C-252 | §4 (1.0.10) | Inline values | An aligned top-level quoted value is quoted: delimiters removed, content not trimmed | positive | both |
+| C-253 | §7.4–7.5 (1.0.10) | Inline values | An aligned top-level flow sequence and flow mapping are collections | positive | both |
+| C-254 | §6.2 (1.0.10) | Inline values | A top-level value of spaces, or spaces and a comment, is `null` | positive | both |
 
 **Scope:** 132 substantive check points (plus the 1.0.x errata rows below). A check point can produce multiple concrete cases.
 
@@ -189,7 +195,7 @@ cover behaviour Core always specified but no 1.0.0 fixture exercised; the
 review added only non-normative clarifications (§5, §5.2, §6.1.3, and the
 error-api context fields). No 1.0.0 case changed result. The `since` marker
 in `corpus/manifests/core-1.0.json` records each addition's revision
-(1.0.1–1.0.9); the 149-case 1.0.0 baseline stays byte-frozen.
+(1.0.1–1.0.10); the 149-case 1.0.0 baseline stays byte-frozen.
 
 ### Block scalars — C-218–C-224 (P0 #1)
 
@@ -314,6 +320,21 @@ compares against the key's column: `block.ts` computes it from the cursor,
 the key column as its threshold (the dash-relative offset for a first key,
 `lineStructuralIndent` for a continuation key). The C-237–C-240 fixtures
 use correct deeper indentation and are unaffected.
+
+### Aligned top-level values — C-249–C-254 (Core 1.0.10)
+
+A top-level inline value kept every space after `: ` but the first, so an
+aligned document (`title:   Hello`, `n:    42`) read `'  Hello'` and the
+string `'   42'`, against §4 step 3 and its own example — and against the
+§5.1 example `title:  Hello` → `'Hello'`. TypeScript and Rust had it; Go
+trimmed. The scalar fast path that `parseCore` takes at the top level
+(added with the 2026-08 speedup over js-yaml) handed the untrimmed span on,
+while the block-mapping path trims (`trimSlice`); no fixture set more than
+one space after a top-level separator, and a unit test in
+`js/src/block.test.ts` had asserted the defect. Now the top-level entry
+skips the whitespace after `: ` before any scalar path and before the
+References 2.0 source column is taken, in `core.ts` and `core.rs`; the
+reported columns were already physical and stay identical in all three.
 
 ## Known implementation gaps
 

@@ -329,20 +329,24 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             .unwrap_or(B::v_null(tk.line))
         } else {
             let span_end = next_start.min(front_matter.len());
-            let first_newline = front_matter[tk.value_start..span_end]
+            // §4 step 3: an inline value begins after the spaces that follow `: `, however many there are — as
+            // in a block mapping — so that the scalar paths below and the source column see the value itself.
+            // The newline that ends the line is not skipped.
+            let value_start = tk.value_start
+                + front_matter[tk.value_start..span_end]
+                    .char_indices()
+                    .find(|&(_, c)| c == '\n' || !is_trim_whitespace(c))
+                    .map_or(span_end - tk.value_start, |(i, _)| i);
+            let first_newline = front_matter[value_start..span_end]
                 .find('\n')
-                .map(|p| p + tk.value_start);
+                .map(|p| p + value_start);
             // Physical codepoint column of the value's first char (References
             // §2.4) — only the positioned builder keeps it; `parse_core` would
             // pay a backward `rfind('\n')` scan plus a codepoint count per
             // value for nothing (mirrors the TS `wantSource` guard).
             let value_col = if B::POSITIONED {
-                let value_line_start = front_matter[..tk.value_start]
-                    .rfind('\n')
-                    .map_or(0, |p| p + 1);
-                front_matter[value_line_start..tk.value_start]
-                    .chars()
-                    .count()
+                let value_line_start = front_matter[..value_start].rfind('\n').map_or(0, |p| p + 1);
+                front_matter[value_line_start..value_start].chars().count()
             } else {
                 0
             };
@@ -359,7 +363,7 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             };
             match first_newline {
                 None => {
-                    let val = &front_matter[tk.value_start..span_end];
+                    let val = &front_matter[value_start..span_end];
                     if val.contains('#') {
                         let stripped = strip_comment(val);
                         parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
@@ -378,7 +382,7 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                     }
                 }
                 Some(nl) if nl == span_end.saturating_sub(1) => {
-                    let val = &front_matter[tk.value_start..nl];
+                    let val = &front_matter[value_start..nl];
                     if val.contains('#') {
                         let stripped = strip_comment(val);
                         parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
@@ -397,7 +401,7 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                     }
                 }
                 Some(nl) => {
-                    let line0 = &front_matter[tk.value_start..nl];
+                    let line0 = &front_matter[value_start..nl];
                     let line0_trimmed = line0.trim_matches(is_trim_whitespace);
                     if line0_trimmed != "|" {
                         if line0.contains('#') {

@@ -1,0 +1,16 @@
+{
+  "id": "core.value.top-level-spaces.spec-example",
+  "spec": "core",
+  "section": "4",
+  "description": "The §4 example: spaces after the separator of a top-level key are trimmed, as are the spaces before a trailing comment.",
+  "input": "title:   Hello World   # comment\n",
+  "expect": {
+    "result": {
+      "title": "Hello World"
+    }
+  },
+  "tags": [
+    "positive",
+    "value"
+  ]
+}

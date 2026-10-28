@@ -1,0 +1,19 @@
+{
+  "id": "core.value.top-level-spaces.empty",
+  "spec": "core",
+  "section": "6.2",
+  "description": "A top-level value of spaces only, or of spaces and a comment, is null.",
+  "input": "a:    \nb:    # comment\nc: x\n",
+  "expect": {
+    "result": {
+      "a": null,
+      "b": null,
+      "c": "x"
+    }
+  },
+  "tags": [
+    "positive",
+    "value",
+    "null"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "core.value.top-level-spaces.scalars",
+  "spec": "core",
+  "section": "6",
+  "description": "Scalar type conversion applies after the trim: an aligned top-level number, boolean, null and date keep their types.",
+  "input": "i:    42\nf:    1.5\nb:    true\nn:    null\nd:    2026-10-28\n",
+  "expect": {
+    "result": {
+      "i": {
+        "$type": "int",
+        "value": 42
+      },
+      "f": {
+        "$type": "float",
+        "value": 1.5
+      },
+      "b": true,
+      "n": null,
+      "d": {
+        "$type": "instant",
+        "value": "2026-10-28T00:00:00Z"
+      }
+    }
+  },
+  "tags": [
+    "positive",
+    "value",
+    "number",
+    "dates"
+  ]
+}
