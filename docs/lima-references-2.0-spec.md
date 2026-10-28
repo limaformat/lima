@@ -5,9 +5,11 @@
 **Date:** 2026-08-12
 
 This document specifies the Lima References Extension 2.0. It is a normative
-addition to Lima Core 1.0 and must be read together with that specification.
+addition to Lima Core 1.1 and must be read together with that specification.
 It supersedes Lima References 1.0 for parsers that claim References 2.0
-conformance; it does not modify Lima Core 1.0.
+conformance; it does not modify Lima Core 1.1. Until Core 1.1 (2026-10-28), it
+was an addition to Lima Core 1.0; Core 1.1 changes strict mode only, and
+nothing in this document.
 
 A Lima Core parser treats all References 2.0 tokens as ordinary string content.
 A References 2.0 parser recognises only the syntax defined here. References 1.0
@@ -343,7 +345,7 @@ Core parsing followed by reference resolution as specified here. Its return
 contract is identical to `parseCore` in Lima Core §11.1.
 
 `parseCore(input, options?)` remains the explicit Core-only entry point defined
-by Lima Core 1.0. A call to `parse(input, { mode: "core" })` is
+by Lima Core 1.1. A call to `parse(input, { mode: "core" })` is
 semantically identical to `parseCore(input, options)` with the shared Core
 options: References 2.0 tokens remain literal, no partials are ingested, and no
 reference-resolution work is performed.
@@ -526,4 +528,4 @@ References 2.0 is intentionally not syntax-compatible with References 1.0:
 | one-hop snapshot model | transitive resolution, maximum three edges |
 | `parseReferences` is primary | `parse` is primary; `parseReferences` is a deprecated alias |
 
-Lima Core 1.0 semantics and APIs are unchanged.
+Lima Core semantics and APIs are unchanged.

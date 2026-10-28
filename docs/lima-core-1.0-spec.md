@@ -8,7 +8,7 @@ This document is the normative specification for Lima Core 1.1. It defines the s
 
 Lima is not a general-purpose data format. It is a small, predictable frontmatter format — the part of YAML that frontmatter actually needs, with well-defined types and no surprises.
 
-**Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented where no block level is open, at the top level as one level down (§7.1 rule 5), an unindented line that matches no key pattern (§4), and a line of a block mapping whose key the key grammar rejects (§5.1). Non-strict mode is unchanged. The end of the input ends the last line as a line terminator does (§4), so a last `key:` is a bare key; Core 1.0 left that unsaid.
+**Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented where no block level is open, at the top level as one level down (§7.1 rule 5), an unindented line that matches no key pattern (§4), and a line of a block mapping whose key the key grammar rejects (§5.1). Non-strict mode skips these lines, as before. Core 1.1 also settles what Core 1.0 left unsaid, where implementations differed: a bare key's sequence may start at the key's own column, as YAML writes it (§7.2); a block holds mapping entries or sequence items, as its first line decides (§7.1); an item whose value is a flow sequence is a nested sequence (§7.2); a `|` with no content lines is `''` (§6.1.5); and the end of the input ends the last line as a line terminator does (§4), so a last `key:` is a bare key.
 
 ---
 
@@ -112,7 +112,7 @@ title:   Hello World   # comment   # → 'Hello World'     (unquoted; both trims
 title: 42              # comment   # → 42                (number after double trim)
 ```
 
-An unindented line that does not match any key pattern is unrecognised: non-strict mode skips it silently, strict mode throws (see §10.1). An indented line that is not part of a block value is inconsistently indented (§7.1 rule 5).
+An unindented line that does not match any key pattern, and is no item of a compact sequence (§7.2), is unrecognised: non-strict mode skips it silently, strict mode throws (see §10.1). An indented line that is not part of a block value is inconsistently indented (§7.1 rule 5).
 
 ---
 
@@ -288,7 +288,7 @@ next: value
 
 **Indentation trimming:** The content indentation is the smallest number of leading spaces among all non-empty content lines, measured from column 0. Empty lines do not participate in this calculation. This uniform indentation is removed from the start of every content line. Empty lines are preserved as empty strings in the joined result. Lines are joined with a single newline character (`\n`) between each consecutive pair.
 
-**Trailing content:** All trailing empty lines and newlines at the end of a block scalar are removed (strip behaviour). The parsed value ends with the final non-empty content line and contains no trailing newline. Tabs within the final content line are preserved — only trailing empty lines and newlines are stripped, not whitespace within lines.
+**Trailing content:** All trailing empty lines and newlines at the end of a block scalar are removed (strip behaviour). The parsed value ends with the final non-empty content line and contains no trailing newline. A `|` with no content lines, at the end of the input too, is the empty string `''`. Tabs within the final content line are preserved — only trailing empty lines and newlines are stripped, not whitespace within lines.
 
 **Inline content without `|`:** Indented freetext without a `|` marker is not a valid multi-line string.
 - Non-strict: the key's value is `null`.
@@ -492,6 +492,8 @@ Lima uses indentation to determine block structure. The following rules apply:
 6. Empty lines (blank or whitespace-only) do not affect base indentation and are skipped.
 7. Comment lines (first non-whitespace character is `#`) do not affect base indentation and are skipped.
 
+A block holds mapping entries or sequence items, as its first content line decides. A line of the other kind at its base indentation is skipped in non-strict mode, and what the block holds stays; strict mode throws. A bare key's sequence may also start at the key's own column instead of deeper (§7.2, compact sequences).
+
 Minimum indentation is one space. There is no required indentation increment — two spaces is conventional but not normative.
 
 ### 7.2 Block Sequences (Arrays)
@@ -528,7 +530,19 @@ authors:
 
 Nested maps within array object items follow the same indentation model recursively.
 
-**Nested sequences:** Array-in-array (nested block sequences) are not supported. In non-strict mode, the entire nested sequence block is consumed and represented by a single `null` item in the outer sequence — subsequent lines of the inner sequence are not reinterpreted as outer items. In strict mode, throw.
+**Nested sequences:** Array-in-array (nested block sequences) are not supported. In non-strict mode, the entire nested sequence block is consumed and represented by a single `null` item in the outer sequence — subsequent lines of the inner sequence are not reinterpreted as outer items. In strict mode, throw. An item's value is an inline value (§15.3), so an item whose value is a flow sequence, such as `- [a, b]` or `- []`, is a nested sequence too: non-strict `null`, strict throw. Any other item value that begins with `[` is read as an inline value is (§7.4: an unclosed `[` is a string fallback in non-strict mode and throws in strict mode).
+
+**Compact sequences:** A bare key's sequence may also start at the key's own column, as YAML front matter often writes it:
+
+```yaml
+tags:
+- javascript
+- webdev
+title: Hello
+```
+→ `tags = ['javascript', 'webdev']`, `title = 'Hello'`
+
+This holds at any level, the key of an object item included. A line is a sequence item when it is `-` alone or `-` followed by whitespace; `---` and `-x` are not. A compact sequence ends at the first content line in its key's column that is not an item. Only a bare key opens one: after a key with an inline value, an item in the key's column belongs to no value — unrecognised at the top level (§4), a line of the other kind in a block mapping (§7.1).
 
 ### 7.3 Block Mappings (Maps)
 
@@ -700,6 +714,8 @@ Lima has two parse modes: non-strict (default) and strict.
 | Incomplete or invalid escape sequence (e.g. `\u12`, `\xZZ`) | leave intact | throw |
 | Unterminated quoted string | string fallback | throw |
 | Inconsistent indentation (§7.1 rule 5, at any level) | skip | throw |
+| A sequence item in a block of mapping entries, or the reverse (§7.1) | skip | throw |
+| Nested sequence, in block or flow form (§7.2) | `null` item | throw |
 | Unrecognised line: an unindented line that matches no key pattern (§4), or a line of a block mapping whose key the key grammar rejects (§5.1) | skip | throw |
 | Space before colon in quoted block key | skip | throw |
 | Non-whitespace content after closing quote in an inline value | string fallback for entire value | throw |
@@ -759,7 +775,7 @@ The following constructs are explicitly outside Lima Core. Their absence is inte
 | `>` folded block scalar | Confusing semantics; `\|` + `^^` covers the use case. The lines that follow the marker are inconsistently indented (§7.1 rule 5) |
 | Chomping indicators (`\|-`, `\|+`) | Not needed without `>`. The lines that follow the marker are inconsistently indented (§7.1 rule 5) |
 | Nested flow structures (depth > 1) | Not needed for frontmatter; block syntax is clearer |
-| Nested sequences (array-in-array) | No real frontmatter use case |
+| Nested sequences (array-in-array) | No real frontmatter use case. A nested sequence is a `null` item in non-strict mode and throws in strict mode (§7.2) |
 | Space separator in ISO datetime | Non-standard; `T` separator required for ISO forms |
 | Milliseconds in dates | No frontmatter use case |
 | Timezone offset with German/slash date formats | Ambiguous; ISO 8601 required for timezone-aware values |
@@ -871,7 +887,8 @@ mapping-entry      = key, inline-separator, block-scalar-marker, NL,
                      [ INDENT, block-scalar-body, DEDENT ]
                    | key, inline-separator, inline-value, NL
                    | key, block-separator, NL,
-                     [ INDENT, block-value, DEDENT ] ;
+                     [ INDENT, block-value, DEDENT ]
+                   | key, block-separator, NL, block-sequence ;
 
 block-sequence     = sequence-entry, { sequence-entry | ignored-line } ;
 
@@ -891,6 +908,8 @@ ignored-line       = ? blank or comment-only line outside a block scalar ? ;
 ```
 
 `mapping-entry` and `sequence-entry` are accepted only when their indentation corresponds to the current block level under §7.1. The first content line establishes the base indentation of a block. The grammar therefore does not assign a fixed number of spaces to `INDENT`.
+
+The last form of `mapping-entry` is a compact sequence: its items start at the key's own column (§7.2), and it ends at the first content line there that is not a `sequence-entry`.
 
 A sequence item beginning with `object-entry-head` starts an object item. Subsequent sibling keys belong to that object only when they use the base indentation defined in §7.2.
 

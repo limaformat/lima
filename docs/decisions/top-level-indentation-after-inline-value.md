@@ -130,6 +130,33 @@ The first review of the implementation found five issues; the maintainer accepte
    corpus pins both shapes.
 5. The packages were still at 0.5.1: they move to 0.6.0 with the release.
 
-Found while fixing, not part of this decision: a sequence at column 0 under a bare key (`tags:` / `- a`) is no block
-under §7.1 (only a deeper line is) — strict mode reports it as an unrecognised line, but non-strict mode reads
-`["a"]` in TypeScript and Rust and `null` in Go, which the corpus does not cover.
+## Compact sequences
+
+Found while fixing: a sequence at column 0 under a bare key (`tags:` / `- a`), which YAML front matter often writes,
+was no block under §7.1 (only a deeper line is). Non-strict mode read `["a"]` in TypeScript and Rust at the top level,
+by accident, and lost the sequence and the keys after it one level down; Go read `null`. Strict mode would have
+reported it as an unrecognised line.
+
+Decided (the maintainer, 2026-10-28): Core 1.1 allows it, at every level (§7.2, "Compact sequences"). A bare key's
+sequence may start at the key's own column and ends at the first content line there that is not an item; an item is
+`-` alone or `-` followed by whitespace. Only a bare key opens one. Before the decision, the sites that use Lima
+were checked: none writes such a sequence, so no page changes.
+
+## Review 2 (Codex CLI, 2026-10-28)
+
+The second review, and a three-way differential test of random documents that followed it, found where Core 1.0 had
+left the implementations to differ. The maintainer accepted all proposals:
+
+1. `a: |` with no content lines was `"|"` in TypeScript and Rust and `''` in Go; it is `''` (§6.1.5).
+2. A block with mapping entries and sequence items lost everything in TypeScript and Rust in non-strict mode; the first
+   kind wins and a line of the other kind is skipped, as Go did (§7.1).
+3. `- [a, b]` was a string in TypeScript and Rust and a sequence in Go; an item's value is an inline value (§15.3), so
+   it is a nested sequence, `null` in non-strict mode and an error in strict mode (§7.2). Any other item value that
+   begins with `[` is read as an inline value is.
+4. The References 2.0 specification names Core 1.1 as its base.
+5. Code comments and package texts name Core 1.1.
+6. The tree-sitter grammar learns compact sequences after the release.
+
+Also found: whitespace-only lines could make the Go package panic, and Go lost an object item's keys after a blank or
+comment line, both already in 0.5.1; both are fixed. One divergence stays open, outside this decision: a line
+indented by spaces and then Unicode whitespace such as U+00A0, which §3 leaves undefined.
