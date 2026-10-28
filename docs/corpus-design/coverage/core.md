@@ -336,7 +336,7 @@ skips the whitespace after `: ` before any scalar path and before the
 References 2.0 source column is taken, in `core.ts` and `core.rs`; the
 reported columns were already physical and stay identical in all three.
 
-## Core 1.1 (2026-10-28) — C-255–C-286, `corpus/core-1.1/`
+## Core 1.1 (2026-10-28) — C-255–C-289, `corpus/core-1.1/`
 
 Strict mode rejects a content line that belongs to no structure
 ([decision](../../decisions/top-level-indentation-after-inline-value.md)).
@@ -380,6 +380,9 @@ and the default run leaves them out.
 | C-284 | §7.1 | Indentation | A skipped line's indentation counts: at column 0 it ends a bare key's block before it opens; as a bare key's first, deeper line it sets the block's base indentation; at an object item's key column it gives a bare key there no block | positive | non-strict |
 | C-285 | §9 | Limits | The top-level key count is checked before any entry is read: a duplicate among 129 entries does not come first (Go threw `DUPLICATE_KEY`) | error | strict |
 | C-286 | §6.1.5 | Block scalar | `\| x` is the string `"\| x"` (the tree-sitter scanner dropped its `\|`) | positive | both |
+| C-287 | §1, §7.1 | Indentation | Indentation is spaces only: a line whose spaces are followed by other whitespace (U+00A0, U+3000) is unrecognised — at column 0, as a bare key's first line, at a block's base, below it, in an object item — skipped, or an error in strict mode (TypeScript counted the whitespace as indentation) | pair | both |
+| C-288 | §1, §7.1 | Indentation | A blank or comment line stays one whatever whitespace precedes it; a dash may be followed by any whitespace | positive | both |
+| C-289 | §6.1.5 | Block scalar | In a `\|` scalar other whitespace is content, and a line of it at the key's column ends the scalar; strict mode then throws for the deeper line after it (TypeScript and Rust dropped it) | pair | both |
 
 Found while implementing: the TypeScript scanner took a top-level `key:` at the
 very end of the input for no key (it wanted a newline or a space after the
@@ -393,11 +396,12 @@ of random documents (TypeScript, Rust and Go on the same inputs, about 400,000
 parses); C-277–C-283 from the third review and the differential test in CI
 (§14 of the design README), whose structured documents found what the random
 lines had not. C-279 is the one where all three implementations agreed and the
-specification said otherwise: agreement is not correctness. One divergence remains, outside Core 1.1: a line indented by ASCII
-spaces and then Unicode whitespace such as U+00A0 is read differently by the
-three; §3 defines indentation by spaces and tabs only, and leaves such a line
-open. The tree-sitter grammar does not show a compact sequence as a sequence
-yet (no error node; the items are missing from the tree).
+specification said otherwise: agreement is not correctness. C-284–C-286 come
+from the fourth review; C-287–C-289 settle the one divergence the
+differential test had left out until then, indentation by Unicode whitespace,
+which §1 and §7.1 now define. The tree-sitter grammar does not show a compact
+sequence as a sequence yet (no error node; the items are missing from the
+tree; `docs/follow-ups.md`).
 
 ## Known implementation gaps
 

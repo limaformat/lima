@@ -2,9 +2,9 @@
   "suite": "core-1.1",
   "frozen": true,
   "baselineVersion": "1.1.0",
-  "baselineCaseCount": 100,
+  "baselineCaseCount": 118,
   "specVersion": "1.1.0",
-  "caseCount": 100,
+  "caseCount": 118,
   "supersedes": [
     "core.block-scalar.chomping-indicator-unsupported.strict",
     "core.block-scalar.folded-marker-unsupported.strict",
@@ -134,6 +134,30 @@
       "path": "core-1.1/block-scalar-marker-with-trailing-text.json",
       "id": "core.block-scalar.marker-with-trailing-text",
       "sha256": "e20a81263ecbf388d2e767351ca9b926c0cdd71e267fcfd69d1063c5a781bc8d",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-unicode-whitespace-content-strict.json",
+      "id": "core.block-scalar.unicode-whitespace-content.strict",
+      "sha256": "ddd1f25958974763a486effc1c2a953412b96e1bb89cd0a36a42a97ae747d720",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-unicode-whitespace-content.json",
+      "id": "core.block-scalar.unicode-whitespace-content",
+      "sha256": "fe6f1da6cbe7d04b0f2c235d383a5d0755f0189484e1698ec4ccbcb720d36148",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-unicode-whitespace-line-ends-scalar-strict.json",
+      "id": "core.block-scalar.unicode-whitespace-line-ends-scalar.strict",
+      "sha256": "b980a0161741ce10b9621e2cd4637a15fd8e00534839a7156123c628792159d6",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-unicode-whitespace-line-ends-scalar.json",
+      "id": "core.block-scalar.unicode-whitespace-line-ends-scalar",
+      "sha256": "16f44bbf4dad6bd61eafa5b49569a7c480fb76feafe9b12090a8d34a6f24cd80",
       "since": "1.1.0"
     },
     {
@@ -347,6 +371,18 @@
       "since": "1.1.0"
     },
     {
+      "path": "core-1.1/block-sequence-unicode-whitespace-after-dash-strict.json",
+      "id": "core.block-sequence.unicode-whitespace-after-dash.strict",
+      "sha256": "8d8bfc76770896fd72aa24e8e26e8e3eb0cbb746b835f940fb2c3fbd4560d2dc",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-sequence-unicode-whitespace-after-dash.json",
+      "id": "core.block-sequence.unicode-whitespace-after-dash",
+      "sha256": "35f0990d13b96b5aa1e28e98ed15c44cab599c4cefd01b3d8043dccd5aab5ebc",
+      "since": "1.1.0"
+    },
+    {
       "path": "core-1.1/document-unrecognized-line-after-bare-key-strict.json",
       "id": "core.document.unrecognized-line.after-bare-key.strict",
       "sha256": "784e52398e2ddc71b1ec3030e595d26db55d429874ba27e2ec890fc5c3d8fa5d",
@@ -488,6 +524,78 @@
       "path": "core-1.1/indentation-skipped-line-sets-base-indentation.json",
       "id": "core.indentation.skipped-line-sets-base-indentation",
       "sha256": "06b1b2e6012d82feef4b3460528bfccba88b822495092dfe3d95496cc56433c5",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-at-base-strict.json",
+      "id": "core.indentation.unicode-whitespace.at-base.strict",
+      "sha256": "31b89bf6c448e5e7d6de47ac62c5f72a719af28ebddba8cd5701fd4884332ecf",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-at-base.json",
+      "id": "core.indentation.unicode-whitespace.at-base",
+      "sha256": "81251e86f73e53cab1afdb700a22771d530ef6c986099d3d709bb12bfb1f7a92",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-below-base-strict.json",
+      "id": "core.indentation.unicode-whitespace.below-base.strict",
+      "sha256": "8d8f626268ff5da03ce49835f780da4cbe6cf285018cbc783e8508a5aa2358f0",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-below-base.json",
+      "id": "core.indentation.unicode-whitespace.below-base",
+      "sha256": "1cc7e02cdc821c1bddddc14704c74a051e79304ff49a936e0e7cd5974cb1882b",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-blank-and-comment-strict.json",
+      "id": "core.indentation.unicode-whitespace.blank-and-comment.strict",
+      "sha256": "8f49dcb752313f819640db56659636d21603e55a092f4b01d8f910b50caa0a55",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-blank-and-comment.json",
+      "id": "core.indentation.unicode-whitespace.blank-and-comment",
+      "sha256": "035de29f84526e2fe297ea8f61c6459aadbafb2979d50b442600ccb794946707",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-first-line-of-block-strict.json",
+      "id": "core.indentation.unicode-whitespace.first-line-of-block.strict",
+      "sha256": "22242213e05c6a7f5a6d68732a305934cf7f678b06c018d17ad1f8f4aad6a681",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-first-line-of-block.json",
+      "id": "core.indentation.unicode-whitespace.first-line-of-block",
+      "sha256": "de43865a78183fd391e8976ae9e095bf42a56edb8e8be6ba41055d330363cf61",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-object-item-strict.json",
+      "id": "core.indentation.unicode-whitespace.object-item.strict",
+      "sha256": "ed5710384a7427cddb850a7b4563bf49212c611fdd1b896766f17e5305bbec60",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-object-item.json",
+      "id": "core.indentation.unicode-whitespace.object-item",
+      "sha256": "3d60f973d3aac8c64742e2cdd362356a47457d9c10e731cbdf77a12b12d7cc18",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-top-level-strict.json",
+      "id": "core.indentation.unicode-whitespace.top-level.strict",
+      "sha256": "3d022f08b1f39e5f79b0e7d12b122dcc3ac45676618d92068fc50c4580bb03fb",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/indentation-unicode-whitespace-top-level.json",
+      "id": "core.indentation.unicode-whitespace.top-level",
+      "sha256": "161ca694d8c50aceed9c1c14ede25c22f989372b448f342ac3cf3bb9a05940ba",
       "since": "1.1.0"
     },
     {

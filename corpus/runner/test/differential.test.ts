@@ -3,7 +3,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
-	canonical, disagreements, generateDocument, isKnownOpen, probeOutcomes, seededRng, shrink, typescriptOutcomes,
+	canonical, disagreements, generateDocument, probeOutcomes, seededRng, shrink, typescriptOutcomes,
 } from '../src/differential'
 
 const documents = (seed: number, n: number): string[] => {
@@ -42,7 +42,7 @@ describe('generateDocument', () => {
 
 	it('writes the constructs the comparison is for', () => {
 		const all = documents(1, 2000).join('\n')
-		for (const construct of ['\n- ', ': |', '\t', '\r\n', '[', '{', '2026-10-28', '# ', '---']) {
+		for (const construct of ['\n- ', ': |', '\t', '\r\n', '[', '{', '2026-10-28', '# ', '---', '\n \u00a0', '\n\u00a0']) {
 			expect(all).toContain(construct)
 		}
 		// a compact sequence: an item at the column of the bare key before it
@@ -53,23 +53,6 @@ describe('generateDocument', () => {
 		const errors = new Set(documents(1, 20_000).filter((d) => d.length > 1000)
 			.map((d) => typescriptOutcomes(d)[0]!).map((o) => 'error' in o ? o.error : 'ok'))
 		expect(errors).toEqual(new Set(['ok', 'RESOURCE_LIMIT']))
-	})
-})
-
-describe('isKnownOpen', () => {
-	it('leaves out content indented by Unicode whitespace, and nothing else', () => {
-		expect(isKnownOpen('a:\n \u00a0b: 1\n')).toBe(true)
-		expect(isKnownOpen('a:\n\u00a0b: 1\n')).toBe(true)
-		expect(isKnownOpen('a:\n  b: 1\n\u00a0\n')).toBe(false)
-		expect(isKnownOpen('a: x\u00a0y\n\tb: 1\n')).toBe(false)
-	})
-
-	it('keeps Unicode whitespace that is the content of a | scalar (§6.1.5)', () => {
-		expect(isKnownOpen('a: |\n  \u00a0text\n')).toBe(false)
-		expect(isKnownOpen('l:\n  - a: |\n      \u00a0text\n')).toBe(false)
-		// the scalar ends at its key's column, and what follows is structure again
-		expect(isKnownOpen('a: |\n  text\n\u00a0b: 1\n')).toBe(true)
-		expect(isKnownOpen('a: | # c\n  \u00a0text\n')).toBe(true)
 	})
 })
 

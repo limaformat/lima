@@ -76,7 +76,9 @@ const inlineOrBlockScalar = <V, M>(
 	cursor.next() // past the `key: |` line
 	const bodyLines: string[] = []
 	while (cursor.valid) {
-		if (!cursor.empty && cursor.asciiIndent <= keyIndent) break
+		// the scalar's own extent (§6.1.5, `buildBlockScalar`): a line of spaces only is empty, any other ends it at the
+		// key's column or less — a line of other whitespace too, which is content here
+		if (cursor.lineEnd - cursor.lineStart > cursor.asciiIndent && cursor.asciiIndent <= keyIndent) break
 		bodyLines.push(cursor.source.slice(cursor.lineStart, cursor.lineEnd))
 		cursor.next()
 	}
@@ -101,6 +103,15 @@ export const findKeySep = (s: string): number => {
  * the original source. Strings are materialized only when grammar or scalar
  * parsing needs their content.
  */
+/**
+ * `source.slice(start, end).trimEnd()`: a key, or a line's content, keeps the whitespace it starts with, which makes it
+ * no key (Core 1.1 §7.1: other whitespace before content is no indentation).
+ */
+const trimEndSlice = (source: string, start: number, end: number): string => {
+	while (end > start && isTrimWhitespace(source.charCodeAt(end - 1))) end--
+	return source.slice(start, end)
+}
+
 /** `source.slice(start, end).trim()` with no temporary untrimmed substring. */
 const trimSlice = (source: string, start: number, end: number): string => {
 	if (start < end) {
@@ -198,8 +209,8 @@ const parseCursorBlock = <V, M>(
 				const bareKey = trimmed.charCodeAt(trimmed.length - 1) === 58
 				const colonPos = bareKey && trimmed.indexOf(' ') === -1 ? -1 : findKeySep(trimmed)
 				const keyRaw = colonPos !== -1
-					? trimSlice(trimmed, 0, colonPos)
-					: bareKey ? trimSlice(trimmed, 0, trimmed.length - 1) : ''
+					? trimEndSlice(trimmed, 0, colonPos)
+					: bareKey ? trimEndSlice(trimmed, 0, trimmed.length - 1) : ''
 				if (keyRaw !== '' && !isValidKey(keyRaw)) {
 					// §5.1: not a usable key — an unrecognised line, skipped in non-strict mode and an error in strict
 					// mode, as at the top level (Core 1.1 §10.1)
@@ -305,10 +316,10 @@ const parseCursorBlock = <V, M>(
 					const ckeyIndent = cursor.asciiIndent
 					const cfirst = cursor.source.charCodeAt(cursor.contentStart)
 					if (cfirst === 35) break
-					const contLine = trimSlice(cursor.source, cursor.contentStart, cursor.lineEnd)
+					const contLine = trimEndSlice(cursor.source, cursor.contentStart, cursor.lineEnd)
 					const csep = findKeySep(contLine)
 					if (csep === -1) break
-					const ckeyRaw = trimSlice(contLine, 0, csep)
+					const ckeyRaw = trimEndSlice(contLine, 0, csep)
 					if (!isValidKey(ckeyRaw)) break
 					const ckey = stripKeyQuotes(ckeyRaw, ctx.strict, continuationLine)
 					if (!ckey) break
@@ -353,8 +364,8 @@ const parseCursorBlock = <V, M>(
 			const bareKey = trimmed.charCodeAt(trimmed.length - 1) === 58
 			const colonPos = bareKey && trimmed.indexOf(' ') === -1 ? -1 : findKeySep(trimmed)
 			const keyRaw = colonPos !== -1
-				? trimSlice(trimmed, 0, colonPos)
-				: bareKey ? trimSlice(trimmed, 0, trimmed.length - 1) : ''
+				? trimEndSlice(trimmed, 0, colonPos)
+				: bareKey ? trimEndSlice(trimmed, 0, trimmed.length - 1) : ''
 			if (keyRaw !== '' && !isValidKey(keyRaw)) {
 				// §5.1: not a usable key — an unrecognised line, skipped in non-strict mode and an error in strict
 				// mode, as at the top level (Core 1.1 §10.1)

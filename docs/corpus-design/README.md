@@ -2,7 +2,7 @@
 
 **Status:** implemented — a byte-frozen 149-case Core 1.0.0 baseline with
 additive Core errata through 1.0.10 on top (218 Core 1.0 cases total), a
-frozen 100-case Core 1.1 corpus that supersedes 8 of them (310 Core 1.1 cases
+frozen 118-case Core 1.1 corpus that supersedes 8 of them (328 Core 1.1 cases
 in all), plus a separate 136-case References 2.0 final corpus; all counts are
 pinned by tests. The baseline also includes 101 byte-frozen References 1.0 cases: that
 extension was published briefly in mid-2026 and superseded almost immediately
@@ -449,8 +449,8 @@ bun run run:references-2
 ```
 
 The default `bun run run` runs the current conformance target: Core 1.1
-(310 cases: the 218 Core 1.0 cases through errata 1.0.10 without the 8 that
-`corpus/manifests/core-1.1.json` lists under `supersedes`, plus the 100 of
+(328 cases: the 218 Core 1.0 cases through errata 1.0.10 without the 8 that
+`corpus/manifests/core-1.1.json` lists under `supersedes`, plus the 118 of
 `corpus/core-1.1/`) plus References 2.0 (136). `bun run run:core-1` runs the
 frozen Core 1.0 corpus alone, whose 8 superseded cases a Core 1.1 parser
 fails by design. `bun run
@@ -468,7 +468,8 @@ maintained rationale + task list) no longer contains any test data.
 The corpus pins what someone thought of. `corpus/runner/src/differential.ts`
 looks for what nobody did: it generates random documents from fixed seeds —
 half nested the way front matter is and then disturbed (stray and invalid
-lines, shifted indentation, tabs, CR and CRLF line ends), half random lines in
+lines, shifted indentation, tabs, U+00A0 and other whitespace after the
+indentation, CR and CRLF line ends), half random lines in
 random order, and rarely one at a resource limit of §9, just below, at or
 above it — and parses each with TypeScript in-process and with the Rust
 and Go probes (`rust/examples/differential.rs`, `go/internal/differential`),
@@ -491,5 +492,4 @@ bun src/differential.ts --rust ../../rust/target/release/examples/differential \
 CI runs it with seeds 1–4 and 25,000 documents each and fails on any
 disagreement. Agreement is not correctness — three implementations can share
 a mistake — so a disagreement found here becomes a corpus case once it is
-decided. Left out as known and open: content indented by Unicode whitespace
-other than space and tab, outside a `|` scalar (`docs/follow-ups.md`).
+decided.

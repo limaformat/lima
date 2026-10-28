@@ -1,0 +1,19 @@
+{
+  "id": "core.block-sequence.unicode-whitespace-after-dash",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "A sequence dash may be followed by any whitespace (§1), U+00A0 included.",
+  "input": "l:\n  - a\n",
+  "expect": {
+    "result": {
+      "l": [
+        "a"
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "whitespace"
+  ]
+}

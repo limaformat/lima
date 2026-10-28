@@ -1,0 +1,23 @@
+{
+  "id": "core.indentation.unicode-whitespace.object-item",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "In an object item, a line indented by spaces and U+3000 is no key; the item goes on past it.",
+  "input": "l:\n  - a: 1\n    　b: 2\n    c: 3\n",
+  "expect": {
+    "result": {
+      "l": [
+        {
+          "a": 1,
+          "c": 3
+        }
+      ]
+    }
+  },
+  "tags": [
+    "indentation",
+    "whitespace",
+    "object-item"
+  ]
+}

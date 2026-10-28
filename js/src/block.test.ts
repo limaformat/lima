@@ -103,12 +103,13 @@ describe('arrays — block sequence (dash-prefixed)', () => {
 })
 
 describe('maps', () => {
-	it('uses the full trimStart whitespace set for indentation', () => {
+	it('indents by spaces only: a line indented by other whitespace is unrecognised (Core 1.1 §7.1)', () => {
 		const result = parse('a:\n  b: 1\n\u00a0\u00a0c: 2\n')
-		expect(result.a).toEqual({ b: 1, c: 2 })
+		expect(result.a).toEqual({ b: 1 })
+		expect(() => parse('a:\n  b: 1\n\u00a0\u00a0c: 2\n', { strict: true })).toThrow('Lima')
 	})
 
-	it('matches trimStart indentation for every ECMAScript whitespace code point', () => {
+	it('counts no ECMAScript whitespace code point but the space as indentation', () => {
 		const whitespace = [
 			// TAB and CR are intentionally absent: Core normalization rewrites
 			// them before block indentation is measured.
@@ -120,7 +121,7 @@ describe('maps', () => {
 		for (const codePoint of whitespace) {
 			const ws = String.fromCodePoint(codePoint)
 			const result = parse(`a:\n  b: 1\n${ws}${ws}c: 2\n`)
-			expect(result.a).toEqual({ b: 1, c: 2 })
+			expect(result.a).toEqual(codePoint === 0x20 ? { b: 1, c: 2 } : { b: 1 })
 		}
 	})
 

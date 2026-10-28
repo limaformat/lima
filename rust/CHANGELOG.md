@@ -40,9 +40,17 @@ non-strict results change with them (below).
 - An item whose value is a flow sequence (`- [a, b]`, `- []`) is a nested
   sequence (Core 1.1 §7.2): `null` in non-strict mode, `INVALID_FLOW_SYNTAX`
   in strict mode.
+- Indentation is spaces only (Core 1.1 §7.1): a line whose spaces are followed
+  by other whitespace, such as U+00A0, before its content is unrecognised —
+  skipped in non-strict mode, an error in strict mode. Whitespace is defined
+  once (§1), as the set every check already used.
+  Rust read such a line at column 0 as part of the block before it.
 
 ### Fixed
 
+- In strict mode, a line deeper than a nested `|` scalar's key, after a line
+  of other whitespace that ended the scalar, was dropped without an error; it
+  throws `INVALID_INDENTATION`.
 - A `|` with no content lines (`a: |` at the end of a block, or of the
   input) was the string `"|"`; it is `""` (Core 1.1 §6.1.5).
 - A block of mapping entries with a sequence item in it, or the reverse, was
@@ -55,8 +63,8 @@ non-strict results change with them (below).
   was a block scalar; it is the string `"|"`, as at the top level — the
   marker stands alone (§6.1.5).
 
-The shared conformance corpus is at 310 Core cases: the 218 Core 1.0 cases
-without the 8 that Core 1.1 supersedes, plus 100 Core 1.1 cases
+The shared conformance corpus is at 328 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 118 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

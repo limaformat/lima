@@ -23,14 +23,3 @@ Core reads as a later key of the item. Both parse without an error node; the
 missing nodes only lose their highlighting. Teach the scanner both, pin the
 trees in `scripts/gen-corpus.ts`, and move the Zed extension's grammar
 commit with the next release.
-
-## Indentation by Unicode whitespace
-
-Core §3 normalises tabs in leading indentation and §7.1 counts spaces, but no
-section says what a line indented by other Unicode whitespace is, such as
-U+00A0 at column 0 or after spaces (`  key: v` under a block). The
-three implementations read it differently, in both modes. The same set is
-open after a sequence dash (§7.2 says "whitespace", Appendix D's
-`item-separator` refers to it). Decide it in the
-specification (Core 1.2 or an erratum), add corpus cases, and drop the
-exclusion `isKnownOpen` in `corpus/runner/src/differential.ts`.

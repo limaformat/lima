@@ -1,0 +1,19 @@
+{
+  "id": "core.indentation.unicode-whitespace.below-base",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "The indentation of a line is its spaces only: one space and U+00A0 is less than the base of two, so the line ends the block (§7.1 rule 4).",
+  "input": "a:\n  b: 1\n  c: 2\n  d: 3\n",
+  "expect": {
+    "result": {
+      "a": {
+        "b": 1
+      }
+    }
+  },
+  "tags": [
+    "indentation",
+    "whitespace"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "core.block-scalar.unicode-whitespace-content",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "In a `|` scalar, U+00A0 after the indentation is content.",
+  "input": "a: |\n   text\n",
+  "expect": {
+    "result": {
+      "a": " text"
+    }
+  },
+  "tags": [
+    "block-scalar",
+    "whitespace"
+  ]
+}

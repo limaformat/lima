@@ -1,0 +1,24 @@
+{
+  "id": "core.indentation.unicode-whitespace.blank-and-comment.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "A line of whitespace only is blank, and one whose first non-whitespace character is `#` a comment line, whatever whitespace precedes it.",
+  "input": "a:\n  b: 1\n   # note\n   \n  c: 2\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "a": {
+        "b": 1,
+        "c": 2
+      }
+    }
+  },
+  "tags": [
+    "indentation",
+    "whitespace",
+    "strict"
+  ]
+}

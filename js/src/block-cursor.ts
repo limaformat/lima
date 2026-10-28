@@ -2,9 +2,10 @@ import { isTrimWhitespace } from './chars.js'
 
 /**
  * Allocation-free physical-line cursor over one top-level block extent.
- * Positions are UTF-16 code-unit offsets. Structural boundaries are ASCII;
- * indentation additionally follows the complete whitespace predicate used by
- * `trimStart()`, matching the existing block grammar.
+ * Positions are UTF-16 code-unit offsets. Indentation is the run of spaces
+ * (Core 1.1 §7.1); other whitespace after it, such as U+00A0, starts the
+ * content of a line that has any, and only a blank or comment line looks
+ * past it (the complete whitespace predicate used by `trimStart()`).
  */
 export class BlockCursor {
 	lineStart = 0
@@ -51,6 +52,9 @@ export class BlockCursor {
 				} while (content < end)
 			}
 		}
+
+		// other whitespace before content is no indentation: the content starts at it (Core 1.1 §7.1)
+		if (content > asciiEnd && content < end && this.source.charCodeAt(content) !== 35) content = asciiEnd
 
 		this.lineStart = start
 		this.lineEnd = end

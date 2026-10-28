@@ -14,7 +14,6 @@
  */
 import { spawnSync } from 'node:child_process'
 import { parseCore } from '../../../js/src/index'
-import { isTrimWhitespace } from '../../../js/src/chars'
 import { LimaError } from '../../../js/src/errors'
 
 export type Outcome =
@@ -58,7 +57,8 @@ const VALUES = [
 ]
 
 /** Lines that belong to no structure, or only to some: what strict mode must reject and non-strict mode skip. */
-const NOISE = ['', '   ', '# comment', 'freetext', 'a.b: 1', 'bad key: 1', '---', '...', '- stray', 'key:value', '^^ more']
+const NOISE = ['', '   ', '# comment', 'freetext', 'a.b: 1', 'bad key: 1', '---', '...', '- stray', 'key:value', '^^ more',
+	'\u00a0', '\u00a0# note', '\u00a0x: 1', '\u3000- y']
 
 /** Whole lines for the soup half, which puts structure in random order rather than nesting it. */
 const ATOMS = [
@@ -127,6 +127,8 @@ function structured(rng: Rng): string[] {
 		let l = line
 		if (chance(rng, 0.04)) l = l.startsWith(' ') && chance(rng, 0.5) ? l.slice(1) : ' ' + l
 		if (chance(rng, 0.03) && l.startsWith('  ')) l = '\t' + l.slice(2)
+		// indentation that ends in other whitespace, which is no indentation (Core 1.1 §7.1)
+		if (chance(rng, 0.02)) l = l.replace(/^( *)/, (spaces) => spaces + pick(rng, ['\u00a0', '\ufeff', '\u2003']))
 		if (chance(rng, 0.04)) l += '  '
 		out.push(l)
 	}
@@ -175,29 +177,6 @@ export function generateDocument(rng: Rng): string {
 	const lines = chance(rng, 0.5) ? structured(rng) : soup(rng)
 	const end = chance(rng, 0.1) ? '\r\n' : chance(rng, 0.02) ? '\r' : '\n'
 	return lines.join(end) + (chance(rng, 0.8) ? end : '')
-}
-
-/**
- * Known and open, so left out rather than reported every run: content indented by Unicode whitespace other than space
- * and tab, such as U+00A0, which §3 does not define and the implementations read differently (docs/follow-ups.md).
- * Inside a `|` scalar such whitespace is content (§6.1.5) and stays in.
- */
-export function isKnownOpen(document: string): boolean {
-	let scalarKey = -1 // the column of the key whose `|` scalar is open, or -1
-	for (const raw of document.split(/\r\n|\r|\n/)) {
-		const line = raw.replace(/^[ \t]+/, (ws) => ws.replaceAll('\t', '  ')) // §3
-		const indent = line.search(/[^ ]/)
-		if (scalarKey >= 0 && (indent === -1 || indent > scalarKey)) continue
-		scalarKey = -1
-		if (indent !== -1 && isTrimWhitespace(line.charCodeAt(indent))) {
-			let j = indent
-			while (j < line.length && isTrimWhitespace(line.charCodeAt(j))) j++
-			if (j < line.length) return true
-		}
-		const marker = /^( *(?:-[ \t]+)?)[^ \t#].*?:[ \t]+\|[ \t]*$/.exec(line)
-		if (marker) scalarKey = marker[1]!.length
-	}
-	return false
 }
 
 /**
@@ -331,16 +310,12 @@ function main(argv: string[]): number {
 	const seeds = seedArg === 'random' ? [Math.floor(Math.random() * 2 ** 31)] : seedArg.split(',').map(Number)
 	const perSeed = Number(arg('docs') ?? 25_000)
 	const show = Number(arg('show') ?? 10)
-	let parses = 0, skipped = 0, total = 0
+	let parses = 0, total = 0
 	const found = new Set<string>()
 	for (const seed of seeds) {
 		const rng = seededRng(seed)
 		const documents: string[] = []
-		for (let i = 0; i < perSeed; i++) {
-			const document = generateDocument(rng)
-			if (isKnownOpen(document)) skipped++
-			else documents.push(document)
-		}
+		for (let i = 0; i < perSeed; i++) documents.push(generateDocument(rng))
 		parses += documents.length * 2
 		const bad = disagreements(documents, probes)
 		total += bad.length
@@ -353,7 +328,7 @@ function main(argv: string[]): number {
 		}
 	}
 	for (const document of found) console.log(`\n${JSON.stringify(document)}\n${report(document, probes)}`)
-	console.log(`\n${parses} parses per implementation, ${skipped} documents left out as known open, ` +
+	console.log(`\n${parses} parses per implementation, ` +
 		`${total === 0 ? 'no disagreement' : `${total} disagreeing document(s), ${found.size} shown`}`)
 	return total === 0 ? 0 : 1
 }

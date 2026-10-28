@@ -1,9 +1,8 @@
 //! Mirrors `js/src/block-cursor.ts`. Positions are byte offsets into the
 //! UTF-8 `&str` (the TS source uses UTF-16 code-unit offsets — the two
-//! coincide for all-ASCII structural characters, which indentation and line
-//! boundaries always are in practice; genuinely multi-byte indentation
-//! whitespace is an edge case this port does not attempt to track at
-//! code-point granularity, only byte-delta).
+//! coincide for the ASCII structural characters: indentation is spaces only,
+//! Core 1.1 §7.1, and line boundaries are `\n`). Other whitespace before
+//! content starts the content; only a blank or comment line looks past it.
 
 use crate::chars::is_trim_whitespace;
 
@@ -73,6 +72,12 @@ impl<'a> BlockCursor<'a> {
                     content += ch.len_utf8();
                 }
             }
+        }
+
+        // other whitespace before content is no indentation: the content
+        // starts at it (Core 1.1 §7.1); a blank or comment line looks past it
+        if content > ascii_end && content < end && b[content] != b'#' {
+            content = ascii_end;
         }
 
         self.line_start = start;

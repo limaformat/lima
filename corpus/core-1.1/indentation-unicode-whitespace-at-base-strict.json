@@ -1,0 +1,23 @@
+{
+  "id": "core.indentation.unicode-whitespace.at-base.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "At a block's base indentation, a line whose spaces are followed by U+00A0 is skipped and ends nothing; the next entry is the block's.",
+  "input": "a:\n  b: 1\n   c: 2\n  d: 3\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 3,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "indentation",
+    "whitespace",
+    "error",
+    "strict"
+  ]
+}

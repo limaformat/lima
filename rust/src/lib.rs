@@ -26,10 +26,10 @@
 //!
 //! ## Conformance
 //!
-//! Checked against the shared, language-neutral conformance corpus: 310
+//! Checked against the shared, language-neutral conformance corpus: 328
 //! Lima Core 1.1 cases (the 218 Core 1.0 cases — a byte-frozen 149-case
 //! 1.0.0 baseline plus additive errata through 1.0.10 — without the 8 that
-//! Core 1.1 supersedes, plus its 100), 136 References 2.0 cases, and the
+//! Core 1.1 supersedes, plus its 118), 136 References 2.0 cases, and the
 //! 101-case frozen References 1.0 corpus — a regression target only; its
 //! resolver is not part of the published crate. All counts are pinned by
 //! the test suite.

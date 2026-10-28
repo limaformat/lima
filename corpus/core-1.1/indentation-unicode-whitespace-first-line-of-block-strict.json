@@ -1,0 +1,23 @@
+{
+  "id": "core.indentation.unicode-whitespace.first-line-of-block.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "A line indented by spaces and U+00A0 is no key: as a bare key's first line it opens the block but decides nothing, so the key is null.",
+  "input": "parent:\n   child: value\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "indentation",
+    "whitespace",
+    "error",
+    "strict"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "core.block-scalar.unicode-whitespace-line-ends-scalar.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "In a `|` scalar only a line of spaces is empty; a line of U+00A0 at the key's column or less is content and ends the scalar, so the deeper line after it belongs to no block.",
+  "input": "m:\n  b: |\n  \n    x\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 4,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "block-scalar",
+    "whitespace",
+    "indentation",
+    "error",
+    "strict"
+  ]
+}

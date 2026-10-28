@@ -87,14 +87,15 @@ func lineContent(l sourceLine) string {
 	return l.text[l.indent:]
 }
 func lineStructuralIndent(l sourceLine) int {
-	// A zero ASCII indent remains a top-level boundary; Rust's top-level
-	// range scan removes such a line from the preceding block before its
-	// BlockCursor observes any following Unicode whitespace.
-	if l.indent == 0 {
-		return 0
-	}
+	// Indentation is spaces only (Core 1.1 §7.1): other whitespace before
+	// content starts the content, and only a blank or comment line looks past
+	// it, as at a zero ASCII indent.
 	c := lineContent(l)
-	return l.indent + len(c) - len(trimLeftWhitespace(c))
+	rest := trimLeftWhitespace(c)
+	if l.indent == 0 || (rest != "" && rest[0] != '#') {
+		return l.indent
+	}
+	return l.indent + len(c) - len(rest)
 }
 func setP(m *[]pentry, key string, v *pvalue) {
 	for i := range *m {
@@ -247,7 +248,7 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 			keyEnd = len(cc) - 1
 			bare = true
 		}
-		ckRaw := trimWhitespace(cc[:keyEnd])
+		ckRaw := trimRightWhitespace(cc[:keyEnd]) // leading whitespace makes it no key (Core 1.1 §7.1)
 		if !isValidKey(ckRaw) {
 			// §5.1: an unrecognised line, an error in strict mode (Core 1.1 §10.1)
 			if strict {
@@ -307,7 +308,7 @@ func firstIsItem(lines []sourceLine, i, indent int) bool {
 		if sep < 0 && strings.HasSuffix(c, ":") {
 			sep = len(c) - 1
 		}
-		if sep >= 0 && isValidKey(trimWhitespace(c[:sep])) {
+		if sep >= 0 && isValidKey(trimRightWhitespace(c[:sep])) {
 			return false
 		}
 	}
@@ -470,7 +471,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				*idx++
 				continue
 			}
-			if !isValidKey(trimWhitespace(c[:sep])) {
+			if !isValidKey(trimRightWhitespace(c[:sep])) {
 				// §5.1: not a usable key — an unrecognised line, skipped in
 				// non-strict mode and an error in strict mode, as at the top
 				// level (Core 1.1 §10.1)
@@ -480,7 +481,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				*idx++
 				continue
 			}
-			key, e0 := stripKeyQuotes(trimWhitespace(c[:sep]), strict, l.number)
+			key, e0 := stripKeyQuotes(trimRightWhitespace(c[:sep]), strict, l.number)
 			if e0 != nil {
 				return nil, e0
 			}

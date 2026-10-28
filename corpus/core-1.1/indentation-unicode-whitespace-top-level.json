@@ -1,0 +1,17 @@
+{
+  "id": "core.indentation.unicode-whitespace.top-level",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "U+00A0 at column 0 is no indentation: it starts the content, so the line is unrecognised — skipped, or an error in strict mode.",
+  "input": " a: 1\nb: 2\n",
+  "expect": {
+    "result": {
+      "b": 2
+    }
+  },
+  "tags": [
+    "indentation",
+    "whitespace"
+  ]
+}

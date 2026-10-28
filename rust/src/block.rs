@@ -66,7 +66,12 @@ fn inline_or_block_scalar<'a, B: Builder, const CHECK_DUPLICATES: bool>(
     cursor.next(); // past the `key: |` line
     let mut body_lines: Vec<&'a str> = Vec::new();
     while cursor.valid {
-        if !cursor.empty() && cursor.ascii_indent <= key_indent {
+        // the scalar's own extent (§6.1.5, `build_block_scalar`): a line of
+        // spaces only is empty, any other ends it at the key's column or less
+        // — a line of other whitespace too, which is content here
+        if cursor.line_end - cursor.line_start > cursor.ascii_indent
+            && cursor.ascii_indent <= key_indent
+        {
             break;
         }
         body_lines.push(&cursor.source[cursor.line_start..cursor.line_end]);
@@ -105,6 +110,13 @@ fn find_key_sep(s: &str) -> Option<usize> {
 
 fn trim_slice(source: &str, start: usize, end: usize) -> &str {
     source[start..end].trim_matches(is_trim_whitespace)
+}
+
+/// A key, or a line's content, keeps the whitespace it starts with, which
+/// makes it no key (Core 1.1 §7.1: other whitespace before content is no
+/// indentation).
+fn trim_end_slice(source: &str, start: usize, end: usize) -> &str {
+    source[start..end].trim_end_matches(is_trim_whitespace)
 }
 
 fn cursor_content<'a>(cursor: &BlockCursor<'a>) -> &'a str {
@@ -268,9 +280,9 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
             if let (true, Some(pending)) = (items.is_some(), pending_item.as_mut()) {
                 let colon_pos = find_key_sep(trimmed);
                 let key_raw = match colon_pos {
-                    Some(c) => trim_slice(trimmed, 0, c),
+                    Some(c) => trim_end_slice(trimmed, 0, c),
                     None => match trimmed.strip_suffix(':') {
-                        Some(_) => trim_slice(trimmed, 0, trimmed.len() - 1),
+                        Some(_) => trim_end_slice(trimmed, 0, trimmed.len() - 1),
                         None => "",
                     },
                 };
@@ -499,11 +511,11 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                         break;
                     }
                     let cont_line =
-                        trim_slice(cursor.source, cursor.content_start, cursor.line_end);
+                        trim_end_slice(cursor.source, cursor.content_start, cursor.line_end);
                     let Some(csep) = find_key_sep(cont_line) else {
                         break;
                     };
-                    let ckey_raw = trim_slice(cont_line, 0, csep);
+                    let ckey_raw = trim_end_slice(cont_line, 0, csep);
                     if !is_valid_key(ckey_raw) {
                         break;
                     }
@@ -539,7 +551,8 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
             } else if colon_pos.is_none() && after_dash.strip_suffix(':').is_some_and(is_valid_key)
             {
                 let key_part = after_dash.strip_suffix(':').unwrap();
-                let key = strip_key_quotes(trim_slice(key_part, 0, key_part.len()), strict, line)?;
+                let key =
+                    strip_key_quotes(trim_end_slice(key_part, 0, key_part.len()), strict, line)?;
                 check_key_length(&key, line)?;
                 // §7.1 rule 3 / §7.2: a nested block must be indented deeper
                 // than the first key's column (after `- `), not merely deeper
@@ -581,7 +594,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
             }
             let colon_pos = find_key_sep(&trimmed);
             let key_attempt: Option<&str> = colon_pos
-                .map(|c| trim_slice(&trimmed, 0, c))
+                .map(|c| trim_end_slice(&trimmed, 0, c))
                 .or_else(|| trimmed.strip_suffix(':').filter(|k| !k.is_empty()));
             if key_attempt.is_some_and(|k| !is_valid_key(k)) {
                 // §5.1: not a usable key — an unrecognised line, skipped in
@@ -593,7 +606,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 cursor.next();
             } else if let Some(colon_pos) = colon_pos {
                 let entries = entries.get_or_insert_with(B::m_create);
-                let key = strip_key_quotes(trim_slice(&trimmed, 0, colon_pos), strict, line)?;
+                let key = strip_key_quotes(trim_end_slice(&trimmed, 0, colon_pos), strict, line)?;
                 check_key_length(&key, line)?;
                 if CHECK_DUPLICATES {
                     check_duplicate_key(B::m_has_key(entries, &key), &key, line, strict)?;
@@ -621,7 +634,8 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 )?;
                 B::m_set(entries, key, value);
             } else if let Some(key_part) = trimmed.strip_suffix(':') {
-                let key = strip_key_quotes(trim_slice(key_part, 0, key_part.len()), strict, line)?;
+                let key =
+                    strip_key_quotes(trim_end_slice(key_part, 0, key_part.len()), strict, line)?;
                 check_key_length(&key, line)?;
                 {
                     let entries_ref = entries.get_or_insert_with(B::m_create);
