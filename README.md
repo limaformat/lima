@@ -73,6 +73,37 @@ This recipe requires the opening `---` on the file's literal first line and a `-
 
 Full Core and References 2.0 syntax, resource limits, strict mode, and the complete API: **[`docs/guide.md`](docs/guide.md)**. Migrating existing YAML frontmatter: **[`docs/migrating-from-yaml.md`](docs/migrating-from-yaml.md)**.
 
+## What Lima guarantees
+
+Lima is small because it is specified, not specified because it is small. Three guarantees follow from that; the
+sizes further down are their evidence, not the point.
+
+- **Nothing is lost without a word.** In strict mode every content line belongs to a key, a block or a scalar, or it
+  is an error at its line (Core 1.1). A typo, a stray tab or a construct Lima does not have is reported where it
+  stands, with a hint where one helps:
+
+  ```text
+  description: >
+    A folded text
+
+  Lima: unexpected indentation at line 2: "A folded text" (">" is YAML's folded scalar; Lima writes "|" and
+  continues a line with "^^")
+  ```
+
+  Strict mode checks a closed list of conditions (Core §10.1) and nothing else; non-strict mode skips what it cannot
+  read, and the same list says what that is.
+- **One answer in every language.** TypeScript, Rust and Go implement the same specification independently. They
+  pass the same 336 Core 1.1 and 136 References 2.0 conformance cases — values, error codes and source lines alike —
+  and in every CI run they parse the same 100,000 random documents in both modes and must agree on every value,
+  warning and error. A disagreement is a defect or a gap in the specification, and once decided it becomes a corpus
+  case.
+- **Types without guessing.** `true` and `false` are the only booleans, so `country: NO` stays the string `"NO"` —
+  YAML 1.1's wider set is the well-known ["Norway problem"](https://hitchdev.com/strictyaml/why/implicit-typing-removed/).
+  Dates have fixed formats, without the locale ambiguity of `MM/DD/YYYY` and `DD/MM/YYYY`; integers outside the safe
+  range stay strings. There is one behaviour and no schema to choose: js-yaml's own newer default no longer resolves
+  timestamps at all, unlike most existing frontmatter tooling. Document size, key and scalar length, nesting depth and
+  key count are normative limits, checked in both modes.
+
 ## Why not YAML / TOML / JSON?
 
 - **YAML** — a large, feature-rich grammar. Frontmatter typically uses a small fraction of it, and the unused parts are exactly where implementations diverge from each other and where past CVEs have concentrated (see [Security](#security), below).
@@ -83,9 +114,28 @@ Lima is what you'd write if you just wanted key-value pairs that work, with a sp
 
 Why does fifteen lines of frontmatter need a specification five times longer than JSON's or TOML's?
 
-### How much smaller, actually
+### What Lima leaves out
 
-Numbers instead of adjectives. Word count is the most robust metric here (line count depends on wrapping conventions); Lima Core is the fair implementation/spec comparison unit, since References is an optional convenience layer with no direct YAML equivalent. The three tables keep unlike measurements separate instead of filling cells with arbitrary JSON or TOML libraries. Implementation size is split into code and comments, counted separately rather than mixed into one figure — comment density is a matter of authoring style, not grammar complexity, and conflating the two would let whichever project comments less look artificially smaller.
+[Appendix A](docs/lima-core-1.0-spec.md#12-appendix-a-what-lima-core-does-not-support) lists 19 constructs Lima Core explicitly excludes. Checked individually against what each one is actually for: 7 are YAML-only constructs tied to well-documented complexity or security concerns (folded block scalars and chomping indicators, nested flow/sequence structures, anchors and aliases, tags, multi-document streams); 5 more remove specifically locale- or format-ambiguous date handling (including the two constructs that are ambiguous *by definition* without a locale: `MM/DD/YYYY` vs `DD/MM/YYYY`); the remaining 7 are Lima's own type-system and References-boundary decisions, not YAML-complexity avoidance as such. On top of that list, a few things never needed an Appendix A entry because the grammar never had them to begin with: YAML 1.1's wider implicit-boolean set, non-scalar mapping keys, merge keys (`<<`).
+
+- **A grammar expressible without regex backtracking.** The TypeScript implementation's tokenizer uses zero lookahead/lookbehind/backreference constructs and zero genuinely backtracking-dependent matching — verifiably RE2-representable, the same property linear-time engines like Google's RE2 and Rust's `regex` crate require. Not a claim about immunity to slow input in general, just that the grammar itself doesn't force a backtracking engine the way some regex-heavy formats do.
+
+None of this makes Lima a YAML replacement — it's deliberately scoped to frontmatter, not general-purpose data serialisation, and the constructs it leaves out are exactly the ones YAML-parsing frontmatter rarely needs in the first place. The trade-off is explicit, not hidden: see [Appendix A](docs/lima-core-1.0-spec.md#12-appendix-a-what-lima-core-does-not-support) for the full, reasoned list.
+
+## Security
+
+Two of YAML's excluded constructs map directly onto real, disclosed vulnerabilities — not hypothetical risk, documented CVEs:
+
+- **[CVE-2020-1747](https://nvd.nist.gov/vuln/detail/CVE-2020-1747)** (PyYAML, CVSS 9.8 critical) — arbitrary code execution via the `!!python/object/new` tag construct in untrusted YAML input. Lima has no tag system at all (Appendix A); there is no construct for this class of bug to attach to.
+- **[CVE-2019-11253](https://nvd.nist.gov/vuln/detail/CVE-2019-11253)** (Kubernetes API server) — denial of service via anchor/alias exponential expansion (a "YAML bomb": each alias re-expands its anchor's full content, nesting a handful of levels deep produces gigabytes from a few kilobytes of input). Lima has no anchors or aliases (Appendix A). Notably, published mitigation guidance for this exact CVE class recommends "parsers with intentionally limited capabilities like StrictYAML" — the same restricted-grammar approach Lima takes, independently arrived at.
+
+This isn't "Lima is unhackable" — it's narrower and more honest than that: these two specific, named attack classes have no construct to exploit, by construction, because the constructs were never added rather than added-then-restricted. Lima's own resource limits (document size, scalar length, node count, nesting depth — Core §9, checked in both parse modes) are separate, defence-in-depth protection against oversized or pathologically nested input generally, independent of any single construct.
+
+Worth being precise about the threat model this actually matters for: both CVEs above involve YAML parsing *untrusted* input (a public API accepting arbitrary submissions). For frontmatter you write yourself, that's not the threat you're facing — this section is most relevant if something in your pipeline parses frontmatter from a source you don't fully control (a CMS accepting user content, a multi-tenant platform, etc.), less so for a personal blog's own files.
+
+## How much smaller, actually
+
+Small as a consequence, not as the goal — and measured rather than claimed. Word count is the most robust metric here (line count depends on wrapping conventions); Lima Core is the fair implementation/spec comparison unit, since References is an optional convenience layer with no direct YAML equivalent. The three tables keep unlike measurements separate instead of filling cells with arbitrary JSON or TOML libraries. Implementation size is split into code and comments, counted separately rather than mixed into one figure — comment density is a matter of authoring style, not grammar complexity, and conflating the two would let whichever project comments less look artificially smaller.
 
 **Specification length:**
 
@@ -110,37 +160,13 @@ Both figures count the committed TypeScript source — not the bundled, minified
 
 The Lima Core 1.1 spec is **~2.5× shorter** than YAML 1.2.2 (8,920 words vs. 21,961) and about twice JSON's or TOML's — it still documents type coercion, date parsing, resource limits, and a full strict-mode error catalogue that the simpler formats skip, and it still reads in one sitting.
 
-js-yaml's `load()` path is ~11,800 words of TypeScript because it also contains support for anchors and aliases, merge keys (`<<`), multi-document streams, `%YAML`/`%TAG` directives, and 21 tag implementations across its four exposed schemas. Ordinary frontmatter does not require those features; tags and anchors/aliases are also the constructs implicated in the two concrete CVEs discussed below. Lima Core is about **7,500 words of code** for the subset that's actually left, plus about **4,100 words of comments** — comments are roughly 36% of the counted committed source, and many tie an implementation detail directly to a spec section. Being smaller is the easy part to measure; the part that matters is that the machinery that isn't there can't misbehave.
+js-yaml's `load()` path is ~11,800 words of TypeScript because it also contains support for anchors and aliases, merge keys (`<<`), multi-document streams, `%YAML`/`%TAG` directives, and 21 tag implementations across its four exposed schemas. Ordinary frontmatter does not require those features; tags and anchors/aliases are also the constructs implicated in the two concrete CVEs discussed below. Lima Core is about **8,500 words of code** for the subset that's actually left, plus about **5,300 words of comments** — comments are roughly 38% of the counted committed source, and many tie an implementation detail directly to a spec section. Being smaller is the easy part to measure; the part that matters is that the machinery that isn't there can't misbehave.
 
 The complete `@limaformat/lima` 0.6.0 tarball — Core *and* References 2.0 — is **~5.6× smaller** than js-yaml 5.2.3 (60.8 KB vs. 338 KB); part of that is scope, part is that js-yaml also ships pre-built browser bundles.
 
 This isn't a case of counting favourably: separating "Core" from "References" in the implementation requires following actual imports, not just file boundaries. Shared files are divided by what each public entry point actually reaches — for instance, three References 2.0 §2.4 source-position helpers (`stripCommentKeepEscapes`, `physicalRaw`, `rawOffsetOf`) that `parseCore` never executes count as References even though they live in shared parser files. The internally isolated, briefly-published References 1.0 code is excluded except for helpers actually imported by References 2.0. Generated `dist/`, tests, benchmarks, and dead code are excluded from both sides.
 
-Reproduce the implementation counts from `js/` with `bun run wordcount -- --manifest scripts/wordcount.manifest.json --bucket lima-core-1.0` and `bun run wordcount -- --manifest scripts/wordcount.manifest.json --bucket lima-references-2.0-additions`. `bun run bench:vs-yaml` measures parse speed against js-yaml on realistic frontmatter — Bun-only numbers, don't assume they transfer proportionally to other JavaScript engines; `bun src/run.ts` (from `compat/`) reports where Lima and YAML actually diverge on the same input, not just how long each takes. Migrating existing YAML frontmatter to Lima: see [`docs/migrating-from-yaml.md`](docs/migrating-from-yaml.md), which uses this same divergence report as its evidence.
-
-### What a smaller grammar buys
-
-[Appendix A](docs/lima-core-1.0-spec.md#12-appendix-a-what-lima-core-does-not-support) lists 19 constructs Lima Core explicitly excludes. Checked individually against what each one is actually for: 7 are YAML-only constructs tied to well-documented complexity or security concerns (folded block scalars and chomping indicators, nested flow/sequence structures, anchors and aliases, tags, multi-document streams); 5 more remove specifically locale- or format-ambiguous date handling (including the two constructs that are ambiguous *by definition* without a locale: `MM/DD/YYYY` vs `DD/MM/YYYY`); the remaining 7 are Lima's own type-system and References-boundary decisions, not YAML-complexity avoidance as such. On top of that list, a few things never needed an Appendix A entry because the grammar never had them to begin with: YAML 1.1's wider implicit-boolean set, non-scalar mapping keys, merge keys (`<<`).
-
-- **No implicit type ambiguity.** YAML 1.1's broader boolean set (`yes`/`no`/`on`/`off`/`y`/`n`, case-insensitive) is the source of the well-known ["Norway problem"](https://hitchdev.com/strictyaml/why/implicit-typing-removed/) — a country code `NO` silently becoming `false`. Lima recognises only the literal tokens `true`/`false`; `country: NO` stays the string `"NO"`.
-- **No schema selection required for consistent behaviour.** YAML needs an explicit schema choice to get predictable results — js-yaml's own newer default no longer resolves timestamps at all, unlike what most existing frontmatter tooling (Jekyll, older js-yaml versions) actually produces. Lima has exactly one behaviour, always.
-- **Hard resource limits are part of the normative spec**, not an implementation afterthought: document size, key length, scalar length, and nesting depth are all specified limits, checked in both parse modes.
-- **A closed strict-mode error list** (Core §10.1) — strict mode validates an explicit, enumerated set of conditions, not "everything a parser feels like flagging." Since Core 1.1 that set includes one plain rule: every content line belongs to the structure, so a typo or a YAML-only construct is reported where it stands instead of being dropped.
-- **A grammar expressible without regex backtracking.** The TypeScript implementation's tokenizer uses zero lookahead/lookbehind/backreference constructs and zero genuinely backtracking-dependent matching — verifiably RE2-representable, the same property linear-time engines like Google's RE2 and Rust's `regex` crate require. Not a claim about immunity to slow input in general, just that the grammar itself doesn't force a backtracking engine the way some regex-heavy formats do.
-- **An implementation-independent conformance corpus** with 336 Core 1.1 cases (the 218 Core 1.0 cases — a byte-frozen 149-case 1.0.0 baseline plus additive errata through 1.0.10 — without the 8 that Core 1.1 supersedes, plus 126 Core 1.1 cases) and 136 References 2.0 cases, all count-pinned and passed by TypeScript, Rust, and Go. Reproduce the independently runnable targets from `corpus/runner/`.
-
-None of this makes Lima a YAML replacement — it's deliberately scoped to frontmatter, not general-purpose data serialisation, and the constructs it leaves out are exactly the ones YAML-parsing frontmatter rarely needs in the first place. The trade-off is explicit, not hidden: see [Appendix A](docs/lima-core-1.0-spec.md#12-appendix-a-what-lima-core-does-not-support) for the full, reasoned list.
-
-### Security
-
-Two of YAML's excluded constructs map directly onto real, disclosed vulnerabilities — not hypothetical risk, documented CVEs:
-
-- **[CVE-2020-1747](https://nvd.nist.gov/vuln/detail/CVE-2020-1747)** (PyYAML, CVSS 9.8 critical) — arbitrary code execution via the `!!python/object/new` tag construct in untrusted YAML input. Lima has no tag system at all (Appendix A); there is no construct for this class of bug to attach to.
-- **[CVE-2019-11253](https://nvd.nist.gov/vuln/detail/CVE-2019-11253)** (Kubernetes API server) — denial of service via anchor/alias exponential expansion (a "YAML bomb": each alias re-expands its anchor's full content, nesting a handful of levels deep produces gigabytes from a few kilobytes of input). Lima has no anchors or aliases (Appendix A). Notably, published mitigation guidance for this exact CVE class recommends "parsers with intentionally limited capabilities like StrictYAML" — the same restricted-grammar approach Lima takes, independently arrived at.
-
-This isn't "Lima is unhackable" — it's narrower and more honest than that: these two specific, named attack classes have no construct to exploit, by construction, because the constructs were never added rather than added-then-restricted. Lima's own resource limits (document size, scalar length, node count, nesting depth — Core §9, checked in both parse modes) are separate, defence-in-depth protection against oversized or pathologically nested input generally, independent of any single construct.
-
-Worth being precise about the threat model this actually matters for: both CVEs above involve YAML parsing *untrusted* input (a public API accepting arbitrary submissions). For frontmatter you write yourself, that's not the threat you're facing — this section is most relevant if something in your pipeline parses frontmatter from a source you don't fully control (a CMS accepting user content, a multi-tenant platform, etc.), less so for a personal blog's own files.
+Reproduce the implementation counts from `js/` with `bun run wordcount -- --manifest scripts/wordcount.manifest.json --bucket lima-core-1.1` and `bun run wordcount -- --manifest scripts/wordcount.manifest.json --bucket lima-references-2.0-additions`. `bun run bench:vs-yaml` measures parse speed against js-yaml on realistic frontmatter — Bun-only numbers, don't assume they transfer proportionally to other JavaScript engines; `bun src/run.ts` (from `compat/`) reports where Lima and YAML actually diverge on the same input, not just how long each takes. Migrating existing YAML frontmatter to Lima: see [`docs/migrating-from-yaml.md`](docs/migrating-from-yaml.md), which uses this same divergence report as its evidence.
 
 ## Status
 
