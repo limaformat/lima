@@ -733,6 +733,10 @@ static bool scan_structural(Scanner *s, TSLexer *lexer, const bool *valid_symbol
 
   uint16_t cur = top_ind(s);
 
+  // Core §7.1 rule 7: a comment line does not affect indentation. One indented deeper than the current level opens
+  // no block (it would have, as an INDENT, and the line after it would then not fit).
+  if (lexer->lookahead == '#' && indent_length > cur) indent_length = cur;
+
   if (valid_symbols[INDENT] && indent_length > cur) {
     push_ind(s, indent_length);
     lexer->mark_end(lexer);
@@ -773,6 +777,15 @@ bool tree_sitter_lima_external_scanner_scan(void *payload, TSLexer *lexer, const
   skip_hws(lexer);
 
   int32_t c = lexer->lookahead;
+
+  // Core §7.1 rule 6: a blank line at the start of a line, where no structural token is wanted (after a comment line,
+  // which takes its own newline), is skipped like whitespace.
+  while (starts_at_line_start && (c == '\n' || c == '\r') &&
+         !(valid_symbols[NEWLINE] || valid_symbols[INDENT] || valid_symbols[DEDENT])) {
+    lexer->advance(lexer, true);
+    skip_hws(lexer);
+    c = lexer->lookahead;
+  }
 
   // Comment (external + extra): emit a comment node for a '#' at any position.
   if (c == '#' && valid_symbols[COMMENT]) {

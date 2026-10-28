@@ -22,6 +22,7 @@ const SYNTACTIC_CODES = new Set([
   "INVALID_INDENTATION",
   "INVALID_QUOTE",
   "INVALID_ESCAPE",
+  "UNRECOGNIZED_LINE",
 ]);
 
 function loadFixtures(dir: string): Fixture[] {
@@ -58,8 +59,10 @@ if (build.exitCode !== 0) {
   process.exit(1);
 }
 
+// Core 1.1: the Core 1.0 fixtures it supersedes stay (the grammar is tolerant either way), and its own join
 const fixtures = [
   ...loadFixtures(join(CORPUS_DIR, "core")),
+  ...loadFixtures(join(CORPUS_DIR, "core-1.1")),
   ...loadFixtures(join(CORPUS_DIR, "references-2.0")),
 ];
 const resolved = fixtures.map((fixture, index) => {
