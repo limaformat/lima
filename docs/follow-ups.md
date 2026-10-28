@@ -23,3 +23,29 @@ Core reads as a later key of the item. Both parse without an error node; the
 missing nodes only lose their highlighting. Teach the scanner both, pin the
 trees in `scripts/gen-corpus.ts`, and move the Zed extension's grammar
 commit with the next release.
+
+## Strict mode's second pass over block lines
+
+Core 1.1's strict range check reads every line of a top-level block a second
+time after the block parser has (`js/src/structure.ts`,
+`rust/src/structure.rs`). Against 0.5.1, strict mode costs +5 % in
+TypeScript and +10–12 % in Rust on real front matter (Go checks in its one
+pass and costs nothing). Let the block parser report how far it read, and
+start the range check there. The strict scenarios of the cross-language
+benchmarks show the effect.
+
+## A hint for indentation by other whitespace
+
+A line indented by spaces and U+00A0 is reported as unrecognised with the
+generic hint for keys ("an unquoted key has letters, digits, …"). Name the
+cause instead, e.g. "U+00A0 before the key; Lima indents by spaces only".
+A message change only; a patch release.
+
+## Core 1.2: a table of line kinds
+
+Every finding of the Core 1.1 reviews sat in §7's prose on lines and
+indentation, where each new sentence had to agree with all the others. A
+normative table — kind of line × context → outcome in each mode — would
+state each case once, and the differential test's generator could produce
+every row of it on purpose. An erratum if it only restates what holds;
+Core 1.2 otherwise.
