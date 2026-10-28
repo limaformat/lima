@@ -13,5 +13,5 @@ language_ids = { Lima = "lima" }
 
 [grammars.lima]
 repository = "https://github.com/limaformat/lima"
-commit = "dfcc22918d9d8e2a89d54409348414137739a6f6"
+commit = "833a953c3b2ed5c16bb9db64040cce86098839ca"
 path = "editors/tree-sitter-lima"

@@ -88,7 +88,7 @@ vim.api.nvim_create_autocmd("User", {
     require("nvim-treesitter.parsers").lima = {
       install_info = {
         url = "https://github.com/limaformat/lima",
-        revision = "dfcc22918d9d8e2a89d54409348414137739a6f6",
+        revision = "833a953c3b2ed5c16bb9db64040cce86098839ca",
         location = "editors/tree-sitter-lima",
         queries = "editors/tree-sitter-lima/queries",
       },
@@ -139,7 +139,7 @@ parser_config.lima = {
       "editors/tree-sitter-lima/src/parser.c",
       "editors/tree-sitter-lima/src/scanner.c",
     },
-    revision = "dfcc22918d9d8e2a89d54409348414137739a6f6",
+    revision = "833a953c3b2ed5c16bb9db64040cce86098839ca",
   },
 }
 
@@ -170,7 +170,7 @@ args = ["--yes", "@limaformat/lima-language-server", "--stdio"]
 
 [[grammar]]
 name = "lima"
-source = { git = "https://github.com/limaformat/lima", rev = "dfcc22918d9d8e2a89d54409348414137739a6f6", subpath = "editors/tree-sitter-lima" }
+source = { git = "https://github.com/limaformat/lima", rev = "833a953c3b2ed5c16bb9db64040cce86098839ca", subpath = "editors/tree-sitter-lima" }
 ```
 
 Helix has no built-in `.lima` association, so the `[[language]]` block is
