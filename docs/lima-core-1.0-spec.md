@@ -8,7 +8,7 @@ This document is the normative specification for Lima Core 1.1. It defines the s
 
 Lima is not a general-purpose data format. It is a small, predictable frontmatter format — the part of YAML that frontmatter actually needs, with well-defined types and no surprises.
 
-**Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented where no block level is open, at the top level as one level down (§7.1 rule 5), an unindented line that matches no key pattern (§4), and a line of a block mapping whose key the key grammar rejects (§5.1). Non-strict mode skips these lines, as before. Core 1.1 also settles what Core 1.0 left unsaid, where implementations differed: a bare key's sequence may start at the key's own column, as YAML writes it (§7.2); a block holds mapping entries or sequence items, as its first line decides (§7.1); an item whose value is a flow sequence is a nested sequence (§7.2); a `|` with no content lines is `''` (§6.1.5); and the end of the input ends the last line as a line terminator does (§4), so a last `key:` is a bare key.
+**Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented where no block level is open, at the top level as one level down (§7.1 rule 5), an unindented line that matches no key pattern (§4), and a line of a block mapping whose key the key grammar rejects (§5.1). Non-strict mode skips these lines, as before. Core 1.1 also settles what Core 1.0 left unsaid, where implementations differed: a bare key's sequence may start at the key's own column, as YAML writes it (§7.2); a block holds mapping entries or sequence items, as its first entry or item decides, and a line non-strict mode skips is as if it were absent (§7.1); an item whose value is a flow sequence is a nested sequence (§7.2); a `|` with no content lines is `''` (§6.1.5); and the end of the input ends the last line as a line terminator does (§4), so a last `key:` is a bare key.
 
 ---
 
@@ -492,7 +492,7 @@ Lima uses indentation to determine block structure. The following rules apply:
 6. Empty lines (blank or whitespace-only) do not affect base indentation and are skipped.
 7. Comment lines (first non-whitespace character is `#`) do not affect base indentation and are skipped.
 
-A block holds mapping entries or sequence items, as its first content line decides. A line of the other kind at its base indentation is skipped in non-strict mode, and what the block holds stays; strict mode throws. A bare key's sequence may also start at the key's own column instead of deeper (§7.2, compact sequences).
+A block holds mapping entries or sequence items, as its first entry or item decides. A line of the other kind at its base indentation is skipped in non-strict mode, and what the block holds stays; strict mode throws. A line non-strict mode skips — of the other kind, freetext, a line whose key the key grammar rejects — is as if it were absent: it decides nothing, and it ends neither the block nor the object item before it. A bare key's sequence may also start at the key's own column instead of deeper (§7.2, compact sequences).
 
 Minimum indentation is one space. There is no required indentation increment — two spaces is conventional but not normative.
 
@@ -530,7 +530,7 @@ authors:
 
 Nested maps within array object items follow the same indentation model recursively.
 
-**Nested sequences:** Array-in-array (nested block sequences) are not supported. In non-strict mode, the entire nested sequence block is consumed and represented by a single `null` item in the outer sequence — subsequent lines of the inner sequence are not reinterpreted as outer items. In strict mode, throw. An item's value is an inline value (§15.3), so an item whose value is a flow sequence, such as `- [a, b]` or `- []`, is a nested sequence too: non-strict `null`, strict throw. Any other item value that begins with `[` is read as an inline value is (§7.4: an unclosed `[` is a string fallback in non-strict mode and throws in strict mode).
+**Nested sequences:** Array-in-array (nested block sequences) are not supported. In non-strict mode, the entire nested sequence block is consumed and represented by a single `null` item in the outer sequence — subsequent lines of the inner sequence are not reinterpreted as outer items. In strict mode, throw. An item's value is an inline value (§15.3), so an item whose value is a flow sequence, such as `- [a, b]` or `- []`, is a nested sequence too: non-strict `null`, strict throw. Any other item value that begins with `[` or `{` is read as any inline value is (§7.4, §7.5: an unclosed `[` or `{` is a string fallback in non-strict mode and throws in strict mode).
 
 **Compact sequences:** A bare key's sequence may also start at the key's own column, as YAML front matter often writes it:
 
@@ -892,7 +892,7 @@ mapping-entry      = key, inline-separator, block-scalar-marker, NL,
 
 block-sequence     = sequence-entry, { sequence-entry | ignored-line } ;
 
-sequence-entry     = "-", [ " ", sequence-value ], NL,
+sequence-entry     = "-", [ item-separator, sequence-value ], NL,
                      [ INDENT, sequence-continuation, DEDENT ] ;
 
 sequence-value     = inline-value
@@ -903,6 +903,8 @@ object-entry-head  = key, inline-separator, inline-value
 
 sequence-continuation
                   = block-mapping ;
+
+item-separator     = ? one or more whitespace characters (§7.2) ? ;
 
 ignored-line       = ? blank or comment-only line outside a block scalar ? ;
 ```

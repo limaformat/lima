@@ -160,3 +160,25 @@ left the implementations to differ. The maintainer accepted all proposals:
 Also found: whitespace-only lines could make the Go package panic, and Go lost an object item's keys after a blank or
 comment line, both already in 0.5.1; both are fixed. One divergence stays open, outside this decision: a line
 indented by spaces and then Unicode whitespace such as U+00A0, which §3 leaves undefined.
+
+## Review 3 (Codex CLI, 2026-10-28) and the differential test
+
+The third review found no blocker. Its findings, and what was done:
+
+1. A block whose first line is neither an entry nor an item (`a:` / `  freetext` / `  - item`) had no single non-strict
+   outcome. §7.1 now says that the first entry or item decides, and that a line non-strict mode skips is as if it were
+   absent: it decides nothing and ends neither the block nor the object item before it.
+2. The packages are still at 0.5.1: the version moves to 0.6.0 in the release commit, as planned.
+3. References 2.0 and the README said that Core 1.1 changes strict mode only; corrected.
+4. Appendix D allowed only a space after a sequence dash; it now has `item-separator`, whitespace as §7.2 says.
+5. A wording slip in §7.2; corrected.
+
+The maintainer then made the three-way differential test a gate (`corpus/runner/src/differential.ts`, a CI job). Its
+structured documents found, all already in 0.5.1: in Go, a negative number as an item (`- -7`) read as a nested
+sequence, an empty `|` as a later key of an object item read `"|"`, a first line that is neither entry nor item made
+the block a mapping, and a skipped line ended an object item; in TypeScript and Rust, an unclosed `{` as an item was
+accepted in strict mode. And one the comparison cannot find, since all three agreed: `| # c` below the top level was a
+block scalar, which §6.1.5 and §15.7 rule out (the marker stands alone); the tree-sitter scanner made it an error
+node, and dropped the `|` of `a: | x`. All are fixed, with corpus cases (and two pinned tree-sitter trees); the gate
+runs four seeds of 25,000 documents with no disagreement, and sixteen more seeds (about 770,000 parses per
+implementation) found none either.

@@ -8,8 +8,7 @@ This document specifies the Lima References Extension 2.0. It is a normative
 addition to Lima Core 1.1 and must be read together with that specification.
 It supersedes Lima References 1.0 for parsers that claim References 2.0
 conformance; it does not modify Lima Core 1.1. Until Core 1.1 (2026-10-28), it
-was an addition to Lima Core 1.0; Core 1.1 changes strict mode only, and
-nothing in this document.
+was an addition to Lima Core 1.0; Core 1.1 changes nothing in this document.
 
 A Lima Core parser treats all References 2.0 tokens as ordinary string content.
 A References 2.0 parser recognises only the syntax defined here. References 1.0
