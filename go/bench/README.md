@@ -101,4 +101,7 @@ Cross-language Lima:
 - wide block array and interpolation-heavy input
 - repeated copies of a large partial
 - key-count and reference-count scaling sweeps
+- strict mode: the typical document through Core and References, and a front
+  matter with a mapping, a list, object items and a `|` scalar, strict and
+  non-strict
 - separate Go error-path benchmarks

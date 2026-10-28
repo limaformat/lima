@@ -2,9 +2,9 @@
   "suite": "core-1.1",
   "frozen": true,
   "baselineVersion": "1.1.0",
-  "baselineCaseCount": 124,
+  "baselineCaseCount": 126,
   "specVersion": "1.1.0",
-  "caseCount": 124,
+  "caseCount": 126,
   "supersedes": [
     "core.block-scalar.chomping-indicator-unsupported.strict",
     "core.block-scalar.folded-marker-unsupported.strict",
@@ -134,6 +134,18 @@
       "path": "core-1.1/block-scalar-marker-with-trailing-text.json",
       "id": "core.block-scalar.marker-with-trailing-text",
       "sha256": "e20a81263ecbf388d2e767351ca9b926c0cdd71e267fcfd69d1063c5a781bc8d",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-object-item-wide-dash-strict.json",
+      "id": "core.block-scalar.object-item-wide-dash.strict",
+      "sha256": "e9853e78c88ba5ebf97e420f5ee9ba59e71bc49d302895629be0783357ac5f2a",
+      "since": "1.1.0"
+    },
+    {
+      "path": "core-1.1/block-scalar-object-item-wide-dash.json",
+      "id": "core.block-scalar.object-item-wide-dash",
+      "sha256": "bfba4bfe7fc6f5501f996738e6e11ad8e984c324529acff296d115972b25cf8b",
       "since": "1.1.0"
     },
     {

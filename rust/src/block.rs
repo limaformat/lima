@@ -519,7 +519,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
                     raw,
                     marker,
-                    base_indent + 2,
+                    item_key_column,
                     line,
                     value_col,
                     after_dash_raw.get(value_start..).unwrap_or(raw),

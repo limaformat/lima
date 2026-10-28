@@ -103,9 +103,15 @@ function sequence(rng: Rng, indent: number, depth: number, lines: string[]): voi
 			lines.push(dash + pick(rng, VALUES))
 		} else if (r < 0.5) {
 			lines.push(pad(indent) + '-')
-		} else if (r < 0.75) {
+		} else if (r < 0.7) {
 			lines.push(inlineEntry(rng, 0, dash + pick(rng, KEYS)))
 			for (let m = below(rng, 3); m > 0; m--) entry(rng, indent + 2, depth + 1, lines)
+		} else if (r < 0.75) {
+			// a `|` scalar as the item's first key, its body deeper than the key's column, wherever the dash puts it
+			lines.push(dash + pick(rng, KEYS) + ': |')
+			const column = dash.replace('\t', ' ').length
+			for (let m = below(rng, 3); m > 0; m--) lines.push(pad(column + below(rng, 3)) + pick(rng, VALUES))
+			if (chance(rng, 0.6)) lines.push(inlineEntry(rng, column, pick(rng, KEYS)))
 		} else if (r < 0.87) {
 			lines.push(dash + pick(rng, KEYS) + ':')
 			if (chance(rng, 0.4)) sequence(rng, indent + 2, depth + 1, lines)

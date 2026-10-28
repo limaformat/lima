@@ -322,7 +322,7 @@ const parseCursorBlock = <V, M>(
 				const valueCol = wantSource ? afterDashCol + valueStart + leadingWsLen(afterDash.slice(valueStart)) : 0
 				pendingColumn = cursor.indent + dashPrefixLen(cursor)
 				pendingItem = builder.createMappingWith(key,
-					inlineOrBlockScalar(raw, trimSlice(afterDashRaw, valueStart, afterDashRaw.length) === '|', baseIndent + 2, line, valueCol,
+					inlineOrBlockScalar(raw, trimSlice(afterDashRaw, valueStart, afterDashRaw.length) === '|', pendingColumn, line, valueCol,
 						wantSource ? afterDashRaw.slice(valueStart) : raw, cursor, ctx, builder))
 				// the item's later keys at its key column; any other line is the block loop's (§7.2)
 				while (cursor.valid && cursor.indent === pendingColumn) {

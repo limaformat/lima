@@ -49,6 +49,9 @@ non-strict results change with them (below).
 
 ### Fixed
 
+- A `|` scalar as an object item's first key measured its body from the dash
+  plus two columns, so after wider whitespace (`-   a: |`) it took the item's
+  next key as text; it measures from the key's column (§6.1.5, §7.2).
 - A line of spaces only, in a block mapping or a sequence item, could panic
   (`slice bounds out of range`) on untrusted input; it is a blank line
   (§7.1 rule 6).
@@ -70,8 +73,8 @@ non-strict results change with them (below).
   at the dash's column that is no item — ended the object item before it, and
   its later keys were lost; it is as if absent (Core 1.1 §7.1).
 
-The shared conformance corpus is at 334 Core cases: the 218 Core 1.0 cases
-without the 8 that Core 1.1 supersedes, plus 124 Core 1.1 cases
+The shared conformance corpus is at 336 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 126 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

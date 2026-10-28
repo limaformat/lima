@@ -68,7 +68,7 @@ export const BASELINE_DIGESTS: Record<SuiteManifest['suite'], string> = {
 	'core-1.0': '35957b2f1803b76eeb328b687b3dd9231d192523598c1ada46b47c914b48cd68',
 	// Core 1.1 (2026-10-28): lines that belong to no structure throw in strict mode; the eight Core 1.0 cases it
 	// replaces stay in the 1.0 baseline above (docs/decisions/top-level-indentation-after-inline-value.md).
-	'core-1.1': 'b25cba75f0ce6138139e4e40f65da3df2ae8ce36d4f58429c610aee6a2f623cf',
+	'core-1.1': 'ef987f6e0bb667dedf1baa56ddb40bad5492cc91503ec96e9d103a4fc0ebca99',
 	// References 1.0 baseline amended once, 2026-09: the §5.1 key-grammar fix
 	// (MAJOR 1) drops the unquoted `{($a): v}` flow key in
 	// references/unsupported-references-in-keys-remain-literal.json — a case

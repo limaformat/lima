@@ -336,7 +336,7 @@ skips the whitespace after `: ` before any scalar path and before the
 References 2.0 source column is taken, in `core.ts` and `core.rs`; the
 reported columns were already physical and stay identical in all three.
 
-## Core 1.1 (2026-10-28) — C-255–C-290, `corpus/core-1.1/`
+## Core 1.1 (2026-10-28) — C-255–C-291, `corpus/core-1.1/`
 
 Strict mode rejects a content line that belongs to no structure
 ([decision](../../decisions/top-level-indentation-after-inline-value.md)).
@@ -384,6 +384,7 @@ and the default run leaves them out.
 | C-288 | §1, §7.1 | Indentation | A blank or comment line stays one whatever whitespace precedes it; a dash may be followed by any whitespace | positive | both |
 | C-289 | §6.1.5 | Block scalar | In a `\|` scalar other whitespace is content, and a line of it at the key's column ends the scalar; strict mode then throws for the deeper line after it (TypeScript and Rust dropped it) | pair | both |
 | C-290 | §7.2 | Block sequence | An object item's later keys stand at its first key's column, however wide the dash's whitespace: a deeper line is skipped and the item goes on, a shallower one ends it, strict mode throws for either (all three took any deeper line as a key) | pair | both |
+| C-291 | §6.1.5, §7.2 | Block scalar | A `\|` scalar as an object item's first key holds the lines deeper than that key's column, however wide the dash's whitespace (all three measured from the dash plus two) | positive | both |
 
 Found while implementing: the TypeScript scanner took a top-level `key:` at the
 very end of the input for no key (it wanted a newline or a space after the

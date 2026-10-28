@@ -415,9 +415,9 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				*idx++
 				var v *pvalue
 				var e error
-				// The key sits after `- `, two columns past the dash.
+				// a `|` scalar's lines are deeper than its key's column, after `- `
 				if rawVal == "|" && !commented {
-					v, _, e = blockScalarValue(rawVal, indent+2, l.number, lines, idx, captureReferences)
+					v, _, e = blockScalarValue(rawVal, itemKeyColumn(l, c), l.number, lines, idx, captureReferences)
 				} else {
 					restByteInC := 1 + leadingWsBytes(c[1:])
 					valueByte := l.indent + restByteInC + sep + 2 + leadingWsBytes(rest[sep+2:])

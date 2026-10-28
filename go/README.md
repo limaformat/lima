@@ -38,9 +38,9 @@ The returned `Value` has the concrete forms `Null`, `Bool`, `Int64`,
 `Float64`, `String`, `Instant`, `Array`, and insertion-ordered `Map`.
 `LimaError` exposes stable diagnostic fields and works with `errors.As`.
 
-The implementation is verified against the shared conformance corpus: 334
+The implementation is verified against the shared conformance corpus: 336
 Lima Core 1.1 cases (the 218 Core 1.0 cases — a byte-frozen 149-case 1.0.0
 baseline plus additive errata through 1.0.10 — without the 8 Core 1.1
-supersedes, plus its 124), 136 References 2.0 cases, and the 101-case frozen
+supersedes, plus its 126), 136 References 2.0 cases, and the 101-case frozen
 References 1.0 corpus (a regression target only — its resolver is not part
 of the published module). All counts are pinned; zero cases skipped.

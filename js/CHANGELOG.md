@@ -51,6 +51,9 @@ non-strict results change with them (below).
 
 ### Fixed
 
+- A `|` scalar as an object item's first key measured its body from the dash
+  plus two columns, so after wider whitespace (`-   a: |`) it took the item's
+  next key as text; it measures from the key's column (§6.1.5, §7.2).
 - In strict mode, a line deeper than a nested `|` scalar's key, after a line
   of other whitespace that ended the scalar, was dropped without an error; it
   throws `INVALID_INDENTATION`.
@@ -70,8 +73,8 @@ non-strict results change with them (below).
   was a block scalar; it is the string `"|"`, as at the top level — the
   marker stands alone (§6.1.5).
 
-The shared conformance corpus is at 334 Core cases: the 218 Core 1.0 cases
-without the 8 that Core 1.1 supersedes, plus 124 Core 1.1 cases
+The shared conformance corpus is at 336 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 126 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

@@ -1,0 +1,26 @@
+{
+  "id": "core.block-scalar.object-item-wide-dash.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "A `|` scalar as an object item's first key holds the lines deeper than that key's column, however wide the dash's whitespace; the item's next key ends it (all three measured from the dash plus two).",
+  "input": "list:\n  -   a: |\n       text\n      b: 2\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "list": [
+        {
+          "a": "text",
+          "b": 2
+        }
+      ]
+    }
+  },
+  "tags": [
+    "block-scalar",
+    "object-item",
+    "strict"
+  ]
+}
