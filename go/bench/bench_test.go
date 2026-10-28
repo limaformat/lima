@@ -88,6 +88,37 @@ func BenchmarkLimaInternal(b *testing.B) {
 	}
 }
 
+func BenchmarkLimaStrict(b *testing.B) {
+	for _, s := range StrictScenarios() {
+		s := s
+		b.Run(s.Name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				v, e := parseStrict(s)
+				if e != nil {
+					b.Fatal(e)
+				}
+				sink = v
+			}
+		})
+	}
+	b.Run("core front matter with blocks", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v, e := lima.ParseCore(FrontMatterWithBlocks(), false)
+			if e != nil {
+				b.Fatal(e)
+			}
+			sink = v
+		}
+	})
+}
+
+func parseStrict(s Scenario) (lima.Value, error) {
+	if s.Partials == nil {
+		return lima.ParseCore(s.Document, true)
+	}
+	return lima.Parse(s.Document, lima.ParseOptions{Strict: true, Partials: s.Partials})
+}
+
 func BenchmarkErrorPaths(b *testing.B) {
 	b.Run("Core strict invalid number", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {

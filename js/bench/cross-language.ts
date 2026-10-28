@@ -1,6 +1,6 @@
 /** Cross-language Lima scenarios shared with rust/benches/cross_language.rs
  * and go/bench. Manual only; `--json` emits machine-readable results. */
-import { parseCore,parseReferences } from '../src/index'
+import { parse,parseCore,parseReferences } from '../src/index'
 import { createBench,JSON_OUTPUT,type BenchResult } from './helpers'
 const results:BenchResult[]=[];const run=createBench(results)
 const typical=`title: My Blog Post
@@ -32,6 +32,12 @@ const interp=Array.from({length:20},(_,i)=>`k${i}: v${i}`).join('\n')+'\nsummary
 run('references interpolation-heavy',()=>parseReferences(interp),10000)
 const big=Array.from({length:1999},(_,i)=>i);const partialDoc=Array.from({length:16},(_,i)=>`k${i}: (%big)`).join('\n')+'\n'
 run('references large partial copies',()=>parseReferences(partialDoc,{partials:{big}}),200)
+// Strict mode, as hadley reads front matter; Core 1.1 checks every line there (the same scenarios in Rust and Go)
+const blocks='title: Feather Cat goes to town\ndate: 2026-10-28\nauthor:\n  name: Odile\n  url: https://example.com/odile\ntags:\n  - cats\n  - town\nlinks:\n  - title: Home\n    url: /\n  - title: About\n    url: /about\ndescription: |\n  A first line.\n  A second line.\ndraft: false\n'
+run('core strict typical',()=>parseCore(typical,{strict:true}),20000)
+run('core front matter with blocks',()=>parseCore(blocks),20000)
+run('core strict front matter with blocks',()=>parseCore(blocks,{strict:true}),20000)
+run('references strict typical',()=>parse(typical,{strict:true}),20000)
 for(const n of [100,200,400,800,1600]){const doc='root:\n'+Array.from({length:n},(_,i)=>`  k${i}: v${i}`).join('\n')+'\n';run(`scaling keys/${n}`,()=>parseCore(doc),Math.max(50,Math.floor(20000/n)))}
 for(const n of [50,100,200,400,800,1600,3200]){const doc='base: 42\nrefs:\n'+Array.from({length:n},(_,i)=>`  k${i}: ($base)`).join('\n')+'\n';if(new TextEncoder().encode(doc).length<=65536)run(`scaling references/${n}`,()=>parseReferences(doc),Math.max(30,Math.floor(5000/n)))}
 if(JSON_OUTPUT)console.log(JSON.stringify(results.map(r=>({...r,implementation:'typescript-lima-bun'})),null,2))

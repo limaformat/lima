@@ -183,6 +183,38 @@ fn main() {
         }
         rs.push(r)
     }
+    // Strict mode, as hadley reads front matter; Core 1.1 checks every line
+    // there (the same scenarios in TypeScript and Go)
+    let blocks = "title: Feather Cat goes to town\ndate: 2026-10-28\nauthor:\n  name: Odile\n  url: https://example.com/odile\ntags:\n  - cats\n  - town\nlinks:\n  - title: Home\n    url: /\n  - title: About\n    url: /about\ndescription: |\n  A first line.\n  A second line.\ndraft: false\n";
+    for (name, doc, strict) in [
+        ("core strict typical", typical, true),
+        ("core front matter with blocks", blocks, false),
+        ("core strict front matter with blocks", blocks, true),
+    ] {
+        rs.push(bench(
+            name,
+            || {
+                black_box(parse_core(black_box(doc), strict).unwrap());
+            },
+            20000,
+        ));
+    }
+    rs.push(bench(
+        "references strict typical",
+        || {
+            black_box(
+                parse(
+                    black_box(typical),
+                    ParseOptions {
+                        strict: true,
+                        ..Default::default()
+                    },
+                )
+                .unwrap(),
+            );
+        },
+        20000,
+    ));
     for (name, doc) in [
         ("core warning callback without duplicates", typical),
         (

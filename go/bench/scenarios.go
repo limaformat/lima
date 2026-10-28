@@ -55,6 +55,22 @@ func YAMLScenarios() []Scenario {
 	}
 }
 
+// StrictScenarios are read in strict mode, as hadley reads front matter; Core
+// 1.1 checks every line there (the same scenarios in TypeScript and Rust). A
+// scenario with partials is read through Parse, References 2.0.
+func StrictScenarios() []Scenario {
+	blocks := "title: Feather Cat goes to town\ndate: 2026-10-28\nauthor:\n  name: Odile\n  url: https://example.com/odile\ntags:\n  - cats\n  - town\nlinks:\n  - title: Home\n    url: /\n  - title: About\n    url: /about\ndescription: |\n  A first line.\n  A second line.\ndraft: false\n"
+	return []Scenario{
+		{"core strict typical", typical, nil},
+		{"core strict front matter with blocks", blocks, nil},
+		{"references strict typical", typical, map[string]lima.Value{}},
+	}
+}
+
+// FrontMatterWithBlocks is the strict scenarios' document with blocks, also
+// read in non-strict mode for comparison.
+func FrontMatterWithBlocks() string { return StrictScenarios()[1].Document }
+
 func InternalScenarios() []Scenario {
 	deep := "a:\n"
 	for i := 1; i <= 15; i++ {

@@ -112,6 +112,31 @@ func main() {
 		}
 		out.Results = append(out.Results, measure(s.Name, "go-lima", *iterations, *samples, fn))
 	}
+	for _, s := range bench.StrictScenarios() {
+		s := s
+		fn := func() {
+			var v lima.Value
+			var e error
+			if s.Partials == nil {
+				v, e = lima.ParseCore(s.Document, true)
+			} else {
+				v, e = lima.Parse(s.Document, lima.ParseOptions{Strict: true, Partials: s.Partials})
+			}
+			if e != nil {
+				panic(e)
+			}
+			sink = v
+		}
+		out.Results = append(out.Results, measure(s.Name, "go-lima", *iterations, *samples, fn))
+	}
+	blocks := bench.FrontMatterWithBlocks()
+	out.Results = append(out.Results, measure("core front matter with blocks", "go-lima", *iterations, *samples, func() {
+		v, e := lima.ParseCore(blocks, false)
+		if e != nil {
+			panic(e)
+		}
+		sink = v
+	}))
 	for _, n := range []int{100, 200, 400, 800, 1600} {
 		doc := "root:\n"
 		for i := 0; i < n; i++ {
