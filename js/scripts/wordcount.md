@@ -68,9 +68,8 @@ part of "the current public implementation" this table measures.
 
 ## Current reproduced values
 
-Current as of Core 1.1 (2026-10-28, before the 0.6.0 release; References
-2.0 corpus at 136). The 0.5.0 figures had drifted with the errata since; the
-npm tarball is still 0.5.0's until 0.6.0 is packed.
+Current as of Core 1.1 and `@limaformat/lima` 0.6.0 (2026-10-28; References
+2.0 corpus at 136).
 
 | Measurement | Words |
 |---|---:|
@@ -80,7 +79,7 @@ npm tarball is still 0.5.0's until 0.6.0 is packed.
 | Lima Core implementation comments | 5,288 |
 | Lima References 2.0 additions code | 3,904 |
 | Lima References 2.0 additions comments | 1,453 |
-| npm tarball (`@limaformat/lima` 0.5.0) | 53,446 bytes (53.4 KB) |
+| npm tarball (`@limaformat/lima` 0.6.0) | 60,802 bytes (60.8 KB) |
 
 ## Calibration
 
@@ -143,8 +142,10 @@ dual-builder split changes shape again.
 
 Not scripted — from `js/`, run `bun run build` (so `js/dist` matches the
 committed output), then `npm pack --dry-run --json` and read `.size`. For
-`@limaformat/lima` 0.5.0 that is 53,446 bytes, i.e. 53.4 KB (decimal, the
+`@limaformat/lima` 0.6.0 that is 60,802 bytes, i.e. 60.8 KB (decimal, the
 same unit as the js-yaml figure below). The published js-yaml 5.2.3 tarball
 is 338 KB; registry tarballs for a released version are immutable. The
-ratio is 338 / 53.4 ≈ 6.3×. (0.5.0 dropped ~6 KB by excluding the internal
-References 1.0 resolver from the build; 0.4.0 was 59.3 KB.)
+ratio is 338 / 60.8 ≈ 5.6×. (0.6.0 added ~5 KB for Core 1.1's structure
+checks and its changelog, over 0.5.1's 55.7 KB; 0.5.0 had dropped ~6 KB by
+excluding the internal References 1.0 resolver from the build, and was
+53.4 KB; 0.4.0 was 59.3 KB.)

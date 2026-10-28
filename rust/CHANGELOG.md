@@ -4,13 +4,13 @@ All notable changes to `lima` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This crate's version number tracks its own release history and is
-independent of the Lima specification version — [Lima Core
-1.0](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
+independent of the Lima specification versions — [Lima Core
+1.1](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
 and [Lima References
-1.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-1.0-spec.md)
-are both frozen regardless of what this file shows.
+2.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
+carry their own.
 
-## [Unreleased]
+## [0.6.0] — 2026-10-28
 
 Lima Core 1.1: strict mode rejects a content line that belongs to no
 structure, which Core 1.0 skipped in both modes. Core 1.1 also settles

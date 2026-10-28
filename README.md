@@ -102,9 +102,9 @@ Numbers instead of adjectives. Word count is the most robust metric here (line c
 
 **Published npm package:**
 
-| | `@limaformat/lima` 0.5.0 | `js-yaml` 5.2.3 |
+| | `@limaformat/lima` 0.6.0 | `js-yaml` 5.2.3 |
 |---|---:|---:|
-| Packed tarball | 53.4 KB | 338 KB |
+| Packed tarball | 60.8 KB | 338 KB |
 
 Both figures count the committed TypeScript source — not the bundled, minified, or generated `dist/` output that ships — measured from code transitively reachable from the relevant public entry point rather than by whole-file boundaries. The js-yaml measurement covers its actual `load()` parse path (parser, constructor, schema, and tag resolvers), not serialization. Package size is necessarily measured for the complete published packages: Core and References always ship together in `@limaformat/lima`, so the Lima package figure is a conservative comparison against the Core-only implementation measurement.
 
@@ -112,7 +112,7 @@ The Lima Core 1.1 spec is **~2.5× shorter** than YAML 1.2.2 (8,920 words vs. 21
 
 js-yaml's `load()` path is ~11,800 words of TypeScript because it also contains support for anchors and aliases, merge keys (`<<`), multi-document streams, `%YAML`/`%TAG` directives, and 21 tag implementations across its four exposed schemas. Ordinary frontmatter does not require those features; tags and anchors/aliases are also the constructs implicated in the two concrete CVEs discussed below. Lima Core is about **7,500 words of code** for the subset that's actually left, plus about **4,100 words of comments** — comments are roughly 36% of the counted committed source, and many tie an implementation detail directly to a spec section. Being smaller is the easy part to measure; the part that matters is that the machinery that isn't there can't misbehave.
 
-The complete `@limaformat/lima` 0.5.0 tarball — Core *and* References 2.0 — is **~6.3× smaller** than js-yaml 5.2.3 (53.4 KB vs. 338 KB); part of that is scope, part is that js-yaml also ships pre-built browser bundles.
+The complete `@limaformat/lima` 0.6.0 tarball — Core *and* References 2.0 — is **~5.6× smaller** than js-yaml 5.2.3 (60.8 KB vs. 338 KB); part of that is scope, part is that js-yaml also ships pre-built browser bundles.
 
 This isn't a case of counting favourably: separating "Core" from "References" in the implementation requires following actual imports, not just file boundaries. Shared files are divided by what each public entry point actually reaches — for instance, three References 2.0 §2.4 source-position helpers (`stripCommentKeepEscapes`, `physicalRaw`, `rawOffsetOf`) that `parseCore` never executes count as References even though they live in shared parser files. The internally isolated, briefly-published References 1.0 code is excluded except for helpers actually imported by References 2.0. Generated `dist/`, tests, benchmarks, and dead code are excluded from both sides.
 
