@@ -61,6 +61,28 @@ const EXPECTED_TREES: Record<string, string> = {
   (block_mapping_entry
     key: (key)
     value: (plain_scalar)))`,
+  // Core §7.1 rule 7: an indented comment before a bare key's first child does not decide the block's indentation
+  "core.indentation.blank-comment-lines-no-base": `(document
+  (block_mapping_entry
+    key: (key)
+    (comment)
+    (block_mapping
+      (block_mapping_entry
+        key: (key)
+        value: (number))
+      (block_mapping_entry
+        key: (key)
+        value: (number)))))`,
+  // ... nor opens one after an inline value, and a blank line after a top-level comment is no ERROR
+  "core.document.blank-and-comment-lines.strict": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (comment)
+  (comment)
+  (block_mapping_entry
+    key: (key)
+    value: (number)))`,
   "core.flow-mapping.empty-and-flat": `(document
   (block_mapping_entry
     key: (key)
@@ -176,7 +198,7 @@ interface Fixture {
 }
 
 const fixtures = new Map<string, Fixture>();
-for (const subdir of ["core", "references-2.0"]) {
+for (const subdir of ["core", "core-1.1", "references-2.0"]) {
   const dir = join(SOURCE_ROOT, subdir);
   for (const name of readdirSync(dir)) {
     if (!name.endsWith(".json")) continue;

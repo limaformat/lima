@@ -103,6 +103,51 @@ title: Hello
     value: (plain_scalar)))
 
 ==================
+core.indentation.blank-comment-lines-no-base
+==================
+a:
+
+  # comment
+  x: 1
+  y: 2
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (comment)
+    (block_mapping
+      (block_mapping_entry
+        key: (key)
+        value: (number))
+      (block_mapping_entry
+        key: (key)
+        value: (number)))))
+
+==================
+core.document.blank-and-comment-lines.strict
+==================
+title: A
+
+  # an indented comment
+# a comment
+
+b: 1
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (comment)
+  (comment)
+  (block_mapping_entry
+    key: (key)
+    value: (number)))
+
+==================
 core.flow-mapping.empty-and-flat
 ==================
 a: {}

@@ -733,13 +733,40 @@ static bool scan_structural(Scanner *s, TSLexer *lexer, const bool *valid_symbol
 
   uint16_t cur = top_ind(s);
 
-  // Core §7.1 rule 7: a comment line does not affect indentation. One indented deeper than the current level opens
-  // no block (it would have, as an INDENT, and the line after it would then not fit).
-  if (lexer->lookahead == '#' && indent_length > cur) indent_length = cur;
+  // Core §7.1 rule 7: a comment line does not affect indentation. The token ends before the comment, which follows
+  // as its own node; the indentation that decides is the next content line's, found by looking past comment and
+  // blank lines (EOF: 0).
+  bool peeked = false;
+  if (lexer->lookahead == '#') {
+    lexer->mark_end(lexer);
+    peeked = true;
+    for (;;) {
+      while (lexer->lookahead != '\n' && lexer->lookahead != '\r' && lexer->lookahead != 0) {
+        lexer->advance(lexer, false);
+      }
+      if (lexer->lookahead == 0) {
+        indent_length = 0;
+        break;
+      }
+      if (lexer->lookahead == '\r') lexer->advance(lexer, false);
+      if (lexer->lookahead == '\n') lexer->advance(lexer, false);
+      indent_length = 0;
+      while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+        indent_length += lexer->lookahead == '\t' ? 2 : 1;
+        lexer->advance(lexer, false);
+      }
+      int32_t next = lexer->lookahead;
+      if (next == 0) {
+        indent_length = 0;
+        break;
+      }
+      if (next != '#' && next != '\n' && next != '\r') break;
+    }
+  }
 
   if (valid_symbols[INDENT] && indent_length > cur) {
     push_ind(s, indent_length);
-    lexer->mark_end(lexer);
+    if (!peeked) lexer->mark_end(lexer);
     lexer->result_symbol = INDENT;
     s->line_start = true;
     return true;
@@ -747,14 +774,14 @@ static bool scan_structural(Scanner *s, TSLexer *lexer, const bool *valid_symbol
 
   if (valid_symbols[DEDENT] && indent_length < cur) {
     pop_ind(s);
-    lexer->mark_end(lexer);
+    if (!peeked) lexer->mark_end(lexer);
     lexer->result_symbol = DEDENT;
     s->line_start = true;
     return true;
   }
 
   if (valid_symbols[NEWLINE]) {
-    lexer->mark_end(lexer);
+    if (!peeked) lexer->mark_end(lexer);
     lexer->result_symbol = NEWLINE;
     s->line_start = true;
     return true;
