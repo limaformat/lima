@@ -1,0 +1,23 @@
+{
+  "id": "core.indentation.mixed-block.after-compact-sequence",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "Core 1.1: after a compact sequence and a sibling entry, an item in the parent's column belongs to the parent's block of entries; non-strict mode skips it.",
+  "input": "m:\n  tags:\n  - a\n  b: 1\n  - c\n",
+  "expect": {
+    "result": {
+      "m": {
+        "tags": [
+          "a"
+        ],
+        "b": 1
+      }
+    }
+  },
+  "tags": [
+    "indentation",
+    "block-sequence",
+    "compact"
+  ]
+}

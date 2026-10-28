@@ -14,8 +14,9 @@ are both frozen regardless of what this file shows.
 ## [Unreleased]
 
 Lima Core 1.1: strict mode rejects a content line that belongs to no
-structure, which Core 1.0 skipped in both modes. Non-strict mode is
-unchanged.
+structure, which Core 1.0 skipped in both modes. Core 1.1 also settles
+cases Core 1.0 left open, where the three implementations differed; some
+non-strict results change with them (below).
 
 ### Changed
 
@@ -32,9 +33,23 @@ unchanged.
   too; an indented line below a block mapping's base indentation, or after a
   `|` scalar a column-0 comment ended, throws `INVALID_INDENTATION`.
 - New diagnostic code constant `UnrecognizedLine` (`"UNRECOGNIZED_LINE"`).
+- A bare key's sequence may start at the key's own column, as YAML writes
+  it (`tags:` / `- a` / `- b`), at any level (Core 1.1 §7.2); it was `null`.
+- An item whose value is a flow sequence (`- [a, b]`, `- []`) was a
+  sequence; it is a nested sequence (Core 1.1 §7.2): `null` in non-strict
+  mode, `INVALID_FLOW_SYNTAX` in strict mode.
 
-The shared conformance corpus is at 239 Core cases: the 218 Core 1.0 cases
-without the 8 that Core 1.1 supersedes, plus 29 Core 1.1 cases
+### Fixed
+
+- A line of spaces only, in a block mapping or a sequence item, could panic
+  (`slice bounds out of range`) on untrusted input; it is a blank line
+  (§7.1 rule 6).
+- An object item's keys after a blank or comment line were lost (`- a: 1` /
+  blank / `  b: 2` read `{a: 1}`, and threw in strict mode); the item goes on
+  past such a line, as in TypeScript and Rust.
+
+The shared conformance corpus is at 283 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 73 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

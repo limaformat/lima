@@ -3,6 +3,7 @@ package lima
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 )
 
 // Core 1.1 §4, §7.1 rule 5 and §10.1: in strict mode every content line
@@ -48,8 +49,8 @@ func unrecognizedHint(text string) string {
 	if text == "---" || text == "..." {
 		return " (a YAML document marker; Lima has one document)"
 	}
-	if text == "-" || strings.HasPrefix(text, "- ") {
-		return " (a sequence item is indented under its key)"
+	if isSequenceItem(text) {
+		return " (a sequence item belongs to a key with no value of its own)"
 	}
 	if strings.HasPrefix(text, `"`) || strings.HasPrefix(text, "'") {
 		return " (a quoted key closes on its own line)"
@@ -80,4 +81,19 @@ func yamlHint(value string) string {
 		return fmt.Sprintf(` ("%s" is a YAML chomping indicator; Lima writes "|")`, value)
 	}
 	return ""
+}
+
+// isSequenceItem reports whether a line's content begins a sequence item
+// (§7.2): "-" alone or "-" followed by whitespace; "---" or "-x" does not
+// (Core 1.1).
+func isSequenceItem(c string) bool {
+	rest, ok := strings.CutPrefix(c, "-")
+	if !ok {
+		return false
+	}
+	if rest == "" {
+		return true
+	}
+	r, _ := utf8.DecodeRuneInString(rest)
+	return isTrimWhitespace(r)
 }

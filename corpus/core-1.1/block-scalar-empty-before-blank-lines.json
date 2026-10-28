@@ -1,0 +1,16 @@
+{
+  "id": "core.block-scalar.empty-before-blank-lines",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "Core 1.1: a `|` followed only by blank lines is the empty string (trailing empty lines are stripped).",
+  "input": "a: |\n\n\n",
+  "expect": {
+    "result": {
+      "a": ""
+    }
+  },
+  "tags": [
+    "block-scalar"
+  ]
+}

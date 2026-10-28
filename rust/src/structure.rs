@@ -5,7 +5,8 @@
 //!
 //! - unrecognised (`UnrecognizedLine`) when it starts at column 0: it
 //!   matches no key pattern, or the top-level scan would have ended the
-//!   range at it;
+//!   range at it. A sequence that starts at column 0 under a bare key is that
+//!   key's (Core 1.1 §7.2), up to the first line at column 0 that is no item.
 //! - inconsistently indented (`InvalidIndentation`) when it is indented and
 //!   no block owns it: before the first key; after a key with an inline
 //!   value other than `|`, which opens no block; under a block mapping but
@@ -63,7 +64,13 @@ pub(crate) fn check_range_lines(
             // by ASCII space only (§3 expanded the tabs)
             let content = text.trim_start_matches(is_trim_whitespace);
             if !content.is_empty() && !content.starts_with('#') {
-                if indent == 0 {
+                // §7.2: a bare key's sequence may start at its own column, 0
+                // here; it ends at the first line there that is no item
+                let item = indent == 0 && is_item(text);
+                if owner == RangeOwner::Mapping && base.is_none() && item {
+                    base = Some(0);
+                }
+                if indent == 0 && !(base == Some(0) && item) {
                     return Err(LimaError::new(
                         Code::UnrecognizedLine,
                         current,
@@ -76,7 +83,9 @@ pub(crate) fn check_range_lines(
                 if owner == RangeOwner::Mapping && base.is_none() {
                     base = Some(indent);
                 }
-                if !(owner == RangeOwner::Mapping && base.is_some_and(|b| indent >= b)) {
+                if indent > 0
+                    && !(owner == RangeOwner::Mapping && base.is_some_and(|b| indent >= b))
+                {
                     let marker = if owner == RangeOwner::Inline {
                         yaml_hint(inline_value)
                     } else {
@@ -108,8 +117,8 @@ fn hint(text: &str) -> &'static str {
     if text == "---" || text == "..." {
         return " (a YAML document marker; Lima has one document)";
     }
-    if text == "-" || text.starts_with("- ") {
-        return " (a sequence item is indented under its key)";
+    if is_item(text) {
+        return " (a sequence item belongs to a key with no value of its own)";
     }
     if text.starts_with('"') || text.starts_with('\'') {
         return " (a quoted key closes on its own line)";
@@ -134,4 +143,10 @@ fn yaml_hint(value: &str) -> String {
         "|-" | "|+" => format!(" (\"{value}\" is a YAML chomping indicator; Lima writes \"|\")"),
         _ => String::new(),
     }
+}
+
+/// §7.2: `-` alone or `-` followed by whitespace begins a sequence item (Core 1.1); `---` or `-x` does not.
+fn is_item(text: &str) -> bool {
+    text.strip_prefix('-')
+        .is_some_and(|rest| rest.is_empty() || rest.starts_with(is_trim_whitespace))
 }

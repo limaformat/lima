@@ -551,7 +551,7 @@ func collectParticipants2(v *pvalue, out *[]insertedAt) {
 	}
 }
 
-// Parse parses Lima Core 1.0 with References 2.0 enabled by default.
+// Parse parses Lima Core 1.1 with References 2.0 enabled by default.
 func Parse(input string, options ParseOptions) (Value, error) {
 	if options.Mode != "" && options.Mode != ModeCore && options.Mode != ModeReferences {
 		return nil, &LimaError{Code: InvalidOption, Message: fmt.Sprintf("Lima: invalid parse mode %q", options.Mode)}

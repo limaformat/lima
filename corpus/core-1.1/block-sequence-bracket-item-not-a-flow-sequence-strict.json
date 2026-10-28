@@ -1,0 +1,23 @@
+{
+  "id": "core.block-sequence.bracket-item-not-a-flow-sequence.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: an item value that begins with `[` but is no flow sequence is read as an inline value is: strict mode throws (§7.4).",
+  "input": "l:\n  - [x] done\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "flow-sequence",
+    "strict",
+    "error"
+  ]
+}

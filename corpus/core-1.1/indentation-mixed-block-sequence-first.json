@@ -1,0 +1,20 @@
+{
+  "id": "core.indentation.mixed-block.sequence-first",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "Core 1.1: a block holds mapping entries or sequence items, as its first line decides; non-strict mode skips an entry in a block of items and keeps the items.",
+  "input": "root:\n  - item\n  a: v\n  - two\n",
+  "expect": {
+    "result": {
+      "root": [
+        "item",
+        "two"
+      ]
+    }
+  },
+  "tags": [
+    "indentation",
+    "block-sequence"
+  ]
+}

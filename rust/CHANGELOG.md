@@ -13,8 +13,9 @@ are both frozen regardless of what this file shows.
 ## [Unreleased]
 
 Lima Core 1.1: strict mode rejects a content line that belongs to no
-structure, which Core 1.0 skipped in both modes. Non-strict mode is
-unchanged.
+structure, which Core 1.0 skipped in both modes. Core 1.1 also settles
+cases Core 1.0 left open, where the three implementations differed; some
+non-strict results change with them (below).
 
 ### Changed
 
@@ -32,9 +33,26 @@ unchanged.
   `|` scalar a column-0 comment ended, throws `INVALID_INDENTATION`.
 - `LimaDiagnosticCode` gains `UnrecognizedLine`; a `match` over it needs the new
   arm.
+- A bare key's sequence may start at the key's own column, as YAML writes
+  it (`tags:` / `- a` / `- b`), at any level (Core 1.1 §7.2). At the top
+  level this was read so by accident; one level down the sequence and the
+  keys after it were lost.
+- An item whose value is a flow sequence (`- [a, b]`, `- []`) is a nested
+  sequence (Core 1.1 §7.2): `null` in non-strict mode, `INVALID_FLOW_SYNTAX`
+  in strict mode.
 
-The shared conformance corpus is at 239 Core cases: the 218 Core 1.0 cases
-without the 8 that Core 1.1 supersedes, plus 29 Core 1.1 cases
+### Fixed
+
+- A `|` with no content lines (`a: |` at the end of a block, or of the
+  input) was the string `"|"`; it is `""` (Core 1.1 §6.1.5).
+- A block of mapping entries with a sequence item in it, or the reverse, was
+  an empty sequence in non-strict mode, all its entries lost; the first kind
+  wins and a line of the other kind is skipped (Core 1.1 §7.1).
+- An item value that begins with `[` but is no flow sequence (`- [x] done`)
+  throws `INVALID_FLOW_SYNTAX` in strict mode, as an inline value does.
+
+The shared conformance corpus is at 283 Core cases: the 218 Core 1.0 cases
+without the 8 that Core 1.1 supersedes, plus 73 Core 1.1 cases
 (`corpus/core-1.1/`).
 
 ## [0.5.1] — 2026-10-28

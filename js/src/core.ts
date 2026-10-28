@@ -1,5 +1,5 @@
 /**
- * Lima Core 1.0 parser — reference-unaware by construction (Appendix B:
+ * Lima Core 1.1 parser — reference-unaware by construction (Appendix B:
  * reference resolution is exclusively the concern of the optional
  * References extension). `($key)`/`(%key)`-shaped text is never
  * recognised or coerced here; it simply falls through as an ordinary
@@ -99,7 +99,7 @@ export type CoreOptions = {
 }
 
 /**
- * Parses Lima Core 1.0 syntax, generic over the output representation
+ * Parses Lima Core 1.1 syntax, generic over the output representation
  * (`builder` — see `builder.ts`): References needs the annotated
  * `PositionedValue` tree (`parseCoreWithPositions` below fixes `V` to
  * that), while `parseCore` fixes `V` to the public native shape directly,
@@ -216,6 +216,19 @@ const parseCoreGeneric = <V, M>(
 		const firstNewline = inlineEnd ?? frontMatter.indexOf('\n', rawStart)
 		const newlineInRange = firstNewline < nextStart
 
+		// §6.1.5: `|` alone is a literal block scalar marker, with a body or without one (then its value is empty).
+		// The introducing key is at column 0; `buildBlockScalar` finds the scalar's own extent within the range (which
+		// runs to the next top-level key), so a dedented comment or dedented freetext before that key ends the scalar
+		// rather than being absorbed into it.
+		if (!isBlock && frontMatter.charCodeAt(rawStart) === 124) {
+			const markerEnd = newlineInRange && firstNewline >= 0 ? firstNewline : nextStart
+			if (frontMatter.slice(rawStart, markerEnd).trim() === '|') {
+				const bodyLines = markerEnd < nextStart ? frontMatter.slice(markerEnd + 1, nextStart).split('\n') : []
+				builder.setMapping(root, key, buildBlockScalar(bodyLines, 0, line, ctx, builder).value)
+				return
+			}
+		}
+
 		// Physical codepoint column of the value's first character in its
 		// source line — the anchor for References 2.0 token positions (§2.4).
 		// References 2.0 token positions (§2.4): only build the source anchor
@@ -264,33 +277,18 @@ const parseCoreGeneric = <V, M>(
 			}
 		}
 
-		{
-			if (lines.length === 0) {
-				builder.setMapping(root, key, builder.null(line))
-				return
-			}
-
-			const line0Trimmed = lines[0].trim()
-			if (lines.length === 1 || line0Trimmed !== '|') {
-				const line0 = lines[0]
-				const hasHash = line0.includes('#')
-				const val   = hasHash ? stripComment(line0) : line0
-				const source = wantSource ? {
-					raw: hasHash ? stripCommentKeepEscapes(line0) : line0,
-					line, col: valueCol, tabAdjust: lineTabAdjust,
-				} : undefined
-				builder.setMapping(root, key, parseFlowOrScalarValue(val, ctx, line, builder, source))
-				return
-			}
-
-			// Multi-line string (`|` literal block scalar). The introducing key
-			// is at column 0 here; `buildBlockScalar` finds the scalar's own
-			// extent within the range (which runs to the next top-level key),
-			// so a dedented comment or dedented freetext before that key ends
-			// the scalar rather than being absorbed into it.
-			const bodyLines = raw.slice(raw.indexOf('\n') + 1).split('\n')
-			builder.setMapping(root, key, buildBlockScalar(bodyLines, 0, line, ctx, builder).value)
+		if (lines.length === 0) {
+			builder.setMapping(root, key, builder.null(line))
+			return
 		}
+		const line0 = lines[0]
+		const hasHash = line0.includes('#')
+		const val = hasHash ? stripComment(line0) : line0
+		const source = wantSource ? {
+			raw: hasHash ? stripCommentKeepEscapes(line0) : line0,
+			line, col: valueCol, tabAdjust: lineTabAdjust,
+		} : undefined
+		builder.setMapping(root, key, parseFlowOrScalarValue(val, ctx, line, builder, source))
 	}
 
 	// A recognised top-level entry needs at least one UTF-16 unit of key text,
@@ -369,7 +367,7 @@ const parseCoreGeneric = <V, M>(
 }
 
 /**
- * Parses Lima Core 1.0 syntax into the internal annotated value tree —
+ * Parses Lima Core 1.1 syntax into the internal annotated value tree —
  * every node carrying its source line, string leaves additionally carrying
  * whether they came from quoted syntax. `($key)`/`(%key)` text is left
  * exactly as written; nothing here ever inspects or resolves it. The
@@ -501,7 +499,7 @@ export const toNativeFromPositioned = (v: PositionedValue): NativeValue => {
 }
 
 /**
- * Public Core 1.0 entry point. Never resolves `($key)`/`(%key)` text — see
+ * Public Core 1.1 entry point. Never resolves `($key)`/`(%key)` text — see
  * the module doc comment. Equivalent in observable behavior to calling
  * `parseReferences()` with no partials on a document that happens to
  * contain no references, except that here reference-shaped text is

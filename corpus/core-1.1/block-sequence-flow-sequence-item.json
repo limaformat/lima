@@ -1,0 +1,21 @@
+{
+  "id": "core.block-sequence.flow-sequence-item",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: an item whose value is a flow sequence is a nested sequence; non-strict mode reads it as a null item.",
+  "input": "l:\n  - [a, b]\n  - []\n  - c\n",
+  "expect": {
+    "result": {
+      "l": [
+        null,
+        null,
+        "c"
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "flow-sequence"
+  ]
+}

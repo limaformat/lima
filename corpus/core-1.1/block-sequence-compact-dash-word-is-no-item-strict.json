@@ -1,0 +1,23 @@
+{
+  "id": "core.block-sequence.compact.dash-word-is-no-item.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: `-x` is no sequence item (a dash must be alone or followed by whitespace); strict mode throws for it as an unrecognised line.",
+  "input": "tags:\n-x\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "compact",
+    "strict",
+    "error"
+  ]
+}

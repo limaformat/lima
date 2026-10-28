@@ -1,0 +1,23 @@
+{
+  "id": "core.block-sequence.compact.ends-at-non-item.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: a compact sequence ends at the first line in its key's column that is not an item; strict mode throws for an unrecognised line there (§4).",
+  "input": "tags:\n- a\ntext\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 3,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "compact",
+    "strict",
+    "error"
+  ]
+}

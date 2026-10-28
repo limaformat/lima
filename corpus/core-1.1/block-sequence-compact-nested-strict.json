@@ -1,0 +1,27 @@
+{
+  "id": "core.block-sequence.compact.nested.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: a compact sequence one level down, at its key's column; the sibling key after it belongs to the parent mapping.",
+  "input": "meta:\n  tags:\n  - a\n  - b\n  title: x\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "meta": {
+        "tags": [
+          "a",
+          "b"
+        ],
+        "title": "x"
+      }
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "compact",
+    "strict"
+  ]
+}

@@ -370,85 +370,44 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                     tab_adjust: tab_adjust_slice(tk.line, 1),
                 })
             };
-            match first_newline {
-                None => {
-                    let val = &front_matter[value_start..span_end];
-                    if val.contains('#') {
-                        let stripped = strip_comment(val);
-                        parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                            &stripped,
-                            strict,
-                            tk.line,
-                            inline_src(val),
-                        )?
-                    } else {
-                        parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                            val,
-                            strict,
-                            tk.line,
-                            inline_src(val),
-                        )?
-                    }
-                }
-                Some(nl) if nl == span_end.saturating_sub(1) => {
-                    let val = &front_matter[value_start..nl];
-                    if val.contains('#') {
-                        let stripped = strip_comment(val);
-                        parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                            &stripped,
-                            strict,
-                            tk.line,
-                            inline_src(val),
-                        )?
-                    } else {
-                        parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                            val,
-                            strict,
-                            tk.line,
-                            inline_src(val),
-                        )?
-                    }
-                }
-                Some(nl) => {
-                    let line0 = &front_matter[value_start..nl];
-                    let line0_trimmed = line0.trim_matches(is_trim_whitespace);
-                    if line0_trimmed != "|" {
-                        if line0.contains('#') {
-                            let stripped = strip_comment(line0);
-                            parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                                &stripped,
-                                strict,
-                                tk.line,
-                                inline_src(line0),
-                            )?
-                        } else {
-                            parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                                line0,
-                                strict,
-                                tk.line,
-                                inline_src(line0),
-                            )?
-                        }
-                    } else {
-                        // The introducing key is at column 0 here; the range
-                        // runs to the next top-level key, so `build_block_scalar`
-                        // finds the scalar's own extent within it — a dedented
-                        // comment or freetext before that key ends the scalar
-                        // instead of being absorbed.
-                        let body: Vec<&str> = front_matter[nl + 1..span_end].split('\n').collect();
-                        let (joined, raw_body, consumed) = build_block_scalar(&body, 0, tk.line)?;
-                        B::v_string_src(
-                            joined,
-                            tk.line + 1,
-                            ReferenceSource {
-                                raw: Some(raw_body),
-                                line: tk.line + 1,
-                                col: 0,
-                                tab_adjust: tab_adjust_slice(tk.line + 1, consumed),
-                            },
-                        )
-                    }
-                }
+            // §6.1.5: `|` alone is a literal block scalar marker, with a body
+            // or without one (then its value is empty). The introducing key is
+            // at column 0; the range runs to the next top-level key, so
+            // `build_block_scalar` finds the scalar's own extent within it — a
+            // dedented comment or freetext before that key ends the scalar
+            // instead of being absorbed.
+            let first_line = &front_matter[value_start..first_newline.unwrap_or(span_end)];
+            if first_line.trim_matches(is_trim_whitespace) == "|" {
+                let body: Vec<&str> = match first_newline {
+                    Some(nl) => front_matter[nl + 1..span_end].split('\n').collect(),
+                    None => Vec::new(),
+                };
+                let (joined, raw_body, consumed) = build_block_scalar(&body, 0, tk.line)?;
+                B::v_string_src(
+                    joined,
+                    tk.line + 1,
+                    ReferenceSource {
+                        raw: Some(raw_body),
+                        line: tk.line + 1,
+                        col: 0,
+                        tab_adjust: tab_adjust_slice(tk.line + 1, consumed),
+                    },
+                )
+            } else if first_line.contains('#') {
+                let stripped = strip_comment(first_line);
+                parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                    &stripped,
+                    strict,
+                    tk.line,
+                    inline_src(first_line),
+                )?
+            } else {
+                parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                    first_line,
+                    strict,
+                    tk.line,
+                    inline_src(first_line),
+                )?
             }
         };
         // Core 1.1: the lines after the key's own line, up to the next key,
@@ -502,7 +461,7 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
     Ok(root)
 }
 
-/// Parses Lima Core 1.0 syntax. `($key)`/`(%key)`-shaped text is never
+/// Parses Lima Core 1.1 syntax. `($key)`/`(%key)`-shaped text is never
 /// recognised here — Core is reference-unaware by construction; that's
 /// exclusively the References extension's concern.
 #[derive(Default)]
@@ -545,7 +504,7 @@ pub fn parse_core(
     result
 }
 
-/// Parses Lima Core 1.0 syntax into the internal annotated value tree —
+/// Parses Lima Core 1.1 syntax into the internal annotated value tree —
 /// every node carrying its source line, string leaves additionally
 /// carrying whether they came from quoted syntax. `($key)`/`(%key)` text
 /// is left exactly as written; nothing here ever inspects or resolves it.

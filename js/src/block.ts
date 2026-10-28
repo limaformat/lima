@@ -14,7 +14,7 @@ import {
 	stripKeyQuotes, stripComment, stripCommentKeepEscapes,
 	parseQuotedOrTyped, closingQuoteIndex, isValidKey,
 } from './scalars.js'
-import { parseFlowMapping, parseFlowOrScalarValue } from './flow.js'
+import { parseFlowMapping, parseFlowOrScalarValue, parseFlowSequence } from './flow.js'
 import { buildBlockScalar } from './block-scalar.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
@@ -133,6 +133,31 @@ const skipEmptyAndCommentLines = (cursor: BlockCursor): void => {
 	while (cursor.valid && (cursor.empty || cursor.firstCode === 35)) cursor.next()
 }
 
+/**
+ * §7.2: a sequence item is a line of `-` alone or `-` followed by whitespace; `---` or `-x` is none (Core 1.1). The
+ * cursor is on a line with content.
+ */
+const isSequenceItem = (cursor: BlockCursor): boolean => {
+	if (cursor.firstCode !== 45) return false
+	const next = cursor.contentStart + 1
+	return next === cursor.lineEnd || isTrimWhitespace(cursor.source.charCodeAt(next))
+}
+
+/**
+ * Core 1.1 §7.2: the block of a bare key at `keyColumn` — deeper than the key (§7.1 rule 3), or a sequence that
+ * starts at the key's own column, which `compact` parsing ends at that column's first line that is no item. Null
+ * without either. The cursor is on the first content line after the key.
+ */
+const blockOfBareKey = <V, M>(
+	cursor: BlockCursor, keyColumn: number, ctx: ParseContext, baseLine: number, builder: ValueBuilder<V, M>,
+): V | null => {
+	if (!cursor.valid) return null
+	if (cursor.indent > keyColumn) return parseCursorBlock(cursor, cursor.indent, ctx, baseLine, builder)
+	if (cursor.indent === keyColumn && isSequenceItem(cursor))
+		return parseCursorBlock(cursor, keyColumn, ctx, baseLine, builder, true)
+	return null
+}
+
 const cursorAfterDash = (cursor: BlockCursor): string => {
 	const start = cursor.contentStart
 	const end = cursor.lineEnd
@@ -152,7 +177,7 @@ const unrecognizedKeyLine = (line: number, trimmed: string): LimaError => new Li
 /** Shared block grammar consuming one mutable physical-line cursor. */
 const parseCursorBlock = <V, M>(
 	cursor: BlockCursor, baseIndent: number, ctx: ParseContext, baseLine: number,
-	builder: ValueBuilder<V, M>,
+	builder: ValueBuilder<V, M>, compact = false,
 ): V | null => {
 	const wantSource = builder.positions === true
 	let items: V[] | null = null
@@ -192,10 +217,8 @@ const parseCursorBlock = <V, M>(
 					checkKeyLength(key, line)
 					cursor.next()
 					skipEmptyAndCommentLines(cursor)
-					if (cursor.valid && cursor.indent > indent) {
-						const nested = parseCursorBlock(cursor, cursor.indent, ctx, baseLine, builder)
-						builder.setMapping(pendingItem, key, nested ?? builder.null(line))
-					} else builder.setMapping(pendingItem, key, builder.null(line))
+					const nested = blockOfBareKey(cursor, indent, ctx, baseLine, builder)
+					builder.setMapping(pendingItem, key, nested ?? builder.null(line))
 				} else {
 					if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
 						message: `Lima: unexpected syntax in array item continuation at line ${line}: "${trimmed}"` })
@@ -209,16 +232,20 @@ const parseCursorBlock = <V, M>(
 			continue
 		}
 
-		if (cursor.firstCode === 45) {
+		// a sequence at its key's column ends at that column's first line that is no item (Core 1.1 §7.2)
+		if (compact && !isSequenceItem(cursor)) break
+		if (isSequenceItem(cursor)) {
 			if (pendingItem !== null) {
 				items!.push(builder.mapping(pendingItem, line)); pendingItem = null
 			}
-			if (items === null) items = []
+			// a block is a mapping or a sequence, as its first line decides; in non-strict mode a line of the other kind
+			// is skipped, and what the block holds stays (Core 1.1 §7.1)
 			if (entries !== null) {
 				if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
 					message: `Lima: mixed array and map entries for the same key at line ${line}` })
 				cursor.next(); continue
 			}
+			if (items === null) items = []
 
 			const afterDashRaw = cursorAfterDash(cursor)
 			let afterDash = afterDashRaw
@@ -229,6 +256,15 @@ const parseCursorBlock = <V, M>(
 				raw: physicalRaw(afterDashRaw), line, col: afterDashCol, tabAdjust: afterDashTab,
 			}) : undefined
 			const first = afterDash.charCodeAt(0)
+			// an item's value is an inline value (§15.3); a flow sequence there is a sequence in a sequence (§7.2)
+			if (first === 91) {
+				const sequence = parseFlowSequence(afterDash, ctx, line, builder, dashSource)
+				if (sequence === null) items.push(parseFlowOrScalarValue(afterDash, ctx, line, builder, dashSource))
+				else if (ctx.strict) throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line,
+					message: `Lima: nested sequence at line ${line}: "${cursorContent(cursor)}"` })
+				else items.push(builder.null(line))
+				cursor.next(); continue
+			}
 			if (first !== 34 && first !== 39 && first !== 45 && first !== 123 &&
 				afterDash.indexOf(': ') === -1 && !afterDash.endsWith(':')) {
 				items.push(parseQuotedOrTyped(afterDash, ctx, line, builder, dashSource))
@@ -296,10 +332,8 @@ const parseCursorBlock = <V, M>(
 				keyColumn -= cursor.lineStart
 				cursor.next()
 				skipEmptyAndCommentLines(cursor)
-				if (cursor.valid && cursor.indent > keyColumn) {
-					const nested = parseCursorBlock(cursor, cursor.indent, ctx, baseLine, builder)
-					pendingItem = builder.createMappingWith(key, nested ?? builder.null(line))
-				} else pendingItem = builder.createMappingWith(key, builder.null(line))
+				const nested = blockOfBareKey(cursor, keyColumn, ctx, baseLine, builder)
+				pendingItem = builder.createMappingWith(key, nested ?? builder.null(line))
 			} else {
 				// A quoted-or-typed scalar item — parseQuotedOrTyped enforces
 				// §10.1's unterminated / trailing-content strict checks.
@@ -342,10 +376,8 @@ const parseCursorBlock = <V, M>(
 					checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
 				cursor.next()
 				skipEmptyAndCommentLines(cursor)
-				if (cursor.valid && cursor.indent > baseIndent) {
-					const nested = parseCursorBlock(cursor, cursor.indent, ctx, baseLine, builder)
-					builder.setMapping(entries, key, nested ?? builder.null(line))
-				} else builder.setMapping(entries, key, builder.null(line))
+				const nested = blockOfBareKey(cursor, baseIndent, ctx, baseLine, builder)
+				builder.setMapping(entries, key, nested ?? builder.null(line))
 			} else {
 				if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
 					message: `Lima: indented freetext without a block scalar marker at line ${line}: "${trimmed}"` })
@@ -370,7 +402,9 @@ export const parseBlockRange = <V, M>(
 	skipEmptyAndCommentLines(cursor)
 	if (!cursor.valid) return null
 	const baseIndent = cursor.asciiIndent
-	const value = parseCursorBlock(cursor, baseIndent, ctx, baseLine, builder)
+	// Core 1.1 §7.2: at the top level's own column 0 only a sequence is the key's block; any other first line is not
+	if (baseIndent === 0 && !isSequenceItem(cursor)) return null
+	const value = parseCursorBlock(cursor, baseIndent, ctx, baseLine, builder, baseIndent === 0)
 	// Recursive block containers require strictly increasing integer
 	// indentation. At one indentation level a sequence-item mapping can add
 	// one container and Core flow syntax at most two more, so delta + 4 is a

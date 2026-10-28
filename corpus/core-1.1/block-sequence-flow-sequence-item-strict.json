@@ -1,0 +1,23 @@
+{
+  "id": "core.block-sequence.flow-sequence-item.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: an item whose value is a flow sequence is a nested sequence; strict mode throws.",
+  "input": "l:\n  - [a, b]\n  - c\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "INVALID_FLOW_SYNTAX"
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "flow-sequence",
+    "strict",
+    "error"
+  ]
+}

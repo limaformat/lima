@@ -10,7 +10,9 @@ use crate::block_scalar::build_block_scalar;
 use crate::chars::is_trim_whitespace;
 use crate::core::tab_adjust_slice;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
-use crate::flow::{parse_flow_mapping_checked, parse_flow_or_scalar_value_checked};
+use crate::flow::{
+    parse_flow_mapping_checked, parse_flow_or_scalar_value_checked, parse_flow_sequence_checked,
+};
 use crate::normalize::{check_duplicate_key, check_key_length, NESTING_DEPTH_LIMIT};
 use crate::scalars::{
     closing_quote_index, is_valid_key, parse_quoted_or_typed, physical_raw, strip_comment,
@@ -192,12 +194,56 @@ fn is_dash_only_or_prefixed(s: &str) -> bool {
     rest.starts_with(is_trim_whitespace) && !rest.is_empty()
 }
 
-/// Shared block grammar consuming one mutable physical-line cursor.
+/// §7.2: a sequence item is a line of `-` alone or `-` followed by
+/// whitespace; `---` or `-x` is none (Core 1.1). The cursor is on a line
+/// with content.
+fn is_sequence_item(cursor: &BlockCursor) -> bool {
+    if cursor.first_byte() != b'-' {
+        return false;
+    }
+    let next = cursor.content_start + 1;
+    next == cursor.line_end
+        || cursor.source[next..cursor.line_end]
+            .chars()
+            .next()
+            .is_some_and(is_trim_whitespace)
+}
+
+/// Core 1.1 §7.2: the block of a bare key at `key_column` — deeper than the
+/// key (§7.1 rule 3), or a sequence that starts at the key's own column,
+/// which compact parsing ends at that column's first line that is no item.
+/// None without either. The cursor is on the first content line after the
+/// key.
+fn block_of_bare_key<B: Builder, const CHECK_DUPLICATES: bool>(
+    cursor: &mut BlockCursor,
+    key_column: usize,
+    strict: bool,
+    base_line: u32,
+) -> Result<Option<B::Value>, LimaError> {
+    if !cursor.valid {
+        return Ok(None);
+    }
+    if cursor.indent > key_column {
+        let indent = cursor.indent;
+        return parse_cursor_block::<B, CHECK_DUPLICATES>(cursor, indent, strict, base_line, false);
+    }
+    if cursor.indent == key_column && is_sequence_item(cursor) {
+        return parse_cursor_block::<B, CHECK_DUPLICATES>(
+            cursor, key_column, strict, base_line, true,
+        );
+    }
+    Ok(None)
+}
+
+/// Shared block grammar consuming one mutable physical-line cursor; a
+/// `compact` sequence (Core 1.1 §7.2) ends at its column's first line that is
+/// no item.
 fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
     cursor: &mut BlockCursor,
     base_indent: usize,
     strict: bool,
     base_line: u32,
+    compact: bool,
 ) -> Result<Option<B::Value>, LimaError> {
     let mut items: Option<Vec<B::Value>> = None;
     let mut entries: Option<B::Mapping> = None;
@@ -266,17 +312,10 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     check_key_length(&key, line)?;
                     cursor.next();
                     skip_empty_and_comment_lines(cursor);
-                    let value = if cursor.valid && cursor.indent > indent {
-                        parse_cursor_block::<B, CHECK_DUPLICATES>(
-                            cursor,
-                            cursor.indent,
-                            strict,
-                            base_line,
-                        )?
-                        .unwrap_or(B::v_null(line))
-                    } else {
-                        B::v_null(line)
-                    };
+                    let value = block_of_bare_key::<B, CHECK_DUPLICATES>(
+                        cursor, indent, strict, base_line,
+                    )?
+                    .unwrap_or(B::v_null(line));
                     B::m_set(pending, key, value);
                 } else {
                     if strict {
@@ -300,13 +339,20 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
             continue;
         }
 
-        if cursor.first_byte() == b'-' {
+        // a sequence at its key's column ends at that column's first line
+        // that is no item (Core 1.1 §7.2)
+        if compact && !is_sequence_item(cursor) {
+            break;
+        }
+        if is_sequence_item(cursor) {
             if let Some(p) = pending_item.take() {
                 items
                     .get_or_insert_with(Vec::new)
                     .push(B::v_mapping(p, line));
             }
-            let items = items.get_or_insert_with(Vec::new);
+            // a block is a mapping or a sequence, as its first line decides;
+            // in non-strict mode a line of the other kind is skipped, and what
+            // the block holds stays (Core 1.1 §7.1)
             if entries.is_some() {
                 if strict {
                     return Err(LimaError::new(
@@ -320,6 +366,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 cursor.next();
                 continue;
             }
+            let items = items.get_or_insert_with(Vec::new);
 
             let after_dash_raw = cursor_after_dash(cursor);
             let after_dash = if after_dash_raw.contains('#') {
@@ -336,6 +383,35 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 })
             };
             let first = after_dash.as_bytes().first().copied();
+            // an item's value is an inline value (§15.3); a flow sequence
+            // there is a sequence in a sequence (§7.2)
+            if first == Some(b'[') {
+                let src = dash_src(cursor.indent + dash_prefix_len(cursor));
+                match parse_flow_sequence_checked::<B, CHECK_DUPLICATES>(
+                    &after_dash,
+                    strict,
+                    line,
+                    src.clone(),
+                )? {
+                    None => items.push(parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
+                        &after_dash,
+                        strict,
+                        line,
+                        src,
+                    )?),
+                    Some(_) if strict => {
+                        let content = cursor_content(cursor).to_string();
+                        return Err(LimaError::new(
+                            Code::InvalidFlowSyntax,
+                            line,
+                            format!("Lima: nested sequence at line {line}: \"{content}\""),
+                        ));
+                    }
+                    Some(_) => items.push(B::v_null(line)),
+                }
+                cursor.next();
+                continue;
+            }
             if !matches!(first, Some(b'"') | Some(b'\'') | Some(b'-') | Some(b'{'))
                 && !after_dash.contains(": ")
                 && !after_dash.ends_with(':')
@@ -462,17 +538,10 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 let key_column = dash_key_column(cursor);
                 cursor.next();
                 skip_empty_and_comment_lines(cursor);
-                let value = if cursor.valid && cursor.indent > key_column {
-                    parse_cursor_block::<B, CHECK_DUPLICATES>(
-                        cursor,
-                        cursor.indent,
-                        strict,
-                        base_line,
-                    )?
-                    .unwrap_or(B::v_null(line))
-                } else {
-                    B::v_null(line)
-                };
+                let value = block_of_bare_key::<B, CHECK_DUPLICATES>(
+                    cursor, key_column, strict, base_line,
+                )?
+                .unwrap_or(B::v_null(line));
                 pending_item = Some(B::m_create_with(key, value));
             } else {
                 // A quoted-or-typed scalar item — parse_quoted_or_typed enforces
@@ -551,17 +620,13 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 }
                 cursor.next();
                 skip_empty_and_comment_lines(cursor);
-                let value = if cursor.valid && cursor.indent > base_indent {
-                    parse_cursor_block::<B, CHECK_DUPLICATES>(
-                        cursor,
-                        cursor.indent,
-                        strict,
-                        base_line,
-                    )?
-                    .unwrap_or(B::v_null(line))
-                } else {
-                    B::v_null(line)
-                };
+                let value = block_of_bare_key::<B, CHECK_DUPLICATES>(
+                    cursor,
+                    base_indent,
+                    strict,
+                    base_line,
+                )?
+                .unwrap_or(B::v_null(line));
                 B::m_set(entries.get_or_insert_with(B::m_create), key, value);
             } else {
                 if strict {
@@ -627,8 +692,18 @@ pub(crate) fn parse_block_range_checked<B: Builder, const CHECK_DUPLICATES: bool
         return Ok(None);
     }
     let base_indent = cursor.ascii_indent;
-    let value =
-        parse_cursor_block::<B, CHECK_DUPLICATES>(&mut cursor, base_indent, strict, base_line)?;
+    // Core 1.1 §7.2: at the top level's own column 0 only a sequence is the
+    // key's block; any other first line is not
+    if base_indent == 0 && !is_sequence_item(&cursor) {
+        return Ok(None);
+    }
+    let value = parse_cursor_block::<B, CHECK_DUPLICATES>(
+        &mut cursor,
+        base_indent,
+        strict,
+        base_line,
+        base_indent == 0,
+    )?;
     if cursor.max_indent.saturating_sub(base_indent) + 4 > NESTING_DEPTH_LIMIT {
         *depth_risk = true;
     }

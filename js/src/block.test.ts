@@ -25,12 +25,13 @@ describe('arrays — block sequence (dash-prefixed)', () => {
 
 	it('consumes the complete whitespace run after a dash', () => {
 		const result = parse("values:\n  -  value\n  -   'quoted'\n  -  [1, 2]\n  -  {a: 1}\n")
-		expect(result.values).toEqual(['value', 'quoted', '[1, 2]', { a: 1 }])
+		// `[1, 2]` is found after the run: a flow sequence as an item is a nested sequence, `null` (Core 1.1 §7.2)
+		expect(result.values).toEqual(['value', 'quoted', null, { a: 1 }])
 	})
 
 	it('consumes non-ASCII whitespace after a dash like /^-\\s+/', () => {
-		const result = parse('values:\n  -\u00a0\u00a0[1, 2]\n')
-		expect(result.values).toEqual(['[1, 2]'])
+		const result = parse('values:\n  -\u00a0\u00a0[1, 2]\n  -\u00a0\u00a0[x] done\n')
+		expect(result.values).toEqual([null, '[x] done'])
 	})
 
 	it('parses an array of single-key objects', () => {

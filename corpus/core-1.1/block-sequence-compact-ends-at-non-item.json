@@ -1,0 +1,19 @@
+{
+  "id": "core.block-sequence.compact.ends-at-non-item",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: a compact sequence ends at the first line in its key's column that is not an item; that line is unrecognised (§4) and skipped in non-strict mode.",
+  "input": "tags:\n- a\ntext\n",
+  "expect": {
+    "result": {
+      "tags": [
+        "a"
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "compact"
+  ]
+}

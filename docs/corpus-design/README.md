@@ -2,7 +2,7 @@
 
 **Status:** implemented — a byte-frozen 149-case Core 1.0.0 baseline with
 additive Core errata through 1.0.10 on top (218 Core 1.0 cases total), a
-frozen 29-case Core 1.1 corpus that supersedes 8 of them (239 Core 1.1 cases
+frozen 73-case Core 1.1 corpus that supersedes 8 of them (283 Core 1.1 cases
 in all), plus a separate 136-case References 2.0 final corpus; all counts are
 pinned by tests. The baseline also includes 101 byte-frozen References 1.0 cases: that
 extension was published briefly in mid-2026 and superseded almost immediately
@@ -449,8 +449,8 @@ bun run run:references-2
 ```
 
 The default `bun run run` runs the current conformance target: Core 1.1
-(239 cases: the 218 Core 1.0 cases through errata 1.0.10 without the 8 that
-`corpus/manifests/core-1.1.json` lists under `supersedes`, plus the 29 of
+(283 cases: the 218 Core 1.0 cases through errata 1.0.10 without the 8 that
+`corpus/manifests/core-1.1.json` lists under `supersedes`, plus the 73 of
 `corpus/core-1.1/`) plus References 2.0 (136). `bun run run:core-1` runs the
 frozen Core 1.0 corpus alone, whose 8 superseded cases a Core 1.1 parser
 fails by design. `bun run

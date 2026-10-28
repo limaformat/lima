@@ -1,0 +1,24 @@
+{
+  "id": "core.indentation.whitespace-only-line-in-mapping.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "A whitespace-only line inside a block mapping is an empty line (§7.1 rule 6), however many spaces it has.",
+  "input": "a:\n  b: 1\n   \n  c: 2\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "a": {
+        "b": 1,
+        "c": 2
+      }
+    }
+  },
+  "tags": [
+    "indentation",
+    "whitespace",
+    "strict"
+  ]
+}

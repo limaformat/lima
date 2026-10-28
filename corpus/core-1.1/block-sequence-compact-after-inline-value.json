@@ -1,0 +1,17 @@
+{
+  "id": "core.block-sequence.compact.after-inline-value",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: only a bare key opens a compact sequence; after an inline value an item at column 0 is unrecognised (§4), skipped in non-strict mode.",
+  "input": "tags: x\n- a\n",
+  "expect": {
+    "result": {
+      "tags": "x"
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "compact"
+  ]
+}

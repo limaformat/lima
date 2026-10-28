@@ -1,0 +1,21 @@
+{
+  "id": "core.block-scalar.empty.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "Core 1.1: a `|` with no content lines is the empty string.",
+  "input": "a: |\nb: 1\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "a": "",
+      "b": 1
+    }
+  },
+  "tags": [
+    "block-scalar",
+    "strict"
+  ]
+}

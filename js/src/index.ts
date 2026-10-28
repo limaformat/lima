@@ -3,7 +3,7 @@
  *
  * Public entry point. The implementation is split per Appendix B's own
  * layering:
- *   - `core.ts`       — Lima Core 1.0, reference-unaware by construction.
+ *   - `core.ts`       — Lima Core 1.1, reference-unaware by construction.
  *   - `references2.ts` — the References 2.0 extension layered on Core.
  *   - `references.ts`  — the frozen internal References 1.0 implementation.
  *   - `value.ts`       — the shared Lima Value Model both build on.

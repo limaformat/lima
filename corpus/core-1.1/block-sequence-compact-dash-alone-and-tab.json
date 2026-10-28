@@ -1,0 +1,20 @@
+{
+  "id": "core.block-sequence.compact.dash-alone-and-tab",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: `-` alone and `-` followed by a tab begin items of a compact sequence too.",
+  "input": "tags:\n-\n-\ta\n",
+  "expect": {
+    "result": {
+      "tags": [
+        null,
+        "a"
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "compact"
+  ]
+}

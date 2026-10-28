@@ -1,0 +1,21 @@
+{
+  "id": "core.block-sequence.compact.top-level",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: a bare key's sequence may start at the key's own column; it ends at the first line there that is not an item, here the next key.",
+  "input": "tags:\n- javascript\n- webdev\ntitle: Hello\n",
+  "expect": {
+    "result": {
+      "tags": [
+        "javascript",
+        "webdev"
+      ],
+      "title": "Hello"
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "compact"
+  ]
+}

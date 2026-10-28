@@ -1,0 +1,29 @@
+{
+  "id": "core.block-sequence.compact.object-items.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: a compact sequence of object items; an item's sibling keys align after `- ` as in any sequence.",
+  "input": "authors:\n- name: Alice\n  role: editor\n- name: Bob\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "authors": [
+        {
+          "name": "Alice",
+          "role": "editor"
+        },
+        {
+          "name": "Bob"
+        }
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "compact",
+    "strict"
+  ]
+}

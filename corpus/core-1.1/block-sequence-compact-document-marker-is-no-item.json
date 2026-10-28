@@ -1,0 +1,17 @@
+{
+  "id": "core.block-sequence.compact.document-marker-is-no-item",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: `---` is no sequence item, so it opens no compact sequence; the bare key is null and the line is skipped.",
+  "input": "tags:\n---\n",
+  "expect": {
+    "result": {
+      "tags": null
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "compact"
+  ]
+}

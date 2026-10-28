@@ -1,4 +1,4 @@
-// Package lima implements Lima Core 1.0 and Lima References 2.0 with only
+// Package lima implements Lima Core 1.1 and Lima References 2.0 with only
 // the Go standard library.
 package lima
 
@@ -33,6 +33,10 @@ func sourceLines(input string) []sourceLine {
 	raw := strings.Split(input, "\n")
 	out := make([]sourceLine, len(raw))
 	for i, s := range raw {
+		// §3: trailing spaces go first, so a line of spaces alone is empty
+		// and has no indentation (counting before the trim crashed
+		// lineContent on such a line).
+		s = strings.TrimRight(s, " ")
 		// Structural indentation is ASCII-space-only after tabs have already
 		// been expanded above. Non-ASCII trim whitespace remains part of the
 		// key text here, matching Rust's top-level block-boundary scan.
@@ -50,7 +54,7 @@ func sourceLines(input string) []sourceLine {
 				}
 			}
 		}
-		out[i] = sourceLine{strings.TrimRight(s, " "), i + 1, n, tabs}
+		out[i] = sourceLine{s, i + 1, n, tabs}
 	}
 	return out
 }
@@ -141,10 +145,20 @@ func bareNestedValue(keyColumn, keyLine int, lines []sourceLine, idx *int, stric
 	for j < len(lines) && (trimWhitespace(lines[j].text) == "" || strings.HasPrefix(trimWhitespace(lines[j].text), "#")) {
 		j++
 	}
-	if j >= len(lines) || lineStructuralIndent(lines[j]) <= keyColumn {
+	if j >= len(lines) {
 		return pv(Null{}, keyLine), nil
 	}
-	v, e := parseBlock(lines, idx, lineStructuralIndent(lines[j]), strict, onWarning, captureReferences)
+	var v *pvalue
+	var e error
+	switch next := lineStructuralIndent(lines[j]); {
+	case next > keyColumn:
+		v, e = parseBlock(lines, idx, next, strict, onWarning, captureReferences, false)
+	case next == keyColumn && isSequenceItem(lineContent(lines[j])):
+		// Core 1.1 §7.2: a sequence may start at its key's own column
+		v, e = parseBlock(lines, idx, keyColumn, strict, onWarning, captureReferences, true)
+	default:
+		return pv(Null{}, keyLine), nil
+	}
 	if e != nil {
 		return nil, e
 	}
@@ -192,7 +206,22 @@ func inlineRefSource(capture bool, l sourceLine, rawFrom string, col int) *refer
 }
 
 func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int, indent int, strict bool, onWarning func(Diagnostic), captureReferences bool) error {
-	for *idx < len(lines) && lineStructuralIndent(lines[*idx]) > indent {
+	for *idx < len(lines) {
+		// blank and comment lines are skipped (§7.1 rules 6 and 7): the
+		// item goes on when the next content line is deeper than its dash
+		if isBlankOrComment(lines[*idx].text) {
+			next := *idx + 1
+			for next < len(lines) && isBlankOrComment(lines[next].text) {
+				next++
+			}
+			if next == len(lines) || lineStructuralIndent(lines[next]) <= indent {
+				break
+			}
+			*idx = next
+		}
+		if lineStructuralIndent(lines[*idx]) <= indent {
+			break
+		}
 		cl := lines[*idx]
 		cc := lineContent(cl)
 		s := findSep(cc)
@@ -239,7 +268,10 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 	return nil
 }
 
-func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning func(Diagnostic), captureReferences bool) (*pvalue, error) {
+// parseBlock parses the block at indent; a compact sequence (Core 1.1 §7.2,
+// one at its key's own column) ends at that column's first line that is no
+// item.
+func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning func(Diagnostic), captureReferences bool, compact bool) (*pvalue, error) {
 	for *idx < len(lines) && (trimWhitespace(lines[*idx].text) == "" || strings.HasPrefix(trimWhitespace(lines[*idx].text), "#")) {
 		*idx++
 	}
@@ -247,7 +279,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 		return nil, nil
 	}
 	start := lines[*idx].number
-	isArray := strings.HasPrefix(lineContent(lines[*idx]), "-")
+	isArray := isSequenceItem(lineContent(lines[*idx]))
 	var arr []*pvalue
 	var m []pentry
 	for *idx < len(lines) {
@@ -269,7 +301,12 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 			continue
 		}
 		if isArray {
-			if !strings.HasPrefix(c, "-") {
+			if !isSequenceItem(c) {
+				// a sequence at its key's column ends at that column's first
+				// line that is no item (Core 1.1 §7.2)
+				if compact {
+					break
+				}
 				if strict {
 					return nil, limaError(InvalidIndentation, l.number, fmt.Sprintf("Lima: mixed map and array entries for the same key at line %d", l.number))
 				}
@@ -284,7 +321,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				}
 				arr = append(arr, pv(Null{}, l.number))
 				*idx++
-				for *idx < len(lines) && lineStructuralIndent(lines[*idx]) > indent {
+				for *idx < len(lines) && (isBlankOrComment(lines[*idx].text) || lineStructuralIndent(lines[*idx]) > indent) {
 					*idx++
 				}
 				continue
@@ -351,10 +388,18 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 			if e != nil {
 				return nil, e
 			}
+			// an item's value is an inline value (§15.3); a flow sequence
+			// there is a sequence in a sequence (§7.2)
+			if v.array != nil {
+				if strict {
+					return nil, limaError(InvalidFlowSyntax, l.number, fmt.Sprintf("Lima: nested sequence at line %d: %q", l.number, c))
+				}
+				v = pv(Null{}, l.number)
+			}
 			arr = append(arr, v)
 			*idx++
 		} else {
-			if strings.HasPrefix(c, "-") {
+			if isSequenceItem(c) {
 				if strict {
 					return nil, limaError(InvalidIndentation, l.number, fmt.Sprintf("Lima: mixed array and map entries for the same key at line %d", l.number))
 				}
@@ -402,21 +447,9 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 			var v *pvalue
 			var e error
 			if bare {
-				// Core §4 rule 7 / §6.1.3: comment lines (and blank lines)
-				// do not affect base indentation and are skipped when
-				// deciding whether this bare key has any nested block at
-				// all. parseBlock re-skips the same lines from *idx once
-				// it is called, so this lookahead only peeks, never mutates.
-				j := *idx
-				for j < len(lines) && (trimWhitespace(lines[j].text) == "" || strings.HasPrefix(trimWhitespace(lines[j].text), "#")) {
-					j++
-				}
-				if j < len(lines) && lineStructuralIndent(lines[j]) > indent {
-					v, e = parseBlock(lines, idx, lineStructuralIndent(lines[j]), strict, onWarning, captureReferences)
-				}
-				if v == nil && e == nil {
-					v = pv(Null{}, l.number)
-				}
+				// deeper than the key, or a sequence at its column (Core 1.1
+				// §7.2); bareNestedValue skips blank and comment lines first
+				v, e = bareNestedValue(indent, l.number, lines, idx, strict, onWarning, captureReferences)
 			} else {
 				raw := trimWhitespace(c[sep+2:])
 				valueByte := l.indent + sep + 2 + leadingWsBytes(c[sep+2:])
@@ -527,7 +560,10 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 				j++
 			}
 			if j < len(lines) && lines[j].indent > 0 {
-				v, e = parseBlock(lines, &i, lines[j].indent, strict, onWarning, captureReferences)
+				v, e = parseBlock(lines, &i, lines[j].indent, strict, onWarning, captureReferences, false)
+			} else if j < len(lines) && isSequenceItem(lines[j].text) {
+				// Core 1.1 §7.2: a sequence may start at its key's own column, 0
+				v, e = parseBlock(lines, &i, 0, strict, onWarning, captureReferences, true)
 			}
 			if v == nil && e == nil {
 				v = pv(Null{}, l.number)
@@ -552,7 +588,7 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 	return root, nil
 }
 
-// ParseCore parses input according to Lima Core 1.0. The returned Value is
+// ParseCore parses input according to Lima Core 1.1. The returned Value is
 // always a Map. strict enables the specification's strict diagnostics.
 func ParseCore(input string, strict bool) (Value, error) {
 	return ParseCoreWithOptions(input, CoreOptions{Strict: strict})
@@ -564,7 +600,7 @@ type CoreOptions struct {
 	OnWarning func(Diagnostic)
 }
 
-// ParseCoreWithOptions parses Lima Core 1.0 with warning callbacks.
+// ParseCoreWithOptions parses Lima Core 1.1 with warning callbacks.
 func ParseCoreWithOptions(input string, options CoreOptions) (Value, error) {
 	m, e := parseCorePositioned(input, options.Strict, options.OnWarning, false)
 	if e != nil {

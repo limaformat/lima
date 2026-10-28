@@ -1,0 +1,22 @@
+{
+  "id": "core.document.unrecognized-line.after-bare-key.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "4",
+  "description": "Core 1.1: an unindented line after a bare key that is neither a key nor a sequence item is unrecognised.",
+  "input": "root:\ntext\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 2,
+      "code": "UNRECOGNIZED_LINE"
+    }
+  },
+  "tags": [
+    "document",
+    "strict",
+    "error"
+  ]
+}

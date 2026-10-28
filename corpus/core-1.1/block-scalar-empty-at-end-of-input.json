@@ -1,0 +1,16 @@
+{
+  "id": "core.block-scalar.empty-at-end-of-input",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "Core 1.1: a `|` at the end of the input, without a line terminator, is the empty string.",
+  "input": "a: |",
+  "expect": {
+    "result": {
+      "a": ""
+    }
+  },
+  "tags": [
+    "block-scalar"
+  ]
+}

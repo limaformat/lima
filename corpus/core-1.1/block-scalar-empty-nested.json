@@ -1,0 +1,19 @@
+{
+  "id": "core.block-scalar.empty-nested",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "6.1.5",
+  "description": "Core 1.1: a `|` with no content lines is the empty string at a nested level too.",
+  "input": "m:\n  a: |\n  b: 1\n",
+  "expect": {
+    "result": {
+      "m": {
+        "a": "",
+        "b": 1
+      }
+    }
+  },
+  "tags": [
+    "block-scalar"
+  ]
+}

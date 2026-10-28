@@ -1,0 +1,23 @@
+{
+  "id": "core.indentation.mixed-block.sequence-first.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.1",
+  "description": "Core 1.1: a block holds mapping entries or sequence items, as its first line decides; strict mode throws for an entry in a block of items.",
+  "input": "root:\n  - item\n  a: v\n  - two\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "line": 3,
+      "code": "INVALID_INDENTATION"
+    }
+  },
+  "tags": [
+    "indentation",
+    "block-sequence",
+    "strict",
+    "error"
+  ]
+}

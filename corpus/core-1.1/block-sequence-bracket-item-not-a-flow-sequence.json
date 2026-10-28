@@ -1,0 +1,19 @@
+{
+  "id": "core.block-sequence.bracket-item-not-a-flow-sequence",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: an item value that begins with `[` but is no flow sequence is read as an inline value is: a string fallback in non-strict mode.",
+  "input": "l:\n  - [x] done\n",
+  "expect": {
+    "result": {
+      "l": [
+        "[x] done"
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "flow-sequence"
+  ]
+}

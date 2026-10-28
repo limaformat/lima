@@ -15,7 +15,7 @@
 //! ).unwrap();
 //! ```
 //!
-//! [`parse_core`] implements Lima Core 1.0 in full (block/flow sequences
+//! [`parse_core`] implements Lima Core 1.1 in full (block/flow sequences
 //! and mappings, dates, numbers, quoting, `|` literal block scalars).
 //! [`parse`] implements References 2.0 on top of it. [`parse_references`]
 //! remains as a deprecated alias with identical 2.0 semantics.
@@ -26,9 +26,10 @@
 //!
 //! ## Conformance
 //!
-//! Checked against the shared, language-neutral conformance corpus: 211
-//! Lima Core 1.0 cases (a byte-frozen 149-case 1.0.0 baseline plus
-//! additive errata through 1.0.9), 136 References 2.0 cases, and the
+//! Checked against the shared, language-neutral conformance corpus: 283
+//! Lima Core 1.1 cases (the 218 Core 1.0 cases — a byte-frozen 149-case
+//! 1.0.0 baseline plus additive errata through 1.0.10 — without the 8 that
+//! Core 1.1 supersedes, plus its 73), 136 References 2.0 cases, and the
 //! 101-case frozen References 1.0 corpus — a regression target only; its
 //! resolver is not part of the published crate. All counts are pinned by
 //! the test suite.

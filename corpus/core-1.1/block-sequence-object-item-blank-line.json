@@ -1,0 +1,24 @@
+{
+  "id": "core.block-sequence.object-item.blank-line",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "An object item's sibling keys go on past a blank or whitespace-only line (\u00a77.1 rule 6).",
+  "input": "l:\n  - a: 1\n\n    b: 2\n   \n    c: 3\n",
+  "expect": {
+    "result": {
+      "l": [
+        {
+          "a": 1,
+          "b": 2,
+          "c": 3
+        }
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "object-item",
+    "whitespace"
+  ]
+}

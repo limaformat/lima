@@ -1,0 +1,29 @@
+{
+  "id": "core.block-sequence.compact.in-object-item.strict",
+  "spec": "core",
+  "specVersion": "1.1",
+  "section": "7.2",
+  "description": "Core 1.1: the key of an object item may open a compact sequence at its own column, after `- `; the item's next key ends it.",
+  "input": "items:\n  - tags:\n    - a\n    - b\n    name: x\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "items": [
+        {
+          "tags": [
+            "a",
+            "b"
+          ],
+          "name": "x"
+        }
+      ]
+    }
+  },
+  "tags": [
+    "block-sequence",
+    "compact",
+    "strict"
+  ]
+}

@@ -336,7 +336,7 @@ skips the whitespace after `: ` before any scalar path and before the
 References 2.0 source column is taken, in `core.ts` and `core.rs`; the
 reported columns were already physical and stay identical in all three.
 
-## Core 1.1 (2026-10-28) — C-255–C-267, `corpus/core-1.1/`
+## Core 1.1 (2026-10-28) — C-255–C-276, `corpus/core-1.1/`
 
 Strict mode rejects a content line that belongs to no structure
 ([decision](../../decisions/top-level-indentation-after-inline-value.md)).
@@ -361,6 +361,15 @@ and the default run leaves them out.
 | C-265 | §5.1, §10.1 | Keys | In a block mapping, at any depth and in a sequence object item, a line whose key the key grammar rejects throws `UNRECOGNIZED_LINE` (replaces `core.keys.nested.dot-invalid` and `core.keys.nested.unquoted-space-invalid`) | error | strict |
 | C-266 | §7.1 rule 5 | Indentation | A line below a block mapping's base indentation, after the mapping ended there, throws, or is skipped | pair | both |
 | C-267 | §6.1.5, §7.1 rule 5 | Block scalar | An indented line after a `\|` scalar that a comment at column 0 ended throws, or is skipped | pair | both |
+| C-268 | §7.2 | Block sequence | A bare key's sequence may start at the key's own column — at the top level, one level down, of object items, under the key of an object item, with `-` alone and `-` and a tab — and ends at the next line there that is no item | positive | both |
+| C-269 | §7.2, §4 | Block sequence | A line in that column that is no item ends the sequence and is unrecognised; after an inline value an item at column 0 is unrecognised; `---` and `-x` are no items | pair | both |
+| C-270 | §4 | Document | An unindented line after a bare key that is neither a key nor an item throws `UNRECOGNIZED_LINE` | error | strict |
+| C-271 | §6.1.5 | Block scalar | A `\|` with no content lines is `''` — followed by a key, nested, at the end of the input, before blank lines (TypeScript and Rust read `"\|"`) | positive | both |
+| C-272 | §7.1 | Indentation | A block holds entries or items, as its first line decides: a line of the other kind is skipped, and the block keeps what it holds (TypeScript and Rust lost it all), or throws — either order, and after a compact sequence | pair | both |
+| C-273 | §7.2 | Block sequence | An item whose value is a flow sequence is a nested sequence: a `null` item, or `INVALID_FLOW_SYNTAX` (Go read a sequence, TypeScript and Rust a string) | pair | both |
+| C-274 | §7.2, §7.4 | Block sequence | Any other item value that begins with `[` is an inline value: string fallback, or `INVALID_FLOW_SYNTAX` (TypeScript and Rust accepted it in strict mode) | pair | both |
+| C-275 | §7.1 rule 6 | Indentation | A line of spaces only, in a block mapping or a sequence, is a blank line (Go panicked) | positive | both |
+| C-276 | §7.1 rules 6–7, §7.2 | Block sequence | An object item's keys go on past a blank, whitespace-only or comment line (Go lost them) | positive | both |
 
 Found while implementing: the TypeScript scanner took a top-level `key:` at the
 very end of the input for no key (it wanted a newline or a space after the
@@ -368,6 +377,14 @@ colon), where every nested level and the other implementations read it as
 `null`; and the tree-sitter grammar opened a block at a comment indented after
 an inline value, and failed at a blank line after a top-level comment line —
 both since fixed (`editors/tree-sitter-lima/src/scanner.c`).
+
+C-268–C-276 come from Codex's second review and a three-way differential test
+of random documents (TypeScript, Rust and Go on the same inputs, about 400,000
+parses). One divergence remains, outside Core 1.1: a line indented by ASCII
+spaces and then Unicode whitespace such as U+00A0 is read differently by the
+three; §3 defines indentation by spaces and tabs only, and leaves such a line
+open. The tree-sitter grammar does not show a compact sequence as a sequence
+yet (no error node; the items are missing from the tree).
 
 ## Known implementation gaps
 
