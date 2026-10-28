@@ -11,6 +11,13 @@ and [Lima References
 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-1.0-spec.md)
 are both frozen regardless of what this file shows.
 
+## [0.5.1] — 2026-10-28
+
+Core errata `1.0.10`. The Go module already trimmed aligned top-level
+values as Core 1.0 requires; this release only adds the 7 new corpus cases
+(`since: "1.0.10"`, 218 Core cases in all), which it passes, in step with
+`@limaformat/lima` and the Rust crate 0.5.1, where the defect was.
+
 ## [0.5.0] — 2026-09-09
 
 Scope cleanup, matching `@limaformat/lima` 0.5.0 and the Rust crate. The

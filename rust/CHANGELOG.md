@@ -10,6 +10,24 @@ and [Lima References
 1.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-1.0-spec.md)
 are both frozen regardless of what this file shows.
 
+## [0.5.1] — 2026-10-28
+
+Core errata `1.0.10`: aligned top-level values are trimmed, as Core 1.0
+always required.
+
+### Fixed
+
+- A top-level inline value kept every space after `: ` but the first:
+  `title:   Hello` read `'  Hello'`, and `n:    42` the string `'   42'`
+  instead of the integer 42 — against §4 step 3 and the §4 and §5.1
+  examples. Nested keys were not affected. The top-level entry now skips the
+  whitespace after the separator before reading the value, as the block
+  mapping does; the References 2.0 columns it reports were already physical
+  and are unchanged.
+
+The shared conformance corpus grows to 218 Core cases (7 new, `since:
+"1.0.10"`); TypeScript, Rust, and Go pass all of them.
+
 ## [0.5.0] — 2026-09-09
 
 Scope cleanup, matching `@limaformat/lima` 0.5.0 and the Go module. The
