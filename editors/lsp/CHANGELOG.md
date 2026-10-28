@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+
+- Diagnostics follow Lima Core 1.1: the bundled parser is that of
+  `@limaformat/lima` 0.6.0. A line that belongs to no structure is reported
+  where it stands — one indented after a value (the lines after a YAML `>`,
+  `|-` or `|+`, a key indented by a tab), or an unrecognised line, a key
+  without its `: ` or a YAML `---` / `...` marker, as `UNRECOGNIZED_LINE` —
+  with a hint for a YAML marker. A sequence at its key's own column is a
+  sequence; indentation is spaces only; an object item's later keys stand at
+  its first key's column.
+
 ## 0.2.0
 
 - Add standalone `.lima` syntax highlighting for Sublime Text and Emacs.

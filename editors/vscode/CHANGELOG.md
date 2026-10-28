@@ -1,6 +1,24 @@
 # Changelog
 
-## [0.1.0] — unreleased
+## [0.2.0] — 2026-10-28
+
+Diagnostics follow Lima Core 1.1: the bundled parser is that of
+`@limaformat/lima` 0.6.0, which reads strictly, as the extension does.
+
+- A line that belongs to no structure is reported where it stands: one
+  indented after a value, which opens no block (the lines after a YAML `>`,
+  `|-` or `|+`, a key indented by a tab), and an unrecognised line — a key
+  without its `: `, an invalid key, a YAML `---` / `...` marker — as
+  `UNRECOGNIZED_LINE`. The message names a YAML marker and what Lima writes
+  instead.
+- A sequence at its key's own column (`tags:` / `- a`), as YAML writes it,
+  is a sequence, not an error.
+- Indentation is spaces only: a line indented by other whitespace, such as a
+  pasted U+00A0, is reported.
+- An object item's later keys stand at its first key's column; another
+  column is reported.
+
+## [0.1.0] — 2026-09-14
 
 Adopted into the `limaformat/lima` monorepo (`editors/vscode`) from its
 earlier home. Publisher is now `limaformat`; the license is ISC, matching
