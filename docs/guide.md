@@ -2,8 +2,8 @@
 
 A practical walkthrough of Lima syntax, the References Extension, resource
 limits, and the JavaScript/TypeScript API. This guide is descriptive, not
-normative — [Lima Core 1.1](lima-core-1.0-spec.md) and the
-[Lima References 2.0 specification](lima-references-2.0-spec.md) are the source of truth.
+normative — [Lima Core 1.1](lima-core-1.0-spec.md) and
+[Lima References 2.0](lima-references-2.0-spec.md) are the source of truth.
 Where this guide and a spec disagree, the spec wins.
 
 ## Installation
@@ -52,7 +52,7 @@ An unquoted key starts with a letter, digit, or underscore, followed by any
 combination of letters, digits, underscores, hyphens, or colons.
 
 | Format | Example | Valid unquoted |
-|---|---|---|
+| --- | --- | --- |
 | camelCase | `firstName` | yes |
 | snake_case | `first_name` | yes |
 | kebab-case | `first-name` | yes |
@@ -104,7 +104,7 @@ flag:  "true"               # → 'true' (string, not boolean)
 ```
 
 | Escape | Result |
-|---|---|
+| --- | --- |
 | `\\` | backslash |
 | `\"` | double quote |
 | `\/` | forward slash |
@@ -161,7 +161,7 @@ with less ambiguity.
 ### Types
 
 | Value | Type |
-|---|---|
+| --- | --- |
 | `null`, `~`, (empty) | null |
 | `true`, `false` (case-sensitive) | Boolean |
 | `42`, `3.14`, `.5` | Number |
@@ -179,7 +179,7 @@ reinterpretation.
 **Dates** are always UTC, second precision, no milliseconds:
 
 | Form | Example |
-|---|---|
+| --- | --- |
 | ISO date only | `2024-03-01` |
 | ISO date + time | `2024-03-01T09:00`, `...T09:00:00`, `...T09:00:00Z`, `...T09:00+02:00` |
 | German (`DD.MM.YYYY`, no offset) | `01.03.2024`, `01.03.2024 14:33` |
@@ -367,7 +367,7 @@ Checked in both strict and non-strict mode; exceeding any of these throws
 resource limits).
 
 | Limit | Value |
-|---|---:|
+| --- | ---: |
 | Document size | 65,536 bytes (UTF-8) |
 | Key length | 128 code points |
 | Scalar length | 16,384 code points |
@@ -393,7 +393,7 @@ content belongs to the structure. A line it cannot place — a key without its
 block — is an error with its line, where non-strict mode skips it silently.
 
 | Condition | Non-strict | Strict |
-|---|---|---|
+| --- | --- | --- |
 | Duplicate key | warn + last value wins | throw |
 | Indented freetext without `\|` | `null` | throw |
 | Invalid date (calendar validation) | string fallback | throw |
@@ -410,11 +410,13 @@ block — is an error with its line, where non-strict mode skips it silently.
 | Space before colon in a quoted block key | skipped | throw |
 | Content after a closing quote on an inline value | string fallback | throw |
 
-References adds (Core §10.1 + References §7):
+References 2.0 adds (Core §10.1 + References §7):
 
 | Condition | Non-strict | Strict |
-|---|---|---|
-| Unresolved reference after bounded resolution | left as token string | throw |
+| --- | --- | --- |
+| Unresolved reference after resolution | left as token string | throw |
+| More than three reference edges | left as token string | throw |
+| Dependency cycle | left as token string | throw |
 | Mapping value used in interpolation | throw | throw |
 | Array/nested-array element in interpolation | throw | throw |
 | Scalar limit exceeded after interpolation/copy | throw | throw |
@@ -425,7 +427,7 @@ References adds (Core §10.1 + References §7):
 
 ```ts
 import { parseCore, type CoreOptions } from '@limaformat/lima'
-import { parse, parseReferences, type ParseOptions } from '@limaformat/lima'
+import { parse, parseReferences, type ParseOptions, type ParseMode } from '@limaformat/lima'
 ```
 
 `parseCore` and `parse` both take
@@ -452,24 +454,24 @@ meta.title.toUpperCase()  // TypeScript knows title is a string
 `$(key)` are plain strings.
 
 | Option | Type | Default |
-|---|---|---|
+| --- | --- | --- |
 | `strict` | `boolean` | `false` |
 | `onWarning` | `(diagnostic) => void` | `undefined` |
 
 **`parse(input, options?: ParseOptions)`** — the primary Core plus
-References 2.0 parser. **`parseReferences`** is a deprecated exact alias;
-new code should use `parse`.
+References 2.0 parser. `parseReferences` is a deprecated exact alias; new
+code should use `parse`.
 
 | Option | Type | Default |
-|---|---|---|
+| --- | --- | --- |
 | `strict` | `boolean` | `false` |
 | `onWarning` | `(diagnostic) => void` | `undefined` |
 | `partials` | `Record<string, unknown>` | `{}` |
-| `mode` | `"references" \| "core"` | `"references"` |
+| `mode` | `'references' \| 'core'` | `'references'` |
 
-`parse(input, { mode: "core" })` uses the same reference-unaware path as
-`parseCore`. Do not supply `partials` in Core mode; the API rejects that
-combination before parsing.
+`parse(input, { mode: 'core' })` uses the same reference-unaware path as
+`parseCore`. Supplying `partials` together with `mode: 'core'` throws
+before parsing begins.
 
 **Duplicate keys never go to `console.warn`** — or any other implicit
 output channel. Diagnostics are only ever delivered through `onWarning`;
@@ -502,7 +504,7 @@ version, until that's a documented, stable export.
 ## Implementation notes
 
 - **Zero runtime dependencies.**
-- **No regex backtracking.** Every pattern in the implementation avoids
+- **Avoids backtracking-specific regex features.** Every pattern in the implementation avoids
   lookahead, lookbehind, backreferences, and nested-quantifier
   constructions — the grammar doesn't require a backtracking engine, the
   same property linear-time engines like RE2 require. Not a claim of
@@ -513,13 +515,13 @@ version, until that's a documented, stable export.
   from `js/`. Numbers are runtime-specific — don't assume they transfer
   proportionally to other JavaScript engines.
 - **Conformance corpus.** Every claim about parsing behaviour in this guide
-  is backed by cases in [`corpus/`](../corpus/), checked against both this
-  implementation and (where applicable) any future one — see
-  [`docs/corpus-design/README.md`](corpus-design/README.md).
+  is backed by cases in the [conformance corpus](../corpus/), checked
+  against both this implementation and (where applicable) any future one —
+  see the [corpus design](corpus-design/README.md).
 
 ## Where to go next
 
-- [Lima Core 1.1](lima-core-1.0-spec.md) and the
+- [Lima Core 1.1](lima-core-1.0-spec.md) and
   [Lima References 2.0](lima-references-2.0-spec.md) — the normative specs;
   this guide simplifies, they decide.
 - [Repository README](../README.md) — why Lima exists, the case against

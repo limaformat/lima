@@ -3,8 +3,8 @@
 Lima is a deliberate subset of YAML block syntax — most existing YAML
 frontmatter parses under Lima unchanged. This guide is about the part that
 doesn't: what to check, what has no equivalent, and how to verify a
-migration mechanically instead of by eye. For full syntax, see
-[`docs/guide.md`](guide.md); for the underlying rules, the two normative
+migration mechanically instead of by eye. For full syntax, see the
+[Guide](guide.md); for the underlying rules, the two normative
 specs (linked throughout) are authoritative.
 
 ## The evidence this guide is based on
@@ -105,7 +105,7 @@ once. The ones most likely to actually appear in real frontmatter:
 
 ## Types and dates
 
-Full type table in [`docs/guide.md`](guide.md#types). The date differences
+Full type table in the [Guide](guide.md#types). The date differences
 specifically:
 
 All js-yaml results below use `YAML11_SCHEMA`, the schema `compat/`
@@ -115,7 +115,7 @@ checking](#needs-checking)) — js-yaml's actual *default* schema
 would otherwise misleadingly read "String".
 
 | YAML input | js-yaml (`YAML11_SCHEMA`) | Lima |
-|---|---|---|
+| --- | --- | --- |
 | `2024-03-01T09:00:00Z` | Date | Date (unchanged) |
 | `2024-03-01 09:00:00` (space, no offset) | Date — YAML 1.1 accepts a space here | **String** — ISO forms require `T` |
 | `2024-03-01 09:00 +02:00` (space, with offset) | String — combining a space *and* an offset isn't resolved either | String (same result, different reason) |
@@ -125,8 +125,7 @@ would otherwise misleadingly read "String".
 ## Quotes and escapes
 
 **The one confirmed divergence found by `compat/`'s own sample set:**
-YAML's single-quote escape doubles the quote (`'It''s fine'` → `It's
-fine`). Lima's single-quote escape is a backslash, matching its
+YAML's single-quote escape doubles the quote (`'It''s fine'` → `It's fine`). Lima's single-quote escape is a backslash, matching its
 double-quote convention (`'It\'s fine'` → `It's fine`) — the doubling
 convention has no Lima equivalent and is **not an error**, so it fails
 silently:
@@ -144,7 +143,7 @@ double-quoted string.
 
 Double-quoted strings and their escapes are otherwise unchanged from
 typical YAML usage. `\0` is a documented exception on the Lima side — see
-[`docs/guide.md`](guide.md#strings).
+the [Guide](guide.md#strings).
 
 ## Block scalars and trailing newlines
 
@@ -172,8 +171,8 @@ addition with no YAML equivalent — migrating YAML frontmatter never
 requires using them. They're layered on top of Core via a separate
 `parse` function (`parseReferences` is its deprecated alias); plain
 `parseCore` never interprets `${...}`/`$(...)`, so existing frontmatter that
-happens to contain literal token-like text is unaffected in Core mode. See
-[`docs/guide.md`](guide.md#references-optional-extension) for the full
+happens to contain literal token-like text is unaffected in Core mode. See the
+[Guide](guide.md#references-optional-extension) for the full
 syntax and the three-edge resolution limit.
 
 ## Migrating step by step
@@ -183,20 +182,20 @@ below is a proposal, not something implemented here (see
 [CLI concept](#a-proposed-cli-not-implemented) for why).
 
 1. **Audit before touching anything.** Run `bun run run` from `compat/`
-   against your own frontmatter (adapt `fixtures/frontmatter-samples/` or
-   point the script at your own directory) to find real divergences in
-   your actual documents, not hypothetical ones.
+  against your own frontmatter (adapt `fixtures/frontmatter-samples/` or
+  point the script at your own directory) to find real divergences in
+  your actual documents, not hypothetical ones.
 2. **Fix flagged documents first**, using the sections above — most fixes
-   are narrow (a date format, a quote style) and mechanical.
+  are narrow (a date format, a quote style) and mechanical.
 3. **Switch the parser, keep the files.** Since Lima accepts a large,
-   deliberate YAML subset, most existing `.yaml`/`.md` frontmatter needs
-   no rewriting at all — only the specific constructs flagged in step 1.
+  deliberate YAML subset, most existing `.yaml`/`.md` frontmatter needs
+  no rewriting at all — only the specific constructs flagged in step 1.
 4. **Re-run the audit** after switching to confirm no unexpected
-   divergence remains.
+  divergence remains.
 5. **Rollback is just reverting the parser swap** — Lima doesn't rewrite
-   or mutate source files, so there's nothing migration-specific to undo
-   in the frontmatter itself. Keep the old parser dependency until step 4
-   is clean.
+  or mutate source files, so there's nothing migration-specific to undo
+  in the frontmatter itself. Keep the old parser dependency until step 4
+  is clean.
 
 ### A proposed CLI, not implemented
 

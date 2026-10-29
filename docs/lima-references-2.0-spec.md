@@ -1,8 +1,8 @@
 # Lima References 2.0 — Normative Specification
 
-**Status:** Final
-**Version:** 2.0.0
-**Date:** 2026-08-12
+> **On an early 1.0?** References 1.0 was published briefly in mid-2026 and is superseded by this specification, which is not syntax-compatible with it. The [archived References 1.0 specification](lima-references-1.0-spec.md) remains available as an independently frozen conformance target.
+
+> **Status:** Final · **Version:** 2.0.0 · **Date:** 2026-08-12
 
 This document specifies the Lima References Extension 2.0. It is a normative
 addition to Lima Core 1.1 and must be read together with that specification.
@@ -182,7 +182,7 @@ representation of its result. An unresolved token remains unchanged in
 non-strict mode and is reported in strict mode.
 
 | Value | Canonical representation |
-|---|---|
+| --- | --- |
 | string | unchanged |
 | boolean | `true` or `false` |
 | null | the empty string |
@@ -368,7 +368,7 @@ are normative.
 `ParseOptions` extends Core options with:
 
 | Option | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `mode` | `"references" \| "core"` | `"references"` | Select full References 2.0 parsing or Core-only parsing |
 | `partials` | `Record<string, unknown>` | `{}` | Values available through `$(name)` |
 
@@ -393,7 +393,7 @@ identifies the partial name but has no value path, because no value traversal
 has begun.
 
 | Resource | Limit |
-|---|---:|
+| --- | ---: |
 | Partial names | 128 |
 | Partial-name length | 128 Unicode code points |
 | Total nodes across all partials | 4,096 |
@@ -438,7 +438,7 @@ After resolution and copying, the complete result is checked in both modes.
 Resource limits are:
 
 | Resource | Limit |
-|---|---:|
+| --- | ---: |
 | String length | 16,384 Unicode code points |
 | Combined map/array depth | 16 |
 | Total result nodes | 65,536 |
@@ -454,7 +454,7 @@ both modes.
 ## 7. Mode behaviour
 
 | Condition | Non-strict | Strict |
-|---|---|---|
+| --- | --- | --- |
 | Missing or invalid lookup path | leave token | throw unresolved-reference error |
 | Dependency cycle | leave token | throw unresolved-reference error |
 | More than three reference edges | leave token | throw unresolved-reference error |
@@ -472,7 +472,7 @@ tokens, never produce unresolved-reference errors.
 ## 8. Unsupported constructs
 
 | Construct | Rule |
-|---|---|
+| --- | --- |
 | References 1.0 `($key)` / `(%key)` | literal text; no compatibility aliases |
 | Briefly published 2.0 `$(:key)` syntax | literal text; no compatibility alias |
 | Briefly published 2.0 `$(key)` document syntax | parsed as a partial reference |
@@ -519,7 +519,7 @@ rules are authoritative.
 References 2.0 is intentionally not syntax-compatible with References 1.0:
 
 | References 1.0 | References 2.0 |
-|---|---|
+| --- | --- |
 | `($site.title)` | `${site.title}` |
 | `(%author)` | `$(author)` |
 | partials are direct-only | partial mappings support dotted traversal |

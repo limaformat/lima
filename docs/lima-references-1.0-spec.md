@@ -1,8 +1,8 @@
 # Lima References 1.0 — Normative Specification
 
-**Status:** Final  
-**Version:** 1.0.0  
-**Date:** 2026-07-31
+> **Archived.** References 1.0 was published briefly in mid-2026 and superseded almost immediately by [Lima References 2.0](lima-references-2.0-spec.md), which is not syntax-compatible with it. This specification is frozen and stays an independently tested conformance target in all three bindings, but it is not a target current implementations are asked to hit. New code should use References 2.0.
+
+> **Status:** Final · **Version:** 1.0.0 · **Date:** 2026-07-31
 
 This document specifies the Lima References Extension. It is a normative addition to Lima Core 1.0 and must be read in conjunction with that document.
 
@@ -137,6 +137,7 @@ tagline: Ein Blog über ($site.default.claim).
 ```
 
 Traversal rules:
+
 - Each segment must resolve to a mapping to allow further traversal.
 - If any intermediate segment is missing, `null`, or not a mapping, the entire path is unresolved.
 - Unresolved dotted path: leave token unchanged in non-strict; throw in strict (after second phase).
@@ -156,7 +157,7 @@ If the partial key is not found, the token is left unchanged in non-strict mode.
 When a value is used in string interpolation, it is converted to a string using the following canonical rules. These rules are implementation-language-agnostic and must produce identical output across all conforming implementations.
 
 | Value type | Canonical string representation |
-|------------|--------------------------------|
+| --- | --- |
 | `string` | the string itself, unchanged |
 | `boolean` | `"true"` or `"false"` |
 | `null` | empty string `""` — the token is replaced with nothing |
@@ -181,13 +182,14 @@ The canonical string form of a float is defined as the result of the **ECMAScrip
 The ECMAScript algorithm is the normative definition — it determines both the digit sequence and the choice between fixed and exponential notation. An implementation MAY use an internal conversion algorithm such as Ryu, Dragonbox, or Grisu, but it MUST apply ECMAScript's fixed-versus-exponential formatting thresholds and produce exactly the same result as `Number::toString` before the lexical normalisations above.
 
 **Fixed vs. exponential threshold (from ECMAScript):**
+
 - If the exponent is in the range −6 to 20 (inclusive), fixed notation is used.
 - Otherwise, exponential notation is used.
 
 **Normative examples:**
 
 | Float value | Canonical string | Notes |
-|-------------|-----------------|-------|
+| --- | --- | --- |
 | `3.14` | `"3.14"` | fixed |
 | `-0.5` | `"-0.5"` | fixed |
 | `0.000001` | `"0.000001"` | fixed (exponent −6) |
@@ -219,6 +221,7 @@ c: 42
 ```
 
 Resolution trace:
+
 - **Phase 1:** `c = 42` (reference-free). `b` contains active token `($c)` — cannot be a target yet. `a` contains active token `($b)` — cannot be a target yet. After phase 1: `a = '($b)'`, `b = '($c)'`, `c = 42`.
 - **Phase 2 snapshot:** `c` is reference-free (42). `b` still contains active token `($c)` — not reference-free in this snapshot. Therefore: `b` resolves to 42 (its target `c` is reference-free). `a` cannot resolve because its target `b` was not reference-free in the phase-2 snapshot.
 - **Final result:** `a = '($b)'`, `b = 42`, `c = 42`.
@@ -296,7 +299,7 @@ Identical contract to `parseCore` (Core spec §11.1) with the addition of refere
 `ReferencesParseOptions` extends `CoreParseOptions` (Core spec §11.2) with:
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `partials` | `Record<string, unknown>` | `{}` | Named values for `(%key)` references |
 
 **Partial validation:** Before document parsing begins, all values in the `partials` map are validated against the Lima Value Model and deep-copied into Lima-owned prototype-free structures. The original host objects are not used after this point. If any partial value fails validation, `parseReferences` throws immediately. The error must identify the failing partial key and the value path (e.g. `"navigation" at navigation.items[2].url: unsupported value type`). Partial-validation errors do not carry a document source line number.
@@ -304,7 +307,7 @@ Identical contract to `parseCore` (Core spec §11.1) with the addition of refere
 **Partial resource limits:**
 
 | Resource | Limit |
-|----------|-------|
+| --- | --- |
 | Number of partial names | 128 |
 | Partial name length | 128 Unicode code points |
 | Total value nodes across all partials | 4,096 |
@@ -336,6 +339,7 @@ LimaValue =
 ```
 
 Additional constraints:
+
 - No cyclic references in partial values.
 - No host-language types (functions, class instances, symbols, accessor properties, etc.).
 - **Numbers:** Host-provided numbers must be finite IEEE-754 binary64 values. The Core safe-integer restriction (−(2^53−1) to 2^53−1) applies only to integer literals parsed from document text, not to host-provided numeric values. A finite `1e20` partial is therefore valid. Negative zero is normalised to positive zero. `NaN` and `Infinity` are invalid.
@@ -357,7 +361,7 @@ Additional constraints:
 The References Extension adds the following entries to the Core strict error list (Core spec §10.1). For the complete normative definition of the References Extension — including syntax, resolution phases, resource checks, and API additions — this document is authoritative. The Core spec Appendix B provides only a summary for orientation.
 
 | Condition | Non-strict | Strict |
-|-----------|-----------|--------|
+| --- | --- | --- |
 | Unresolved reference after both phases | leave token as string | throw |
 | Mapping value used in string interpolation | throw | throw |
 | Array element is a mapping or nested array (in interpolation) | throw | throw |
@@ -378,7 +382,7 @@ Quoted strings containing reference-like tokens (e.g. `"($missing)"`) are inacti
 ## 8. Appendix — What the References Extension Does Not Support
 
 | Construct | Reason |
-|-----------|--------|
+| --- | --- |
 | Transitive references (`a → b → c`) | Lima is a data format, not an evaluation system |
 | Explicit cycle detection | Snapshot-based two-phase model makes it unnecessary |
 | `%key` shorthand without parentheses | Removed; `(%key)` is the only partial syntax |

@@ -1,8 +1,6 @@
 # Lima Core 1.1 — Normative Specification
 
-**Status:** Final  
-**Version:** 1.1.0  
-**Date:** 2026-10-28
+> **Status:** Final · **Version:** 1.1.0 · **Date:** 2026-10-28
 
 This document is the normative specification for Lima Core 1.1. It defines the syntax, semantics, and error behaviour of the Lima frontmatter format. All conforming implementations must produce identical output for any given valid input.
 
@@ -106,6 +104,7 @@ The separator between key and value is `: ` (colon followed by a single space) f
 6. For unquoted values: trim leading and trailing spaces again (a second trim, to handle trailing spaces left after comment removal). If the result is empty, produce `null`. Apply scalar type conversion.
 
 Examples:
+
 ```yaml
 title: "Hello # world" # comment   # → 'Hello # world'  (# inside quotes is literal; outer comment stripped)
 title: "Hello"         # comment   # → 'Hello'           (closing quote is final; outer comment stripped)
@@ -135,6 +134,7 @@ Valid examples: `title`, `firstName`, `h1`, `_draft`, `snake_case`, `kebab-case`
 A line with a separator whose key matches neither this pattern nor a quoted key (§5.2) is unrecognised (§4): skipped in non-strict mode, an error in strict mode — at the top level and in a block mapping alike.
 
 Examples:
+
 ```yaml
 og:title: Hello      # key = 'og:title', value = 'Hello'
 a:b:c: value         # key = 'a:b:c', value = 'value'
@@ -194,7 +194,7 @@ Inline comments and whitespace are processed according to the complete pipeline 
 A value enclosed in matching double quotes (`"..."`) is a string. Type coercion is not applied. The following backslash escape sequences are decoded:
 
 | Escape | Result |
-|--------|--------|
+| --- | --- |
 | `\\` | backslash |
 | `\"` | double quote |
 | `\/` | forward slash |
@@ -210,7 +210,7 @@ A value enclosed in matching double quotes (`"..."`) is a string. Type coercion 
 **Error handling for malformed escapes:**
 
 | Condition | Non-strict | Strict |
-|-----------|-----------|--------|
+| --- | --- | --- |
 | Unknown escape sequence (e.g. `\q`, `\z`, `\0`) | Leave intact (backslash preserved) | throw |
 | Incomplete `\uXXXX` (fewer than 4 hex digits) | Leave intact | throw |
 | Incomplete `\UXXXXXXXX` (fewer than 8 hex digits) | Leave intact | throw |
@@ -234,7 +234,7 @@ Single-quoted strings have exactly one special sequence: `\'` produces a single 
 Inside single-quoted strings, `#` is never a comment.
 
 | Condition | Non-strict | Strict |
-|-----------|-----------|--------|
+| --- | --- | --- |
 | Unterminated string (no closing `'`) | String fallback (from opening quote to end of line) | throw |
 
 #### 6.1.4 Unquoted Value Comment Escaping
@@ -242,7 +242,7 @@ Inside single-quoted strings, `#` is never a comment.
 In unquoted values, `\#` is an escaped hash: the backslash is removed and `#` is kept as a literal character (not a comment). Only the immediately preceding backslash is considered — earlier backslashes are not counted.
 
 | Input | Result | Reason |
-|-------|--------|--------|
+| --- | --- | --- |
 | `text\#rest` | `text#rest` | `\#` → `#`, no comment |
 | `text\\#rest` | `text\#rest` | second `\` escapes `#`; first `\` is literal |
 | `text\\\#rest` | `text\\#rest` | third `\` escapes `#`; first two are literal (two backslashes preserved) |
@@ -264,12 +264,14 @@ The `|` must appear alone on its line (after the key separator).
 **Block scalar extent:** A line belongs to a block scalar if and only if its indentation is strictly greater than the indentation of the key that introduced the scalar. This rule applies to all lines, including lines beginning with `#`. An indented `#` line is literal scalar content; a dedented `#` line ends the scalar and is processed as a Lima comment by the surrounding structure. Empty lines between scalar content lines belong to the scalar regardless of their indentation. An empty line here is one of spaces only, or none: other whitespace, such as U+00A0, is scalar content, and a line of it at the key's column or less ends the scalar like any content line.
 
 Examples:
+
 ```yaml
 description: |
   Text
 # top-level comment   ← dedented, ends scalar; Lima comment
 title: Hello
 ```
+
 → `description = 'Text'`, `title = 'Hello'`
 
 ```yaml
@@ -278,14 +280,17 @@ description: |
   # indented comment  ← belongs to scalar, literal content
   More text
 ```
+
 → `description = 'Text\n# indented comment\nMore text'`
 
 **Key with empty block and following comment:**
+
 ```yaml
 empty:
   # comment
 next: value
 ```
+
 → `empty = null`, `next = 'value'` (comment is skipped, no content lines at deeper indentation)
 
 **Indentation trimming:** The content indentation is the smallest number of leading spaces among all non-empty content lines, measured from column 0. Empty lines do not participate in this calculation. This uniform indentation is removed from the start of every content line. Empty lines are preserved as empty strings in the joined result. Lines are joined with a single newline character (`\n`) between each consecutive pair.
@@ -293,6 +298,7 @@ next: value
 **Trailing content:** All trailing empty lines and newlines at the end of a block scalar are removed (strip behaviour). The parsed value ends with the final non-empty content line and contains no trailing newline. A `|` with no content lines, at the end of the input too, is the empty string `''`. Tabs within the final content line are preserved — only trailing empty lines and newlines are stripped, not whitespace within lines.
 
 **Inline content without `|`:** Indented freetext without a `|` marker is not a valid multi-line string.
+
 - Non-strict: the key's value is `null`.
 - Strict: throw. Error includes 1-based line number.
 
@@ -305,9 +311,11 @@ description: |
   This is a very long sentence that
   ^^continues on the next line as one.
 ```
+
 → `"This is a very long sentence that continues on the next line as one."`
 
 Rules:
+
 - `^^` must appear at the very start of the line content (after indentation trimming).
 - A `^^` line with no further content (bare `^^`) is silently dropped — no trailing space is added to the previous line.
 - `^^` on the first content line of a block has no previous line to append to — the marker is stripped and the content is kept as-is.
@@ -347,6 +355,7 @@ exponent     = [eE] [+-]? [0-9]+
 ```
 
 **Type determination:**
+
 - A number with no decimal point and no exponent is an **integer**.
 - A number with a decimal point or an exponent (or both) is a **float**.
 
@@ -361,6 +370,7 @@ Invalid (remain strings): `1e`, `1e+`, `.5E`, `1e-`
 **Zero normalisation:** Any numeric value whose parsed mathematical value is zero — whether integer (`-0`) or float (`-0.0`) — and which did not result from underflow, is normalised to positive zero. This ensures identical output across JavaScript (which distinguishes `+0` and `-0`) and Rust (which has no negative integer zero). Therefore `value: -0` produces the integer `0`, and `value: -0.0` produces the float `0.0`.
 
 **Floats:** Follow IEEE 754 double precision.
+
 - If conversion produces a non-finite value (`Infinity` or `-Infinity`) due to overflow: non-strict — string fallback; strict — throw.
 - If a syntactically non-zero float converts to positive or negative zero due to underflow: non-strict — string fallback; strict — throw.
 - Subnormal (denormal) values that remain non-zero are accepted as normal float values in both modes.
@@ -372,7 +382,7 @@ Lima does not produce `Infinity`, `-Infinity`, `NaN`, or negative zero as output
 The following forms are not matched by the grammar and remain strings:
 
 | Form | Example |
-|------|---------|
+| --- | --- |
 | Explicit plus sign | `+42` |
 | Trailing decimal point | `1.` |
 | Leading zeros (non-zero) | `01`, `007` |
@@ -392,7 +402,7 @@ Dates are recognised when the value matches one of the following forms exactly. 
 **ISO 8601** — offset supported:
 
 | Form | Example |
-|------|---------|
+| --- | --- |
 | Date only | `2024-03-01` |
 | Date + time | `2024-03-01T09:00` |
 | Date + time + seconds | `2024-03-01T09:00:00` |
@@ -405,7 +415,7 @@ The `T` separator between date and time is required for ISO forms. A space separ
 **German format** (`DD.MM.YYYY` or `D.M.YYYY`) — no offset, always UTC:
 
 | Form | Example |
-|------|---------|
+| --- | --- |
 | Date only | `01.03.2024` or `1.3.2024` |
 | Date + time | `01.03.2024 14:33` |
 | Date + time + seconds | `01.03.2024 14:33:00` |
@@ -415,7 +425,7 @@ Day and month may be one or two digits. A space separator between date and time 
 **Slash format** (`YYYY/MM/DD`) — no offset, always UTC:
 
 | Form | Example |
-|------|---------|
+| --- | --- |
 | Date only | `2024/03/01` |
 | Date + time | `2024/03/01 14:33` |
 | Date + time + seconds | `2024/03/01 14:33:00` |
@@ -427,14 +437,14 @@ Month and day must be two digits in slash format. A space separator between date
 All date and time components are validated individually. Dates use the proleptic Gregorian calendar. Years range from 0001 through 9999.
 
 | Component | Valid range | Notes |
-|-----------|------------|-------|
-| Year | 0001–9999 | |
+| --- | --- | --- |
+| Year | 0001–9999 |  |
 | Month | 1–12 | ISO and slash: exactly two digits in the format pattern (e.g. `03`, not `3`); German: one or two digits |
 | Day | 1–last day of month | Calendar-aware including leap years; ISO and slash: exactly two digits in the format pattern; German: one or two digits |
-| Hour | 00–23 | |
-| Minute | 00–59 | |
+| Hour | 00–23 |  |
+| Minute | 00–59 |  |
 | Second | 00–59 | Leap seconds not supported |
-| Offset hour | 00–14 | |
+| Offset hour | 00–14 |  |
 | Offset minute | 00–59 | If offset hour is 14, offset minute MUST be 00 |
 
 The reconstructed date components must match the input exactly. Invalid calendar dates (e.g. `2024-02-30`) are not silently normalised. `-00:00` is treated identically to `+00:00` (UTC). `24:00` is not accepted.
@@ -459,7 +469,7 @@ All date values represent a **UTC Instant**: a point in time in UTC with second 
 **Language bindings:**
 
 | Language | Concrete type |
-|----------|--------------|
+| --- | --- |
 | JavaScript/TypeScript | `Date` (milliseconds always 0) |
 | JSON serialisation | RFC 3339 string (`2024-03-01T09:00:00Z`) |
 | Rust | `Instant { epoch_seconds: i64 }` (seconds since the Unix epoch) |
@@ -544,6 +554,7 @@ tags:
 - webdev
 title: Hello
 ```
+
 → `tags = ['javascript', 'webdev']`, `title = 'Hello'`
 
 This holds at any level, the key of an object item included. A line is a sequence item when it is `-` alone or `-` followed by whitespace; `---` and `-x` are not. A compact sequence ends at the first content line in its key's column that is not an item. Only a bare key opens one: after a key with an inline value, an item in the key's column belongs to no value — unrecognised at the top level (§4), a line of the other kind in a block mapping (§7.1).
@@ -594,6 +605,7 @@ tags: [javascript, webdev, open-source]
 **Empty flow sequence:** `[]` produces an empty sequence.
 
 **Parsing rules:**
+
 - Items are separated by commas at the current flow depth, outside quoted strings. A comma inside an immediately nested flow mapping does not separate items of the outer sequence.
 - Whitespace around items and commas is trimmed.
 - Quoted items may contain commas. Quoting rules follow §6.1.2 and §6.1.3.
@@ -621,6 +633,7 @@ author: {name: Alice, role: editor}
 **Empty flow mapping:** `{}` produces an empty mapping.
 
 **Parsing rules:**
+
 - Items are separated by commas at the current flow depth, outside quoted strings.
 - Whitespace around items and commas is trimmed.
 - Each item must have the form `key: value` — the separator is `: ` (colon followed by exactly one space). A colon not followed by a space is part of the value, not a separator.
@@ -666,6 +679,7 @@ Multi-line `|` block scalar content: a `#` line that is more deeply indented tha
 The following limits are enforced in both strict and non-strict mode. Exceeding any limit is a hard error in both modes — limits are security boundaries, not style preferences.
 
 **Measurement conventions:**
+
 - **Document size:** UTF-8 byte count of the original input, before normalisation.
 - **Key and scalar length:** Unicode code point count, measured after escape decoding. Escape sequences left intact in non-strict mode are counted in their preserved literal form.
 - **Nesting depth:** Defined recursively on the final parsed value tree. The document root mapping itself does not count as a level.
@@ -678,11 +692,10 @@ The following limits are enforced in both strict and non-strict mode. Exceeding 
   ```
 
   The limit `documentDepth ≤ 16` applies. Flow collections count identically to block collections. This definition is used for Core parsing, partial validation, and the final References output check.
-
 - **Top-level key count:** All recognised top-level key entries, counted at parse time before duplicate resolution. Each occurrence of a duplicate key increments the counter.
 
 | Resource | Limit |
-|----------|-------|
+| --- | --- |
 | Document size | 64 KB (65,536 UTF-8 bytes) |
 | Nesting depth (maps and arrays combined) | 16 levels |
 | Number of top-level key entries | 128 |
@@ -704,7 +717,7 @@ Lima has two parse modes: non-strict (default) and strict.
 ### 10.1 Strict Error List
 
 | Condition | Non-strict | Strict |
-|-----------|-----------|--------|
+| --- | --- | --- |
 | Duplicate key (any mapping level) | warn via `onWarning` + last wins | throw |
 | Indented freetext without `\|` marker | `null` | throw |
 | Invalid date value (component validation) | string fallback | throw |
@@ -727,6 +740,7 @@ Lima has two parse modes: non-strict (default) and strict.
 ### 10.2 Error Messages
 
 All errors (strict and resource limit) MUST include:
+
 - A descriptive message identifying the problem.
 - The 1-based line number where the error occurs (`at line N`).
 
@@ -749,7 +763,7 @@ The return value is a prototype-free plain object (equivalent to `Object.create(
 ### 11.2 CoreParseOptions
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `strict` | `boolean` | `false` | Enable strict mode (§10) |
 | `onWarning` | `(diagnostic: Diagnostic) => void` | `undefined` | Callback for non-strict warnings (e.g. duplicate keys). If not provided, warnings are silently discarded. |
 
@@ -775,7 +789,7 @@ All errors thrown by the parser are plain `Error` instances with a descriptive `
 The following constructs are explicitly outside Lima Core. Their absence is intentional.
 
 | Construct | Reason |
-|-----------|--------|
+| --- | --- |
 | `>` folded block scalar | Confusing semantics; `\|` + `^^` covers the use case. The lines that follow the marker are inconsistently indented (§7.1 rule 5) |
 | Chomping indicators (`\|-`, `\|+`) | Not needed without `>`. The lines that follow the marker are inconsistently indented (§7.1 rule 5) |
 | Nested flow structures (depth > 1) | Not needed for frontmatter; block syntax is clearer |
@@ -813,9 +827,7 @@ For implementors: the References Extension adds `parseReferences()`, validates a
 ## 14. Appendix C — Design Principles
 
 1. **Lima is a data format with convenience features, not an evaluation system.** References and partials are author convenience, not a programming language. Features that move Lima toward a template language or evaluation system do not belong in Core.
-
 2. **The YAML subset is the product. References and partials are features.** Lima Core is a complete and useful format without references. The extension layer must not take over the identity of Core.
-
 3. **The spec is implementation-language-agnostic.** No rule may depend on host-language-specific behaviour. Every rule must be precise enough for a Rust implementation to follow directly.
 
 ### Implementation Notes
