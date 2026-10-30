@@ -1,6 +1,6 @@
 {
   "name": "@limaformat/lima-language-server",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Language Server Protocol diagnostics and reference navigation for Lima",
   "keywords": ["lima", "language-server", "lsp", "frontmatter", "markdown"],
   "homepage": "https://limaformat.dev",

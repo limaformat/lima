@@ -1,12 +1,27 @@
 # Changelog
 
-## [0.2.0] — 2026-10-28
+## [0.3.0] — 2026-10-30
+
+Highlighting and diagnostics follow Lima Core 1.2 and References 2.1: the
+bundled parser is that of `@limaformat/lima` 0.7.0.
+
+- Keys in any script and gendered keys (`größe`, `題名`, `autor*in`,
+  `autor·in`) are highlighted and read as keys, and so are references to them
+  (`${größe}`); the grammar uses the editor's Unicode classes (README).
+- A document with a lone surrogate is reported as `INVALID_DOCUMENT`; new
+  hints name whitespace other than spaces before a key and a FULLWIDTH COLON
+  in place of `: `.
 
 The minimum is now VS Code 1.82. Its extension host moved to Electron 25
 (Chromium 114 / V8 11.4), which provides `String.prototype.isWellFormed()`;
-the bundled Core 1.2 parser uses that method to reject invalid Unicode scalar
-values. See the official [VS Code 1.82 Electron update][vscode-1.82] and
+the bundled parser uses that method to reject invalid Unicode scalar values.
+See the official [VS Code 1.82 Electron update][vscode-1.82] and
 [Electron 25 release notes][electron-25].
+
+[vscode-1.82]: https://code.visualstudio.com/updates/v1_82#_electron-25-update
+[electron-25]: https://www.electronjs.org/blog/electron-25-0
+
+## [0.2.0] — 2026-10-28
 
 Diagnostics follow Lima Core 1.1: the bundled parser is that of
 `@limaformat/lima` 0.6.0, which reads strictly, as the extension does.
@@ -23,9 +38,6 @@ Diagnostics follow Lima Core 1.1: the bundled parser is that of
   pasted U+00A0, is reported.
 - An object item's later keys stand at its first key's column; another
   column is reported.
-
-[vscode-1.82]: https://code.visualstudio.com/updates/v1_82#_electron-25-update
-[electron-25]: https://www.electronjs.org/blog/electron-25-0
 
 ## [0.1.0] — 2026-09-14
 

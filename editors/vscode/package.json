@@ -2,7 +2,7 @@
   "name": "vscode-lima",
   "displayName": "Lima",
   "description": "Syntax highlighting, live diagnostics, and reference navigation for Lima frontmatter — standalone .lima files and Markdown/MDX.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "limaformat",
   "license": "ISC",
   "icon": "icon.png",
@@ -77,7 +77,7 @@
     "prepare": "bun run esbuild.mjs",
     "vscode:prepublish": "bun run esbuild.mjs --production",
     "package": "vsce package",
-    "publish:openvsx": "ovsx publish vscode-lima-0.2.0.vsix",
+    "publish:openvsx": "ovsx publish vscode-lima-0.3.0.vsix",
     "test": "bun test"
   },
   "devDependencies": {
