@@ -1057,16 +1057,14 @@ pub fn parse(front_matter: &str, mut options: ParseOptions) -> Result<LimaValue,
         );
     }
     let has_no_references = !front_matter.contains("${") && !front_matter.contains("$(");
-    if has_no_references {
-        if options.partials.as_ref().is_none_or(Vec::is_empty) {
-            return parse_core(
-                front_matter,
-                CoreOptions {
-                    strict: options.strict,
-                    on_warning: options.on_warning,
-                },
-            );
-        }
+    if has_no_references && options.partials.as_ref().is_none_or(Vec::is_empty) {
+        return parse_core(
+            front_matter,
+            CoreOptions {
+                strict: options.strict,
+                on_warning: options.on_warning,
+            },
+        );
     }
     let partials = validate_partials(options.partials.as_deref().unwrap_or(&[]))?;
     if has_no_references {

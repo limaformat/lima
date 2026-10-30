@@ -58,7 +58,7 @@ const wrap = (items: string[], indent: string, width = 110) => {
 const header = (comment: string) => `${comment} Generated from UnicodeData.txt 18.0.0; DO NOT EDIT.\n${comment} SHA-256: ${EXPECTED_SHA256}\n${comment} Regenerate: ${command}\n`
 
 const ts = `${header('//')}export const UNICODE_KEY_RANGES = new Uint32Array([\n${wrap(flat, '\t')}\n])\n`
-const rs = `${header('//')}pub(crate) static UNICODE_KEY_RANGES: &[u32] = &[\n${wrap(flat, '    ')}\n];\n`
+const rs = `${header('//')}#[rustfmt::skip]\npub(crate) static UNICODE_KEY_RANGES: &[u32] = &[\n${wrap(flat, '    ')}\n];\n`
 const go = `${header('//')}package lima\n\nvar unicodeKeyRanges = [...]uint32{\n${wrap(flat, '\t')}\n}\n`
 await Bun.write(resolve('js/src/unicode-key-table.ts'), ts)
 await Bun.write(resolve('rust/src/unicode_key_table.rs'), rs)
