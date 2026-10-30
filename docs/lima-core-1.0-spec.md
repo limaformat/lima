@@ -1,10 +1,12 @@
-# Lima Core 1.1 — Normative Specification
+# Lima Core 1.2 — Normative Specification
 
-> **Status:** Final · **Version:** 1.1.0 · **Date:** 2026-10-28
+> **Status:** Draft · **Version:** 1.2.0 · **Date:** —
 
-This document is the normative specification for Lima Core 1.1. It defines the syntax, semantics, and error behaviour of the Lima frontmatter format. All conforming implementations must produce identical output for any given valid input.
+This document is the normative specification for Lima Core 1.2. It defines the syntax, semantics, and error behaviour of the Lima frontmatter format. All conforming implementations must produce identical output for any given valid input.
 
 Lima is not a general-purpose data format. It is a small, predictable frontmatter format — the part of YAML that frontmatter actually needs, with well-defined types and no surprises.
+
+**Changes from Core 1.1:** an unquoted key may be written in any script: it starts with a letter or number of Unicode 18.0 or with `_`, and after its first character it may also hold marks, as accents can be written, and `*` and `·`, as gendered words such as `autor*in` and `autor·in` are written (§5.1). Lima delivers and compares a key as it is written, code point by code point, and normalises no Unicode (§5.3). A key Core 1.1 recognised reads the same in Core 1.2; a line whose unquoted key holds characters that Core 1.2 admits and Core 1.1 did not, and which Core 1.1 therefore did not read as an entry, is an entry now when it otherwise has the form of an entry and stands where an entry may. For clarity, §1 now says what UTF-8 implies: a string with a lone surrogate is no document, and a parser rejects it.
 
 **Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented where no block level is open, at the top level as one level down (§7.1 rule 5), an unindented line that matches no key pattern (§4), and a line of a block mapping whose key the key grammar rejects (§5.1). Non-strict mode skips these lines, as before. Core 1.1 also settles what Core 1.0 left unsaid, where implementations differed: a bare key's sequence may start at the key's own column, as YAML writes it (§7.2); a block holds mapping entries or sequence items, as its first entry or item decides, and a line non-strict mode skips ends neither the block nor the object item before it unless it is less indented (§7.1); an item whose value is a flow sequence is a nested sequence (§7.2); a `|` with no content lines is `''` (§6.1.5); indentation is spaces only, so a line indented by other whitespace, such as U+00A0, is unrecognised (§7.1), with whitespace defined once (§1); and the end of the input ends the last line as a line terminator does (§4), so a last `key:` is a bare key.
 
@@ -12,7 +14,7 @@ Lima is not a general-purpose data format. It is a small, predictable frontmatte
 
 ## 1. Definitions
 
-**Document:** A UTF-8 encoded string of Lima frontmatter content, without the surrounding `---` delimiters. Stripping delimiters is the caller's responsibility.
+**Document:** A UTF-8 encoded string of Lima frontmatter content, without the surrounding `---` delimiters. Stripping delimiters is the caller's responsibility. Its characters are Unicode scalar values, as UTF-8 encodes no other: a string that holds a lone surrogate, which some host languages can, is no document, and a parser rejects it with an error in both modes.
 
 **Key:** A named field in a Lima document.
 
@@ -36,9 +38,7 @@ Lima is not a general-purpose data format. It is a small, predictable frontmatte
 
 **UTC Instant:** An abstract point in time expressed in UTC with second precision and zero milliseconds. The concrete representation depends on the host language (see §6.5.3).
 
-**Document sigil (`$`):** The character that introduces a document reference within `($...)` syntax. Meaningful only to a Lima References conforming parser; treated as literal string content by a Lima Core parser.
-
-**Partial sigil (`%`):** The character that introduces a partial reference within `(%...)` syntax. Meaningful only to a Lima References conforming parser; treated as literal string content by a Lima Core parser.
+**Reference:** A token of the optional References extension (Appendix B): `${document-path}`, a document reference, or `$(partial-name)` with an optional dotted path, a partial reference, as the References specification defines them. Meaningful only to a References parser; treated as literal string content by a Lima Core parser.
 
 **Strict mode:** A parse mode in which a defined set of additional checks are enforced and throw errors instead of falling back silently. See §10.
 
@@ -121,13 +121,16 @@ An unindented line that does not match any key pattern, and is no item of a comp
 
 ### 5.1 Unquoted Keys
 
-An unquoted key matches the following pattern:
+An unquoted key starts with a letter, a number or `_`. After that it holds letters, marks, numbers and the characters `_`, `:`, `-`, `*` and `·` (U+00B7 MIDDLE DOT):
 
 ```
-[a-zA-Z0-9_][a-zA-Z0-9_:\-]*
+key-initial    a letter or a number of any script, or _
+key-character  a key-initial, a mark, or one of : - * ·
 ```
 
-Valid examples: `title`, `firstName`, `h1`, `_draft`, `snake_case`, `kebab-case`, `og:title`, `1st`, `42`
+Letters, marks and numbers are the characters whose general category in the Unicode Character Database 18.0.0 is L, M or N; numbers include more than decimal digits, such as Roman numerals. The version is fixed, so that every implementation reads a key alike, whatever version of Unicode its host language knows: a character that Unicode 18.0 does not assign is no letter, mark or number. Whitespace (§1), control characters and format characters, among them U+200B–U+200F and the bidirectional controls U+202A–U+202E and U+2066–U+2069, are in none of these categories and in no unquoted key; a key that holds them must be quoted (§5.2).
+
+Valid examples: `title`, `firstName`, `h1`, `_draft`, `snake_case`, `kebab-case`, `og:title`, `1st`, `42`, `größe`, `título`, `autor:in`, `autor*in`, `autor·in`, `заголовок`, `題名`
 
 **Key-value separator rule:** Since unquoted keys may contain colons, the key-value separator is the first `: ` (colon followed by exactly one space) or `:\n` (colon followed by a newline, or the end of the input, §4) that is not inside a quoted key. Everything before it is the key; everything after is the value.
 
@@ -172,6 +175,8 @@ Duplicate keys are invalid at all mapping levels (top-level, nested maps, flow m
 
 - **Non-strict:** Emit a warning via `onWarning`. Last value wins.
 - **Strict:** Throw. Error message includes the key name and 1-based line number.
+
+Two keys are the same key when they are the same sequence of code points. Lima normalises no Unicode: `größe` written with U+00F6 and `größe` written with `o` and U+0308 COMBINING DIAERESIS are two keys, and each is delivered as it is written. A consumer that wants them to be one normalises the keys itself.
 
 Duplicate detection and resource limit counting (§9) both occur at parse time, before duplicate resolution. Each recognised key entry increments the counter and is checked for duplication independently.
 
@@ -636,7 +641,7 @@ author: {name: Alice, role: editor}
 
 - Items are separated by commas at the current flow depth, outside quoted strings.
 - Whitespace around items and commas is trimmed.
-- Each item must have the form `key: value` — the separator is `: ` (colon followed by exactly one space). A colon not followed by a space is part of the value, not a separator.
+- Each item must have the form `key: value` — the separator is `: ` (colon followed by exactly one space). A colon not followed by a space is no separator: before the first `: ` it is part of an unquoted key (§5.1), after it part of the value.
 - The first `: ` in each item is the separator. Everything after it is the value — colons in values are permitted: `{url: https://x:y}` → `url = 'https://x:y'`.
 - Quoted keys follow the same rules as block quoted keys (§5.2).
 - Type coercion applies to unquoted values. Quoted values are returned as strings without coercion.
@@ -806,7 +811,7 @@ The following constructs are explicitly outside Lima Core. Their absence is inte
 | YAML anchors and aliases (`&`, `*`) | Out of scope |
 | YAML tags (`!!str`, `!!int`) | Out of scope |
 | Multi-document streams (`---`, `...`) | Out of scope. A `---` or `...` line is unrecognised (§4) |
-| Transitive references | References Extension only; one hop maximum |
+| Transitive references | References Extension only; at most three reference edges (References §4.2) |
 | BigInt / arbitrary-precision integers | Not part of Lima type system |
 | Non-finite float output | Lima never produces `Infinity` or `NaN`. The literal strings `Infinity` and `NaN` are never parsed as numbers (grammar mismatch). A syntactic float that overflows to a non-finite value falls back to string in non-strict mode and throws in strict mode (see §6.4.2 and §10.1). |
 
@@ -816,11 +821,9 @@ The following constructs are explicitly outside Lima Core. Their absence is inte
 
 Lima Core defines the data format. The References Extension defines an optional resolution layer on top.
 
-A **Lima Core conforming parser** implements `parseCore` as defined in §11. It does not need to implement reference resolution. `($key)` and `(%key)` tokens — using the document sigil `$` and partial sigil `%` respectively — are plain strings to a Core parser.
+A **Lima Core conforming parser** implements `parseCore` as defined in §11. It does not need to implement reference resolution. `${key}` and `$(partial)` tokens are plain strings to a Core parser.
 
-The complete syntax, semantics, error behaviour, resource checks, and API additions of the optional References Extension are defined exclusively in the **Lima References 1.0 specification**. In case of any discrepancy between this appendix and that document, the References specification is authoritative.
-
-For implementors: the References Extension adds `parseReferences()`, validates and deep-copies all partial values before parsing, marks reference tokens as active during syntactic parsing, and resolves them in two snapshot-based phases after Core parsing is complete.
+The complete syntax, semantics, error behaviour, resource checks, and API additions of the optional References Extension are defined exclusively in the **Lima References 2.1 specification**; References 1.0 is frozen and normative only for its own conformance corpus. In case of any discrepancy between this appendix and the References specification, the References specification is authoritative.
 
 ---
 
@@ -838,7 +841,10 @@ These notes document known engineering trade-offs that arise from the design dec
 The canonical float serialisation (References §3.5.1) is normatively defined via the ECMAScript `Number::toString` algorithm, including its fixed-versus-exponential thresholds (exponent range −6 to 20). This is a deliberate trade-off: it guarantees cross-language output parity at the cost of additional engineering effort in non-JavaScript implementations. A Rust implementation must reproduce these thresholds exactly — using Ryu or Dragonbox internally is fine, but the fixed/exponential boundary and the digit sequence must match ECMAScript semantics. This is the one place where the spec is normatively ECMAScript-anchored; all other rules are language-neutral.
 
 **Source position tracking (References Extension only)**
-References §4.1 requires source position metadata (line number and character offset) for every key in the document, including keys nested at arbitrary depth, in order to apply the phase-1 resolution rule correctly for dotted paths. A minimal streaming parser that deserialises directly into output structures without an intermediate representation cannot satisfy this requirement. Implementations of the References Extension must retain an internal structure that preserves source positions for all keys until phase 2 is complete. This is an intentional trade-off: deterministic phase-1 resolution requires this metadata.
+References orders the errors associated with source tokens by the source position (line number and character offset) of the token, and a token copied by a pure reference keeps the position of its original spelling (References §4.4, §5). A minimal streaming parser that deserialises directly into output structures without an intermediate representation cannot satisfy this requirement. Implementations of the References Extension must retain every active token's source position and insertion provenance until resolution and final-result validation are complete. This is an intentional trade-off: deterministic error reporting requires this metadata.
+
+**The characters of a key**
+An unquoted key's letters, marks and numbers are the general categories of Unicode 18.0 (§5.1). A host language's own Unicode support follows the version it was built with, and Rust's standard library has no test for a mark; so every implementation carries its own table of the three categories, generated from the Unicode Character Database 18.0.0, rather than a dependency. Reading a key byte by byte while it is ASCII, and looking a category up only for a code point beyond U+007F, keeps a document of ASCII keys as fast as before.
 
 **Partial validation overhead**
 Partial values are fully validated and deep-copied before document parsing begins (References §6.2). For host applications that pass large partial objects of which only a small fraction is actually referenced in a given document, this validation occurs on every parse call regardless of usage. If this overhead is measurable, the recommended approach is to pre-validate and cache the deep-copied Lima partial structure on the host side, and pass the already-validated copy to `parseReferences` — avoiding repeated validation of the same partial data.
@@ -938,8 +944,9 @@ A sequence item beginning with `object-entry-head` starts an object item. Subseq
 key                = unquoted-key | single-quoted-key | double-quoted-key ;
 
 unquoted-key       = key-initial, { key-character } ;
-key-initial        = ASCII-letter | decimal-digit | "_" ;
-key-character      = key-initial | ":" | "-" ;
+key-initial        = unicode-letter | unicode-number | "_" ;
+key-character      = key-initial | unicode-mark
+                   | ":" | "-" | "*" | "·" ;
 
 single-quoted-key  = "'", { single-quoted-key-character }, "'" ;
 double-quoted-key  = '"', { double-quoted-character }, '"' ;
@@ -948,7 +955,7 @@ inline-separator   = ":", " " ;
 block-separator    = ":" ;
 ```
 
-For an unquoted key, the separator is the first `: ` outside a quoted key, as specified in §5.1. A colon not followed by a space remains part of an unquoted key. For a quoted key, the separator must immediately follow the closing quote (§5.2).
+For an unquoted key, the separator is the first `: `, or a colon that ends the line or the input, outside a quoted key, as specified in §5.1. A colon followed by any other character remains part of an unquoted key. For a quoted key, the separator must immediately follow the closing quote (§5.2).
 
 ### 15.5 Inline Values
 
@@ -1074,6 +1081,13 @@ The productions recognise lexical shapes only. Numeric range, overflow, underflo
 ### 15.10 Character Classes
 
 ```ebnf
+unicode-letter     = ? a character of general category L
+                       (Lu, Ll, Lt, Lm, Lo) in Unicode 18.0 ? ;
+unicode-mark       = ? a character of general category M
+                       (Mn, Mc, Me) in Unicode 18.0 ? ;
+unicode-number     = ? a character of general category N
+                       (Nd, Nl, No) in Unicode 18.0 ? ;
+
 ASCII-letter       = "A" | "B" | "C" | "D" | "E" | "F" | "G"
                    | "H" | "I" | "J" | "K" | "L" | "M" | "N"
                    | "O" | "P" | "Q" | "R" | "S" | "T" | "U"

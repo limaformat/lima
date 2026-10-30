@@ -34,13 +34,6 @@ pass and costs nothing). Let the block parser report how far it read, and
 start the range check there. The strict scenarios of the cross-language
 benchmarks show the effect.
 
-## A hint for indentation by other whitespace
-
-A line indented by spaces and U+00A0 is reported as unrecognised with the
-generic hint for keys ("an unquoted key has letters, digits, …"). Name the
-cause instead, e.g. "U+00A0 before the key; Lima indents by spaces only".
-A message change only; a patch release.
-
 ## Core 1.2: a table of line kinds
 
 Every finding of the Core 1.1 reviews sat in §7's prose on lines and
@@ -49,3 +42,10 @@ normative table — kind of line × context → outcome in each mode — would
 state each case once, and the differential test's generator could produce
 every row of it on purpose. An erratum if it only restates what holds;
 Core 1.2 otherwise.
+
+## "Identical output" says more than it means
+
+Core's opening paragraph and §2 promise identical output for any valid input,
+but dates are host types (§6.5.3) and mapping order is not semantic (§1). Say
+"the same abstract Lima value" instead, the next time the opening is touched
+(raised by the review of Core 1.2, 2026-10-30).

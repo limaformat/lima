@@ -2,8 +2,8 @@
 
 A practical walkthrough of Lima syntax, the References Extension, resource
 limits, and the JavaScript/TypeScript API. This guide is descriptive, not
-normative — [Lima Core 1.1](lima-core-1.0-spec.md) and
-[Lima References 2.0](lima-references-2.0-spec.md) are the source of truth.
+normative — [Lima Core 1.2](lima-core-1.0-spec.md) and
+[Lima References 2.1](lima-references-2.0-spec.md) are the source of truth.
 Where this guide and a spec disagree, the spec wins.
 
 ## Installation
@@ -44,21 +44,26 @@ them.
 
 ### Key names
 
-```
-[a-zA-Z0-9_][a-zA-Z0-9_:\-]*
-```
-
-An unquoted key starts with a letter, digit, or underscore, followed by any
-combination of letters, digits, underscores, hyphens, or colons.
+An unquoted key starts with a letter, number, or underscore, in any script,
+followed by any combination of letters, accents and other marks, numbers,
+underscores, hyphens, colons, asterisks, or middle dots (`·`). Letters, marks
+and numbers are those of Unicode 18.0; numbers include more than the digits
+0–9, such as Roman numerals.
 
 | Format | Example | Valid unquoted |
 | --- | --- | --- |
 | camelCase | `firstName` | yes |
 | snake_case | `first_name` | yes |
 | kebab-case | `first-name` | yes |
-| digit start | `1st`, `42` | yes |
+| number start | `1st`, `42` | yes |
 | colon-namespaced | `og:title` | yes |
-| spaces, other characters | `first name` | needs quoting |
+| other languages | `größe`, `título`, `題名` | yes |
+| gendered | `autor:in`, `autor*in`, `autor·in` | yes |
+| spaces, other characters | `first name`, `🙂` | needs quoting |
+
+Lima reads a key as it is written and does not normalise Unicode: an `ö`
+typed as one character and an `ö` typed as `o` plus a combining mark are two
+different keys. Editors write the first almost always.
 
 Since unquoted keys may themselves contain colons, the key/value separator
 is the *first* `: ` (colon + exactly one space) or `:\n` that isn't inside a
@@ -294,10 +299,10 @@ for the indentation-based rule that applies there instead.
 
 ## References (optional extension)
 
-Everything in this section is **Lima References 2.0**, layered on top of
+Everything in this section is **Lima References 2.1**, layered on top of
 Core. A Core-only parser (`parseCore`) treats `${key}` and `$(key)` as plain
 strings. `parse` enables References by default; `parseReferences` is its
-deprecated compatibility alias with identical 2.0 semantics.
+deprecated compatibility alias with identical semantics.
 
 **Document reference** — `${key}` or a dotted path `${a.b.c}`:
 
@@ -410,7 +415,7 @@ block — is an error with its line, where non-strict mode skips it silently.
 | Space before colon in a quoted block key | skipped | throw |
 | Content after a closing quote on an inline value | string fallback | throw |
 
-References 2.0 adds (Core §10.1 + References §7):
+References 2.1 adds (Core §10.1 + References §7):
 
 | Condition | Non-strict | Strict |
 | --- | --- | --- |
@@ -459,7 +464,7 @@ meta.title.toUpperCase()  // TypeScript knows title is a string
 | `onWarning` | `(diagnostic) => void` | `undefined` |
 
 **`parse(input, options?: ParseOptions)`** — the primary Core plus
-References 2.0 parser. `parseReferences` is a deprecated exact alias; new
+References 2.1 parser. `parseReferences` is a deprecated exact alias; new
 code should use `parse`.
 
 | Option | Type | Default |
@@ -521,8 +526,8 @@ version, until that's a documented, stable export.
 
 ## Where to go next
 
-- [Lima Core 1.1](lima-core-1.0-spec.md) and
-  [Lima References 2.0](lima-references-2.0-spec.md) — the normative specs;
+- [Lima Core 1.2](lima-core-1.0-spec.md) and
+  [Lima References 2.1](lima-references-2.0-spec.md) — the normative specs;
   this guide simplifies, they decide.
 - [Repository README](../README.md) — why Lima exists, the case against
   YAML, security rationale.

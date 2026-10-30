@@ -1,17 +1,19 @@
-# Lima References 2.0 — Normative Specification
+# Lima References 2.1 — Normative Specification
 
 > **On an early 1.0?** References 1.0 was published briefly in mid-2026 and is superseded by this specification, which is not syntax-compatible with it. The [archived References 1.0 specification](lima-references-1.0-spec.md) remains available as an independently frozen conformance target.
 
-> **Status:** Final · **Version:** 2.0.0 · **Date:** 2026-08-12
+> **Status:** Draft · **Version:** 2.1.0 · **Date:** —
 
-This document specifies the Lima References Extension 2.0. It is a normative
-addition to Lima Core 1.1 and must be read together with that specification.
-It supersedes Lima References 1.0 for parsers that claim References 2.0
-conformance; it does not modify Lima Core 1.1. Until Core 1.1 (2026-10-28), it
-was an addition to Lima Core 1.0; Core 1.1 changes nothing in this document.
+**Changes from References 2.0:** a key segment takes the characters of a Core 1.2 key (Core §5.1), and a partial name those characters and `/`, so a reference reaches every unquoted key: `${größe}`, `${autor*in}`, `$(personen/zoë)`. A text that held such a name in reference syntax and was literal in 2.0, `${größe}`, is a reference in 2.1.
 
-A Lima Core parser treats all References 2.0 tokens as ordinary string content.
-A References 2.0 parser recognises only the syntax defined here. References 1.0
+This document specifies the Lima References Extension 2.1. It is a normative
+addition to Lima Core 1.2 and must be read together with that specification.
+It supersedes Lima References 1.0 and 2.0 for parsers that claim References 2.1
+conformance; it does not modify Lima Core 1.2. References 2.0 was an addition
+to Lima Core 1.0 and, unchanged, to Core 1.1 (2026-10-28).
+
+A Lima Core parser treats all References 2.1 tokens as ordinary string content.
+A References 2.1 parser recognises only the syntax defined here. References 1.0
 tokens such as `($key)` and `(%key)` are ordinary string content in References
 2.0 and are not deprecated aliases.
 
@@ -19,7 +21,7 @@ tokens such as `($key)` and `(%key)` are ordinary string content in References
 
 ## 1. Overview
 
-References 2.0 provides two composition mechanisms:
+References 2.1 provides two composition mechanisms:
 
 - **Document references** — `${key}` reads a value from the current document.
 - **Partial references** — `$(key)` reads a value supplied through the
@@ -71,13 +73,13 @@ a partial name.
 ```ebnf
 key-segment        = reference-initial, { reference-character } ;
 partial-name       = reference-initial, { partial-character } ;
-reference-initial = ASCII-letter | decimal-digit | "_" ;
+reference-initial = key-initial ;
 reference-character
-                   = reference-initial | ":" | "-" ;
+                   = key-character ;
 partial-character = reference-character | "/" ;
 ```
 
-`ASCII-letter` and `decimal-digit` are defined by Lima Core Appendix D.
+`key-initial` and `key-character` are those of an unquoted key, defined by Lima Core Appendix D (§15.4).
 
 A colon within either form is part of the document key or partial name. Thus
 `${a:b}` reads the document key `a:b`, while `$(a:b)` reads the partial named
@@ -135,7 +137,9 @@ For either namespace, the first component selects the root value. Each
 remaining dotted component requires the current value to be a mapping and
 selects the mapping entry with that exact key. Traversal through an array or
 scalar, or a missing component, makes the whole reference unresolved. Numeric
-components are mapping keys, never array indexes.
+components are mapping keys, never array indexes. Every comparison of a
+component with a key, and of a partial name with the name of a partial, is code
+point by code point; References normalises no Unicode (Core §5.3).
 
 ```yaml
 site:
@@ -311,7 +315,7 @@ Errors associated with source tokens are ordered by the token's 1-based line
 number and then by its character offset within that line. The character offset
 is counted in Unicode code points and is zero-based. If multiple such errors
 exist, the one at the lowest source position is thrown. Messages MUST include
-the complete References 2.0 token text and its source line.
+the complete References 2.1 token text and its source line.
 
 Where a host API exposes the offending token's column as a separate field, it
 is the one-based form of that same code-point offset (offset + 1), and
@@ -339,14 +343,14 @@ They identify the partial name and value path and carry no document line.
 parse(input: string, options?: ParseOptions): Record<string, unknown>
 ```
 
-`parse` is the primary References 2.0 entry point. By default it performs Lima
+`parse` is the primary References 2.1 entry point. By default it performs Lima
 Core parsing followed by reference resolution as specified here. Its return
 contract is identical to `parseCore` in Lima Core §11.1.
 
 `parseCore(input, options?)` remains the explicit Core-only entry point defined
-by Lima Core 1.1. A call to `parse(input, { mode: "core" })` is
+by Lima Core 1.2. A call to `parse(input, { mode: "core" })` is
 semantically identical to `parseCore(input, options)` with the shared Core
-options: References 2.0 tokens remain literal, no partials are ingested, and no
+options: References 2.1 tokens remain literal, no partials are ingested, and no
 reference-resolution work is performed.
 
 Core mode MUST use the same reference-unaware parsing path as `parseCore`. It
@@ -358,7 +362,7 @@ implementation details of the shared Core path remain unrestricted.
 Bindings that exposed `parseReferences` before 2.0 SHOULD retain it as a
 deprecated compatibility alias for `parse` during the 2.x release line. The
 alias MUST have exactly the same options, result, diagnostics, and References
-2.0 semantics as `parse`; it is not a References 1.0 compatibility mode. New
+2.1 semantics as `parse`; it is not a References 1.0 compatibility mode. New
 code SHOULD use `parse`.
 
 Names may follow host-language conventions (`parse_core`, `Parse`, etc.), but
@@ -369,7 +373,7 @@ are normative.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `mode` | `"references" \| "core"` | `"references"` | Select full References 2.0 parsing or Core-only parsing |
+| `mode` | `"references" \| "core"` | `"references"` | Select full References 2.1 parsing or Core-only parsing |
 | `partials` | `Record<string, unknown>` | `{}` | Values available through `$(name)` |
 
 `partials` MUST NOT be supplied when `mode` is `"core"`. Such a call is
@@ -501,9 +505,9 @@ document-path      = key-segment, { ".", key-segment } ;
 key-segment        = reference-initial, { reference-character } ;
 partial-name       = reference-initial, { partial-character } ;
 
-reference-initial = ASCII-letter | decimal-digit | "_" ;
+reference-initial = key-initial ;
 reference-character
-                   = reference-initial | ":" | "-" ;
+                   = key-character ;
 partial-character = reference-character | "/" ;
 ```
 
@@ -516,7 +520,7 @@ rules are authoritative.
 
 ## 10. Compatibility summary
 
-References 2.0 is intentionally not syntax-compatible with References 1.0:
+References 2.x is intentionally not syntax-compatible with References 1.0:
 
 | References 1.0 | References 2.0 |
 | --- | --- |
@@ -527,4 +531,4 @@ References 2.0 is intentionally not syntax-compatible with References 1.0:
 | one-hop snapshot model | transitive resolution, maximum three edges |
 | `parseReferences` is primary | `parse` is primary; `parseReferences` is a deprecated alias |
 
-Lima Core semantics and APIs are unchanged.
+References 2.1 changes no semantics or API of Lima Core 1.2.
