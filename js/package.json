@@ -20,7 +20,7 @@
     }
   },
   "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
-  "engines": { "node": ">=18" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepack": "bun run build",

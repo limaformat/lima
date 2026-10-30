@@ -11,6 +11,7 @@ use crate::chars::is_trim_whitespace;
 use crate::core::tab_adjust_slice;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
 use crate::flow::{parse_flow_or_scalar_value_checked, parse_flow_sequence_checked};
+use crate::key_hints::{specific_key_hint, KEY_GRAMMAR_HINT};
 use crate::normalize::{check_duplicate_key, check_key_length, NESTING_DEPTH_LIMIT};
 use crate::scalars::{
     closing_quote_index, is_valid_key, parse_quoted_or_typed, physical_raw, strip_comment,
@@ -32,7 +33,10 @@ fn unrecognized_key_line(line: u32, trimmed: &str) -> LimaError {
         Code::UnrecognizedLine,
         line,
         format!(
-            "Lima: unrecognised line at line {line}: \"{trimmed}\" (an unquoted key has letters, digits, \"_\", \"-\" and \":\" only; quote any other)"
+            "Lima: unrecognised line at line {line}: \"{trimmed}\"{}",
+            specific_key_hint(trimmed)
+                .as_deref()
+                .unwrap_or(KEY_GRAMMAR_HINT)
         ),
     )
 }

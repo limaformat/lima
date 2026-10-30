@@ -36,7 +36,11 @@ func unrecognizedLine(l sourceLine) error {
 // unrecognizedKeyLine is, in strict mode, a line in a block whose key the key
 // grammar (§5.1) rejects (Core 1.1 §10.1).
 func unrecognizedKeyLine(number int, text string) error {
-	return limaError(UnrecognizedLine, number, fmt.Sprintf(`Lima: unrecognised line at line %d: %q (an unquoted key has letters, digits, "_", "-" and ":" only; quote any other)`, number, text))
+	hint := specificKeyHint(text)
+	if hint == "" {
+		hint = keyGrammarHint
+	}
+	return limaError(UnrecognizedLine, number, fmt.Sprintf(`Lima: unrecognised line at line %d: %q%s`, number, text, hint))
 }
 
 func indentedLine(l sourceLine, inlineValue string) error {
@@ -46,6 +50,9 @@ func indentedLine(l sourceLine, inlineValue string) error {
 
 // unrecognizedHint is what a reader likely meant by an unrecognised line.
 func unrecognizedHint(text string) string {
+	if hint := specificKeyHint(text); hint != "" {
+		return hint
+	}
 	if text == "---" || text == "..." {
 		return " (a YAML document marker; Lima has one document)"
 	}
@@ -57,19 +64,11 @@ func unrecognizedHint(text string) string {
 	}
 	// `author Odile`, `key:value`: key characters, but no ": " after them
 	first, _, _ := strings.Cut(text, " ")
-	keyChars := first != ""
-	for i := 0; i < len(first); i++ {
-		b := first[i]
-		alnum := b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9' || b == '_'
-		if !alnum && !(i > 0 && (b == ':' || b == '-')) {
-			keyChars = false
-			break
-		}
-	}
+	keyChars := isValidUnquotedKey(first, false)
 	if !strings.Contains(text, ":") || keyChars {
 		return ` (a key needs ": " after it)`
 	}
-	return ` (an unquoted key has letters, digits, "_", "-" and ":" only; quote any other)`
+	return keyGrammarHint
 }
 
 // yamlHint is the hint a YAML block scalar marker in place of a value earns.

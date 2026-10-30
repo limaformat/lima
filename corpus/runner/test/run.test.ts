@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(472)
+		expect(outcomes).toHaveLength(496)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -524,8 +524,8 @@ describe('runCorpus', () => {
 		const { outcomes } = runCorpus(corpusRoot)
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
-		// Core 1.1 (2026-10-28): 354 → 472, eight Core 1.0 cases superseded by 126 Core 1.1.0 cases.
-		expect(counts).toEqual({ PASS: 472, FAIL: 0, BLOCKED: 0 })
+		// Core 1.2 / References 2.1 add 20 Unicode-key cases to the 472-case target.
+		expect(counts).toEqual({ PASS: 496, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

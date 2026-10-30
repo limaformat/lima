@@ -1,11 +1,13 @@
-/** Lima References 2.0 resolver. References 1.0 remains isolated in references.ts. */
+/** Lima References 2.1 resolver. References 1.0 remains isolated in references.ts. */
 import {
 	type LimaValue, canonicalString, codepointLength, countNodes, ingestPartialValue,
 	PARTIAL_COUNT_LIMIT, PARTIAL_NAME_LENGTH_LIMIT, PARTIAL_NODE_LIMIT,
 	RESULT_NODE_LIMIT, SCALAR_LENGTH_LIMIT,
 } from './value.js'
+import { isValidUnquotedKey } from './key-grammar.js'
+import { validateDocument } from './document.js'
 import {
-	NESTING_DEPTH_LIMIT, parseCore, parseCoreWithPositions, toPlainValue,
+	NESTING_DEPTH_LIMIT, parseCoreValidated, parseCoreWithPositions, toPlainValue,
 	type CoreOptions, type Diagnostic, type InsertedAt, type PositionedReferenceParse,
 	type PositionedValue,
 } from './core.js'
@@ -19,8 +21,6 @@ import { type ReferenceToken2 } from './reference-tokens2.js'
 
 type Meta = Record<string, unknown>
 
-const PARTIAL_NAME = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*'
-const PARTIAL_NAME_RE = new RegExp(`^${PARTIAL_NAME}$`)
 const MAX_EDGES = 3
 // Looking up the root path is itself the first reference edge; recursion into
 // that root therefore gets the public resolver's remaining two-edge budget.
@@ -369,7 +369,7 @@ const validatePartials = (raw: Meta): Map<string, PositionedValue> => {
 		throw new LimaError({ code: 'INVALID_PARTIAL', message: `Lima: too many partials (max ${PARTIAL_COUNT_LIMIT})` })
 	}
 	for (const name of names) {
-		if (!PARTIAL_NAME_RE.test(name)) {
+		if (!isValidUnquotedKey(name, true)) {
 			throw new LimaError({ code: 'INVALID_PARTIAL', partial: name, message: `Lima: invalid partial name "${name}"` })
 		}
 		if (codepointLength(name) > PARTIAL_NAME_LENGTH_LIMIT) {
@@ -415,6 +415,7 @@ const parseInternal = <T extends Record<string, unknown> = Meta>(
 	options: ParseOptions | undefined,
 	useResolveCache: boolean,
 ): T => {
+	validateDocument(frontMatter)
 	if (options?.mode !== undefined && options.mode !== 'core' && options.mode !== 'references') {
 		throw new TypeError(`Lima: invalid parse mode "${String(options.mode)}"`)
 	}
@@ -424,11 +425,11 @@ const parseInternal = <T extends Record<string, unknown> = Meta>(
 		}
 		// Core ignores the additional `mode` property. Passing the same object
 		// avoids allocating a projected options object on this hot dispatch path.
-		return parseCore<T>(frontMatter, options as CoreOptions)
+		return parseCoreValidated<T>(frontMatter, options as CoreOptions)
 	}
 	const partials = validatePartials(options?.partials ?? {})
 	if (!frontMatter.includes('${') && !frontMatter.includes('$(')) {
-		return parseCore<T>(frontMatter, options as CoreOptions | undefined)
+		return parseCoreValidated<T>(frontMatter, options as CoreOptions | undefined)
 	}
 	const document = parseCoreWithPositions(frontMatter, { strict: options?.strict ?? false, onWarning: options?.onWarning })
 	const ctx: Context = { diagnostics: [], ...(useResolveCache ? { cache: new WeakMap() } : {}) }

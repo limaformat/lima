@@ -24,6 +24,7 @@ import {
 	type ParseContext, type Diagnostic, checkKeyLength, byteLength,
 	DOCUMENT_SIZE_LIMIT, TOP_LEVEL_KEY_LIMIT, NESTING_DEPTH_LIMIT,
 } from './normalize.js'
+import { validateDocument } from './document.js'
 import {
 	type PositionedValue, unescapeDQ, stripComment, stripCommentKeepEscapes, positionedBuilder,
 	NO_SPAN_VALUE, parseSimpleScalarSpan,
@@ -505,9 +506,16 @@ export const toNativeFromPositioned = (v: PositionedValue): NativeValue => {
  * contain no references, except that here reference-shaped text is
  * guaranteed to always pass through unresolved, even in strict mode.
  */
-export const parseCore = <T extends Record<string, unknown> = Meta>(
+export const parseCoreValidated = <T extends Record<string, unknown> = Meta>(
 	frontMatter: string, options?: CoreOptions
 ): T => {
 	const ctx: ParseContext = { strict: options?.strict ?? false, onWarning: options?.onWarning }
 	return parseCoreGeneric(frontMatter, ctx, nativeBuilder, depthOfNative) as T
+}
+
+export const parseCore = <T extends Record<string, unknown> = Meta>(
+	frontMatter: string, options?: CoreOptions
+): T => {
+	validateDocument(frontMatter)
+	return parseCoreValidated<T>(frontMatter, options)
 }

@@ -1,0 +1,24 @@
+{
+  "id": "core.keys.unicode-key-length-over-limit",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "5.1",
+  "description": "A 129-code-point multi-byte key exceeds the unchanged key limit.",
+  "input": "題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題: over\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "RESOURCE_LIMIT",
+      "line": 1
+    }
+  },
+  "tags": [
+    "unicode",
+    "keys",
+    "limits",
+    "error"
+  ]
+}
+

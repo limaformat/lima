@@ -1,0 +1,21 @@
+{
+  "id": "core.keys.lone-surrogate-key",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "5.1",
+  "description": "TypeScript rejects a document containing a lone surrogate in a key before parsing.",
+  "input": "\ud800key: value\n",
+  "expect": {
+    "error": {
+      "code": "INVALID_DOCUMENT",
+      "line": 1,
+      "contains": "document contains an invalid Unicode scalar value at line 1"
+    }
+  },
+  "tags": [
+    "unicode",
+    "typescript-only",
+    "error"
+  ]
+}
+

@@ -104,6 +104,8 @@ func InternalScenarios() []Scenario {
 	}
 	return []Scenario{
 		{"core typical", typical, nil}, {"references no references", typical, map[string]lima.Value{}},
+		{"core German keys", "größe: groß\ntítulo: spanisch\nautor*in: Alex\n", nil},
+		{"core Japanese keys", "題名: 文書\n著者: 花子\n分類: 技術\n", nil},
 		{"references small document", "siteName: My Site\ntitle: Hello ${siteName}!\nbyline: Written by ${author}\nauthor: Alice\ntagline: $(tagline)\n", map[string]lima.Value{"tagline": lima.String("Welcome")}},
 		{"core maximum nesting depth", deep, nil}, {"core 128 top-level keys", keys, nil}, {"core wide block array", wide, nil},
 		{"references interpolation-heavy", interp, map[string]lima.Value{}}, {"references large partial copies", partialDoc, map[string]lima.Value{"big": big}},

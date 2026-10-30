@@ -353,17 +353,7 @@ func isValidKey(raw string) bool {
 	if raw[0] == '"' || raw[0] == '\'' {
 		return closingQuoteIndex(raw, false) == len(raw)-1
 	}
-	for i := 0; i < len(raw); i++ {
-		c := raw[i]
-		ok := c == '_' || (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-		if i > 0 {
-			ok = ok || c == ':' || c == '-'
-		}
-		if !ok {
-			return false
-		}
-	}
-	return true
+	return isValidUnquotedKey(raw, false)
 }
 
 // stripKeyQuotes strips a key's surrounding quotes — unescaping a

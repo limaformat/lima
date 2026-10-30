@@ -160,17 +160,17 @@ export function validateCase(doc: unknown): ValidationResult {
 	if ('spec' in doc && !SPEC_VALUES.includes(doc.spec as string)) {
 		fail(errors, 'spec', `must be one of ${SPEC_VALUES.join(', ')}`)
 	}
-	if ('specVersion' in doc && !['1.0', '1.1', '2.0'].includes(doc.specVersion as string)) {
-		fail(errors, 'specVersion', 'must be one of 1.0, 1.1, 2.0')
+	if ('specVersion' in doc && !['1.0', '1.1', '1.2', '2.0', '2.1'].includes(doc.specVersion as string)) {
+		fail(errors, 'specVersion', 'must be one of 1.0, 1.1, 1.2, 2.0, 2.1')
 	}
-	if (doc.specVersion === '2.0' && doc.spec !== 'references') {
-		fail(errors, 'specVersion', '2.0 is currently defined only for the References extension')
+	if ((doc.specVersion === '2.0' || doc.specVersion === '2.1') && doc.spec !== 'references') {
+		fail(errors, 'specVersion', '2.x is defined only for the References extension')
 	}
-	if (doc.specVersion === '2.0' && typeof doc.id === 'string' && !doc.id.startsWith('references-2.')) {
+	if ((doc.specVersion === '2.0' || doc.specVersion === '2.1') && typeof doc.id === 'string' && !doc.id.startsWith('references-2.')) {
 		fail(errors, 'id', 'References 2.0 case IDs must begin with references-2.')
 	}
-	if (typeof doc.id === 'string' && doc.id.startsWith('references-2.') && doc.specVersion !== '2.0') {
-		fail(errors, 'specVersion', 'references-2. case IDs require specVersion 2.0')
+	if (typeof doc.id === 'string' && doc.id.startsWith('references-2.') && doc.specVersion !== '2.0' && doc.specVersion !== '2.1') {
+		fail(errors, 'specVersion', 'references-2. case IDs require specVersion 2.0 or 2.1')
 	}
 	if ('api' in doc) {
 		if (!API_VALUES.includes(doc.api as string)) {

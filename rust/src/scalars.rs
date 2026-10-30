@@ -10,6 +10,7 @@
 
 use crate::chars::is_trim_whitespace;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
+use crate::unicode_key::is_valid_unquoted;
 use crate::value::{days_from_civil, Builder, Instant, ReferenceSource};
 
 pub const SCALAR_LENGTH_LIMIT: usize = 16_384;
@@ -610,11 +611,20 @@ pub fn is_valid_key(raw: &str) -> bool {
     if first == b'"' || first == b'\'' {
         return closing_quote_index(raw, false) == Some(b.len() - 1);
     }
-    let head_ok = first.is_ascii_alphanumeric() || first == b'_';
-    let tail_ok = b[1..]
-        .iter()
-        .all(|&c| c.is_ascii_alphanumeric() || matches!(c, b'_' | b':' | b'-'));
-    head_ok && tail_ok
+    let legacy_ascii_valid = (first.is_ascii_alphanumeric() || first == b'_')
+        && b[1..]
+            .iter()
+            .all(|&c| c.is_ascii_alphanumeric() || matches!(c, b'_' | b':' | b'-'));
+    if legacy_ascii_valid {
+        return true;
+    }
+    if raw.is_ascii() {
+        return (first.is_ascii_alphanumeric() || first == b'_')
+            && b[1..]
+                .iter()
+                .all(|&c| c.is_ascii_alphanumeric() || matches!(c, b'_' | b':' | b'-' | b'*'));
+    }
+    is_valid_unquoted(raw, false)
 }
 
 /// Strips a key's surrounding quotes — unescaping a double-quoted key

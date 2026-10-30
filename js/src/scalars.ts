@@ -357,11 +357,13 @@ export const closingQuoteIndex = (s: string, singleQuoteEscape = true): number =
  * Kept byte-for-byte identical to `scanner.ts`'s `isKeyStartChar` /
  * `isKeyContinueChar`, which enforce the same grammar at the top level.
  */
-const isUnquotedKeyStart = (c: number): boolean =>
+import { isValidUnquotedKey } from './key-grammar.js'
+
+const isAsciiUnquotedKeyStart = (c: number): boolean =>
 	(c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 95
 
-const isUnquotedKeyContinue = (c: number): boolean =>
-	isUnquotedKeyStart(c) || c === 58 || c === 45
+const isAsciiUnquotedKeyContinue = (c: number): boolean =>
+	isAsciiUnquotedKeyStart(c) || c === 58 || c === 45 || c === 42
 
 /**
  * Whether `raw` (a key candidate as written, before quote stripping) is a
@@ -381,11 +383,15 @@ const isUnquotedKeyContinue = (c: number): boolean =>
 export const isValidKey = (raw: string): boolean => {
 	const f = raw.charCodeAt(0)
 	if (f === 34 || f === 39) return closingQuoteIndex(raw, false) === raw.length - 1
-	if (!isUnquotedKeyStart(f)) return false
-	for (let i = 1; i < raw.length; i++) {
-		if (!isUnquotedKeyContinue(raw.charCodeAt(i))) return false
+	if (f <= 0x7f) {
+		if (!isAsciiUnquotedKeyStart(f)) return false
+		for (let i = 1; i < raw.length; i++) {
+			const c = raw.charCodeAt(i)
+			if (!isAsciiUnquotedKeyContinue(c)) return c > 0x7f && isValidUnquotedKey(raw)
+		}
+		return true
 	}
-	return true
+	return isValidUnquotedKey(raw)
 }
 
 const ANY_ESCAPE_RE = /\\(u[0-9a-fA-F]{0,4}|U[0-9a-fA-F]{0,8}|x[0-9a-fA-F]{0,2}|.)/gs

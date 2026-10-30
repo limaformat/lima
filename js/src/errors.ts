@@ -10,6 +10,7 @@
  */
 
 export type LimaDiagnosticCode =
+	| 'INVALID_DOCUMENT'
 	| 'INVALID_ESCAPE'
 	| 'INVALID_QUOTE'
 	| 'INVALID_DATE'

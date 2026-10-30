@@ -14,6 +14,7 @@ import {
 	stripKeyQuotes, stripComment, stripCommentKeepEscapes,
 	parseQuotedOrTyped, closingQuoteIndex, isValidKey,
 } from './scalars.js'
+import { KEY_GRAMMAR_HINT, specificKeyHint } from './key-hints.js'
 import { parseFlowOrScalarValue, parseFlowSequence } from './flow.js'
 import { buildBlockScalar } from './block-scalar.js'
 import { LimaError } from './errors.js'
@@ -183,7 +184,7 @@ const cursorAfterDash = (cursor: BlockCursor): string => {
 /** Core 1.1 §10.1: a line in a block whose key the key grammar (§5.1) rejects, in strict mode. */
 const unrecognizedKeyLine = (line: number, trimmed: string): LimaError => new LimaError({
 	code: 'UNRECOGNIZED_LINE', line,
-	message: `Lima: unrecognised line at line ${line}: "${trimmed}" (an unquoted key has letters, digits, "_", "-" and ":" only; quote any other)`,
+	message: `Lima: unrecognised line at line ${line}: "${trimmed}"${specificKeyHint(trimmed) ?? KEY_GRAMMAR_HINT}`,
 })
 
 /** Shared block grammar consuming one mutable physical-line cursor. */

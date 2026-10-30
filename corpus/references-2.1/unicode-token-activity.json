@@ -1,0 +1,28 @@
+{
+  "id": "references-2.syntax.unicode-token-activity",
+  "spec": "references",
+  "specVersion": "2.1",
+  "section": "2.3",
+  "description": "Unicode keys and middle dot are reference characters; invalid initials, quoted tokens, and References 1.0 syntax stay literal.",
+  "input": "題名: 文書\nautor·in: Alex\ngröße: 42\njapanese: ${題名}\nauthor: ${autor·in}\nsize: Größe: ${größe} cm\nmarkLiteral: ${́bad}\nmiddleLiteral: ${·bad}\nquoted: \"${größe}\"\nlegacy: ($größe)\n",
+  "expect": {
+    "result": {
+      "題名": "文書",
+      "autor·in": "Alex",
+      "größe": 42,
+      "japanese": "文書",
+      "author": "Alex",
+      "size": "Größe: 42 cm",
+      "markLiteral": "${́bad}",
+      "middleLiteral": "${·bad}",
+      "quoted": "${größe}",
+      "legacy": "($größe)"
+    }
+  },
+  "tags": [
+    "unicode",
+    "activity",
+    "compatibility"
+  ]
+}
+

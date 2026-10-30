@@ -1,7 +1,9 @@
 package lima
 
 import (
+	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -110,5 +112,42 @@ func TestUnicodeWhitespaceCommentDoesNotEstablishBaseline(t *testing.T) {
 	want := Map{{Key: "parent", Value: Map{{Key: "child", Value: String("value")}}}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %#v, want %#v", got, want)
+	}
+}
+
+func TestCore12UnicodeKeysAndMessageHints(t *testing.T) {
+	got, err := ParseCore("größe: one\n𠀀: two\nautor*in: three\n", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := Map{{Key: "größe", Value: String("one")}, {Key: "𠀀", Value: String("two")}, {Key: "autor*in", Value: String("three")}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %#v, want %#v", got, want)
+	}
+	for input, hint := range map[string]string{
+		"\u00a0key: value\n": "U+00A0 before the key; Lima indents by spaces only",
+		"title： value\n":     `the key-value separator is ": " (U+003A and a space), not U+FF1A FULLWIDTH COLON`,
+	} {
+		_, err := ParseCore(input, true)
+		if err == nil || !strings.Contains(err.Error(), hint) {
+			t.Fatalf("%q: got %v, want hint %q", input, err, hint)
+		}
+	}
+}
+
+func TestInvalidUTF8DocumentIsRejectedFirstWithLine(t *testing.T) {
+	input := "valid: one\nbad: \xff\n"
+	want := "Lima: document contains an invalid Unicode scalar value at line 2"
+	for _, strict := range []bool{false, true} {
+		_, err := ParseCore(input, strict)
+		var le *LimaError
+		if !errors.As(err, &le) || le.Code != InvalidDocument || le.Line != 2 || le.Message != want {
+			t.Fatalf("strict=%v: got %#v", strict, err)
+		}
+	}
+	_, err := Parse(input, ParseOptions{Mode: ParseMode("invalid"), Partials: map[string]Value{"bad": String("partial")}})
+	var le *LimaError
+	if !errors.As(err, &le) || le.Code != InvalidDocument {
+		t.Fatalf("invalid document must precede option and partial work: %#v", err)
 	}
 }

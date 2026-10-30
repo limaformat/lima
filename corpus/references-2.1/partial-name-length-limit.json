@@ -1,0 +1,24 @@
+{
+  "id": "references-2.partials.unicode-length-limit",
+  "spec": "references",
+  "specVersion": "2.1",
+  "section": "6.2",
+  "description": "A partial name of 128 multi-byte Unicode letters is accepted and counted by code points.",
+  "input": "value: $(題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題)\n",
+  "options": {
+    "partials": {
+      "題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題": "limit"
+    }
+  },
+  "expect": {
+    "result": {
+      "value": "limit"
+    }
+  },
+  "tags": [
+    "unicode",
+    "partials",
+    "limits"
+  ]
+}
+

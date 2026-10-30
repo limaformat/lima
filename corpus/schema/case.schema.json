@@ -24,7 +24,7 @@
     },
     "specVersion": {
       "description": "Normative specification version. Legacy cases without this field are References/Core 1.0; every newly versioned suite must set it explicitly.",
-      "enum": ["1.0", "1.1", "2.0"]
+      "enum": ["1.0", "1.1", "1.2", "2.0", "2.1"]
     },
     "api": {
       "description": "Which entry point to run. Legacy 1.0 cases default to references; References 2.0 cases default to parse. Use core for parseCore and references only for the deprecated parseReferences compatibility alias.",
@@ -227,6 +227,7 @@
         },
         "code": {
           "enum": [
+            "INVALID_DOCUMENT",
             "INVALID_ESCAPE",
             "INVALID_QUOTE",
             "INVALID_DATE",

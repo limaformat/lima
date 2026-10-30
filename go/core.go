@@ -1,4 +1,4 @@
-// Package lima implements Lima Core 1.1 and Lima References 2.0 with only
+// Package lima implements Lima Core 1.2 and Lima References 2.1 with only
 // the Go standard library.
 package lima
 
@@ -697,6 +697,13 @@ type CoreOptions struct {
 
 // ParseCoreWithOptions parses Lima Core 1.1 with warning callbacks.
 func ParseCoreWithOptions(input string, options CoreOptions) (Value, error) {
+	if err := validateDocument(input); err != nil {
+		return nil, err
+	}
+	return parseCoreWithOptionsValidated(input, options)
+}
+
+func parseCoreWithOptionsValidated(input string, options CoreOptions) (Value, error) {
 	m, e := parseCorePositioned(input, options.Strict, options.OnWarning, false)
 	if e != nil {
 		return nil, e

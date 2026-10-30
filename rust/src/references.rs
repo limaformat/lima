@@ -1088,6 +1088,7 @@ mod corpus_tests {
     fn code_name(code: LimaDiagnosticCode) -> &'static str {
         use LimaDiagnosticCode::*;
         match code {
+            InvalidDocument => "INVALID_DOCUMENT",
             InvalidEscape => "INVALID_ESCAPE",
             InvalidQuote => "INVALID_QUOTE",
             InvalidDate => "INVALID_DATE",

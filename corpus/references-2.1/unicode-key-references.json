@@ -1,0 +1,32 @@
+{
+  "id": "references-2.keys.unicode",
+  "spec": "references",
+  "specVersion": "2.1",
+  "section": "2.3",
+  "description": "References 2.1 reaches Unicode and punctuation keys and slash-namespaced Unicode partials.",
+  "input": "größe: groß\nautor*in: Alex\na: ${größe}\nb: ${autor*in}\nc: $(personen/zoë)\nd: $(personen/zoë.name)\n",
+  "options": {
+    "partials": {
+      "personen/zoë": {
+        "name": "Zoë"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "größe": "groß",
+      "autor*in": "Alex",
+      "a": "groß",
+      "b": "Alex",
+      "c": {
+        "name": "Zoë"
+      },
+      "d": "Zoë"
+    }
+  },
+  "tags": [
+    "unicode",
+    "positive"
+  ]
+}
+

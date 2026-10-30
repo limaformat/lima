@@ -15,6 +15,7 @@ pub struct Diagnostic {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LimaDiagnosticCode {
+    InvalidDocument,
     InvalidEscape,
     InvalidQuote,
     InvalidDate,

@@ -1,0 +1,19 @@
+{
+  "id": "core.keys.quoted-unchanged",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "5.1",
+  "description": "Quoted keys may still contain characters excluded from unquoted keys.",
+  "input": "\"a b\": one\n'😀': two\n",
+  "expect": {
+    "result": {
+      "a b": "one",
+      "😀": "two"
+    }
+  },
+  "tags": [
+    "unicode",
+    "keys"
+  ]
+}
+

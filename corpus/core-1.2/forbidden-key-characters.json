@@ -1,0 +1,18 @@
+{
+  "id": "core.keys.forbidden-key-characters",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "5.1",
+  "description": "Format controls, non-space whitespace and emoji are outside the unquoted key grammar.",
+  "input": "a‍b: no\nc​d: no\ne‮f: no\ng h: no\ni😀j: no\nvalid: yes\n",
+  "expect": {
+    "result": {
+      "valid": "yes"
+    }
+  },
+  "tags": [
+    "unicode",
+    "keys"
+  ]
+}
+

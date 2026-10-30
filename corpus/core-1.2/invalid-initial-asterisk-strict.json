@@ -1,0 +1,24 @@
+{
+  "id": "core.keys.invalid-initial-asterisk-strict",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "5.1",
+  "description": "A asterisk cannot begin an unquoted key; strict mode reports the line.",
+  "input": "*star: no\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "UNRECOGNIZED_LINE",
+      "line": 1
+    }
+  },
+  "tags": [
+    "unicode",
+    "keys",
+    "strict",
+    "error"
+  ]
+}
+

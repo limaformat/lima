@@ -15,10 +15,10 @@
 //! ).unwrap();
 //! ```
 //!
-//! [`parse_core`] implements Lima Core 1.1 in full (block/flow sequences
+//! [`parse_core`] implements Lima Core 1.2 in full (block/flow sequences
 //! and mappings, dates, numbers, quoting, `|` literal block scalars).
-//! [`parse`] implements References 2.0 on top of it. [`parse_references`]
-//! remains as a deprecated alias with identical 2.0 semantics.
+//! [`parse`] implements References 2.1 on top of it. [`parse_references`]
+//! remains as a deprecated alias with identical 2.1 semantics.
 //!
 //! See <https://limaformat.dev> for the specification, and the
 //! TypeScript implementation (`@limaformat/lima` on npm) for a second,
@@ -26,13 +26,10 @@
 //!
 //! ## Conformance
 //!
-//! Checked against the shared, language-neutral conformance corpus: 336
-//! Lima Core 1.1 cases (the 218 Core 1.0 cases — a byte-frozen 149-case
-//! 1.0.0 baseline plus additive errata through 1.0.10 — without the 8 that
-//! Core 1.1 supersedes, plus its 126), 136 References 2.0 cases, and the
-//! 101-case frozen References 1.0 corpus — a regression target only; its
-//! resolver is not part of the published crate. All counts are pinned by
-//! the test suite.
+//! Checked against the shared, language-neutral conformance corpus through
+//! Lima Core 1.2 and References 2.1 (including the additive 1.2/2.1 suites),
+//! plus the frozen References 1.0 corpus. The Core 1.0/1.1 and References 1.0
+//! baselines remain count- and hash-pinned by their corpus manifests.
 
 pub mod block;
 mod block_cursor;
@@ -41,12 +38,15 @@ mod chars;
 pub mod core;
 pub mod errors;
 pub mod flow;
+mod key_hints;
 pub mod normalize;
 #[cfg(test)]
 mod references;
 pub mod references2;
 pub mod scalars;
 mod structure;
+mod unicode_key;
+mod unicode_key_table;
 pub mod value;
 
 pub use crate::core::{parse_core, CoreOptions};

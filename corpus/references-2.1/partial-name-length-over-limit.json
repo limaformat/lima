@@ -1,0 +1,27 @@
+{
+  "id": "references-2.partials.unicode-length-over-limit",
+  "spec": "references",
+  "specVersion": "2.1",
+  "section": "6.2",
+  "description": "A partial name of 129 multi-byte Unicode letters exceeds the code-point limit.",
+  "input": "",
+  "options": {
+    "partials": {
+      "題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題": "over"
+    }
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_PARTIAL",
+      "partial": "題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題",
+      "contains": "exceeds maximum length of 128 code points"
+    }
+  },
+  "tags": [
+    "unicode",
+    "partials",
+    "limits",
+    "error"
+  ]
+}
+

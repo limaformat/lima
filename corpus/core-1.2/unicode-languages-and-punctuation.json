@@ -1,0 +1,24 @@
+{
+  "id": "core.keys.unicode-languages-and-punctuation",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "5.1",
+  "description": "Unicode letters and the added key punctuation are accepted.",
+  "input": "größe: German\ntítulo: Spanish\nзаголовок: Russian\n題名: Japanese\nautor:in: colon\nautor*in: star\nautor·in: middle\n",
+  "expect": {
+    "result": {
+      "größe": "German",
+      "título": "Spanish",
+      "заголовок": "Russian",
+      "題名": "Japanese",
+      "autor:in": "colon",
+      "autor*in": "star",
+      "autor·in": "middle"
+    }
+  },
+  "tags": [
+    "unicode",
+    "keys"
+  ]
+}
+

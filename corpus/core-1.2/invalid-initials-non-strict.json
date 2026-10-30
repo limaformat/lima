@@ -1,0 +1,18 @@
+{
+  "id": "core.keys.invalid-initials-non-strict",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "5.1",
+  "description": "A mark, asterisk and middle dot cannot begin an unquoted key; non-strict mode skips all three.",
+  "input": "́mark: no\n*star: no\n·middle: no\nvalid: yes\n",
+  "expect": {
+    "result": {
+      "valid": "yes"
+    }
+  },
+  "tags": [
+    "unicode",
+    "keys"
+  ]
+}
+

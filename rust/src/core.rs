@@ -697,4 +697,21 @@ mod tests {
     fn space_before_colon_strict_error() {
         assert!(parse_core("\"first name\" : Alice", true).is_err());
     }
+
+    #[test]
+    fn core_12_unicode_keys_and_message_hints() {
+        let v = parse_core("größe: one\n𠀀: two\nautor*in: three\n", false).unwrap();
+        assert_eq!(get(&v, "größe"), &LimaValue::String("one".into()));
+        assert_eq!(get(&v, "𠀀"), &LimaValue::String("two".into()));
+        assert_eq!(get(&v, "autor*in"), &LimaValue::String("three".into()));
+
+        let whitespace = parse_core("\u{a0}key: value\n", true).unwrap_err();
+        assert!(whitespace
+            .message
+            .contains("U+00A0 before the key; Lima indents by spaces only"));
+        let colon = parse_core("title： value\n", true).unwrap_err();
+        assert!(colon.message.contains(
+            "the key-value separator is \": \" (U+003A and a space), not U+FF1A FULLWIDTH COLON"
+        ));
+    }
 }

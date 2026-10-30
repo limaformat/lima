@@ -1,0 +1,18 @@
+{
+  "id": "core.keys.unicode-key-length-limit",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "5.1",
+  "description": "Key length counts code points, so 128 multi-byte letters are accepted.",
+  "input": "題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題: limit\n",
+  "expect": {
+    "result": {
+      "題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題題": "limit"
+    }
+  },
+  "tags": [
+    "unicode",
+    "keys"
+  ]
+}
+

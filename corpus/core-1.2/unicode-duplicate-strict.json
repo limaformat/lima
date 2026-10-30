@@ -1,0 +1,25 @@
+{
+  "id": "core.keys.unicode-duplicate-strict",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "5.1",
+  "description": "Two identical non-ASCII keys are duplicates.",
+  "input": "größe: one\ngröße: two\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "DUPLICATE_KEY",
+      "line": 2,
+      "key": "größe"
+    }
+  },
+  "tags": [
+    "unicode",
+    "keys",
+    "strict",
+    "error"
+  ]
+}
+

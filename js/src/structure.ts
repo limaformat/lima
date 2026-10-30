@@ -16,6 +16,8 @@
  */
 import { isTrimWhitespace } from './chars.js'
 import { LimaError } from './errors.js'
+import { isValidUnquotedKey } from './key-grammar.js'
+import { KEY_GRAMMAR_HINT, specificKeyHint } from './key-hints.js'
 
 /**
  * What the lines after a key belong to: nothing (`none`, before the first key; `inline`, after an inline value), a
@@ -90,12 +92,14 @@ export const isBlockScalarMarker = (frontMatter: string, rawStart: number, lineE
 
 /** What a reader likely meant by an unrecognised line, as a hint after the message; none for anything else. */
 const hint = (text: string): string => {
+	const specific = specificKeyHint(text)
+	if (specific !== undefined) return specific
 	if (text === '---' || text === '...') return ' (a YAML document marker; Lima has one document)'
 	if (isItem(text)) return ' (a sequence item belongs to a key with no value of its own)'
 	if (text.startsWith('"') || text.startsWith("'")) return ' (a quoted key closes on its own line)'
 	// `author Odile`, `key:value`: key characters, but no ": " after them
-	if (!text.includes(':') || /^[a-zA-Z0-9_][a-zA-Z0-9_:-]*$/.test(text.split(' ')[0]!)) return ' (a key needs ": " after it)'
-	return ' (an unquoted key has letters, digits, "_", "-" and ":" only; quote any other)'
+	if (!text.includes(':') || isValidUnquotedKey(text.split(' ')[0]!)) return ' (a key needs ": " after it)'
+	return KEY_GRAMMAR_HINT
 }
 
 /** The hint a YAML block scalar marker in place of a value earns; none for any other value. */

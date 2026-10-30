@@ -1,10 +1,11 @@
-//! Lima References 2.0 resolver. The frozen 1.0 implementation remains in
+//! Lima References 2.1 resolver. The frozen 1.0 implementation remains in
 //! `references.rs` solely for its conformance tests.
 
 use crate::core::{parse_core, parse_core_with_positions_options, CoreOptions};
 use crate::errors::{Diagnostic, LimaDiagnosticCode as Code, LimaError};
 use crate::normalize::{begin_warning_collection, finish_warning_collection, NESTING_DEPTH_LIMIT};
 use crate::scalars::SCALAR_LENGTH_LIMIT;
+use crate::unicode_key::{is_character, is_initial, is_valid_unquoted};
 use crate::value::{InsertedAt, LimaValue, PositionedValue, ReferenceSource};
 use std::collections::{HashMap, HashSet};
 
@@ -43,37 +44,57 @@ struct Token {
     partial_path: Option<String>,
 }
 
-fn initial(c: u8) -> bool {
-    c.is_ascii_alphanumeric() || c == b'_'
-}
-fn segment_char(c: u8) -> bool {
-    initial(c) || c == b':' || c == b'-'
-}
-fn partial_char(c: u8) -> bool {
-    segment_char(c) || c == b'/'
-}
-
-fn scan_component(bytes: &[u8], mut i: usize, partial: bool) -> Option<usize> {
-    if !bytes.get(i).is_some_and(|c| initial(*c)) {
-        return None;
-    }
-    i += 1;
-    while bytes.get(i).is_some_and(|c| {
-        if partial {
-            partial_char(*c)
-        } else {
-            segment_char(*c)
+fn scan_component(s: &str, mut i: usize, partial: bool) -> Option<usize> {
+    let first = *s.as_bytes().get(i)?;
+    if first.is_ascii() {
+        if !(first.is_ascii_alphanumeric() || first == b'_') {
+            return None;
         }
-    }) {
         i += 1;
+    } else {
+        let c = s.get(i..)?.chars().next()?;
+        if !is_initial(c) {
+            return None;
+        }
+        i += c.len_utf8();
+    }
+    // Keep the former References 2.0 ASCII loop intact. Only `*` or a
+    // non-ASCII byte enters the 2.1 extension path below.
+    loop {
+        while let Some(&b) = s.as_bytes().get(i) {
+            if b.is_ascii()
+                && (b.is_ascii_alphanumeric()
+                    || matches!(b, b'_' | b':' | b'-')
+                    || partial && b == b'/')
+            {
+                i += 1;
+            } else {
+                break;
+            }
+        }
+        let Some(&b) = s.as_bytes().get(i) else {
+            break;
+        };
+        if b.is_ascii() {
+            if b != b'*' {
+                break;
+            }
+            i += 1;
+        } else {
+            let c = s[i..].chars().next().unwrap();
+            if !(is_character(c) || partial && c == '/') {
+                break;
+            }
+            i += c.len_utf8();
+        }
     }
     Some(i)
 }
 
-fn scan_path(bytes: &[u8], mut i: usize, partial: bool) -> Option<usize> {
-    i = scan_component(bytes, i, partial)?;
-    while bytes.get(i) == Some(&b'.') {
-        let next = scan_component(bytes, i + 1, false)?;
+fn scan_path(s: &str, mut i: usize, partial: bool) -> Option<usize> {
+    i = scan_component(s, i, partial)?;
+    while s.as_bytes().get(i) == Some(&b'.') {
+        let next = scan_component(s, i + 1, false)?;
         i = next;
     }
     Some(i)
@@ -100,7 +121,7 @@ fn scan_matches(s: &str) -> Vec<RawMatch> {
             i += s[i..].chars().next().unwrap().len_utf8();
             continue;
         };
-        if let Some(end) = scan_path(bytes, body, partial) {
+        if let Some(end) = scan_path(s, body, partial) {
             if bytes.get(end) == Some(&close) {
                 out.push(RawMatch {
                     start: i,
@@ -650,8 +671,7 @@ fn resolve_node(
 }
 
 fn valid_partial_name(name: &str) -> bool {
-    let bytes = name.as_bytes();
-    !bytes.is_empty() && initial(bytes[0]) && bytes[1..].iter().all(|c| partial_char(*c))
+    is_valid_unquoted(name, true)
 }
 
 fn count_nodes(v: &LimaValue) -> usize {
@@ -1036,8 +1056,20 @@ pub fn parse(front_matter: &str, mut options: ParseOptions) -> Result<LimaValue,
             },
         );
     }
+    let has_no_references = !front_matter.contains("${") && !front_matter.contains("$(");
+    if has_no_references {
+        if options.partials.as_ref().is_none_or(Vec::is_empty) {
+            return parse_core(
+                front_matter,
+                CoreOptions {
+                    strict: options.strict,
+                    on_warning: options.on_warning,
+                },
+            );
+        }
+    }
     let partials = validate_partials(options.partials.as_deref().unwrap_or(&[]))?;
-    if !front_matter.contains("${") && !front_matter.contains("$(") {
+    if has_no_references {
         return parse_core(
             front_matter,
             CoreOptions {

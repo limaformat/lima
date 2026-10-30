@@ -1,0 +1,19 @@
+{
+  "id": "core.keys.unicode-version-boundary",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "5.1",
+  "description": "U+20000 is a supplementary-plane letter, U+088F ARABIC LETTER NOON WITH RING ABOVE a letter since Unicode 17.0, and U+0558 a letter (Lm) first assigned in Unicode 18.0, which an implementation reading the host's older Unicode would reject; U+1E007 is unassigned in Unicode 18.0.",
+  "input": "𠀀: supplementary\n࢏: unicode17\n՘: unicode18\n𞀇: unassigned\n",
+  "expect": {
+    "result": {
+      "𠀀": "supplementary",
+      "࢏": "unicode17",
+      "՘": "unicode18"
+    }
+  },
+  "tags": [
+    "unicode",
+    "keys"
+  ]
+}

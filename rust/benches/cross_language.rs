@@ -42,7 +42,7 @@ fn bench(name: &str, mut f: impl FnMut(), it: usize) -> R {
 fn main() {
     let json = env::args().any(|a| a == "--json");
     let typical="title: My Blog Post\nslug: my-blog-post\ndate: 2024-03-01T09:00:00Z\ndraft: false\nauthor: Alice\ntags: [javascript, webdev, tutorial]\nexcerpt: A short excerpt about the post, nothing fancy.\nreadingTime: 4.5\ncategory: Engineering\n";
-    let mut cases:Vec<(String,String,Option<Vec<(String,LimaValue)>>,usize)>=vec![("core typical".into(),typical.into(),None,20000),("references no references".into(),typical.into(),Some(vec![]),20000),("references small document".into(),"siteName: My Site\ntitle: Hello ${siteName}!\nbyline: Written by ${author}\nauthor: Alice\ntagline: $(tagline)\n".into(),Some(vec![("tagline".into(),LimaValue::String("Welcome".into()))]),20000)];
+    let mut cases:Vec<(String,String,Option<Vec<(String,LimaValue)>>,usize)>=vec![("core typical".into(),typical.into(),None,20000),("core German keys".into(),"größe: groß\ntítulo: spanisch\nautor*in: Alex\n".into(),None,20000),("core Japanese keys".into(),"題名: 文書\n著者: 花子\n分類: 技術\n".into(),None,20000),("references no references".into(),typical.into(),Some(vec![]),20000),("references small document".into(),"siteName: My Site\ntitle: Hello ${siteName}!\nbyline: Written by ${author}\nauthor: Alice\ntagline: $(tagline)\n".into(),Some(vec![("tagline".into(),LimaValue::String("Welcome".into()))]),20000)];
     let mut deep = "a:\n".to_string();
     for i in 1..=15 {
         deep += &format!("{}k:\n", "  ".repeat(i))

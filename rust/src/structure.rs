@@ -20,6 +20,8 @@
 
 use crate::chars::is_trim_whitespace;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
+use crate::key_hints::{specific_key_hint, KEY_GRAMMAR_HINT};
+use crate::unicode_key::is_valid_unquoted;
 
 /// What the lines after a key belong to.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -118,25 +120,26 @@ pub(crate) fn check_range_lines(
 }
 
 /// What a reader likely meant by an unrecognised line, as a hint after the message.
-fn hint(text: &str) -> &'static str {
+fn hint(text: &str) -> String {
+    if let Some(hint) = specific_key_hint(text) {
+        return hint;
+    }
     if text == "---" || text == "..." {
-        return " (a YAML document marker; Lima has one document)";
+        return " (a YAML document marker; Lima has one document)".into();
     }
     if is_item(text) {
-        return " (a sequence item belongs to a key with no value of its own)";
+        return " (a sequence item belongs to a key with no value of its own)".into();
     }
     if text.starts_with('"') || text.starts_with('\'') {
-        return " (a quoted key closes on its own line)";
+        return " (a quoted key closes on its own line)".into();
     }
     // `author Odile`, `key:value`: key characters, but no ": " after them
     let first_word = text.split(' ').next().unwrap_or("");
-    let key_chars = first_word.bytes().enumerate().all(|(i, b)| {
-        b.is_ascii_alphanumeric() || b == b'_' || (i > 0 && (b == b':' || b == b'-'))
-    });
+    let key_chars = is_valid_unquoted(first_word, false);
     if !text.contains(':') || (!first_word.is_empty() && key_chars) {
-        return " (a key needs \": \" after it)";
+        return " (a key needs \": \" after it)".into();
     }
-    " (an unquoted key has letters, digits, \"_\", \"-\" and \":\" only; quote any other)"
+    KEY_GRAMMAR_HINT.into()
 }
 
 /// The hint a YAML block scalar marker in place of a value earns.

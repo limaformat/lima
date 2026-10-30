@@ -37,13 +37,14 @@ export type ReferenceToken2 = {
  */
 export type ReferenceSource = { raw?: string; line: number; col: number; tabAdjust?: number[] }
 
-export const SEGMENT = '[a-zA-Z0-9_][a-zA-Z0-9_:-]*'
-export const DOC_PATH = `${SEGMENT}(?:\\.${SEGMENT})*`
-export const PARTIAL_NAME = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*'
-export const PARTIAL_PATH = `${PARTIAL_NAME}(?:\\.${SEGMENT})*`
-export const PURE_REFERENCE_2 = new RegExp(`^(?:\\$\\{(${DOC_PATH})\\}|\\$\\((${PARTIAL_PATH})\\))$`)
-const REFERENCE_2 = new RegExp(`\\$\\{(${DOC_PATH})\\}|\\$\\((${PARTIAL_PATH})\\)`, 'g')
+import { isKeyCharacterCodePoint, isKeyInitialCodePoint } from './key-grammar.js'
 const NO_TOKENS: ReferenceToken2[] = []
+
+const isAsciiReferenceInitial = (c: number): boolean =>
+	(c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 95
+
+const isAsciiReferenceCharacter = (c: number, allowSlash: boolean): boolean =>
+	isAsciiReferenceInitial(c) || c === 58 || c === 45 || c === 42 || allowSlash && c === 47
 
 type DecodedMatch = { token: string; index: number; documentPath?: string; partialPath?: string }
 
@@ -81,14 +82,54 @@ export const utf16OffsetToCodepoint = (text: string, utf16Offset: number): numbe
 }
 
 /** Splice points (decoded value order): token text, UTF-16 index, path. */
+const scanComponent = (value: string, start: number, allowSlash: boolean): number => {
+	let i = start
+	if (i >= value.length) return -1
+	let cp = value.charCodeAt(i)
+	if (cp <= 0x7f) {
+		if (!isAsciiReferenceInitial(cp)) return -1
+	} else {
+		cp = value.codePointAt(i)!
+		if (!isKeyInitialCodePoint(cp)) return -1
+	}
+	i += cp > 0xffff ? 2 : 1
+	while (i < value.length && isAsciiReferenceCharacter(value.charCodeAt(i), allowSlash)) i++
+	while (i < value.length) {
+		cp = value.charCodeAt(i)
+		if (cp <= 0x7f) break
+		cp = value.codePointAt(i)!
+		if (!isKeyCharacterCodePoint(cp)) break
+		i += cp > 0xffff ? 2 : 1
+		while (i < value.length && isAsciiReferenceCharacter(value.charCodeAt(i), allowSlash)) i++
+	}
+	return i
+}
+
+const scanPath = (value: string, start: number, partial: boolean): number => {
+	let i = scanComponent(value, start, partial)
+	if (i < 0) return -1
+	while (value.charCodeAt(i) === 46) {
+		const next = scanComponent(value, i + 1, false)
+		if (next < 0) return -1
+		i = next
+	}
+	return i
+}
+
 const scanDecoded = (value: string): DecodedMatch[] => {
-	REFERENCE_2.lastIndex = 0
 	const out: DecodedMatch[] = []
-	for (const m of value.matchAll(REFERENCE_2)) {
-		out.push({
-			token: m[0], index: m.index ?? 0,
-			...(m[1] !== undefined ? { documentPath: m[1] } : { partialPath: m[2]! }),
-		})
+	for (let i = 0; i + 2 < value.length; ) {
+		const partial = value.startsWith('$(', i)
+		const document = !partial && value.startsWith('${', i)
+		if (!partial && !document) { const cp = value.codePointAt(i)!; i += cp > 0xffff ? 2 : 1; continue }
+		const end = scanPath(value, i + 2, partial)
+		const close = partial ? 41 : 125
+		if (end >= 0 && value.charCodeAt(end) === close) {
+			const token = value.slice(i, end + 1)
+			const path = value.slice(i + 2, end)
+			out.push({ token, index: i, ...(partial ? { partialPath: path } : { documentPath: path }) })
+			i = end + 1
+		} else i++
 	}
 	return out
 }
@@ -97,14 +138,13 @@ const scanDecoded = (value: string): DecodedMatch[] => {
 const scanPhysical = (
 	raw: string, firstLine: number, firstCol: number, tabAdjust?: number[],
 ): { line: number; offset: number }[] => {
-	REFERENCE_2.lastIndex = 0
 	const out: { line: number; offset: number }[] = []
 	let scanned = 0
 	let line = firstLine
 	let col = firstCol
 	let lineIndex = 0
-	for (const m of raw.matchAll(REFERENCE_2)) {
-		const idx = m.index ?? 0
+	for (const m of scanDecoded(raw)) {
+		const idx = m.index
 		while (scanned < idx) {
 			const cp = raw.codePointAt(scanned)!
 			if (cp === 10) { line++; col = 0; lineIndex++ } else col++

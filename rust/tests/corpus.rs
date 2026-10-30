@@ -35,6 +35,7 @@ fn references_corpus_dir() -> PathBuf {
 fn code_name(code: LimaDiagnosticCode) -> &'static str {
     use LimaDiagnosticCode::*;
     match code {
+        InvalidDocument => "INVALID_DOCUMENT",
         InvalidEscape => "INVALID_ESCAPE",
         InvalidQuote => "INVALID_QUOTE",
         InvalidDate => "INVALID_DATE",
@@ -283,9 +284,22 @@ fn core_matches_conformance_corpus() {
         "Core 1.1 corpus case count does not match the manifest",
     );
     entries.extend(entries_11);
+    let mut entries_12: Vec<_> = fs::read_dir(corpus_dir().join("..").join("core-1.2"))
+        .expect("corpus/core-1.2 directory should exist")
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("json"))
+        .collect();
+    entries_12.sort();
+    entries.extend(entries_12);
 
     for path in entries {
         let text = fs::read_to_string(&path).unwrap();
+        // Rust UTF-8 strings cannot represent a lone UTF-16 surrogate.
+        if text.contains("typescript-only") {
+            skip += 1;
+            continue;
+        }
         let fixture: Json = serde_json::from_str(&text).unwrap();
         let id = fixture["id"].as_str().unwrap_or("<unknown>").to_string();
         if superseded.contains(&id) {
@@ -374,6 +388,10 @@ fn core_matches_conformance_corpus() {
     assert!(
         pass > 0,
         "expected at least one corpus fixture to pass — harness or corpus path is likely broken"
+    );
+    assert_eq!(
+        skip, 2,
+        "only the two TypeScript lone-surrogate cases should be skipped"
     );
 }
 
@@ -501,6 +519,15 @@ fn references_matches_conformance_corpus() {
         .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("json"))
         .collect();
     entries.sort();
+    let mut entries_21: Vec<_> =
+        fs::read_dir(references_corpus_dir().join("..").join("references-2.1"))
+            .expect("corpus/references-2.1 directory should exist")
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("json"))
+            .collect();
+    entries_21.sort();
+    entries.extend(entries_21);
     assert!(
         !entries.is_empty(),
         "expected corpus fixtures under {}",
@@ -508,8 +535,8 @@ fn references_matches_conformance_corpus() {
     );
     assert_eq!(
         entries.len(),
-        136,
-        "References 2.0 corpus case count changed"
+        141,
+        "References 2.x corpus case count changed"
     );
 
     for path in entries {

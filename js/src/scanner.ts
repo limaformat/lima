@@ -51,11 +51,13 @@
  *     resolved at decode time.
  */
 
-const isKeyStartChar = (c: number): boolean =>
-	(c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 95 // a-z A-Z 0-9 _
+import { isKeyCharacterCodePoint, isKeyInitialCodePoint } from './key-grammar.js'
 
-const isKeyContinueChar = (c: number): boolean =>
-	isKeyStartChar(c) || c === 58 || c === 45 // + : -
+const isAsciiKeyStart = (c: number): boolean =>
+	(c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 95
+
+const isAsciiKeyContinue = (c: number): boolean =>
+	isAsciiKeyStart(c) || c === 58 || c === 45 || c === 42
 
 export interface KeyMatch {
 	/** One-based source line of the key. */
@@ -130,9 +132,24 @@ const matchAt = (s: string, pos: number, line: number, out: KeyCursor): boolean 
 		if (separator === 0) return false
 		keyStart = pos + 1; keyEnd = end; keyKind = 2
 	} else {
-		if (!isKeyStartChar(c)) return false
+		if (c <= 0x7f && !isAsciiKeyStart(c)) return false
 		let runEnd = pos + 1
-		while (runEnd < s.length && isKeyContinueChar(s.charCodeAt(runEnd))) runEnd++
+		if (c > 0x7f) {
+			const first = s.codePointAt(pos)!
+			if (!isKeyInitialCodePoint(first)) return false
+			runEnd = pos + (first > 0xffff ? 2 : 1)
+		}
+		// Preserve the old tiny ASCII loop. Unicode decoding is entered only
+		// when this key actually reaches a non-ASCII code unit.
+		while (runEnd < s.length && isAsciiKeyContinue(s.charCodeAt(runEnd))) runEnd++
+		while (runEnd < s.length) {
+			let cp = s.charCodeAt(runEnd)
+			if (cp <= 0x7f) break
+			cp = s.codePointAt(runEnd)!
+			if (!isKeyCharacterCodePoint(cp)) break
+			runEnd += cp > 0xffff ? 2 : 1
+			while (runEnd < s.length && isAsciiKeyContinue(s.charCodeAt(runEnd))) runEnd++
+		}
 		for (let k = runEnd - 1; k >= pos + 1; k--) {
 			if (s.charCodeAt(k) !== 58) continue
 			sepStart = k + 1

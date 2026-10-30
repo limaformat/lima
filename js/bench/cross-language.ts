@@ -14,6 +14,8 @@ readingTime: 4.5
 category: Engineering
 `
 run('core typical',()=>parseCore(typical),20000)
+run('core German keys',()=>parseCore('größe: groß\ntítulo: spanisch\nautor*in: Alex\n'),20000)
+run('core Japanese keys',()=>parseCore('題名: 文書\n著者: 花子\n分類: 技術\n'),20000)
 run('references no references',()=>parseReferences(typical),20000)
 const refs=`siteName: My Site
 title: Hello ($siteName)!

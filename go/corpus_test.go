@@ -7,16 +7,18 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
 )
 
 type corpusCase struct {
-	ID        string `json:"id"`
-	API       string `json:"api"`
-	Input     string `json:"input"`
-	InputFile string `json:"inputFile"`
+	ID        string   `json:"id"`
+	API       string   `json:"api"`
+	Input     string   `json:"input"`
+	InputFile string   `json:"inputFile"`
+	Tags      []string `json:"tags"`
 	Options   struct {
 		Strict   bool           `json:"strict"`
 		Mode     ParseMode      `json:"mode"`
@@ -67,8 +69,10 @@ func TestReferences2Corpus(t *testing.T) {
 		t.Fatal(globErr)
 	}
 	sort.Strings(paths)
-	if len(paths) != 136 {
-		t.Fatalf("References 2.0 corpus count changed: %d", len(paths))
+	paths21, _ := filepath.Glob("../corpus/references-2.1/*.json")
+	paths = append(paths, paths21...)
+	if len(paths) != 141 {
+		t.Fatalf("References 2.x corpus count changed: %d", len(paths))
 	}
 	pass, skip := 0, 0
 	for _, path := range paths {
@@ -309,6 +313,12 @@ func TestCoreCorpus(t *testing.T) {
 	}
 	superseded := supersededByCore11(t)
 	paths = append(paths, paths11...)
+	paths12, globErr := filepath.Glob("../corpus/core-1.2/*.json")
+	if globErr != nil {
+		t.Fatal(globErr)
+	}
+	sort.Strings(paths12)
+	paths = append(paths, paths12...)
 	pass := 0
 	skip := 0
 	for _, path := range paths {
@@ -319,6 +329,10 @@ func TestCoreCorpus(t *testing.T) {
 		var c corpusCase
 		if e := json.Unmarshal(b, &c); e != nil {
 			t.Fatal(e)
+		}
+		if slices.Contains(c.Tags, "typescript-only") {
+			skip++
+			continue
 		}
 		if superseded[c.ID] {
 			continue
@@ -352,8 +366,8 @@ func TestCoreCorpus(t *testing.T) {
 	if pass+skip != len(paths)-len(superseded) {
 		t.Fatalf("core corpus accounting mismatch: %d passed + %d skipped != %d fixtures", pass, skip, len(paths)-len(superseded))
 	}
-	if skip != 0 {
-		t.Fatalf("Core corpus skipped %d cases", skip)
+	if skip != 2 {
+		t.Fatalf("Core corpus skipped %d cases; expected the two TypeScript-only lone-surrogate cases", skip)
 	}
 	t.Logf("core corpus: %d/%d (%d skipped)", pass, len(paths)-len(superseded), skip)
 	_ = math.NaN()

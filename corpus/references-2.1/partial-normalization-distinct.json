@@ -1,0 +1,26 @@
+{
+  "id": "references-2.partials.unicode-normalization-distinct",
+  "spec": "references",
+  "specVersion": "2.1",
+  "section": "2.3",
+  "description": "NFC and NFD partial names compare by code points and remain distinct.",
+  "input": "nfc: $(café)\nnfd: $(café)\n",
+  "options": {
+    "partials": {
+      "café": "NFC",
+      "café": "NFD"
+    }
+  },
+  "expect": {
+    "result": {
+      "nfc": "NFC",
+      "nfd": "NFD"
+    }
+  },
+  "tags": [
+    "unicode",
+    "partials",
+    "normalization"
+  ]
+}
+

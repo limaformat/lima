@@ -34,18 +34,36 @@ type ParseOptions struct {
 // ReferencesOptions is retained for source compatibility.
 type ReferencesOptions = ParseOptions
 
-func referenceInitial(c byte) bool {
-	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_'
-}
-func referenceChar(c byte) bool { return referenceInitial(c) || c == ':' || c == '-' }
-func partialChar(c byte) bool   { return referenceChar(c) || c == '/' }
 func scanComponent2(s string, i int, partial bool) (int, bool) {
-	if i >= len(s) || !referenceInitial(s[i]) {
+	if i >= len(s) {
 		return i, false
 	}
-	i++
-	for i < len(s) && ((partial && partialChar(s[i])) || (!partial && referenceChar(s[i]))) {
+	if s[i] < utf8.RuneSelf {
+		if !isASCIIKeyInitial(s[i]) {
+			return i, false
+		}
 		i++
+	} else {
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if r == utf8.RuneError && size == 1 || !isKeyInitial(r) {
+			return i, false
+		}
+		i += size
+	}
+	for i < len(s) {
+		if s[i] < utf8.RuneSelf {
+			b := s[i]
+			if !(isASCIIKeyCharacter(b) || partial && b == '/') {
+				break
+			}
+			i++
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if r == utf8.RuneError && size == 1 || !(isKeyCharacter(r) || partial && r == '/') {
+			break
+		}
+		i += size
 	}
 	return i, true
 }
@@ -444,15 +462,7 @@ func resolveNodeUncached2(node *pvalue, document, partials []pentry, remaining i
 }
 
 func validPartialName2(name string) bool {
-	if name == "" || !referenceInitial(name[0]) {
-		return false
-	}
-	for i := 1; i < len(name); i++ {
-		if !partialChar(name[i]) {
-			return false
-		}
-	}
-	return true
+	return isValidUnquotedKey(name, true)
 }
 
 func validatePartials2(raw map[string]Value) ([]pentry, error) {
@@ -553,6 +563,9 @@ func collectParticipants2(v *pvalue, out *[]insertedAt) {
 
 // Parse parses Lima Core 1.1 with References 2.0 enabled by default.
 func Parse(input string, options ParseOptions) (Value, error) {
+	if err := validateDocument(input); err != nil {
+		return nil, err
+	}
 	if options.Mode != "" && options.Mode != ModeCore && options.Mode != ModeReferences {
 		return nil, &LimaError{Code: InvalidOption, Message: fmt.Sprintf("Lima: invalid parse mode %q", options.Mode)}
 	}
@@ -560,14 +573,14 @@ func Parse(input string, options ParseOptions) (Value, error) {
 		if options.Partials != nil {
 			return nil, &LimaError{Code: InvalidOption, Message: "Lima: partials cannot be supplied in core mode"}
 		}
-		return ParseCoreWithOptions(input, CoreOptions{Strict: options.Strict, OnWarning: options.OnWarning})
+		return parseCoreWithOptionsValidated(input, CoreOptions{Strict: options.Strict, OnWarning: options.OnWarning})
 	}
 	partials, err := validatePartials2(options.Partials)
 	if err != nil {
 		return nil, err
 	}
 	if !strings.Contains(input, "${") && !strings.Contains(input, "$(") {
-		return ParseCoreWithOptions(input, CoreOptions{Strict: options.Strict, OnWarning: options.OnWarning})
+		return parseCoreWithOptionsValidated(input, CoreOptions{Strict: options.Strict, OnWarning: options.OnWarning})
 	}
 	document, err := parseCorePositioned(input, options.Strict, options.OnWarning, true)
 	if err != nil {

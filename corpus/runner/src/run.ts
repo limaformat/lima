@@ -321,7 +321,7 @@ if (import.meta.main) {
 	const suites: SuiteName[] = []
 	for (let i = 0; i < args.length; i++) {
 		if (args[i] !== '--suite' || i + 1 >= args.length) {
-			console.error('usage: bun src/run.ts [--suite core-1.0|core-1.1|references-1.0|references-2.0]...')
+			console.error('usage: bun src/run.ts [--suite core-1.0|core-1.1|core-1.2|references-1.0|references-2.0|references-2.1]...')
 			process.exit(2)
 		}
 		const suite = args[++i] as SuiteName

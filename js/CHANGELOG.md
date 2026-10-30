@@ -10,6 +10,14 @@ and [Lima References
 2.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
 carry their own.
 
+## [Unreleased]
+
+- Changed the minimum supported Node.js version from 18 to 22.
+- Implement Lima Core 1.2 Unicode 18.0 unquoted keys and Lima References 2.1
+  key/partial grammar, including supplementary-plane code points.
+- Reject documents containing lone UTF-16 surrogates and improve key and
+  non-space-indentation diagnostics.
+
 ## [0.6.0] — 2026-10-28
 
 Lima Core 1.1: strict mode rejects a content line that belongs to no

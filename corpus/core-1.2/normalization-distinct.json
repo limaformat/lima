@@ -1,0 +1,19 @@
+{
+  "id": "core.keys.normalization-distinct",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "5.1",
+  "description": "NFC and NFD spellings compare as their code-point sequences and remain distinct.",
+  "input": "größe: NFC\ngröße: NFD\n",
+  "expect": {
+    "result": {
+      "größe": "NFC",
+      "größe": "NFD"
+    }
+  },
+  "tags": [
+    "unicode",
+    "keys"
+  ]
+}
+

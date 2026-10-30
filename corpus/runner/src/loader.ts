@@ -8,7 +8,7 @@ import type { DiagnosticExpectation } from './errors'
 export interface LoadedCase {
 	id: string
 	spec: 'core' | 'references'
-	specVersion: '1.0' | '1.1' | '2.0'
+	specVersion: '1.0' | '1.1' | '1.2' | '2.0' | '2.1'
 	section: string
 	description: string
 	input: string
@@ -52,7 +52,7 @@ export function loadCase(jsonPath: string): LoadResult {
 	const d = doc as {
 		id: string
 		spec: 'core' | 'references'
-		specVersion?: '1.0' | '1.1' | '2.0'
+		specVersion?: '1.0' | '1.1' | '1.2' | '2.0' | '2.1'
 		section: string
 		description: string
 		input?: string
@@ -129,7 +129,7 @@ export function loadCase(jsonPath: string): LoadResult {
 			// References 1.0 resolver instead of the public API it claims to
 			// test — see docs/review-2026-09-followups.md P1 #6). Only a
 			// `spec: "references"` case's default depends on `specVersion`.
-			api: d.api ?? (d.spec === 'core' ? 'core' : d.specVersion === '2.0' ? 'parse' : 'references'),
+			api: d.api ?? (d.spec === 'core' ? 'core' : d.specVersion === '2.0' || d.specVersion === '2.1' ? 'parse' : 'references'),
 			options,
 			expectation,
 			tags: d.tags ?? [],
@@ -157,13 +157,15 @@ export interface LoadedCorpus {
 export const SUITE_DIRECTORIES = {
 	'core-1.0': 'core',
 	'core-1.1': 'core-1.1',
+	'core-1.2': 'core-1.2',
 	'references-1.0': 'references',
 	'references-2.0': 'references-2.0',
+	'references-2.1': 'references-2.1',
 } as const
 
 export type SuiteName = keyof typeof SUITE_DIRECTORIES
 
-export const DEFAULT_SUITES: readonly SuiteName[] = ['core-1.0', 'core-1.1', 'references-2.0']
+export const DEFAULT_SUITES: readonly SuiteName[] = ['core-1.0', 'core-1.1', 'core-1.2', 'references-2.0', 'references-2.1']
 
 /** The ids of the Core 1.0 cases Core 1.1 replaces (`supersedes` in its manifest). */
 export const supersededByCore11 = (corpusRoot: string): ReadonlySet<string> =>
@@ -194,7 +196,7 @@ export function loadCorpus(
 			const result = loadCase(join(dir, entry))
 			if (result.ok) {
 				if (suite === 'core-1.0' && superseded.has(result.case.id)) continue
-				const expectedVersion = suite.endsWith('-2.0') ? '2.0' : suite === 'core-1.1' ? '1.1' : '1.0'
+				const expectedVersion = suite === 'references-2.1' ? '2.1' : suite === 'references-2.0' ? '2.0' : suite === 'core-1.2' ? '1.2' : suite === 'core-1.1' ? '1.1' : '1.0'
 				if (result.case.specVersion !== expectedVersion) {
 					failures.push({
 						sourceFile: result.case.sourceFile,

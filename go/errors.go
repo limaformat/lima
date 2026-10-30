@@ -4,6 +4,8 @@ package lima
 type LimaDiagnosticCode string
 
 const (
+	// InvalidDocument reports input that is not a well-formed Unicode string.
+	InvalidDocument LimaDiagnosticCode = "INVALID_DOCUMENT"
 	// InvalidEscape reports an unsupported or malformed escape sequence.
 	InvalidEscape LimaDiagnosticCode = "INVALID_ESCAPE"
 	// InvalidQuote reports malformed quoted syntax.
