@@ -107,8 +107,9 @@ describe('loadCorpus', () => {
 		const { cases, failures } = loadCorpus(corpusRoot)
 		expect(failures).toEqual([])
 		// 149 Core 1.0.0 + 62 Core 1.0.1-1.0.9 (2026-09 review errata) + 7 Core 1.0.10, without the 8 Core 1.1
-		// supersedes, + 126 Core 1.1.0 + 136 References 2.0 + 19 Core 1.2 + 1 References 2.1.
-		expect(cases.length).toBe(496)
+		// supersedes, + 126 Core 1.1.0 + 136 References 2.0 + 143 Core 1.2 (19 for Unicode keys and documents, 124 for
+		// the lines of §7.1) + 5 References 2.1.
+		expect(cases.length).toBe(620)
 	})
 
 	it('drops the Core 1.0 cases Core 1.1 supersedes, which the 1.0 suite alone still holds', () => {
