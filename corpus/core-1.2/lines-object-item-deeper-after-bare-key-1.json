@@ -1,0 +1,24 @@
+{
+  "id": "core.lines.object-item-deeper-after-bare-key-1",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "A line deeper than an object item's key column after a bare key is the first line after that bare key.",
+  "input": "s:\n  - meta:\n      a: 1\n    role: y\n",
+  "expect": {
+    "result": {
+      "s": [
+        {
+          "meta": {
+            "a": 1
+          },
+          "role": "y"
+        }
+      ]
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

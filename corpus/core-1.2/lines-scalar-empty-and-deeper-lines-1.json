@@ -1,0 +1,18 @@
+{
+  "id": "core.lines.scalar-empty-and-deeper-lines-1",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "In a `|` scalar, an empty line and a line deeper than the key's column are content.",
+  "input": "k: |\n  one\n\n    two\nb: 2\n",
+  "expect": {
+    "result": {
+      "k": "one\n\n  two",
+      "b": 2
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

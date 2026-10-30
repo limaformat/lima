@@ -1,0 +1,19 @@
+{
+  "id": "core.lines.bare-key-first-other-deeper-2",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "An other line first after a bare key opens its block and sets its base, decides nothing, and is skipped; strict throws.",
+  "input": "k:\n  hello\n  - x\n",
+  "expect": {
+    "result": {
+      "k": [
+        "x"
+      ]
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

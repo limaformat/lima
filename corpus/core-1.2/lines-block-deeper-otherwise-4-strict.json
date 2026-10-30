@@ -1,0 +1,23 @@
+{
+  "id": "core.lines.block-deeper-otherwise-4-strict",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "Any other line deeper than a block's base is inconsistently indented: skipped, the block goes on; strict throws. (strict)",
+  "input": "s:\n  - x\n    a: 1\n  - z\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_INDENTATION",
+      "line": 3
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation",
+    "strict",
+    "error"
+  ]
+}

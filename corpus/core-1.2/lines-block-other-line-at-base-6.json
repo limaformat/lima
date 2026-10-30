@@ -1,0 +1,18 @@
+{
+  "id": "core.lines.block-other-line-at-base-6",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "An other line at a block's base is skipped; strict throws.",
+  "input": "a: 1\n---\nb: 2\n",
+  "expect": {
+    "result": {
+      "a": 1,
+      "b": 2
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "core.lines.block-deeper-otherwise-9",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "Any other line deeper than a block's base is inconsistently indented: skipped, the block goes on; strict throws.",
+  "input": "a: 1\n  - x\nc: 3\n",
+  "expect": {
+    "result": {
+      "a": 1,
+      "c": 3
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "core.lines.object-item-entry-at-key-column-1",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "An entry at an object item's key column is a member of the item.",
+  "input": "s:\n  - name: A\n    role: x\n  - name: B\n",
+  "expect": {
+    "result": {
+      "s": [
+        {
+          "name": "A",
+          "role": "x"
+        },
+        {
+          "name": "B"
+        }
+      ]
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "core.lines.block-member-at-base-2",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "An entry or item of the block's kind at its base is a member.",
+  "input": "s:\n  - x\n  - y\n",
+  "expect": {
+    "result": {
+      "s": [
+        "x",
+        "y"
+      ]
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

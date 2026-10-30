@@ -1,0 +1,18 @@
+{
+  "id": "core.lines.scalar-ends-at-key-column-1",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "A line with content at the key's column or less ends a `|` scalar and is read where it stands.",
+  "input": "k: |\n  one\n# c\nb: 2\n",
+  "expect": {
+    "result": {
+      "k": "one",
+      "b": 2
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

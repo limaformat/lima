@@ -1,0 +1,23 @@
+{
+  "id": "core.lines.bare-key-first-other-deeper-5-strict",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "An other line first after a bare key opens its block and sets its base, decides nothing, and is skipped; strict throws. (strict)",
+  "input": "k:\n    x y: 1\n  a: 2\nb: 3\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "UNRECOGNIZED_LINE",
+      "line": 2
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation",
+    "strict",
+    "error"
+  ]
+}

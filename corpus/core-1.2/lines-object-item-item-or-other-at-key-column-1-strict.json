@@ -1,0 +1,23 @@
+{
+  "id": "core.lines.object-item-item-or-other-at-key-column-1-strict",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "An item or an other line at an object item's key column is skipped; strict throws. (strict)",
+  "input": "s:\n  - name: A\n    - x\n    role: y\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_INDENTATION",
+      "line": 3
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation",
+    "strict",
+    "error"
+  ]
+}

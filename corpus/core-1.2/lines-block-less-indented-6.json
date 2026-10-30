@@ -1,0 +1,20 @@
+{
+  "id": "core.lines.block-less-indented-6",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "A line less indented than a block's base ends it and is read in the enclosing block.",
+  "input": "p:\n  a: 1\nhello\nb: 2\n",
+  "expect": {
+    "result": {
+      "p": {
+        "a": 1
+      },
+      "b": 2
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "core.lines.compact-deeper-2",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "A line deeper than a compact sequence's key column is read as in a block of items of that base.",
+  "input": "k:\n- x\n  hello\n- y\n",
+  "expect": {
+    "result": {
+      "k": [
+        "x",
+        "y"
+      ]
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

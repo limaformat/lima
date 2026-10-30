@@ -1,0 +1,23 @@
+{
+  "id": "core.lines.compact-deeper-3",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "A line deeper than a compact sequence's key column is read as in a block of items of that base.",
+  "input": "k:\n- name: A\n    role: x\n  age: 3\nb: 2\n",
+  "expect": {
+    "result": {
+      "k": [
+        {
+          "name": "A",
+          "age": 3
+        }
+      ],
+      "b": 2
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

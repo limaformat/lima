@@ -6,7 +6,7 @@ This document is the normative specification for Lima Core 1.2. It defines the s
 
 Lima is not a general-purpose data format. It is a small, predictable frontmatter format — the part of YAML that frontmatter actually needs, with well-defined types and no surprises.
 
-**Changes from Core 1.1:** an unquoted key may be written in any script: it starts with a letter or number of Unicode 18.0 or with `_`, and after its first character it may also hold marks, as accents can be written, and `*` and `·`, as gendered words such as `autor*in` and `autor·in` are written (§5.1). Lima delivers and compares a key as it is written, code point by code point, and normalises no Unicode (§5.3). A key Core 1.1 recognised reads the same in Core 1.2; a line whose unquoted key holds characters that Core 1.2 admits and Core 1.1 did not, and which Core 1.1 therefore did not read as an entry, is an entry now when it otherwise has the form of an entry and stands where an entry may. For clarity, §1 now says what UTF-8 implies: a string with a lone surrogate is no document, and a parser rejects it.
+**Changes from Core 1.1:** an unquoted key may be written in any script: it starts with a letter or number of Unicode 18.0 or with `_`, and after its first character it may also hold marks, as accents can be written, and `*` and `·`, as gendered words such as `autor*in` and `autor·in` are written (§5.1). Lima delivers and compares a key as it is written, code point by code point, and normalises no Unicode (§5.3). A key Core 1.1 recognised reads the same in Core 1.2; a line whose unquoted key holds characters that Core 1.2 admits and Core 1.1 did not, and which Core 1.1 therefore did not read as an entry, is an entry now when it otherwise has the form of an entry and stands where an entry may. For clarity, §1 now says what UTF-8 implies: a string with a lone surrogate is no document, and a parser rejects it. §7.1 states what each kind of line does where it stands in one table, in place of the paragraph that said it in prose; no outcome changes. In step with it, §6.1.5 and §10.1 say that indented freetext after a bare key leaves the key `null` only when no later line of its block is a member, as Core 1.1's §7.1 already said, and §10.1 lists every other line the table has strict mode reject.
 
 **Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented where no block level is open, at the top level as one level down (§7.1 rule 5), an unindented line that matches no key pattern (§4), and a line of a block mapping whose key the key grammar rejects (§5.1). Non-strict mode skips these lines, as before. Core 1.1 also settles what Core 1.0 left unsaid, where implementations differed: a bare key's sequence may start at the key's own column, as YAML writes it (§7.2); a block holds mapping entries or sequence items, as its first entry or item decides, and a line non-strict mode skips ends neither the block nor the object item before it unless it is less indented (§7.1); an item whose value is a flow sequence is a nested sequence (§7.2); a `|` with no content lines is `''` (§6.1.5); indentation is spaces only, so a line indented by other whitespace, such as U+00A0, is unrecognised (§7.1), with whitespace defined once (§1); and the end of the input ends the last line as a line terminator does (§4), so a last `key:` is a bare key.
 
@@ -302,9 +302,9 @@ next: value
 
 **Trailing content:** All trailing empty lines and newlines at the end of a block scalar are removed (strip behaviour). The parsed value ends with the final non-empty content line and contains no trailing newline. A `|` with no content lines, at the end of the input too, is the empty string `''`. Tabs within the final content line are preserved — only trailing empty lines and newlines are stripped, not whitespace within lines.
 
-**Inline content without `|`:** Indented freetext without a `|` marker is not a valid multi-line string.
+**Inline content without `|`:** Indented freetext without a `|` marker is not a valid multi-line string. It is an other line of §7.1: after a bare key it opens the key's block but adds nothing to it.
 
-- Non-strict: the key's value is `null`.
+- Non-strict: the line is skipped; the key is `null` unless a later line of its block is a member (§7.1).
 - Strict: throw. Error includes 1-based line number.
 
 #### 6.1.6 Line Continuation (`^^`)
@@ -509,7 +509,39 @@ Lima uses indentation to determine block structure. The following rules apply:
 6. Empty lines (blank or whitespace-only) do not affect base indentation and are skipped.
 7. Comment lines (first non-whitespace character is `#`) do not affect base indentation and are skipped.
 
-A block holds mapping entries or sequence items, as its first entry or item decides. A line of the other kind at its base indentation is skipped in non-strict mode, and what the block holds stays; strict mode throws. A line non-strict mode skips — of the other kind, freetext, a line whose key the key grammar rejects — decides nothing about what a block holds, but its indentation counts as any line's does: less indented than a block, it ends the block (rule 4); as the first content line after a bare key, it opens the key's block only when it is deeper (rule 3) and then sets the block's base indentation (rule 1); and it ends a `|` scalar or a compact sequence as §6.1.5 and §7.2 say. Otherwise, at a block's base indentation or deeper, it ends neither the block nor the object item before it. A bare key's sequence may also start at the key's own column instead of deeper (§7.2, compact sequences).
+What each kind of line does where it stands is the table below; rules 1–7 name its terms, and §6.1.5 and §7.2 define the structures it refers to. The document is a block mapping at column 0, so the rows for a block hold at the top level too.
+
+**Kinds of line.** A **blank line** holds whitespace only (§1). A **comment line** has `#` as its first non-whitespace character. An **entry** is a key and its separator (§4, §5): with an inline value, or a **bare key** with none. An **item** is `-` alone or `-` followed by whitespace (§7.2): with a value, or a **bare item** `-` alone; an **object item** is an item whose value starts with an entry, and its **key column** is that entry's column. An **other line** is any other line with content: freetext, a key the key grammar rejects (§5.1), a quoted key that does not close on its line or has a space before its colon (§5.2), `---`, and a line whose content starts after whitespace other than spaces. A line's **column** is its indentation, the run of spaces at its start.
+
+The rows of the innermost structure open at a line apply: a `|` scalar before the first line after a bare key, that before an object item or a compact sequence, and those before the block they stand in.
+
+| Where the line stands | Line | Non-strict | Strict |
+| --- | --- | --- | --- |
+| In a `\|` scalar of a key at column *k* (§6.1.5) | An empty line (spaces only, or none) | Content of the scalar | Same |
+| | Any non-empty line at a column deeper than *k* | Content of the scalar, a `#` line included | Same |
+| | A line with content at column *k* or less | Ends the scalar; read where it stands | Same |
+| First line with content after a bare key at column *k* | An entry or an item deeper than *k* | Opens the key's block: the line's column is its base indentation, its kind decides whether the block holds entries or items | Same |
+| | An other line deeper than *k* | Opens the key's block and sets its base indentation, but decides nothing about what it holds; skipped | Throw |
+| | An item at column *k* | Opens the key's compact sequence (§7.2) | Same |
+| | Any remaining line at column *k* or less | The key is `null`; the line is read where it stands | Same |
+| In a block of base indentation *b* | An entry or an item at column *b*, while the block holds nothing yet or holds that kind | A member of the block; the first decides what the block holds | Same |
+| | An entry or an item of the other kind at column *b* | Skipped; the block keeps its kind | Throw |
+| | An other line at column *b* | Skipped | Throw |
+| | A line deeper than *b* after a bare key | As the first line after a bare key (above) | Same |
+| | Any remaining line deeper than *b* — after an inline value, after an item or a bare item, or at the top level with no block open | Inconsistently indented (rule 5): skipped; the block goes on | Throw |
+| | A line less indented than *b* | Ends the block; read in the enclosing block by these rows | Same |
+| In an object item, its dash at column *d* and its key column *c* | An entry at column *c* | A member of the item's mapping | Same |
+| | An item or an other line at column *c* | Skipped | Throw |
+| | A line deeper than *c* after a bare key | As the first line after a bare key (above) | Same |
+| | Any remaining line deeper than *c* | Inconsistently indented: skipped; the item goes on | Throw |
+| | A line deeper than *d* and less indented than *c* | Inconsistently indented: ends the item; skipped | Throw |
+| | A line at column *d* or less | Ends the item; read in the sequence by the rows for a block | Same |
+| In a compact sequence of a key at column *k* | An item at column *k* | The next item | Same |
+| | A line deeper than *k* | As in a block of items of base indentation *k* | Same |
+| | Any remaining line with content at column *k* or less | Ends the sequence; read where it stands | Same |
+| Anywhere but in a `\|` scalar | A blank line or a comment line | Skipped; it ends nothing and sets no base indentation | Same |
+
+A key whose block ends with no member is `null`, as a bare key with no deeper line is (§7.3). A skipped line is no member: it ends a block, an item or a sequence only where the table says so, by its column.
 
 Minimum indentation is one space. There is no required indentation increment — two spaces is conventional but not normative.
 
@@ -724,7 +756,7 @@ Lima has two parse modes: non-strict (default) and strict.
 | Condition | Non-strict | Strict |
 | --- | --- | --- |
 | Duplicate key (any mapping level) | warn via `onWarning` + last wins | throw |
-| Indented freetext without `\|` marker | `null` | throw |
+| Indented freetext first after a bare key, without a `\|` marker | skip; the key is `null` unless its block gains a member (§7.1) | throw |
 | Invalid date value (component validation) | string fallback | throw |
 | Float overflow to non-finite, or non-zero float underflow to zero | string fallback | throw |
 | Flow mapping missing `: ` separator | string fallback for mapping | throw |
@@ -739,6 +771,7 @@ Lima has two parse modes: non-strict (default) and strict.
 | A sequence item in a block of mapping entries, or the reverse (§7.1) | skip | throw |
 | Nested sequence, in block or flow form (§7.2) | `null` item | throw |
 | Unrecognised line: an unindented line that matches no key pattern (§4), or a line of a block mapping whose key the key grammar rejects (§5.1) | skip | throw |
+| An other line (§7.1) where the table of §7.1 says Throw, such as freetext or `---` at the base indentation of a block of items | skip | throw |
 | Space before colon in quoted block key | skip | throw |
 | Non-whitespace content after closing quote in an inline value | string fallback for entire value | throw |
 

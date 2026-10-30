@@ -1,0 +1,24 @@
+{
+  "id": "core.lines.object-item-between-dash-and-key-1",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "A line between an object item's dash and key column ends the item and is skipped; strict throws.",
+  "input": "s:\n  - name: A\n   role: x\n  - name: B\n",
+  "expect": {
+    "result": {
+      "s": [
+        {
+          "name": "A"
+        },
+        {
+          "name": "B"
+        }
+      ]
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

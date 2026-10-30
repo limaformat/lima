@@ -1,0 +1,21 @@
+{
+  "id": "core.lines.bare-key-item-at-key-column-1",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "An item at a bare key's column opens its compact sequence.",
+  "input": "k:\n- x\n- y\nb: 2\n",
+  "expect": {
+    "result": {
+      "k": [
+        "x",
+        "y"
+      ],
+      "b": 2
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

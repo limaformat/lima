@@ -1,0 +1,23 @@
+{
+  "id": "core.lines.block-other-kind-at-base-2-strict",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "An entry or item of the other kind at a block's base is skipped; strict throws. (strict)",
+  "input": "s:\n  - x\n  a: 1\n  - y\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_INDENTATION",
+      "line": 3
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation",
+    "strict",
+    "error"
+  ]
+}

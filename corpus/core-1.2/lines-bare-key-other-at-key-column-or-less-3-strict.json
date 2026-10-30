@@ -1,0 +1,23 @@
+{
+  "id": "core.lines.bare-key-other-at-key-column-or-less-3-strict",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "Any other line at a bare key's column or less leaves the key null and is read where it stands. (strict)",
+  "input": "k:\nhello\nb: 2\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "UNRECOGNIZED_LINE",
+      "line": 2
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation",
+    "strict",
+    "error"
+  ]
+}

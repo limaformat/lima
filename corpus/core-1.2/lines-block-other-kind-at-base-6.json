@@ -1,0 +1,18 @@
+{
+  "id": "core.lines.block-other-kind-at-base-6",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "An entry or item of the other kind at a block's base is skipped; strict throws.",
+  "input": "k: 1\n- x\nb: 2\n",
+  "expect": {
+    "result": {
+      "k": 1,
+      "b": 2
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

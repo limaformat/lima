@@ -1,0 +1,24 @@
+{
+  "id": "core.lines.object-item-at-dash-column-1",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "A line at an object item's dash column or less ends the item and is read in the sequence.",
+  "input": "s:\n  - name: A\n  role: x\n  - name: B\n",
+  "expect": {
+    "result": {
+      "s": [
+        {
+          "name": "A"
+        },
+        {
+          "name": "B"
+        }
+      ]
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

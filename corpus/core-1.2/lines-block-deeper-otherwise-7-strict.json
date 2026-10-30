@@ -1,0 +1,23 @@
+{
+  "id": "core.lines.block-deeper-otherwise-7-strict",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "Any other line deeper than a block's base is inconsistently indented: skipped, the block goes on; strict throws. (strict)",
+  "input": "  a: 1\nb: 2\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_INDENTATION",
+      "line": 1
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation",
+    "strict",
+    "error"
+  ]
+}

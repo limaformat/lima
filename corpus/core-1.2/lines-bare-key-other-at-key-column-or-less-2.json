@@ -1,0 +1,20 @@
+{
+  "id": "core.lines.bare-key-other-at-key-column-or-less-2",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "Any other line at a bare key's column or less leaves the key null and is read where it stands.",
+  "input": "p:\n  k:\nb: 2\n",
+  "expect": {
+    "result": {
+      "p": {
+        "k": null
+      },
+      "b": 2
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

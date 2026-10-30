@@ -1,0 +1,19 @@
+{
+  "id": "core.lines.bare-key-first-item-deeper-1",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "The first item deeper than a bare key opens its block of items.",
+  "input": "k:\n  - x\n",
+  "expect": {
+    "result": {
+      "k": [
+        "x"
+      ]
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

@@ -34,15 +34,6 @@ pass and costs nothing). Let the block parser report how far it read, and
 start the range check there. The strict scenarios of the cross-language
 benchmarks show the effect.
 
-## Core 1.2: a table of line kinds
-
-Every finding of the Core 1.1 reviews sat in §7's prose on lines and
-indentation, where each new sentence had to agree with all the others. A
-normative table — kind of line × context → outcome in each mode — would
-state each case once, and the differential test's generator could produce
-every row of it on purpose. An erratum if it only restates what holds;
-Core 1.2 otherwise.
-
 ## "Identical output" says more than it means
 
 Core's opening paragraph and §2 promise identical output for any valid input,

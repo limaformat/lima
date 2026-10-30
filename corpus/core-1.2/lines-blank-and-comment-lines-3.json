@@ -1,0 +1,18 @@
+{
+  "id": "core.lines.blank-and-comment-lines-3",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "7.1",
+  "description": "Outside a `|` scalar, blank and comment lines are skipped, end nothing and set no base indentation.",
+  "input": "a: 1\n # c\nb: 2\n",
+  "expect": {
+    "result": {
+      "a": 1,
+      "b": 2
+    }
+  },
+  "tags": [
+    "lines",
+    "indentation"
+  ]
+}

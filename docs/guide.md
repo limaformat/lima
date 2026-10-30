@@ -396,11 +396,12 @@ Since Core 1.1, strict mode has one plain rule for lines: every line with
 content belongs to the structure. A line it cannot place — a key without its
 `: `, a YAML document marker, a line indented after a value that opens no
 block — is an error with its line, where non-strict mode skips it silently.
+What each kind of line does where it stands is one table in Core §7.1.
 
 | Condition | Non-strict | Strict |
 | --- | --- | --- |
 | Duplicate key | warn + last value wins | throw |
-| Indented freetext without `\|` | `null` | throw |
+| Indented freetext first after a bare key, without `\|` | skipped; the key is `null` unless a later line of its block is a member | throw |
 | Invalid date (calendar validation) | string fallback | throw |
 | Float overflow / non-zero underflow to zero | string fallback | throw |
 | Flow mapping missing `: ` | string fallback | throw |
