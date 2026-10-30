@@ -2,7 +2,7 @@
 
 > **On an early 1.0?** References 1.0 was published briefly in mid-2026 and is superseded by this specification, which is not syntax-compatible with it. The [archived References 1.0 specification](lima-references-1.0-spec.md) remains available as an independently frozen conformance target.
 
-> **Status:** Draft · **Version:** 2.1.0 · **Date:** —
+> **Status:** Final · **Version:** 2.1.0 · **Date:** 2026-10-30
 
 **Changes from References 2.0:** a key segment takes the characters of a Core 1.2 key (Core §5.1), and a partial name those characters and `/`, so a reference reaches every unquoted key: `${größe}`, `${autor*in}`, `$(personen/zoë)`. A text that held such a name in reference syntax and was literal in 2.0, `${größe}`, is a reference in 2.1.
 

@@ -2,7 +2,12 @@
 # Regenerate with: bun scripts/facts.ts
 
 packages:
-  version: "0.6.0"
+  version: "0.7.0"
+  runtime_dependencies: 0
+  runtime_dependencies_by_package:
+    typescript: 0
+    rust: 0
+    go: 0
 editors:
   jetbrains_plugin_version: "0.1.0"
   jetbrains_minimum_ide_build: "242"
@@ -67,8 +72,8 @@ word_counts:
     js_yaml_tag_implementations: 21
     js_yaml_exposed_schemas: 4
 package_sizes:
-  lima_npm_tarball_bytes: 71867
-  lima_npm_tarball_kilobytes_decimal: 71.9
+  lima_npm_tarball_bytes: 72288
+  lima_npm_tarball_kilobytes_decimal: 72.3
   js_yaml_npm_tarball_bytes: 338050
   js_yaml_npm_tarball_kilobytes_decimal: 338
   js_yaml_ratio_to_lima: 4.7

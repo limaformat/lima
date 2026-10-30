@@ -1,6 +1,6 @@
 # Lima Core 1.2 — Normative Specification
 
-> **Status:** Draft · **Version:** 1.2.0 · **Date:** —
+> **Status:** Final · **Version:** 1.2.0 · **Date:** 2026-10-30
 
 This document is the normative specification for Lima Core 1.2. It defines the syntax, semantics, and error behaviour of the Lima frontmatter format. All conforming implementations must produce identical output for any given valid input.
 

@@ -56,6 +56,29 @@ const packageVersion = (): string => {
 	return javascript
 }
 
+/** The runtime dependencies each package declares: npm `dependencies`, Cargo `[dependencies]`, Go `require`. */
+const runtimeDependencies = (): { typescript: number; rust: number; go: number } => {
+	const npm = JSON.parse(read('js/package.json')) as { dependencies?: Record<string, string> }
+	const cargo = read('rust/Cargo.toml').split('\n')
+	let inDependencies = false
+	let rust = 0
+	for (const line of cargo) {
+		if (/^\s*\[/.test(line)) inDependencies = /^\s*\[dependencies\]\s*$/.test(line)
+		else if (inDependencies && /^\s*[A-Za-z0-9_-]+\s*=/.test(line)) rust++
+	}
+	let go = 0
+	let inRequire = false
+	for (const line of read('go/go.mod').split('\n')) {
+		const text = line.replace(/\/\/.*$/, '').trim()
+		if (inRequire) {
+			if (text === ')') inRequire = false
+			else if (text !== '') go++
+		} else if (text === 'require (') inRequire = true
+		else if (/^require\s+\S+\s+\S+/.test(text)) go++
+	}
+	return { typescript: Object.keys(npm.dependencies ?? {}).length, rust, go }
+}
+
 const specVersion = (path: string, name: string): string => {
 	const match = new RegExp(`^# Lima ${name} ([0-9]+\\.[0-9]+)`, 'm').exec(read(path))
 	if (!match) throw new Error(`could not read ${name} version from ${path}`)
@@ -201,6 +224,7 @@ const editorFacts = () => {
 
 interface Measurements {
 	version: string
+	runtimeDependencies: ReturnType<typeof runtimeDependencies>
 	coreVersion: string
 	referencesVersion: string
 	unicodeVersion: string
@@ -228,6 +252,7 @@ const measure = async (): Promise<Measurements> => {
 	])
 	return {
 		version: packageVersion(),
+		runtimeDependencies: runtimeDependencies(),
 		coreVersion: specVersion('docs/lima-core-1.0-spec.md', 'Core'),
 		referencesVersion: specVersion('docs/lima-references-2.0-spec.md', 'References'),
 		unicodeVersion: /Unicode (\d+\.\d+)/.exec(read('docs/lima-core-1.0-spec.md'))?.[1] ?? (() => { throw new Error('could not read Unicode version from Core spec') })(),
@@ -249,7 +274,11 @@ const measure = async (): Promise<Measurements> => {
 const round = (value: number, digits = 1): number => Number(value.toFixed(digits))
 
 const toFacts = (m: Measurements): FactTree => ({
-	packages: { version: m.version },
+	packages: {
+		version: m.version,
+		runtime_dependencies: m.runtimeDependencies.typescript + m.runtimeDependencies.rust + m.runtimeDependencies.go,
+		runtime_dependencies_by_package: m.runtimeDependencies,
+	},
 	editors: {
 		jetbrains_plugin_version: m.editors.jetbrainsPluginVersion,
 		jetbrains_minimum_ide_build: m.editors.jetbrainsSinceBuild,

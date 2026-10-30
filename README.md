@@ -71,7 +71,7 @@ const meta = parse(split.frontmatter)
 
 This recipe requires the opening `---` on the file's literal first line and a `---`-only closing line; it does not recognise a completely empty frontmatter block with zero blank lines between the fences (`---\n---\n`, as opposed to `---\n\n---\n`, which works). If this pattern turns out to be widely needed, an official `extractFrontmatter` (or similar) export is a reasonable future addition — proposed here, not implemented, since it's a new public API surface that deserves its own review rather than arriving as a side effect of a docs pass.
 
-Full Core and References 2.0 syntax, resource limits, strict mode, and the complete API: **[`docs/guide.md`](docs/guide.md)**. Migrating existing YAML frontmatter: **[`docs/migrating-from-yaml.md`](docs/migrating-from-yaml.md)**.
+Full Core and References syntax, resource limits, strict mode, and the complete API: **[`docs/guide.md`](docs/guide.md)**. Migrating existing YAML frontmatter: **[`docs/migrating-from-yaml.md`](docs/migrating-from-yaml.md)**.
 
 ## What Lima guarantees
 
@@ -152,9 +152,9 @@ Small as a consequence, not as the goal — and measured rather than claimed. Wo
 
 **Published npm package:**
 
-| | `@limaformat/lima` <!-- facts:packages.version -->0.6.0<!-- /facts --> | `js-yaml` <!-- facts:word_counts.implementations.js_yaml_version -->5.2.3<!-- /facts --> |
+| | `@limaformat/lima` <!-- facts:packages.version -->0.7.0<!-- /facts --> | `js-yaml` <!-- facts:word_counts.implementations.js_yaml_version -->5.2.3<!-- /facts --> |
 |---|---:|---:|
-| Packed tarball | <!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->71.9<!-- /facts --> KB | <!-- facts:package_sizes.js_yaml_npm_tarball_kilobytes_decimal -->338<!-- /facts --> KB |
+| Packed tarball | <!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->72.3<!-- /facts --> KB | <!-- facts:package_sizes.js_yaml_npm_tarball_kilobytes_decimal -->338<!-- /facts --> KB |
 
 Both figures count the committed TypeScript source — not the bundled, minified, or generated `dist/` output that ships — measured from code transitively reachable from the relevant public entry point rather than by whole-file boundaries. The js-yaml measurement covers its actual `load()` parse path (parser, constructor, schema, and tag resolvers), not serialization. Package size is necessarily measured for the complete published packages: Core and References always ship together in `@limaformat/lima`, so the Lima package figure is a conservative comparison against the Core-only implementation measurement.
 
@@ -162,7 +162,7 @@ The Lima Core <!-- facts:language.core_version -->1.2<!-- /facts --> spec is **~
 
 js-yaml's `load()` path is ~<!-- facts:word_counts.implementations.js_yaml_code -->11,787<!-- /facts --> words of TypeScript because it also contains support for anchors and aliases, merge keys (`<<`), multi-document streams, `%YAML`/`%TAG` directives, and <!-- facts:word_counts.implementations.js_yaml_tag_implementations -->21<!-- /facts --> tag implementations across its <!-- facts:word_counts.implementations.js_yaml_exposed_schemas -->4<!-- /facts --> exposed schemas. Ordinary frontmatter does not require those features; tags and anchors/aliases are also the constructs implicated in the two concrete CVEs discussed below. Lima Core is about **<!-- facts:word_counts.implementations.lima_core_code -->8,615<!-- /facts --> words of code** for the subset that's actually left, plus about **<!-- facts:word_counts.implementations.lima_core_comments -->5,310<!-- /facts --> words of comments** — comments are roughly <!-- facts:word_counts.implementations.lima_core_comment_percentage -->38.1<!-- /facts -->% of the counted committed source, and many tie an implementation detail directly to a spec section. Being smaller is the easy part to measure; the part that matters is that the machinery that isn't there can't misbehave.
 
-The complete `@limaformat/lima` <!-- facts:packages.version -->0.6.0<!-- /facts --> tarball — Core *and* References <!-- facts:language.references_version -->2.1<!-- /facts --> — is **~<!-- facts:package_sizes.js_yaml_ratio_to_lima -->4.7<!-- /facts -->× smaller** than js-yaml <!-- facts:word_counts.implementations.js_yaml_version -->5.2.3<!-- /facts --> (<!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->71.9<!-- /facts --> KB vs. <!-- facts:package_sizes.js_yaml_npm_tarball_kilobytes_decimal -->338<!-- /facts --> KB); part of that is scope, part is that js-yaml also ships pre-built browser bundles.
+The complete `@limaformat/lima` <!-- facts:packages.version -->0.7.0<!-- /facts --> tarball — Core *and* References <!-- facts:language.references_version -->2.1<!-- /facts --> — is **~<!-- facts:package_sizes.js_yaml_ratio_to_lima -->4.7<!-- /facts -->× smaller** than js-yaml <!-- facts:word_counts.implementations.js_yaml_version -->5.2.3<!-- /facts --> (<!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->72.3<!-- /facts --> KB vs. <!-- facts:package_sizes.js_yaml_npm_tarball_kilobytes_decimal -->338<!-- /facts --> KB); part of that is scope, part is that js-yaml also ships pre-built browser bundles.
 
 This isn't a case of counting favourably: separating "Core" from "References" in the implementation requires following actual imports, not just file boundaries. Shared files are divided by what each public entry point actually reaches — for instance, three References 2.0 §2.4 source-position helpers (`stripCommentKeepEscapes`, `physicalRaw`, `rawOffsetOf`) that `parseCore` never executes count as References even though they live in shared parser files. The internally isolated, briefly-published References 1.0 code is excluded except for helpers actually imported by References 2.0. Generated `dist/`, tests, benchmarks, and dead code are excluded from both sides.
 
@@ -170,11 +170,12 @@ Reproduce the implementation counts from `js/` with `bun run wordcount -- --mani
 
 ## Status
 
-- [ ] Lima Core <!-- facts:language.core_version -->1.2<!-- /facts --> specification — draft ([`docs/lima-core-1.0-spec.md`](docs/lima-core-1.0-spec.md), under its 1.0 name so that published links keep working)
+- [x] Lima Core <!-- facts:language.core_version -->1.2<!-- /facts --> specification — final ([`docs/lima-core-1.0-spec.md`](docs/lima-core-1.0-spec.md), under its 1.0 name so that published links keep working)
 - [x] Frozen Core 1.0 conformance baseline — a byte-identical <!-- facts:corpus.suites.core_1_0.baseline_cases -->149<!-- /facts -->-case 1.0.0 baseline, count-pinned and content-hash protected, with additive Core errata through <!-- facts:corpus.suites.core_1_0.latest_errata_version -->1.0.10<!-- /facts --> on top ([`corpus/`](corpus/), design rationale in [`docs/corpus-design/`](docs/corpus-design/))
 - [x] Frozen Core 1.1 conformance corpus — <!-- facts:corpus.suites.core_1_1.cases -->126<!-- /facts --> cases in `corpus/core-1.1/`, pinned the same way, superseding <!-- facts:corpus.suites.core_1_1.superseded_core_1_0_cases -->8<!-- /facts --> Core 1.0 cases ([decision](docs/decisions/top-level-indentation-after-inline-value.md))
+- [x] Core 1.2 conformance cases — <!-- facts:corpus.suites.core_1_2.cases -->143<!-- /facts --> cases in `corpus/core-1.2/`: keys in any script, and a case for every row of the table of what each kind of line does
 - [x] Differential test in CI — TypeScript, Rust, and Go parse the same random documents (<!-- facts:differential_test.parses_per_implementation -->200,000<!-- /facts --> parses per implementation and run) and must agree on every value, warning and error ([`docs/corpus-design/`](docs/corpus-design/README.md#14-differential-test))
-- [ ] Lima References <!-- facts:language.references_version -->2.1<!-- /facts --> specification — draft with a <!-- facts:corpus.default.references_cases -->141<!-- /facts -->-case additive corpus; TypeScript, Rust, and Go pass the complete suite through their public References <!-- facts:language.references_version -->2.1<!-- /facts --> APIs ([spec](docs/lima-references-2.0-spec.md), [coverage](docs/corpus-design/coverage/references-2.0.md))
+- [x] Lima References <!-- facts:language.references_version -->2.1<!-- /facts --> specification — final with a <!-- facts:corpus.default.references_cases -->141<!-- /facts -->-case additive corpus; TypeScript, Rust, and Go pass the complete suite through their public References <!-- facts:language.references_version -->2.1<!-- /facts --> APIs ([spec](docs/lima-references-2.0-spec.md), [coverage](docs/corpus-design/coverage/references-2.0.md))
 - [x] TypeScript/JavaScript implementation — published as [`@limaformat/lima`](js/)
 - [x] Rust implementation — published as [`lima`](rust/)
 - [x] Go implementation — published as [`github.com/limaformat/lima/go`](go/)
@@ -182,12 +183,15 @@ Reproduce the implementation counts from `js/` with `bun run wordcount -- --mani
 Lima Core is at **<!-- facts:language.core_version -->1.2<!-- /facts -->**. Core 1.0 was frozen; corrections shipped only as
 additive errata revisions (through 1.0.10), driven by the conformance corpus
 rather than any single implementation, and never altering the byte-frozen 1.0.0
-baseline. Core 1.1 (2026-10) is the one change since, which an erratum could not
+baseline. Core 1.1 (2026-10-28) was the first change an erratum could not
 carry: strict mode rejects a content line that belongs to no structure, which
 Core 1.0 skipped in both modes, and it settles cases Core 1.0 left open, such as
 a sequence at its key's own column, which changes some non-strict results too.
 The 1.0 baseline stays frozen as it is; Core 1.1 supersedes eight of its cases
 with its own ([decision](docs/decisions/top-level-indentation-after-inline-value.md)).
+Core 1.2 (2026-10-30) lets an unquoted key be written in any script, and
+gendered (`größe`, `題名`, `autor*in`), with References 2.1 reaching every such
+key, and states in one table what each kind of line does where it stands.
 
 The runnable reference API in every implementation is **Core <!-- facts:language.core_version -->1.2<!-- /facts --> plus
 References <!-- facts:language.references_version -->2.1<!-- /facts -->**.

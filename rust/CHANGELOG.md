@@ -5,16 +5,37 @@ All notable changes to `lima` are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This crate's version number tracks its own release history and is
 independent of the Lima specification versions — [Lima Core
-1.1](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
+1.2](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
 and [Lima References
-2.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
+2.1](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
 carry their own.
 
 ## [Unreleased]
 
-- Implement Lima Core 1.2 Unicode 18.0 unquoted keys and Lima References 2.1
-  key/partial grammar, with generated dependency-free category tables.
-- Improve key, fullwidth-colon and non-space-indentation diagnostics.
+## [0.7.0] — 2026-10-30
+
+Lima Core 1.2 and References 2.1: an unquoted key may be written in any
+script. It starts with a letter or number of Unicode 18.0 or `_`, and after
+its first character also holds marks, `*` and `·`, so keys can be written
+in any language and gendered (`größe`, `題名`, `autor*in`, `autor·in`);
+references reach every such key. Core 1.2 also states in one table what
+each kind of line does where it stands (§7.1), without changing an outcome.
+
+### Added
+
+- Unquoted keys and reference names take Unicode letters, marks and numbers
+  (Unicode 18.0, fixed by the specification) and `*` and `·` after their
+  first character. The categories come from a generated table, not the
+  host's Unicode support, and no dependency; ASCII keys are read as fast as
+  before.
+- Hints: whitespace other than spaces before a key, a FULLWIDTH COLON
+  (U+FF1A) in place of `: `, and the key-grammar hint for a key such as
+  `x y: 2` at every level.
+
+### Changed
+
+- A line whose key Core 1.1 rejected for its characters, and Core 1.2
+  admits, is an entry now; non-strict mode skipped it, strict mode threw.
 
 ## [0.6.0] — 2026-10-28
 
