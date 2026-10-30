@@ -2,6 +2,12 @@
 
 ## [0.2.0] — 2026-10-28
 
+The minimum is now VS Code 1.82. Its extension host moved to Electron 25
+(Chromium 114 / V8 11.4), which provides `String.prototype.isWellFormed()`;
+the bundled Core 1.2 parser uses that method to reject invalid Unicode scalar
+values. See the official [VS Code 1.82 Electron update][vscode-1.82] and
+[Electron 25 release notes][electron-25].
+
 Diagnostics follow Lima Core 1.1: the bundled parser is that of
 `@limaformat/lima` 0.6.0, which reads strictly, as the extension does.
 
@@ -17,6 +23,9 @@ Diagnostics follow Lima Core 1.1: the bundled parser is that of
   pasted U+00A0, is reported.
 - An object item's later keys stand at its first key's column; another
   column is reported.
+
+[vscode-1.82]: https://code.visualstudio.com/updates/v1_82#_electron-25-update
+[electron-25]: https://www.electronjs.org/blog/electron-25-0
 
 ## [0.1.0] — 2026-09-14
 

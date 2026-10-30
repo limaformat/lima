@@ -97,6 +97,8 @@ const hint = (text: string): string => {
 	if (text === '---' || text === '...') return ' (a YAML document marker; Lima has one document)'
 	if (isItem(text)) return ' (a sequence item belongs to a key with no value of its own)'
 	if (text.startsWith('"') || text.startsWith("'")) return ' (a quoted key closes on its own line)'
+	const separator = text.indexOf(': ')
+	if (separator >= 0 && !isValidUnquotedKey(text.slice(0, separator))) return KEY_GRAMMAR_HINT
 	// `author Odile`, `key:value`: key characters, but no ": " after them
 	if (!text.includes(':') || isValidUnquotedKey(text.split(' ')[0]!)) return ' (a key needs ": " after it)'
 	return KEY_GRAMMAR_HINT

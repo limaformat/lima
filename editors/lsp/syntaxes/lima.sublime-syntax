@@ -10,7 +10,7 @@ variables:
   # A double-quoted key's backslash escapes (Core §5.2) keep an escaped
   # quote from closing it early; a single-quoted key is fully literal.
   # GENERATED:sublime-key
-  key: "[a-zA-Z0-9_][a-zA-Z0-9_:-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\""
+  key: "[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\""
 
 contexts:
   main:
@@ -65,12 +65,12 @@ contexts:
 
   reference-document:
     # GENERATED:sublime-document-reference
-    - match: '\$\{[a-zA-Z0-9_][a-zA-Z0-9_:-]*(?:\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*)*\}'
+    - match: '\$\{[\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*\u00B7-]*(?:\.[\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*\u00B7-]*)*\}'
       scope: variable.other.reference.document.lima
 
   reference-partial:
     # GENERATED:sublime-partial-reference
-    - match: '\$\([a-zA-Z0-9_][a-zA-Z0-9_:/-]*(?:\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*)*\)'
+    - match: '\$\([\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*/\u00B7-]*(?:\.[\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*\u00B7-]*)*\)'
       scope: variable.other.reference.partial.lima
 
   flow-sequence:

@@ -2,7 +2,7 @@
 
 This extension registers `.lima` files with the
 [`@limaformat/lima-language-server`](https://www.npmjs.com/package/@limaformat/lima-language-server).
-It provides parser diagnostics, hover information for References 2.0 tokens,
+It provides parser diagnostics, hover information for References 2.1 tokens,
 and go to definition for resolvable `${document.path}` references. The
 extension installs and updates the npm language-server package through Zed,
 then starts it over stdio with Zed's Node runtime.
@@ -52,8 +52,10 @@ The extension forwards Zed's `initialization_options` and `settings` for the
 
 The extension pins the `tree-sitter-lima` grammar (repository, commit, and
 subdirectory in `extension.toml`) and ships its `highlights.scm` query,
-providing Lima-aware syntax highlighting for Core 1.0 and the active
-References 2.0 tokens.
+providing Lima-aware syntax highlighting for Core 1.2 and the active
+References 2.1 tokens. The pinned grammar uses exact Unicode 18.0 checks for
+block keys and Tree-sitter Unicode properties for flow keys and references;
+see the grammar README for that engine-version approximation.
 
 Markdown/MDX frontmatter is not registered by this extension. Standalone
 `.lima` files are the supported target.

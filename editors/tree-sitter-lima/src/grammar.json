@@ -300,8 +300,12 @@
       "name": "_unquoted_key"
     },
     "flow_key": {
-      "type": "PATTERN",
-      "value": "[a-zA-Z0-9_][a-zA-Z0-9_-]*(?::[a-zA-Z0-9_][a-zA-Z0-9_-]*)*"
+      "type": "TOKEN",
+      "content": {
+        "type": "PATTERN",
+        "value": "[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_*·-]*(?::[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_*·-]*)*",
+        "flags": "u"
+      }
     },
     "single_quoted_key": {
       "type": "SEQ",
@@ -523,14 +527,16 @@
       "type": "TOKEN",
       "content": {
         "type": "PATTERN",
-        "value": "\\$\\{[a-zA-Z0-9_][a-zA-Z0-9_:-]*(?:\\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*)*\\}"
+        "value": "\\$\\{[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*·-]*(?:\\.[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*·-]*)*\\}",
+        "flags": "u"
       }
     },
     "partial_reference": {
       "type": "TOKEN",
       "content": {
         "type": "PATTERN",
-        "value": "\\$\\([a-zA-Z0-9_][a-zA-Z0-9_:/-]*(?:\\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*)*\\)"
+        "value": "\\$\\([\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*/·-]*(?:\\.[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*·-]*)*\\)",
+        "flags": "u"
       }
     },
     "flow_sequence": {

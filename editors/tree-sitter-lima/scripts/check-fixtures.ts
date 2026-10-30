@@ -59,11 +59,13 @@ if (build.exitCode !== 0) {
   process.exit(1);
 }
 
-// Core 1.1: the Core 1.0 fixtures it supersedes stay (the grammar is tolerant either way), and its own join
+// Historical fixtures stay alongside the current Core 1.2 / References 2.1 corpus.
 const fixtures = [
   ...loadFixtures(join(CORPUS_DIR, "core")),
   ...loadFixtures(join(CORPUS_DIR, "core-1.1")),
+  ...loadFixtures(join(CORPUS_DIR, "core-1.2")),
   ...loadFixtures(join(CORPUS_DIR, "references-2.0")),
+  ...loadFixtures(join(CORPUS_DIR, "references-2.1")),
 ];
 const resolved = fixtures.map((fixture, index) => {
   const input = inputFor(fixture);

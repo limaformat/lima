@@ -13,6 +13,12 @@ const CASES: { token: string; kind: TokenKind; valid: boolean }[] = [
   { token: "$(people/alice.name)", kind: "partial", valid: true },
   { token: "$(a:b-c/path.more:x)", kind: "partial", valid: true },
   { token: "$(_root/name-space:part.child_2)", kind: "partial", valid: true },
+  { token: "${größe}", kind: "document", valid: true },
+  { token: "${autor*in}", kind: "document", valid: true },
+  { token: "$(personen/zoë.name)", kind: "partial", valid: true },
+  { token: "${\u0308mark}", kind: "document", valid: false },
+  { token: "${*name}", kind: "document", valid: false },
+  { token: "${·name}", kind: "document", valid: false },
   { token: "$key", kind: "document", valid: false },
   { token: "${}", kind: "document", valid: false },
   { token: "${.key}", kind: "document", valid: false },
@@ -29,7 +35,7 @@ const CASES: { token: string; kind: TokenKind; valid: boolean }[] = [
 
 const root = resolve(__dirname, "../..");
 
-test("all editor grammars agree with the References 2.0 scanner", async () => {
+test("all editor grammars agree with the References 2.1 scanner", async () => {
   const patterns = await editorPatterns();
 
   for (const example of CASES) {
@@ -45,7 +51,7 @@ test("all editor grammars agree with the References 2.0 scanner", async () => {
       for (const kind of ["document", "partial"] as const) {
         expect(
           fullMatch(byKind[kind], example.token),
-          `${editor}/${kind}: ${example.token}`,
+          `${editor}/${kind}: ${example.token} with ${byKind[kind]}`,
         ).toBe(example.valid && example.kind === kind);
       }
     }
@@ -107,6 +113,9 @@ function emacsToJavaScript(pattern: string): string {
   const openGroup = "__LIMA_OPEN_GROUP__";
   const closeGroup = "__LIMA_CLOSE_GROUP__";
   let translated = pattern
+    .replaceAll("[:alnum:]", String.raw`\p{L}\p{N}`)
+    .replaceAll(String.raw`\p{^}`, String.raw`\p{M}`)
+    .replaceAll(String.raw`\|`, "|")
     .replaceAll("\\(?:", openGroup)
     .replaceAll("\\)", closeGroup)
     .replaceAll("(", "\\(")
@@ -120,5 +129,5 @@ function emacsToJavaScript(pattern: string): string {
 }
 
 function fullMatch(pattern: string, token: string): boolean {
-  return new RegExp(`^(?:${pattern})$`).test(token);
+  return new RegExp(`^(?:${pattern})$`, "u").test(token);
 }

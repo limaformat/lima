@@ -98,3 +98,21 @@ describe('parseCore ignores an unsupported partials option', () => {
 		expect(() => parseCore('a: (%p)\n', { strict: true, partials: { p: 'Alice' } } as never)).not.toThrow()
 	})
 })
+
+describe('unrecognised key hints', () => {
+	const keyGrammarHint = 'an unquoted key starts with a Unicode letter or number'
+
+	for (const [level, input] of [
+		['top level', 'x y: 2\n'],
+		['nested', 'outer:\n  x y: 2\n'],
+	] as const) {
+		it(`uses the key-grammar hint for a spaced ${level} key with a separator`, () => {
+			expect(() => parseCore(input, { strict: true })).toThrow(keyGrammarHint)
+			try {
+				parseCore(input, { strict: true })
+			} catch (error) {
+				expect((error as Error).message).not.toContain('a key needs ": " after it')
+			}
+		})
+	}
+})

@@ -12,7 +12,7 @@ Syntax highlighting, live diagnostics, and reference navigation for
   continuation lines, scalar types (string, number, boolean, null, date in
   ISO 8601 / `DD.MM.YYYY` / `DD/MM/YYYY` form), and single/double-quoted
   strings with their real escape rules.
-- **References 2.0 tokens** — `${document.path}` and `$(partial.path)` are
+- **References 2.1 tokens** — `${document.path}` and `$(partial.path)` are
   highlighted where they are active (unquoted scalars, flow values); they
   stay literal inside quoted strings, matching the spec.
 - **Markdown / MDX frontmatter** — the `---` … `---` block at the top of a
@@ -48,7 +48,7 @@ available in Lima frontmatter in Markdown and MDX.
 - `>` folded block scalars — use `|` plus `^^`.
 - YAML anchors, aliases, tags, merge keys, directives, multi-document
   streams.
-- References **1.0** `($key)` / `(%key)` syntax — in References 2.0 these
+- References **1.0** `($key)` / `(%key)` syntax — in References 2.1 these
   are ordinary string content.
 
 ## Development
@@ -68,6 +68,10 @@ developing.
 
 The parser is bundled from `../../js/src` so the checker and the published
 `@limaformat/lima` package never drift. Grammar lives in `syntaxes/`.
+Unquoted keys and reference path components use Oniguruma's Unicode `\p{L}`,
+`\p{M}`, and `\p{N}` properties. VS Code therefore follows the Unicode tables
+in its bundled Oniguruma rather than Core 1.2's fixed Unicode 18.0 table at
+newly assigned code points.
 
 ## License
 

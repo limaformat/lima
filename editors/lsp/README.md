@@ -1,10 +1,13 @@
 # Lima Language Server
 
 Language Server Protocol support for [Lima](https://limaformat.dev). The
-server reports parser errors and warnings, explains References 2.0 tokens on
+server reports parser errors and warnings, explains References 2.1 tokens on
 hover, and navigates `${document.path}` references to their definitions.
 These features work in standalone `.lima` files and in Lima frontmatter in
 Markdown and MDX documents.
+
+Node.js 22 or newer is required. The bundled Core 1.2 parser uses
+`String.prototype.isWellFormed()` to reject invalid Unicode scalar values.
 
 ## Usage
 
@@ -199,7 +202,7 @@ the installation steps.
 Copy [`syntaxes/lima.sublime-syntax`](./syntaxes/lima.sublime-syntax) to
 `Packages/User/Lima.sublime-syntax` in your Sublime Text data directory. The
 syntax assigns `.lima` files the `source.lima` scope and highlights Lima Core
-1.0 plus active References 2.0 tokens.
+1.2 plus active References 2.1 tokens.
 
 Install Sublime's [LSP package](https://lsp.sublimetext.io/), then add this
 client under `clients` in `Packages/User/LSP.sublime-settings`:
@@ -226,6 +229,9 @@ The same entry can be placed in Sublime LSP's current custom-server file,
 `clients` object; see the
 [client-configuration documentation](https://lsp.sublimetext.io/client_configuration/).
 
+Unquoted keys and reference components use Oniguruma's `\p{L}`, `\p{M}`, and
+`\p{N}` properties, so their Unicode version follows Sublime's bundled engine
+rather than Core 1.2's fixed Unicode 18.0 table at newly assigned code points.
 The included syntax makes the `source.lima` selector usable for standalone
 `.lima` files. Markdown/MDX frontmatter injection is not included, so Sublime
 syntax highlighting is currently limited to standalone files.
@@ -260,7 +266,7 @@ highlighting.
 
 Add the directory containing [`emacs/lima-mode.el`](./emacs/lima-mode.el) to
 `load-path`, then load the mode. It derives from `prog-mode`, associates the
-`.lima` extension, and provides Lima Core 1.0 and active References 2.0
+`.lima` extension, and provides Lima Core 1.2 and active References 2.1
 font-lock highlighting. Eglot is built into Emacs 29; add its server entry and
 hook alongside the mode:
 
@@ -305,3 +311,8 @@ Hovering over `$(key)` explains that it is a partial reference whose value is
 supplied by the caller. Partial references intentionally have no definition
 target because Lima specifies no source-file convention for them. Quoted or
 commented reference-shaped text remains literal and receives neither feature.
+
+Emacs has no equivalent fixed general-category property class. The mode uses
+its Unicode-aware `[[:alnum:]]` class plus the combining-diacritic category;
+coverage and Unicode version follow the running Emacs and may differ for
+non-decimal numbers, spacing marks, or newly assigned Unicode 18.0 code points.

@@ -1,7 +1,7 @@
 /**
  * @file Lima grammar for tree-sitter
  *
- * Lima Core 1.0 syntax + active References 2.0 tokens.
+ * Lima Core 1.2 syntax + active References 2.1 tokens.
  *
  * The external scanner (src/scanner.c) owns:
  *   - indentation (NEWLINE / INDENT / DEDENT)
@@ -13,11 +13,15 @@
  * expressed directly in the grammar.
  */
 
-// Keep these four definitions byte-for-byte aligned with the exported
-// constants in js/src/reference-tokens2.ts.
-const SEGMENT = '[a-zA-Z0-9_][a-zA-Z0-9_:-]*';
+const KEY_INITIAL = '[\\p{L}\\p{N}_]';
+const KEY_CHARACTER = '[\\p{L}\\p{M}\\p{N}_:*·-]';
+const SEGMENT = `${KEY_INITIAL}${KEY_CHARACTER}*`;
+// Keep the separator colon out of the token. Tree-sitter's regex engine has
+// no lookahead, so colon-bearing flow keys are expressed as non-empty parts.
+const FLOW_PART = `${KEY_INITIAL}[\\p{L}\\p{M}\\p{N}_*·-]*`;
+const FLOW_KEY = `${FLOW_PART}(?::${FLOW_PART})*`;
 const DOC_PATH = `${SEGMENT}(?:\\.${SEGMENT})*`;
-const PARTIAL_NAME = '[a-zA-Z0-9_][a-zA-Z0-9_:/-]*';
+const PARTIAL_NAME = `${KEY_INITIAL}[\\p{L}\\p{M}\\p{N}_:*/·-]*`;
 const PARTIAL_PATH = `${PARTIAL_NAME}(?:\\.${SEGMENT})*`;
 
 const ESCAPE = '\\\\(?:\\\\|\\"|\\/|n|r|t|b|f|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8}|x[0-9A-Fa-f]{2})';
@@ -120,7 +124,7 @@ module.exports = grammar({
 
     _key: $ => choice($.key, $.single_quoted_key, $.double_quoted_key),
     key: $ => $._unquoted_key,
-    flow_key: $ => /[a-zA-Z0-9_][a-zA-Z0-9_-]*(?::[a-zA-Z0-9_][a-zA-Z0-9_-]*)*/,
+    flow_key: $ => token(new RegExp(FLOW_KEY, 'u')),
     // Core §5.2: single-quoted keys are literal — no escape processing,
     // unlike single_quoted_string values (§6.1.3) or double_quoted_key
     // (§5.2 also, but double-quoted keys decode like double-quoted values).
@@ -168,10 +172,10 @@ module.exports = grammar({
 
     escape_sequence: $ => token(prec(2, new RegExp(ESCAPE))),
 
-    // ---- references (References 2.0, active contexts only) ----
+    // ---- references (References 2.1, active contexts only) ----
 
-    document_reference: $ => token(new RegExp(`\\$\\{${DOC_PATH}\\}`)),
-    partial_reference: $ => token(new RegExp(`\\$\\(${PARTIAL_PATH}\\)`)),
+    document_reference: $ => token(new RegExp(`\\$\\{${DOC_PATH}\\}`, 'u')),
+    partial_reference: $ => token(new RegExp(`\\$\\(${PARTIAL_PATH}\\)`, 'u')),
 
     // ---- flow collections ----
 

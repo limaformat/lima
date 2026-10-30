@@ -30,6 +30,20 @@ test("strict mode catches invalid dates, escapes, unterminated strings", () => {
   expect(check('q: "open\n').some((f) => f.code === "INVALID_QUOTE")).toBe(true);
 });
 
+test("Core 1.2 diagnostics include unrecognised-line hints and invalid documents", () => {
+  const unrecognised = check("title: ok\nmissing separator\n");
+  expect(unrecognised).toMatchObject([
+    {
+      code: "UNRECOGNIZED_LINE",
+      severity: "error",
+      message: expect.stringContaining('a key needs ": " after it'),
+    },
+  ]);
+  expect(check("title: \ud800\n")).toMatchObject([
+    { code: "INVALID_DOCUMENT", severity: "error", line: 1 },
+  ]);
+});
+
 test("an apostrophe in an unquoted value is not a diagnostic", () => {
   expect(check("tagline: leaving out much of YAML's broader grammar.\n")).toEqual([]);
 });

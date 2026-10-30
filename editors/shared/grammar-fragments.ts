@@ -1,11 +1,14 @@
-import {
-  DOC_PATH,
-  PARTIAL_PATH,
-  SEGMENT,
-} from "../../js/src/reference-tokens2.js";
-
-/** Core §5.1 and References 2.0 path segments share this character class. */
-export const UNQUOTED_KEY = SEGMENT;
+/**
+ * Core 1.2 §5.1 and References 2.1 path segments. Oniguruma supports Unicode
+ * general-category properties; the implementation itself uses the fixed
+ * Unicode 18.0 table in js/src/unicode-key-table.ts.
+ */
+const KEY_INITIAL = String.raw`[\p{L}\p{N}_]`;
+const KEY_CHARACTER = String.raw`[\p{L}\p{M}\p{N}_:*\u00B7-]`;
+export const UNQUOTED_KEY = `${KEY_INITIAL}${KEY_CHARACTER}*`;
+const DOC_PATH = `${UNQUOTED_KEY}(?:\\.${UNQUOTED_KEY})*`;
+const PARTIAL_NAME = `${KEY_INITIAL}[\\p{L}\\p{M}\\p{N}_:*/\\u00B7-]*`;
+const PARTIAL_PATH = `${PARTIAL_NAME}(?:\\.${UNQUOTED_KEY})*`;
 
 /** Contents of a Core §5.2 double-quoted key, excluding its delimiters. */
 export const DOUBLE_QUOTED_KEY_BODY = String.raw`(?:\\.|[^"\\])*`;
@@ -31,6 +34,13 @@ export function onigurumaFragmentToEmacs(fragment: string): string {
     .replaceAll("|", String.raw`\|`);
 }
 
-export const EMACS_KEY = onigurumaFragmentToEmacs(KEY);
-export const EMACS_DOCUMENT_REFERENCE = String.raw`\${${onigurumaFragmentToEmacs(DOC_PATH)}}`;
-export const EMACS_PARTIAL_REFERENCE = String.raw`\$(${onigurumaFragmentToEmacs(PARTIAL_PATH)})`;
+// Emacs regexp has no general-category property syntax equivalent to
+// Oniguruma's. Its Unicode-aware POSIX alnum class follows the Unicode tables
+// built into the running Emacs, and category `^` covers combining marks.
+const EMACS_INITIAL = String.raw`[[:alnum:]_]`;
+const EMACS_CHARACTER = String.raw`[[:alnum:]_:*·-]\|\p{^}`;
+const EMACS_SEGMENT = `${EMACS_INITIAL}\\(?:${EMACS_CHARACTER}\\)*`;
+const EMACS_PARTIAL_NAME = `${EMACS_INITIAL}\\(?:${EMACS_CHARACTER}\\|/\\)*`;
+export const EMACS_KEY = `${EMACS_SEGMENT}\\|'[^']*'\\|"\\(?:\\\\.\\|[^"\\\\]\\)*"`;
+export const EMACS_DOCUMENT_REFERENCE = String.raw`\${${EMACS_SEGMENT}\(?:\.${EMACS_SEGMENT}\)*}`;
+export const EMACS_PARTIAL_REFERENCE = String.raw`\$(${EMACS_PARTIAL_NAME}\(?:\.${EMACS_SEGMENT}\)*)`;

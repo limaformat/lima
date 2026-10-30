@@ -2,6 +2,8 @@
 
 ## 0.3.0
 
+- Require Node.js 22 or newer because the bundled Core 1.2 parser uses
+  `String.prototype.isWellFormed()` for document validation.
 - Diagnostics follow Lima Core 1.1: the bundled parser is that of
   `@limaformat/lima` 0.6.0. A line that belongs to no structure is reported
   where it stands — one indented after a value (the lines after a YAML `>`,

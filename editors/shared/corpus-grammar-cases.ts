@@ -36,7 +36,9 @@ const CORPUS = resolve(__dirname, "../..", "corpus");
  */
 export const CORPUS_GRAMMAR_CASES: CorpusGrammarCase[] = [
   ...readCorpusDirectory("core"),
+  ...readCorpusDirectory("core-1.2"),
   ...readCorpusDirectory("references-2.0"),
+  ...readCorpusDirectory("references-2.1"),
 ].sort((a, b) => a.id.localeCompare(b.id));
 
 function readCorpusDirectory(directory: string): CorpusGrammarCase[] {

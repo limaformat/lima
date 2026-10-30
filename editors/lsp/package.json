@@ -21,7 +21,7 @@
   },
   "files": ["dist", "syntaxes", "emacs", "README.md", "CHANGELOG.md"],
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "build": "bun build --target=node --format=esm --outfile=dist/server.js --banner='#!/usr/bin/env node' src/server.ts",

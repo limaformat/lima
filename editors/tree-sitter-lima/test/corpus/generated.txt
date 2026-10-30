@@ -153,10 +153,50 @@ l:
         value: (number)
         (block_mapping_entry
           key: (key)
-          value: (number))
-        (block_mapping_entry
-          key: (key)
           value: (number))))))
+
+==================
+core.block-sequence.compact.top-level
+==================
+tags:
+- javascript
+- webdev
+title: Hello
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        value: (plain_scalar))
+      (block_sequence_item
+        value: (plain_scalar))))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))
+
+==================
+editor.block-sequence.bare-item-key-past-skipped-line
+==================
+list:
+  - a:
+      freetext
+        c: 1
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        (block_mapping
+          (block_mapping_entry
+            key: (key)
+            value: (number)))))))
 
 ==================
 core.block-scalar.dedent-comment-ends-scalar
@@ -297,6 +337,57 @@ c: ~
     value: (null)))
 
 ==================
+core.keys.unicode-languages-and-punctuation
+==================
+größe: German
+título: Spanish
+заголовок: Russian
+題名: Japanese
+autor:in: colon
+autor*in: star
+autor·in: middle
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))
+
+==================
+core.keys.invalid-initials-non-strict
+==================
+́mark: no
+*star: no
+·middle: no
+valid: yes
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))
+
+==================
 references-2.interpolation.block-scalar.basic
 ==================
 author: Alice
@@ -378,6 +469,42 @@ city: $(persons/alice.address.city)
 ---
 
 (document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (partial_reference))))
+
+==================
+references-2.keys.unicode
+==================
+größe: groß
+autor*in: Alex
+a: ${größe}
+b: ${autor*in}
+c: $(personen/zoë)
+d: $(personen/zoë.name)
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (document_reference)))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (document_reference)))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (partial_reference)))
   (block_mapping_entry
     key: (key)
     value: (plain_scalar

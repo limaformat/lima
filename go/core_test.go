@@ -135,6 +135,18 @@ func TestCore12UnicodeKeysAndMessageHints(t *testing.T) {
 	}
 }
 
+func TestSpacedKeyWithSeparatorGetsKeyGrammarHintAtEveryLevel(t *testing.T) {
+	for _, input := range []string{"x y: 2\n", "outer:\n  x y: 2\n"} {
+		_, err := ParseCore(input, true)
+		if err == nil || !strings.Contains(err.Error(), "an unquoted key starts with a Unicode letter or number") {
+			t.Fatalf("%q: got %v, want key-grammar hint", input, err)
+		}
+		if strings.Contains(err.Error(), `a key needs ": " after it`) {
+			t.Fatalf("%q: got misleading separator hint: %v", input, err)
+		}
+	}
+}
+
 func TestInvalidUTF8DocumentIsRejectedFirstWithLine(t *testing.T) {
 	input := "valid: one\nbad: \xff\n"
 	want := "Lima: document contains an invalid Unicode scalar value at line 2"

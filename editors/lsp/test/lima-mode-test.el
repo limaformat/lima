@@ -6,6 +6,10 @@
 (defconst lima-test--document
   (concat
    "title: ${site.name} / $(partial.name)\n"
+   "größe: ${größe}\n"
+   "題名: Japanese\n"
+   "autor*in: ${autor*in}\n"
+   "autor·in: $(personen/zoë.name)\n"
    "quoted: \"${site.name}\" '$(partial.name)'\n"
    "plain: YAML's apostrophe does not start a string\n"
    "body: | # comment\n"
@@ -40,6 +44,20 @@
   (should (eq (lima-test--face-at lima-test--document "${site.name}")
               'font-lock-variable-name-face))
   (should (eq (lima-test--face-at lima-test--document "$(partial.name)")
+              'font-lock-preprocessor-face))
+  (should (eq (lima-test--face-at lima-test--document "größe")
+              'font-lock-variable-name-face))
+  (should (eq (lima-test--face-at lima-test--document "題名")
+              'font-lock-variable-name-face))
+  (should (eq (lima-test--face-at lima-test--document "autor*in")
+              'font-lock-variable-name-face))
+  (should (eq (lima-test--face-at lima-test--document "autor·in")
+              'font-lock-variable-name-face))
+  (should (eq (lima-test--face-at lima-test--document "${größe}")
+              'font-lock-variable-name-face))
+  (should (eq (lima-test--face-at lima-test--document "${autor*in}")
+              'font-lock-variable-name-face))
+  (should (eq (lima-test--face-at lima-test--document "$(personen/zoë.name)")
               'font-lock-preprocessor-face))
   (should (eq (lima-test--face-at lima-test--document "| #" 0)
               'font-lock-keyword-face))

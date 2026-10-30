@@ -133,6 +133,11 @@ fn hint(text: &str) -> String {
     if text.starts_with('"') || text.starts_with('\'') {
         return " (a quoted key closes on its own line)".into();
     }
+    if let Some(separator) = text.find(": ") {
+        if !is_valid_unquoted(&text[..separator], false) {
+            return KEY_GRAMMAR_HINT.into();
+        }
+    }
     // `author Odile`, `key:value`: key characters, but no ": " after them
     let first_word = text.split(' ').next().unwrap_or("");
     let key_chars = is_valid_unquoted(first_word, false);

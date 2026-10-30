@@ -17,7 +17,7 @@
   "metadata": {
     "version": "0.1.0",
     "license": "ISC",
-    "description": "Tree-sitter grammar for Lima (Core 1.0 + active References 2.0 tokens)",
+    "description": "Tree-sitter grammar for Lima (Core 1.2 + active References 2.1 tokens)",
     "authors": [
       {
         "name": "Lima contributors"

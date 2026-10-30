@@ -88,10 +88,28 @@ const EXPECTED_TREES: Record<string, string> = {
         value: (number)
         (block_mapping_entry
           key: (key)
-          value: (number))
-        (block_mapping_entry
-          key: (key)
           value: (number))))))`,
+  "core.block-sequence.compact.top-level": `(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        value: (plain_scalar))
+      (block_sequence_item
+        value: (plain_scalar))))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))`,
+  "editor.block-sequence.bare-item-key-past-skipped-line": `(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        (block_mapping
+          (block_mapping_entry
+            key: (key)
+            value: (number)))))))`,
   "core.block-scalar.dedent-comment-ends-scalar": `(document
   (block_mapping_entry
     key: (key)
@@ -163,6 +181,32 @@ const EXPECTED_TREES: Record<string, string> = {
   (block_mapping_entry
     key: (key)
     value: (null)))`,
+  "core.keys.unicode-languages-and-punctuation": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))`,
+  "core.keys.invalid-initials-non-strict": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))`,
   "references-2.interpolation.block-scalar.basic": `(document
   (block_mapping_entry
     key: (key)
@@ -212,6 +256,29 @@ const EXPECTED_TREES: Record<string, string> = {
     key: (key)
     value: (plain_scalar
       (partial_reference))))`,
+  "references-2.keys.unicode": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (document_reference)))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (document_reference)))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (partial_reference)))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (partial_reference))))`,
   "references-2.scanner.incomplete-token.literal-strict": `(document
   (block_mapping_entry
     key: (key)
@@ -238,7 +305,7 @@ interface Fixture {
 }
 
 const fixtures = new Map<string, Fixture>();
-for (const subdir of ["core", "core-1.1", "references-2.0"]) {
+for (const subdir of ["core", "core-1.1", "core-1.2", "references-2.0", "references-2.1"]) {
   const dir = join(SOURCE_ROOT, subdir);
   for (const name of readdirSync(dir)) {
     if (!name.endsWith(".json")) continue;
@@ -246,6 +313,11 @@ for (const subdir of ["core", "core-1.1", "references-2.0"]) {
     fixtures.set(fixture.id, fixture);
   }
 }
+
+fixtures.set("editor.block-sequence.bare-item-key-past-skipped-line", {
+  id: "editor.block-sequence.bare-item-key-past-skipped-line",
+  input: "list:\n  - a:\n      freetext\n        c: 1\n",
+});
 
 const cases: string[] = [];
 for (const [id, tree] of Object.entries(EXPECTED_TREES)) {

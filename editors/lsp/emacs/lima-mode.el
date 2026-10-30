@@ -5,7 +5,7 @@
 
 ;;; Commentary:
 
-;; Syntax highlighting for Lima Core 1.0 and active References 2.0 tokens.
+;; Syntax highlighting for Lima Core 1.2 and active References 2.1 tokens.
 
 ;;; Code:
 
@@ -17,15 +17,15 @@
 
 ;; GENERATED:emacs-key
 (defconst lima--key-regexp
-  "[a-zA-Z0-9_][a-zA-Z0-9_:-]*\\|'[^']*'\\|\"\\(?:\\\\.\\|[^\"\\\\]\\)*\"")
+  "[[:alnum:]_]\\(?:[[:alnum:]_:*\\u00B7-]\\|\\p{^}\\)*\\|'[^']*'\\|\"\\(?:\\\\.\\|[^\"\\\\]\\)*\"")
 
 ;; GENERATED:emacs-document-reference
 (defconst lima--document-reference-regexp
-  "\\${[a-zA-Z0-9_][a-zA-Z0-9_:-]*\\(?:\\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*\\)*}")
+  "\\${[[:alnum:]_]\\(?:[[:alnum:]_:*\\u00B7-]\\|\\p{^}\\)*\\(?:\\.[[:alnum:]_]\\(?:[[:alnum:]_:*\\u00B7-]\\|\\p{^}\\)*\\)*}")
 
 ;; GENERATED:emacs-partial-reference
 (defconst lima--partial-reference-regexp
-  "\\$([a-zA-Z0-9_][a-zA-Z0-9_:/-]*\\(?:\\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*\\)*)")
+  "\\$([[:alnum:]_]\\(?:[[:alnum:]_:*\\u00B7-]\\|\\p{^}\\|/\\)*\\(?:\\.[[:alnum:]_]\\(?:[[:alnum:]_:*\\u00B7-]\\|\\p{^}\\)*\\)*)")
 
 (defconst lima--mapping-key-regexp
   (concat "^\\([ \t]*\\)\\(" lima--key-regexp

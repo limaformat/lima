@@ -1,11 +1,12 @@
 {
   "name": "tree-sitter-lima",
   "version": "0.1.0",
-  "description": "Tree-sitter grammar for Lima (Core 1.0 + active References 2.0 tokens)",
+  "description": "Tree-sitter grammar for Lima (Core 1.2 + active References 2.1 tokens)",
   "license": "ISC",
   "scripts": {
-    "generate": "tree-sitter generate",
-    "build": "tree-sitter generate && tree-sitter build",
+    "generate:unicode": "bun run scripts/generate-unicode-key-header.ts",
+    "generate": "bun run generate:unicode && tree-sitter generate",
+    "build": "bun run generate && tree-sitter build",
     "test": "bun run scripts/test-native.ts",
     "corpus:generate": "bun run scripts/gen-corpus.ts",
     "corpus:check": "bun run scripts/gen-corpus.ts --check && bun run scripts/check-fixtures.ts",

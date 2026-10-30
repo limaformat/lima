@@ -62,6 +62,9 @@ func unrecognizedHint(text string) string {
 	if strings.HasPrefix(text, `"`) || strings.HasPrefix(text, "'") {
 		return " (a quoted key closes on its own line)"
 	}
+	if separator := strings.Index(text, ": "); separator >= 0 && !isValidUnquotedKey(text[:separator], false) {
+		return keyGrammarHint
+	}
 	// `author Odile`, `key:value`: key characters, but no ": " after them
 	first, _, _ := strings.Cut(text, " ")
 	keyChars := isValidUnquotedKey(first, false)

@@ -123,6 +123,18 @@ test("keys, comments, and the key/value colon", async () => {
   expect(t.some(([x, s]) => x.includes("whole line") && s.some((y) => y.includes("comment")))).toBe(true);
 });
 
+test("Core 1.2 Unicode and gendered keys use the key scope", async () => {
+  const t = await scopesFor(
+    "größe: German\n題名: Japanese\nautor*in: star\nautor·in: middle\n\u0308mark: no\n*star: no\n·middle: no\n",
+  );
+  for (const key of ["größe", "題名", "autor*in", "autor·in"]) {
+    expect(has(t, key, "entity.name.tag.lima"), key).toBe(true);
+  }
+  for (const key of ["\u0308mark", "*star", "·middle"]) {
+    expect(has(t, key, "entity.name.tag.lima"), key).toBe(false);
+  }
+});
+
 test("a # need not be preceded by whitespace to start a comment", async () => {
   const t = await scopesFor("tight-comment: hello#literal\n");
   expect(has(t, "#", "comment.line.number-sign.lima")).toBe(true);
@@ -172,14 +184,17 @@ test("scalars: bool, null, number, date", async () => {
   expect(has(t, "11.08.2026", "constant.other.date.lima")).toBe(true);
 });
 
-test("References 2.0: ${document} and $(partial) tokens are references", async () => {
+test("References 2.1: Unicode ${document} and $(partial) tokens are references", async () => {
   const t = await scopesFor(
-    "a: ${title}\nb: Hello ${first.name}!\nc: $(author.name)\nd: $(persons/alice.city)\n",
+    "a: ${title}\nb: Hello ${first.name}!\nc: $(author.name)\nd: $(persons/alice.city)\ne: ${größe}\nf: ${autor*in}\ng: $(personen/zoë.name)\n",
   );
   expect(has(t, "${title}", "variable.other.reference.document.lima")).toBe(true);
   expect(has(t, "${first.name}", "variable.other.reference.document.lima")).toBe(true);
   expect(has(t, "$(author.name)", "variable.other.reference.partial.lima")).toBe(true);
   expect(has(t, "$(persons/alice.city)", "variable.other.reference.partial.lima")).toBe(true);
+  expect(has(t, "${größe}", "variable.other.reference.document.lima")).toBe(true);
+  expect(has(t, "${autor*in}", "variable.other.reference.document.lima")).toBe(true);
+  expect(has(t, "$(personen/zoë.name)", "variable.other.reference.partial.lima")).toBe(true);
 });
 
 test("References 1.0 ($key)/(%key) are NOT highlighted as references", async () => {

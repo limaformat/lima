@@ -40,7 +40,7 @@
 
     "mapping-key": {
       "comment": "key: — unquoted, single-quoted, or double-quoted key followed by a colon and a space or end of line. A double-quoted key's backslash escapes (Core §5.2) keep an escaped quote from closing it early. GENERATED:textmate-mapping-key",
-      "match": "^(\\s*)([a-zA-Z0-9_][a-zA-Z0-9_:-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")(\\s*)(:)(?=\\s|$)",
+      "match": "^(\\s*)([\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")(\\s*)(:)(?=\\s|$)",
       "captures": {
         "2": { "name": "entity.name.tag.lima" },
         "4": { "name": "punctuation.separator.key-value.lima" }
@@ -71,14 +71,14 @@
     },
 
     "reference-document": {
-      "comment": "Lima References 2.0 §2.1: ${document.path} reads a value from the current document. Inactive (literal) inside quoted strings. GENERATED:textmate-document-reference",
-      "match": "\\$\\{[a-zA-Z0-9_][a-zA-Z0-9_:-]*(?:\\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*)*\\}",
+      "comment": "Lima References 2.1 §2.1: ${document.path} reads a value from the current document. Inactive (literal) inside quoted strings. GENERATED:textmate-document-reference",
+      "match": "\\$\\{[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*(?:\\.[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*)*\\}",
       "name": "variable.other.reference.document.lima"
     },
 
     "reference-partial": {
-      "comment": "Lima References 2.0 §2.2: $(partial.path) reads from the partials option. GENERATED:textmate-partial-reference",
-      "match": "\\$\\([a-zA-Z0-9_][a-zA-Z0-9_:/-]*(?:\\.[a-zA-Z0-9_][a-zA-Z0-9_:-]*)*\\)",
+      "comment": "Lima References 2.1 §2.2: $(partial.path) reads from the partials option. GENERATED:textmate-partial-reference",
+      "match": "\\$\\([\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*/\\u00B7-]*(?:\\.[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*)*\\)",
       "name": "variable.other.reference.partial.lima"
     },
 
@@ -114,7 +114,7 @@
         { "include": "#comment" },
         {
           "comment": "GENERATED:textmate-flow-mapping-key",
-          "match": "([a-zA-Z0-9_][a-zA-Z0-9_:-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")(\\s*)(:)(?=\\s)",
+          "match": "([\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")(\\s*)(:)(?=\\s)",
           "captures": {
             "1": { "name": "entity.name.tag.lima" },
             "3": { "name": "punctuation.separator.key-value.lima" }

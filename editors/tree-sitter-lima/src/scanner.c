@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include "unicode_key_table.h"
 
 enum TokenType {
   NEWLINE,
@@ -40,6 +41,11 @@ typedef struct {
 
 static bool is_ws(int32_t c) { return c == ' ' || c == '\t'; }
 static bool is_nl(int32_t c) { return c == '\n' || c == '\r'; }
+static bool is_trim_ws(int32_t c) {
+  return c == 0x0009 || (c >= 0x000a && c <= 0x000d) || c == 0x0020 || c == 0x00a0 ||
+         c == 0x1680 || (c >= 0x2000 && c <= 0x200a) || c == 0x2028 || c == 0x2029 ||
+         c == 0x202f || c == 0x205f || c == 0x3000 || c == 0xfeff;
+}
 
 static uint16_t top_ind(Scanner *s) {
   return s->ind_len == 0 ? 0 : s->inds[s->ind_len - 1];
@@ -57,9 +63,34 @@ static void skip_hws(TSLexer *lexer) {
   while (is_ws(lexer->lookahead)) lexer->advance(lexer, true);
 }
 
+static uint32_t unicode_key_category(int32_t c) {
+  uint32_t low = 0;
+  uint32_t high = lima_unicode_key_ranges_len / 3;
+  while (low < high) {
+    uint32_t mid = (low + high) >> 1;
+    uint32_t offset = mid * 3;
+    if ((uint32_t)c < lima_unicode_key_ranges[offset]) high = mid;
+    else if ((uint32_t)c > lima_unicode_key_ranges[offset + 1]) low = mid + 1;
+    else return lima_unicode_key_ranges[offset + 2];
+  }
+  return 0;
+}
+
+static bool is_key_initial(int32_t c) {
+  if (c <= 0x7f) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') ||
+           (c >= 'A' && c <= 'Z') || c == '_';
+  }
+  return (unicode_key_category(c) & 5) != 0;
+}
+
+static bool is_key_character(int32_t c) {
+  if (c <= 0x7f) return is_key_initial(c) || c == ':' || c == '-' || c == '*';
+  return c == 0xb7 || unicode_key_category(c) != 0;
+}
+
 static bool is_key_start(int32_t c) {
-  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-         c == '_' || c == '"' || c == '\'';
+  return is_key_initial(c) || c == '"' || c == '\'';
 }
 
 // ---- lifecycle ----
@@ -170,22 +201,37 @@ static bool scan_dash(Scanner *s, TSLexer *lexer) {
   if (lexer->lookahead != '-') return false;
   uint32_t dash_col = lexer->get_column(lexer);
   lexer->advance(lexer, false);
+  if (!is_trim_ws(lexer->lookahead) && lexer->lookahead != 0) return false;
   lexer->mark_end(lexer);
   bool object_item = false;
   skip_hws(lexer);
   if (is_key_start(lexer->lookahead)) {
+    bool quoted = lexer->lookahead == '"' || lexer->lookahead == '\'';
+    int32_t quote = quoted ? lexer->lookahead : 0;
+    bool escaped = false;
+    bool valid_key = true;
+    bool first = true;
     for (;;) {
       int32_t c = lexer->lookahead;
       if (c == '\n' || c == '\r' || c == 0) break;
       lexer->advance(lexer, true);
-      if (c == ':') {
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (quote == '"' && c == '\\') escaped = true;
+        else if (c == quote) quoted = false;
+        continue;
+      }
+      if (c == ':' && !quoted) {
         int32_t d = lexer->lookahead;
         if (d == ' ' || d == '\n' || d == '\r' || d == 0) {
-          object_item = true;
+          object_item = valid_key;
           break;
         }
         // ':' followed by a key char is part of the key; keep scanning
+      } else if (!quote && !(first ? is_key_initial(c) : is_key_character(c))) {
+        valid_key = false;
       }
+      first = false;
     }
   }
   if (object_item) {
@@ -571,7 +617,7 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
   bool can_key = valid_symbols[KEY];
   bool can_unrec = valid_symbols[UNRECOGNIZED_LINE];
   uint32_t start_column = lexer->get_column(lexer);
-  bool key_position = start_column == top_ind(s) ||
+  bool key_position = start_column >= top_ind(s) ||
                       (s->pending_obj && start_column == s->obj_indent);
 
   if (c == '#' || c == '\n' || c == '\r' || c == 0) return false;
@@ -584,6 +630,8 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
   bool dollar = false;
   unsigned backslashes = 0;
   bool started = false;
+  bool valid_key = true;
+  bool first_key_character = true;
 
   lexer->mark_end(lexer);
 
@@ -592,6 +640,10 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
     if (c == '\n' || c == '\r' || c == 0) break;
     if (c == '$') {
       if (can_unrec || (can_key && key_position)) {
+        if (can_key && key_position) {
+          valid_key = false;
+          first_key_character = false;
+        }
         if (len < 79) buf[len++] = (char)c;
         lexer->advance(lexer, false);
         backslashes = 0;
@@ -618,7 +670,7 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
       int32_t d = lexer->lookahead;
       if (d == ' ' || d == '\n' || d == '\r' || d == 0) {
         // ':' separator → this is a key
-        if (can_key && key_position) {
+        if (can_key && key_position && valid_key) {
           lexer->result_symbol = KEY;
           return true;
         }
@@ -635,6 +687,11 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
       started = true;
       continue;
     }
+    if (can_key && key_position &&
+        !(first_key_character ? is_key_initial(c) : is_key_character(c))) {
+      valid_key = false;
+    }
+    first_key_character = false;
     if (len < 79) buf[len++] = (char)c;
     if (c == '\\') backslashes++;
     else backslashes = 0;
@@ -775,9 +832,34 @@ static bool scan_structural(Scanner *s, TSLexer *lexer, const bool *valid_symbol
     }
   }
 
+  // Core 1.1 §7.2: a bare key may open a compact sequence in its own
+  // column. A duplicate indentation-stack value represents that synthetic
+  // block until the first same-column line that is not an item.
+  bool item = false;
+  bool item_peeked = false;
+  if (lexer->lookahead == '-') {
+    lexer->mark_end(lexer);
+    lexer->advance(lexer, false);
+    item_peeked = true;
+    item = is_trim_ws(lexer->lookahead) || lexer->lookahead == 0;
+  }
+  bool compact = s->ind_len > 1 && s->inds[s->ind_len - 1] == s->inds[s->ind_len - 2];
+  if (valid_symbols[INDENT] && indent_length == cur && item) {
+    push_ind(s, cur);
+    lexer->result_symbol = INDENT;
+    s->line_start = true;
+    return true;
+  }
+  if (valid_symbols[DEDENT] && compact && indent_length == cur && !item) {
+    pop_ind(s);
+    lexer->result_symbol = DEDENT;
+    s->line_start = true;
+    return true;
+  }
+
   if (valid_symbols[INDENT] && indent_length > cur) {
     push_ind(s, indent_length);
-    if (!peeked) lexer->mark_end(lexer);
+    if (!peeked && !item_peeked) lexer->mark_end(lexer);
     lexer->result_symbol = INDENT;
     s->line_start = true;
     return true;
@@ -785,14 +867,14 @@ static bool scan_structural(Scanner *s, TSLexer *lexer, const bool *valid_symbol
 
   if (valid_symbols[DEDENT] && indent_length < cur) {
     pop_ind(s);
-    if (!peeked) lexer->mark_end(lexer);
+    if (!peeked && !item_peeked) lexer->mark_end(lexer);
     lexer->result_symbol = DEDENT;
     s->line_start = true;
     return true;
   }
 
   if (valid_symbols[NEWLINE]) {
-    if (!peeked) lexer->mark_end(lexer);
+    if (!peeked && !item_peeked) lexer->mark_end(lexer);
     lexer->result_symbol = NEWLINE;
     s->line_start = true;
     return true;
@@ -851,6 +933,15 @@ bool tree_sitter_lima_external_scanner_scan(void *payload, TSLexer *lexer, const
   // Dedent detected at a content position: the previous line's newline was
   // consumed by an entry's own _newline token, and the following content is
   // now at a shallower indentation than the current block.
+  bool compact = s->ind_len > 1 && s->inds[s->ind_len - 1] == s->inds[s->ind_len - 2];
+  if (valid_symbols[DEDENT] && compact && c != '-' &&
+      lexer->get_column(lexer) == top_ind(s)) {
+    pop_ind(s);
+    lexer->mark_end(lexer);
+    lexer->result_symbol = DEDENT;
+    s->line_start = true;
+    return true;
+  }
   if (valid_symbols[DEDENT] && c != '\n' && c != '\r' && c != 0 &&
       lexer->get_column(lexer) < top_ind(s)) {
     pop_ind(s);

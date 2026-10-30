@@ -6,6 +6,24 @@ title: ${site.name} / $(partial.name)
 #      ^^^^^^^^^^^^ variable.other.reference.document.lima
 #                     ^^^^^^^^^^^^^^^ variable.other.reference.partial.lima
 
+größe: ${größe}
+# ^^^^^ entity.name.tag.lima
+#       ^^^^^^^^ variable.other.reference.document.lima
+題名: Japanese
+# ^^ entity.name.tag.lima
+autor*in: ${autor*in}
+# ^^^^^^^^ entity.name.tag.lima
+#          ^^^^^^^^^^^ variable.other.reference.document.lima
+autor·in: $(personen/zoë.name)
+# ^^^^^^^^ entity.name.tag.lima
+#          ^^^^^^^^^^^^^^^^^^^ variable.other.reference.partial.lima
+̈mark: no
+# ^ source.lima - entity.name.tag.lima
+*star: no
+# ^ source.lima - entity.name.tag.lima
+·middle: no
+# ^ source.lima - entity.name.tag.lima
+
 quoted: "${site.name}" '$(partial.name)'
 #        ^^^^^^^^^^^^ string.quoted.double.lima - variable.other.reference
 #                       ^^^^^^^^^^^^^^^ string.quoted.single.lima - variable.other.reference

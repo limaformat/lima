@@ -714,4 +714,15 @@ mod tests {
             "the key-value separator is \": \" (U+003A and a space), not U+FF1A FULLWIDTH COLON"
         ));
     }
+
+    #[test]
+    fn spaced_key_with_separator_gets_key_grammar_hint_at_every_level() {
+        for input in ["x y: 2\n", "outer:\n  x y: 2\n"] {
+            let error = parse_core(input, true).unwrap_err();
+            assert!(error
+                .message
+                .contains("an unquoted key starts with a Unicode letter or number"));
+            assert!(!error.message.contains("a key needs \": \" after it"));
+        }
+    }
 }

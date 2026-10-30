@@ -1,6 +1,6 @@
 # tree-sitter-lima
 
-Tree-sitter grammar for Lima Core 1.0 plus active References 2.0 tokens.
+Tree-sitter grammar for Lima Core 1.2 plus active References 2.1 tokens.
 It is an editor-highlighting parser: reference resolution, strict-mode
 diagnostics, hover, and go-to-definition remain LSP responsibilities.
 
@@ -13,9 +13,15 @@ strings, keys, nulls, booleans, numbers, dates, escapes, and active
 quoted strings and keys stays literal.
 
 `src/scanner.c` implements indentation, block-scalar boundaries, tolerant
-fallbacks, and scalar classification. Reference token character classes in
-`grammar.js` mirror `js/src/reference-tokens2.ts`, the repository's canonical
-source.
+fallbacks, scalar classification, and exact Unicode 18.0 block-key checks via
+the generated `src/unicode_key_table.h`. Tree-sitter regexes use `\p{L}`,
+`\p{M}`, and `\p{N}` for flow keys and References 2.1 tokens; those regexes
+follow the Unicode version embedded in the installed Tree-sitter generator,
+which may differ at newly assigned code points from Core's fixed Unicode 18.0.
+Because Tree-sitter regexes have no lookahead, a colon-bearing flow key is
+written as non-empty colon-separated parts; consecutive or final colons in a
+flow key are the one syntax-highlighting approximation. Block keys remain
+exact.
 
 ## Development
 
@@ -27,7 +33,8 @@ bun run ci
 ```
 
 `bun run corpus:check` materializes every fixture in `corpus/core`,
-`corpus/core-1.1` and `corpus/references-2.0`, including generator-backed
+`corpus/core-1.1`, `corpus/core-1.2`, `corpus/references-2.0`, and
+`corpus/references-2.1`, including generator-backed
 limit fixtures. Successful
 and semantic-only cases must have no `ERROR`/`MISSING`; syntax-error fixtures
 may use tolerant recovery, but any emitted error must start on the fixture's

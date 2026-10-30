@@ -235,6 +235,31 @@ test("diagnostics and references survive the LSP round trip", async () => {
       }),
     ).toBeNull();
 
+    const unrecognisedChanged = nextDiagnostics();
+    await client.sendNotification(DidChangeTextDocumentNotification.type, {
+      textDocument: { uri, version: 7 },
+      contentChanges: [{ text: "title: ok\nmissing separator\n" }],
+    });
+    expect(await unrecognisedChanged).toMatchObject({
+      uri,
+      diagnostics: [
+        {
+          code: "UNRECOGNIZED_LINE",
+          message: expect.stringContaining('a key needs ": " after it'),
+        },
+      ],
+    });
+
+    const invalidDocumentChanged = nextDiagnostics();
+    await client.sendNotification(DidChangeTextDocumentNotification.type, {
+      textDocument: { uri, version: 8 },
+      contentChanges: [{ text: "title: \ud800\n" }],
+    });
+    expect(await invalidDocumentChanged).toMatchObject({
+      uri,
+      diagnostics: [{ code: "INVALID_DOCUMENT", severity: 1 }],
+    });
+
     const closed = nextDiagnostics();
     await client.sendNotification(DidCloseTextDocumentNotification.type, {
       textDocument: { uri },
