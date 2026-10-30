@@ -1,6 +1,6 @@
 # Coverage Matrix: Lima References 2.0
 
-**Status:** final corpus — 136 cases; TypeScript, Rust, and Go each pass the
+**Status:** final corpus — <!-- facts:corpus.suites.references_2_0.cases -->136<!-- /facts --> cases; TypeScript, Rust, and Go each pass the
 full suite through their public References 2.0 APIs.
 **Normative basis:** `docs/lima-references-2.0-spec.md` Final.
 

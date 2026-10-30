@@ -6,9 +6,10 @@
 A deliberate, focused subset of YAML: the part frontmatter actually needs,
 with well-defined types, no surprises, and zero runtime dependencies.
 
-```toml
-[dependencies]
-lima = "0.3"
+The current crate release is <!-- facts:packages.version -->0.6.0<!-- /facts -->.
+
+```sh
+cargo add lima
 ```
 
 ```rust
@@ -32,10 +33,10 @@ frontmatter delimiters (`---`) — stripping them is the caller's job.
 
 The public entry points are:
 
-- `parse(input, options)` — Lima References 2.0 by default: `${key}` reads
+- `parse(input, options)` — Lima References <!-- facts:language.references_version -->2.1<!-- /facts --> by default: `${key}` reads
   document values and `$(partial)` reads supplied partials.
-- `parse_core(input, options)` — Lima Core 1.1 only.
-- `parse_references(input, options)` — deprecated References 2.0 alias for
+- `parse_core(input, options)` — Lima Core <!-- facts:language.core_version -->1.2<!-- /facts --> only.
+- `parse_references(input, options)` — deprecated References <!-- facts:language.references_version -->2.1<!-- /facts --> alias for
   `parse`.
 
 `ParseOptions::default()` enables References in non-strict mode. Select
@@ -47,17 +48,17 @@ Both return `Result<LimaValue, LimaError>` — `LimaError` implements
 (`LimaDiagnosticCode`) for programmatic error handling, alongside a
 human-readable message.
 
-The crate implements Lima Core 1.1 and Lima References 2.0. Rust API docs:
+The crate implements Lima Core <!-- facts:language.core_version -->1.2<!-- /facts --> and Lima References <!-- facts:language.references_version -->2.1<!-- /facts -->. Rust API docs:
 **[docs.rs/lima](https://docs.rs/lima)**.
 
 Why Lima exists, the case against YAML, and security rationale:
 **[repository README](https://github.com/limaformat/lima#readme)**.
 
-The [Lima Core 1.1](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
-and [Lima References 2.0](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
+The [Lima Core <!-- facts:language.core_version -->1.2<!-- /facts -->](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
+and [Lima References <!-- facts:language.references_version -->2.1<!-- /facts -->](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
 specifications are the normative source of truth — this crate implements
 them exactly, verified against the same
-[369-case conformance corpus](https://github.com/limaformat/lima/tree/main/corpus)
+[<!-- facts:corpus.default.cases -->620<!-- /facts -->-case conformance corpus](https://github.com/limaformat/lima/tree/main/corpus)
 (counts pinned by `tests/corpus.rs` and the private References 1.0 unit-test
 module) shared with the TypeScript implementation.
 

@@ -10,8 +10,8 @@ resolvable document references.
 ## Requirements
 
 - IntelliJ IDEA, WebStorm, or another compatible JetBrains IDE based on build
-  242 (2024.2) or newer.
-- LSP4IJ 0.21.0 or newer. It is declared as a required plugin dependency.
+  <!-- facts:editors.jetbrains_minimum_ide_build -->242<!-- /facts --> (<!-- facts:editors.jetbrains_minimum_ide_version -->2024.2<!-- /facts -->) or newer.
+- LSP4IJ <!-- facts:editors.lsp4ij_minimum_version -->0.21.0<!-- /facts --> or newer. It is declared as a required plugin dependency.
 - Node.js with `npx` available in the environment inherited by the IDE.
 
 ## Install from this checkout
@@ -22,9 +22,10 @@ The plugin is not published to JetBrains Marketplace yet. Build its ZIP:
 ./gradlew buildPlugin
 ```
 
+The current plugin version is <!-- facts:editors.jetbrains_plugin_version -->0.1.0<!-- /facts -->.
 Then open **Settings | Plugins**, choose **Install Plugin from Disk** from the
-gear menu, and select
-`build/distributions/lima-jetbrains-0.1.0.zip`. Install LSP4IJ from the
+gear menu, and select the matching
+`build/distributions/lima-jetbrains-<version>.zip`. Install LSP4IJ from the
 Marketplace first if the IDE does not resolve the required dependency while
 sideloading.
 

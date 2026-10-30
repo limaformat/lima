@@ -195,7 +195,7 @@ cover behaviour Core always specified but no 1.0.0 fixture exercised; the
 review added only non-normative clarifications (§5, §5.2, §6.1.3, and the
 error-api context fields). No 1.0.0 case changed result. The `since` marker
 in `corpus/manifests/core-1.0.json` records each addition's revision
-(1.0.1–1.0.10); the 149-case 1.0.0 baseline stays byte-frozen.
+(1.0.1–<!-- facts:corpus.suites.core_1_0.latest_errata_version -->1.0.10<!-- /facts -->); the <!-- facts:corpus.suites.core_1_0.baseline_cases -->149<!-- /facts -->-case 1.0.0 baseline stays byte-frozen.
 
 ### Block scalars — C-218–C-224 (P0 #1)
 
@@ -342,7 +342,7 @@ Strict mode rejects a content line that belongs to no structure
 ([decision](../../decisions/top-level-indentation-after-inline-value.md)).
 Core 1.0 skipped such a line in both modes at the top level, while one level
 down the same construct already threw (C-124, `core.indentation.inconsistent.strict`).
-The eight Core 1.0 cases that pinned the old strict behaviour stay in the frozen
+The <!-- facts:corpus.suites.core_1_1.superseded_core_1_0_cases -->8<!-- /facts --> Core 1.0 cases that pinned the old strict behaviour stay in the frozen
 1.0 baseline; `corpus/manifests/core-1.1.json` lists them under `supersedes`,
 and the default run leaves them out.
 

@@ -68,18 +68,18 @@ part of "the current public implementation" this table measures.
 
 ## Current reproduced values
 
-Current as of Core 1.1 and `@limaformat/lima` 0.6.0 (2026-10-28; References
-2.0 corpus at 136).
+Current as of Core <!-- facts:language.core_version -->1.2<!-- /facts --> and `@limaformat/lima` <!-- facts:packages.version -->0.6.0<!-- /facts --> (References
+<!-- facts:language.references_version -->2.1<!-- /facts --> corpus at <!-- facts:corpus.default.references_cases -->141<!-- /facts --> cases).
 
 | Measurement | Words |
 |---|---:|
-| Lima Core 1.1 specification | 8,920 |
-| Lima References 2.0 specification | 3,036 |
-| Lima Core implementation code | 8,472 |
-| Lima Core implementation comments | 5,288 |
-| Lima References 2.0 additions code | 3,904 |
-| Lima References 2.0 additions comments | 1,453 |
-| npm tarball (`@limaformat/lima` 0.6.0) | 60,802 bytes (60.8 KB) |
+| Lima Core <!-- facts:language.core_version -->1.2<!-- /facts --> specification | <!-- facts:word_counts.specifications.lima_core -->10,408<!-- /facts --> |
+| Lima References <!-- facts:language.references_version -->2.1<!-- /facts --> specification | <!-- facts:word_counts.specifications.lima_references -->3,189<!-- /facts --> |
+| Lima Core implementation code | <!-- facts:word_counts.implementations.lima_core_code -->8,615<!-- /facts --> |
+| Lima Core implementation comments | <!-- facts:word_counts.implementations.lima_core_comments -->5,310<!-- /facts --> |
+| Lima References additions code | <!-- facts:word_counts.implementations.lima_references_code -->4,171<!-- /facts --> |
+| Lima References additions comments | <!-- facts:word_counts.implementations.lima_references_comments -->1,453<!-- /facts --> |
+| npm tarball (`@limaformat/lima` <!-- facts:packages.version -->0.6.0<!-- /facts -->) | <!-- facts:package_sizes.lima_npm_tarball_bytes -->71,867<!-- /facts --> bytes (<!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->71.9<!-- /facts --> KB) |
 
 ## Calibration
 
@@ -140,12 +140,13 @@ dual-builder split changes shape again.
 
 ## Package size
 
-Not scripted — from `js/`, run `bun run build` (so `js/dist` matches the
-committed output), then `npm pack --dry-run --json` and read `.size`. For
-`@limaformat/lima` 0.6.0 that is 60,802 bytes, i.e. 60.8 KB (decimal, the
-same unit as the js-yaml figure below). The published js-yaml 5.2.3 tarball
-is 338 KB; registry tarballs for a released version are immutable. The
-ratio is 338 / 60.8 ≈ 5.6×. (0.6.0 added ~5 KB for Core 1.1's structure
+Scripted by `scripts/facts.ts`: from `js/`, first run `bun run build`, then
+the facts script runs `npm pack --ignore-scripts --dry-run --json` and reads
+`.size`. For `@limaformat/lima` <!-- facts:packages.version -->0.6.0<!-- /facts --> that is <!-- facts:package_sizes.lima_npm_tarball_bytes -->71,867<!-- /facts --> bytes, i.e. <!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->71.9<!-- /facts --> KB (decimal, the
+same unit as the js-yaml figure below). The installed, exactly pinned
+js-yaml <!-- facts:word_counts.implementations.js_yaml_version -->5.2.3<!-- /facts --> dependency is packed with the same command and measures
+<!-- facts:package_sizes.js_yaml_npm_tarball_bytes -->338,050<!-- /facts --> bytes (<!-- facts:package_sizes.js_yaml_npm_tarball_kilobytes_decimal -->338<!-- /facts --> KB). The
+ratio is approximately <!-- facts:package_sizes.js_yaml_ratio_to_lima -->4.7<!-- /facts -->×. Historical releases: 0.6.0 added ~5 KB for Core 1.1's structure
 checks and its changelog, over 0.5.1's 55.7 KB; 0.5.0 had dropped ~6 KB by
 excluding the internal References 1.0 resolver from the build, and was
 53.4 KB; 0.4.0 was 59.3 KB.)

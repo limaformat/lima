@@ -111,6 +111,7 @@ jobs:
         working-directory: js
       - run: bun run build
         working-directory: js
+      - run: bun scripts/facts.ts --check
       # A build/test run against js/src (the two jobs above) never proves
       # the *published* npm tarball works — package.json's `files`/`exports`
       # fields could omit something the source tree doesn't need. Packs for

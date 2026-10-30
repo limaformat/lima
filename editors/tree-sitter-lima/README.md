@@ -1,6 +1,6 @@
 # tree-sitter-lima
 
-Tree-sitter grammar for Lima Core 1.2 plus active References 2.1 tokens.
+Tree-sitter grammar for Lima Core <!-- facts:language.core_version -->1.2<!-- /facts --> plus active References <!-- facts:language.references_version -->2.1<!-- /facts --> tokens.
 It is an editor-highlighting parser: reference resolution, strict-mode
 diagnostics, hover, and go-to-definition remain LSP responsibilities.
 
@@ -13,11 +13,11 @@ strings, keys, nulls, booleans, numbers, dates, escapes, and active
 quoted strings and keys stays literal.
 
 `src/scanner.c` implements indentation, block-scalar boundaries, tolerant
-fallbacks, scalar classification, and exact Unicode 18.0 block-key checks via
+fallbacks, scalar classification, and exact Unicode <!-- facts:language.unicode_version -->18.0<!-- /facts --> block-key checks via
 the generated `src/unicode_key_table.h`. Tree-sitter regexes use `\p{L}`,
-`\p{M}`, and `\p{N}` for flow keys and References 2.1 tokens; those regexes
+`\p{M}`, and `\p{N}` for flow keys and References <!-- facts:language.references_version -->2.1<!-- /facts --> tokens; those regexes
 follow the Unicode version embedded in the installed Tree-sitter generator,
-which may differ at newly assigned code points from Core's fixed Unicode 18.0.
+which may differ at newly assigned code points from Core's fixed Unicode <!-- facts:language.unicode_version -->18.0<!-- /facts -->.
 Because Tree-sitter regexes have no lookahead, a colon-bearing flow key is
 written as non-empty colon-separated parts; consecutive or final colons in a
 flow key are the one syntax-highlighting approximation. Block keys remain
