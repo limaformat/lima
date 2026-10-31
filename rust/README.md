@@ -6,7 +6,7 @@
 A deliberate, focused subset of YAML: the part frontmatter actually needs,
 with well-defined types, no surprises, and zero runtime dependencies.
 
-The current crate release is <!-- facts:packages.version -->0.7.0<!-- /facts -->.
+The current crate release is <!-- facts:packages.version -->0.7.1<!-- /facts -->.
 
 ```sh
 cargo add lima

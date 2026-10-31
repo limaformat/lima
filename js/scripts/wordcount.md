@@ -68,7 +68,7 @@ part of "the current public implementation" this table measures.
 
 ## Current reproduced values
 
-Current as of Core <!-- facts:language.core_version -->1.2<!-- /facts --> and `@limaformat/lima` <!-- facts:packages.version -->0.7.0<!-- /facts --> (References
+Current as of Core <!-- facts:language.core_version -->1.2<!-- /facts --> and `@limaformat/lima` <!-- facts:packages.version -->0.7.1<!-- /facts --> (References
 <!-- facts:language.references_version -->2.1<!-- /facts --> corpus at <!-- facts:corpus.default.references_cases -->144<!-- /facts --> cases).
 
 | Measurement | Words |
@@ -79,7 +79,7 @@ Current as of Core <!-- facts:language.core_version -->1.2<!-- /facts --> and `@
 | Lima Core implementation comments | <!-- facts:word_counts.implementations.lima_core_comments -->5,390<!-- /facts --> |
 | Lima References additions code | <!-- facts:word_counts.implementations.lima_references_code -->4,330<!-- /facts --> |
 | Lima References additions comments | <!-- facts:word_counts.implementations.lima_references_comments -->1,506<!-- /facts --> |
-| npm tarball (`@limaformat/lima` <!-- facts:packages.version -->0.7.0<!-- /facts -->) | <!-- facts:package_sizes.lima_npm_tarball_bytes -->73,609<!-- /facts --> bytes (<!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->73.6<!-- /facts --> KB) |
+| npm tarball (`@limaformat/lima` <!-- facts:packages.version -->0.7.1<!-- /facts -->) | <!-- facts:package_sizes.lima_npm_tarball_bytes -->73,612<!-- /facts --> bytes (<!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->73.6<!-- /facts --> KB) |
 
 ## Calibration
 
@@ -142,7 +142,7 @@ dual-builder split changes shape again.
 
 Scripted by `scripts/facts.ts`: from `js/`, first run `bun run build`, then
 the facts script runs `npm pack --ignore-scripts --dry-run --json` and reads
-`.size`. For `@limaformat/lima` <!-- facts:packages.version -->0.7.0<!-- /facts --> that is <!-- facts:package_sizes.lima_npm_tarball_bytes -->73,609<!-- /facts --> bytes, i.e. <!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->73.6<!-- /facts --> KB (decimal, the
+`.size`. For `@limaformat/lima` <!-- facts:packages.version -->0.7.1<!-- /facts --> that is <!-- facts:package_sizes.lima_npm_tarball_bytes -->73,612<!-- /facts --> bytes, i.e. <!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->73.6<!-- /facts --> KB (decimal, the
 same unit as the js-yaml figure below). The installed, exactly pinned
 js-yaml <!-- facts:word_counts.implementations.js_yaml_version -->5.2.3<!-- /facts --> dependency is packed with the same command and measures
 <!-- facts:package_sizes.js_yaml_npm_tarball_bytes -->338,050<!-- /facts --> bytes (<!-- facts:package_sizes.js_yaml_npm_tarball_kilobytes_decimal -->338<!-- /facts --> KB). The

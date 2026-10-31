@@ -13,6 +13,8 @@ carry their own.
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-10-31
+
 ### Security
 
 - A few KB of references could copy millions of nodes before the limit on the result stopped them, and interpolation
