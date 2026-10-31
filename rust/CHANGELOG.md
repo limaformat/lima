@@ -12,6 +12,19 @@ carry their own.
 
 ## [Unreleased]
 
+### Security
+
+- A few KB of references could copy millions of nodes before the limit on the result stopped them, and interpolation
+  kept growing a value past its limit. Resolution now counts what it copies and stops (References §4.1), with the
+  error of an oversized result.
+
+### Fixed
+
+- Panics on short input: a last line of whitespace after a mapping in a sequence item, and a flow value in such a
+  mapping with spaces or non-ASCII whitespace before it.
+- A value or sequence item followed by whitespace other than spaces kept it at the top level (Core §4).
+- `.0` and `-.0` are zero, not an underflow.
+
 ## [0.7.0] — 2026-10-30
 
 Lima Core 1.2 and References 2.1: an unquoted key may be written in any

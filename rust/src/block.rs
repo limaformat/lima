@@ -414,7 +414,9 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
             let after_dash = if after_dash_raw.contains('#') {
                 strip_comment(after_dash_raw)
             } else {
-                after_dash_raw.to_string()
+                after_dash_raw
+                    .trim_end_matches(is_trim_whitespace)
+                    .to_string()
             };
             let dash_src = |col: usize| {
                 B::POSITIONED.then(|| ReferenceSource {
@@ -526,7 +528,9 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     item_key_column,
                     line,
                     value_col,
-                    after_dash_raw.get(value_start..).unwrap_or(raw),
+                    after_dash_raw
+                        .get(value_start..)
+                        .map_or(raw, |value| value.trim_matches(is_trim_whitespace)),
                     cursor,
                     strict,
                 )?;
@@ -537,8 +541,8 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 while cursor.valid && cursor.indent == pending_column {
                     let continuation_line = (base_line as i64 + cursor.line_index) as u32;
                     let ckey_indent = cursor.ascii_indent;
-                    let cfirst = cursor.source.as_bytes()[cursor.content_start];
-                    if cfirst == b'#' {
+                    // a last line of whitespace only has no first byte
+                    if cursor.source.as_bytes().get(cursor.content_start) == Some(&b'#') {
                         break;
                     }
                     let cont_line =

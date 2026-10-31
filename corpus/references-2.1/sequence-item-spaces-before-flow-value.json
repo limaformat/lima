@@ -1,0 +1,20 @@
+{
+  "id": "references-2.tokens.sequence-item-spaces-before-flow",
+  "spec": "references",
+  "specVersion": "2.1",
+  "section": "2.4",
+  "description": "Spaces between the key of a sequence item and a flow value do not move the tokens in it.",
+  "input": "u: 1\nt:\n- r:  [${u}]\n",
+  "expect": {
+    "result": {
+      "u": 1,
+      "t": [
+        {
+          "r": [
+            1
+          ]
+        }
+      ]
+    }
+  }
+}

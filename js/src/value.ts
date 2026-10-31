@@ -77,6 +77,12 @@ export const PARTIAL_COUNT_LIMIT = 128
 export const PARTIAL_NAME_LENGTH_LIMIT = 128
 export const PARTIAL_NODE_LIMIT = 4096
 export const RESULT_NODE_LIMIT = 65536
+/**
+ * Nodes a resolution may copy (References §4.1: limits are validated during expansion). Each value is resolved
+ * for at most four edge budgets, so a document within RESULT_NODE_LIMIT stays far below this. Past it the result
+ * cannot fit, and copying on would only fill the memory: a few KB of references can reach millions of nodes.
+ */
+export const RESOLUTION_COPY_LIMIT = 16 * RESULT_NODE_LIMIT
 export const SCALAR_LENGTH_LIMIT = 16384
 
 /**

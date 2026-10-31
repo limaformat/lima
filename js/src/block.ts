@@ -17,7 +17,7 @@ import {
 import { KEY_GRAMMAR_HINT, specificKeyHint } from './key-hints.js'
 import { parseFlowOrScalarValue, parseFlowSequence } from './flow.js'
 import { buildBlockScalar } from './block-scalar.js'
-import { LimaError } from './errors.js'
+import { LimaError, printableLine } from './errors.js'
 import type { ValueBuilder } from './builder.js'
 import type { ReferenceSource } from './reference-tokens2.js'
 import { isTrimWhitespace } from './chars.js'
@@ -184,7 +184,7 @@ const cursorAfterDash = (cursor: BlockCursor): string => {
 /** Core 1.1 §10.1: a line in a block whose key the key grammar (§5.1) rejects, in strict mode. */
 const unrecognizedKeyLine = (line: number, trimmed: string): LimaError => new LimaError({
 	code: 'UNRECOGNIZED_LINE', line,
-	message: `Lima: unrecognised line at line ${line}: "${trimmed}"${specificKeyHint(trimmed) ?? KEY_GRAMMAR_HINT}`,
+	message: `Lima: unrecognised line at line ${line}: "${printableLine(trimmed)}"${specificKeyHint(trimmed) ?? KEY_GRAMMAR_HINT}`,
 })
 
 /** Shared block grammar consuming one mutable physical-line cursor. */
@@ -224,7 +224,7 @@ const parseCursorBlock = <V, M>(
 				const keyRaw = colonPos !== -1
 					? trimEndSlice(trimmed, 0, colonPos)
 					: bareKey ? trimEndSlice(trimmed, 0, trimmed.length - 1) : ''
-				if (keyRaw !== '' && !isValidKey(keyRaw)) {
+				if ((keyRaw !== '' || colonPos !== -1) && !isValidKey(keyRaw)) {
 					// §5.1: not a usable key — an unrecognised line, skipped in non-strict mode and an error in strict
 					// mode, as at the top level (Core 1.1 §10.1)
 					if (ctx.strict) throw unrecognizedKeyLine(line, trimmed)
@@ -273,8 +273,7 @@ const parseCursorBlock = <V, M>(
 			if (items === null) items = []
 
 			const afterDashRaw = cursorAfterDash(cursor)
-			let afterDash = afterDashRaw
-			if (afterDash.includes('#')) afterDash = stripComment(afterDash)
+			const afterDash = afterDashRaw.includes('#') ? stripComment(afterDashRaw) : afterDashRaw.trimEnd()
 			const afterDashCol = wantSource ? cursor.indent + dashPrefixLen(cursor) : 0
 			const afterDashTab = wantSource && ctx.tabAdjust ? [ctx.tabAdjust[line - 1] ?? 0] : undefined
 			const dashSource: ReferenceSource | undefined = wantSource ? ({
@@ -324,7 +323,7 @@ const parseCursorBlock = <V, M>(
 				pendingColumn = cursor.indent + dashPrefixLen(cursor)
 				pendingItem = builder.createMappingWith(key,
 					inlineOrBlockScalar(raw, trimSlice(afterDashRaw, valueStart, afterDashRaw.length) === '|', pendingColumn, line, valueCol,
-						wantSource ? afterDashRaw.slice(valueStart) : raw, cursor, ctx, builder))
+						wantSource ? trimSlice(afterDashRaw, valueStart, afterDashRaw.length) : raw, cursor, ctx, builder))
 				// the item's later keys at its key column; any other line is the block loop's (§7.2)
 				while (cursor.valid && cursor.indent === pendingColumn) {
 					const continuationLine = baseLine + cursor.lineIndex
@@ -382,7 +381,7 @@ const parseCursorBlock = <V, M>(
 			const keyRaw = colonPos !== -1
 				? trimEndSlice(trimmed, 0, colonPos)
 				: bareKey ? trimEndSlice(trimmed, 0, trimmed.length - 1) : ''
-			if (keyRaw !== '' && !isValidKey(keyRaw)) {
+			if ((keyRaw !== '' || colonPos !== -1) && !isValidKey(keyRaw)) {
 				// §5.1: not a usable key — an unrecognised line, skipped in non-strict mode and an error in strict
 				// mode, as at the top level (Core 1.1 §10.1)
 				if (ctx.strict) throw unrecognizedKeyLine(line, trimmed)

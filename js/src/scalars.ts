@@ -206,7 +206,7 @@ const parseDateUTC = (str: string, strict = false, line = 0): Date | null => {
 const NUMBER_RE = /^-?(?:(?:0|[1-9][0-9]*)(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/
 const DATE_PRE_RE = /\d[\d\-:.\/a-zA-Z]{4,}/
 const isFloatForm = (str: string): boolean => str.includes('.') || str.includes('e') || str.includes('E')
-const isZeroLiteral = (str: string): boolean => /^0+(\.0+)?$/.test(str.replace(/^-/, '').split(/[eE]/)[0])
+const isZeroLiteral = (str: string): boolean => /^(?:0+(?:\.0+)?|\.0+)$/.test(str.replace(/^-/, '').split(/[eE]/)[0])
 
 export const NO_SPAN_VALUE: unique symbol = Symbol('NO_SPAN_VALUE')
 

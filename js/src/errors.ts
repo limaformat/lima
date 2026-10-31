@@ -36,6 +36,13 @@ export interface LimaDiagnostic {
 	path?: string
 }
 
+/** A line of the source for a message: shortened, and no control or direction character reaches a terminal. */
+export const printableLine = (text: string): string =>
+	(text.length > 120 ? `${text.slice(0, 120)}…` : text).replace(
+		/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,
+		(c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`,
+	)
+
 export class LimaError extends Error {
 	readonly code!: LimaDiagnosticCode
 	readonly line?: number

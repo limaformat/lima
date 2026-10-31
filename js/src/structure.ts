@@ -15,7 +15,7 @@
  * these lines, as Core 1.0 did in both modes.
  */
 import { isTrimWhitespace } from './chars.js'
-import { LimaError } from './errors.js'
+import { LimaError, printableLine } from './errors.js'
 import { isValidUnquotedKey } from './key-grammar.js'
 import { KEY_GRAMMAR_HINT, specificKeyHint } from './key-hints.js'
 
@@ -64,7 +64,7 @@ export function checkRangeLines(
 				const text = frontMatter.slice(pos, stop)
 				throw new LimaError({
 					code: 'UNRECOGNIZED_LINE', line: current,
-					message: `Lima: unrecognised line at line ${current}: "${text}"${hint(text)}`,
+					message: `Lima: unrecognised line at line ${current}: "${printableLine(text)}"${hint(text)}`,
 				})
 			}
 			if (owner === 'mapping' && base === -1) base = indent

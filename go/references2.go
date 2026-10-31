@@ -194,10 +194,20 @@ type resolution2 struct {
 	value    *pvalue
 	complete bool
 }
+
+// resolutionCopyLimit is the number of nodes a resolution may copy (References §4.1: limits are validated during
+// expansion). Each value is resolved for at most four edge budgets, so a document within resultNodeLimit stays far
+// below this. Past it the result cannot fit, and copying on would only fill the memory: a few KB of references can
+// reach millions of nodes.
+const resolutionCopyLimit = 16 * resultNodeLimit
+
 type resolveContext2 struct {
-	diagnostics []sourceDiagnostic
-	cache       map[*pvalue]map[int]resolution2
-	document    map[string]*pvalue
+	diagnostics       []sourceDiagnostic
+	cache             map[*pvalue]map[int]resolution2
+	document          map[string]*pvalue
+	copied            int
+	overflowed        bool
+	earliestInsertion *insertedAt
 }
 
 func referenceTokensOf2(v *pvalue) []referenceToken2 {
@@ -253,7 +263,29 @@ func clonePositioned2(v *pvalue) *pvalue {
 	return out
 }
 
-func copyWithInsertion2(target *pvalue, token referenceToken2) *pvalue {
+func countPositioned2(v *pvalue) int {
+	count := 1
+	for _, item := range v.array {
+		count += countPositioned2(item)
+	}
+	for _, entry := range v.mapping {
+		count += countPositioned2(entry.value)
+	}
+	return count
+}
+
+func copyWithInsertion2(target *pvalue, token referenceToken2, ctx *resolveContext2) *pvalue {
+	if at := ctx.earliestInsertion; at == nil || token.line < at.line || token.line == at.line && token.offset < at.offset {
+		ctx.earliestInsertion = &insertedAt{line: token.line, offset: token.offset, token: token.token}
+	}
+	if !ctx.overflowed {
+		ctx.copied += countPositioned2(target)
+		ctx.overflowed = ctx.copied > resolutionCopyLimit
+	}
+	// the result is lost by now: resolution only goes on to see the earliest insertion
+	if ctx.overflowed {
+		return &pvalue{value: Null{}}
+	}
 	copy := clonePositioned2(target)
 	if copy.inserted != nil {
 		copy.priorInsertions = append(copy.priorInsertions, *copy.inserted)
@@ -404,7 +436,7 @@ func resolveNodeUncached2(node *pvalue, document, partials []pentry, remaining i
 			return resolution2{clonePositioned2(node), false}
 		}
 		if token.partialPath != "" {
-			return resolution2{copyWithInsertion2(target, token), true}
+			return resolution2{copyWithInsertion2(target, token, ctx), true}
 		}
 		stack[target] = true
 		r := resolveNode2(target, document, partials, remaining-1, stack, ctx)
@@ -416,7 +448,7 @@ func resolveNodeUncached2(node *pvalue, document, partials []pentry, remaining i
 		if selected == nil {
 			return resolution2{clonePositioned2(node), false}
 		}
-		return resolution2{copyWithInsertion2(selected, token), true}
+		return resolution2{copyWithInsertion2(selected, token, ctx), true}
 	}
 	var out strings.Builder
 	cursor, complete := 0, true
@@ -454,6 +486,8 @@ func resolveNodeUncached2(node *pvalue, document, partials []pentry, remaining i
 	value := out.String()
 	if utf8.RuneCountInString(value) > scalarLengthLimit {
 		addRefDiagnostic(ctx, tokens[0], ResourceLimit, fmt.Sprintf("scalar exceeds maximum length of %d code points", scalarLengthLimit))
+		// the document has failed; a value that holds this one still exceeds the limit, and none grows further
+		value = string([]rune(value)[:scalarLengthLimit+1])
 	}
 	result := &pvalue{value: String(value), line: node.line, inserted: node.inserted,
 		priorInsertions: append([]insertedAt(nil), node.priorInsertions...)}
@@ -597,6 +631,13 @@ func Parse(input string, options ParseOptions) (Value, error) {
 	for i, entry := range document {
 		stack := map[*pvalue]bool{entry.value: true}
 		resolved[i] = pentry{entry.key, resolveNode2(entry.value, document, partials, maxReferenceEdges, stack, ctx).value}
+	}
+	if ctx.overflowed {
+		line, token, column := 1, "", 0
+		if winner := ctx.earliestInsertion; winner != nil {
+			line, token, column = winner.line, winner.token, winner.offset+1
+		}
+		return nil, &LimaError{Code: ResourceLimit, Line: line, Column: column, Token: token, Message: fmt.Sprintf("Lima: result exceeds maximum size of %d total nodes at line %d", resultNodeLimit, line)}
 	}
 	if options.Strict {
 		var walk func(*pvalue)

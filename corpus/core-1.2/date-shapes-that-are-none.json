@@ -1,0 +1,16 @@
+{
+  "id": "core.scalars.date-shapes-that-are-none",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "15.9",
+  "description": "Only the productions of §15.9 are dates: no sign in a time, no offset on a German or slash date, no third digit in a German day.",
+  "input": "a: 2024-03-01T09:00:-1\nb: 01.03.2024 09:00+02:00\nc: 001.03.2024\nd: 2024/03/01T09:00\n",
+  "expect": {
+    "result": {
+      "a": "2024-03-01T09:00:-1",
+      "b": "01.03.2024 09:00+02:00",
+      "c": "001.03.2024",
+      "d": "2024/03/01T09:00"
+    }
+  }
+}

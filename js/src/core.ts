@@ -252,7 +252,7 @@ const parseCoreGeneric = <V, M>(
 			}
 			const val = frontMatter.slice(rawStart, valueEnd)
 			const hasHash = val.includes('#')
-			const uncommented = hasHash ? stripComment(val) : val
+			const uncommented = hasHash ? stripComment(val) : val.trimEnd()
 			// The physical anchor keeps `\#` but drops a real comment, so a
 			// `${…}`-shaped token inside a trailing comment is not scanned (§2.4).
 			const source = wantSource ? {

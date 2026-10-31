@@ -1,0 +1,13 @@
+{
+  "id": "core.values.whitespace-at-end-boolean",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "4",
+  "description": "Inline value processing trims whitespace as §1 defines it, so a value followed by a line separator is the boolean a reader sees.",
+  "input": "draft: false \n",
+  "expect": {
+    "result": {
+      "draft": false
+    }
+  }
+}

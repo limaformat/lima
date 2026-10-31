@@ -12,6 +12,25 @@ carry their own.
 
 ## [Unreleased]
 
+### Security
+
+- A few KB of references could copy millions of nodes before the limit on the result stopped them, and interpolation
+  kept growing a value past its limit. Resolution now counts what it copies and stops (References §4.1), with the
+  error of an oversized result.
+
+### Fixed
+
+- A value or sequence item followed by whitespace other than spaces kept it at the top level: `draft: false` with a no-break space
+  after it is now the boolean, as in a block (Core §4).
+- `.0` and `-.0` are zero, not an underflow.
+- A line with an empty key in a block is an unrecognised line.
+- Spaces before a flow value in a sequence item threw an error without a Lima code.
+- Messages no longer quote control or direction characters of the source, and shorten a long line.
+
+### Added
+
+- `LimaError` is exported.
+
 ## [0.7.0] — 2026-10-30
 
 Lima Core 1.2 and References 2.1: an unquoted key may be written in any

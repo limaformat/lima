@@ -58,7 +58,7 @@ The [Lima Core <!-- facts:language.core_version -->1.2<!-- /facts -->](https://g
 and [Lima References <!-- facts:language.references_version -->2.1<!-- /facts -->](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
 specifications are the normative source of truth — this crate implements
 them exactly, verified against the same
-[<!-- facts:corpus.default.cases -->620<!-- /facts -->-case conformance corpus](https://github.com/limaformat/lima/tree/main/corpus)
+[<!-- facts:corpus.default.cases -->630<!-- /facts -->-case conformance corpus](https://github.com/limaformat/lima/tree/main/corpus)
 (counts pinned by `tests/corpus.rs` and the private References 1.0 unit-test
 module) shared with the TypeScript implementation.
 

@@ -330,7 +330,7 @@ fn is_zero_literal(s: &str) -> bool {
         Some((i, f)) => (i, f),
         None => (mantissa, ""),
     };
-    !int_part.is_empty()
+    !(int_part.is_empty() && frac_part.is_empty())
         && int_part.bytes().all(|c| c == b'0')
         && frac_part.bytes().all(|c| c == b'0')
 }

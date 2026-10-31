@@ -37,12 +37,12 @@ func parseDateUTC(s string, strict bool, line int) (*Instant, error) {
 		mo, _ = strconv.ParseInt(date[5:7], 10, 64)
 		d, _ = strconv.ParseInt(date[8:], 10, 64)
 		shape = true
-	} else if p := strings.Split(date, "/"); len(p) == 3 && len(p[0]) == 4 && digitsOnly(p[0]) && digitsOnly(p[1]) && digitsOnly(p[2]) {
+	} else if p := strings.Split(date, "/"); len(p) == 3 && len(p[0]) == 4 && len(p[1]) == 2 && len(p[2]) == 2 && digitsOnly(p[0]) && digitsOnly(p[1]) && digitsOnly(p[2]) {
 		y, _ = strconv.ParseInt(p[0], 10, 64)
 		mo, _ = strconv.ParseInt(p[1], 10, 64)
 		d, _ = strconv.ParseInt(p[2], 10, 64)
 		shape = true
-	} else if p := strings.Split(date, "."); len(p) == 3 && len(p[2]) == 4 && digitsOnly(p[0]) && digitsOnly(p[1]) && digitsOnly(p[2]) {
+	} else if p := strings.Split(date, "."); len(p) == 3 && len(p[0]) <= 2 && len(p[1]) <= 2 && len(p[2]) == 4 && digitsOnly(p[0]) && digitsOnly(p[1]) && digitsOnly(p[2]) {
 		d, _ = strconv.ParseInt(p[0], 10, 64)
 		mo, _ = strconv.ParseInt(p[1], 10, 64)
 		y, _ = strconv.ParseInt(p[2], 10, 64)
@@ -51,21 +51,25 @@ func parseDateUTC(s string, strict bool, line int) (*Instant, error) {
 	if !shape {
 		return nil, nil
 	}
-	// ISO datetimes require T; the space form is only valid for the German
-	// and slash date grammars.
-	if separator == ' ' && len(date) == 10 && date[4] == '-' {
+	// ISO datetimes require T and alone may name an offset; the space form is only valid for the German and slash
+	// date grammars (Core §15.9).
+	iso := len(date) == 10 && date[4] == '-'
+	if iso && separator == ' ' || !iso && separator == 'T' {
 		return nil, nil
 	}
 	var h, mi, sec, offset int64
 	if timePart != "" {
-		if strings.HasSuffix(timePart, "Z") {
+		if iso && strings.HasSuffix(timePart, "Z") {
 			timePart = strings.TrimSuffix(timePart, "Z")
-		} else if len(timePart) >= 6 {
+		} else if iso && len(timePart) >= 6 {
 			i := len(timePart) - 6
 			if (timePart[i] == '+' || timePart[i] == '-') && timePart[i+3] == ':' {
-				oh, e1 := strconv.ParseInt(timePart[i+1:i+3], 10, 64)
-				om, e2 := strconv.ParseInt(timePart[i+4:], 10, 64)
-				if e1 != nil || e2 != nil || oh > 14 || om > 59 || (oh == 14 && om != 0) {
+				if !digitsOnly(timePart[i+1:i+3]) || !digitsOnly(timePart[i+4:]) {
+					return nil, nil
+				}
+				oh, _ := strconv.ParseInt(timePart[i+1:i+3], 10, 64)
+				om, _ := strconv.ParseInt(timePart[i+4:], 10, 64)
+				if oh > 14 || om > 59 || (oh == 14 && om != 0) {
 					return invalid()
 				}
 				offset = oh*60 + om
@@ -76,26 +80,18 @@ func parseDateUTC(s string, strict bool, line int) (*Instant, error) {
 			}
 		}
 		parts := strings.Split(timePart, ":")
-		if len(parts) < 2 || len(parts) > 3 || len(parts[0]) != 2 || len(parts[1]) != 2 {
+		if len(parts) < 2 || len(parts) > 3 {
 			return nil, nil
 		}
-		var err error
-		h, err = strconv.ParseInt(parts[0], 10, 64)
-		if err != nil {
-			return nil, nil
+		for _, part := range parts {
+			if len(part) != 2 || !digitsOnly(part) {
+				return nil, nil
+			}
 		}
-		mi, err = strconv.ParseInt(parts[1], 10, 64)
-		if err != nil {
-			return nil, nil
-		}
+		h, _ = strconv.ParseInt(parts[0], 10, 64)
+		mi, _ = strconv.ParseInt(parts[1], 10, 64)
 		if len(parts) == 3 {
-			if len(parts[2]) != 2 {
-				return nil, nil
-			}
-			sec, err = strconv.ParseInt(parts[2], 10, 64)
-			if err != nil {
-				return nil, nil
-			}
+			sec, _ = strconv.ParseInt(parts[2], 10, 64)
 		}
 	}
 	leap := y%400 == 0 || (y%4 == 0 && y%100 != 0)

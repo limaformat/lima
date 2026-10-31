@@ -71,7 +71,7 @@ func TestReferences2Corpus(t *testing.T) {
 	sort.Strings(paths)
 	paths21, _ := filepath.Glob("../corpus/references-2.1/*.json")
 	paths = append(paths, paths21...)
-	if len(paths) != 141 {
+	if len(paths) != 144 {
 		t.Fatalf("References 2.x corpus count changed: %d", len(paths))
 	}
 	pass, skip := 0, 0

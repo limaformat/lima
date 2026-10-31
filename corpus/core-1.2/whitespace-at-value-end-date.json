@@ -1,0 +1,22 @@
+{
+  "id": "core.values.whitespace-at-end-date",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "4",
+  "description": "A no-break space after a date leaves the date a date, at the top level as in a block.",
+  "input": "date: 2026-11-01 \nb:\n  date: 2026-11-01 \n",
+  "expect": {
+    "result": {
+      "date": {
+        "$type": "instant",
+        "value": "2026-11-01T00:00:00Z"
+      },
+      "b": {
+        "date": {
+          "$type": "instant",
+          "value": "2026-11-01T00:00:00Z"
+        }
+      }
+    }
+  }
+}

@@ -13,6 +13,17 @@ carry their own.
 
 ## [Unreleased]
 
+### Security
+
+- A few KB of references could copy millions of nodes before the limit on the result stopped them, and interpolation
+  kept growing a value past its limit. Resolution now counts what it copies and stops (References §4.1), with the
+  error of an oversized result.
+
+### Fixed
+
+- Dates are only the forms of Core §15.9: a sign in a time, an offset on a German or slash date, a `T` in one, or a
+  third digit in a German day read as a date.
+
 ## [0.7.0] — 2026-10-30
 
 Lima Core 1.2 and References 2.1: an unquoted key may be written in any

@@ -408,7 +408,7 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
                 )?
             } else {
                 parse_flow_or_scalar_value_checked::<B, CHECK_DUPLICATES>(
-                    first_line,
+                    first_line.trim_end_matches(is_trim_whitespace),
                     strict,
                     tk.line,
                     inline_src(first_line),

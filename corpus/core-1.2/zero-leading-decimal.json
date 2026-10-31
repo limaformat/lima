@@ -1,0 +1,27 @@
+{
+  "id": "core.scalars.zero-leading-decimal",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "6.4.1",
+  "description": "A leading decimal of zeros is zero, not an underflow.",
+  "input": "a: .0\nb: -.0\nc: .0e5\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "a": {
+        "$type": "float",
+        "value": 0
+      },
+      "b": {
+        "$type": "float",
+        "value": 0
+      },
+      "c": {
+        "$type": "float",
+        "value": 0
+      }
+    }
+  }
+}

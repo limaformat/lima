@@ -1,0 +1,16 @@
+{
+  "id": "core.values.whitespace-at-end-sequence-item",
+  "spec": "core",
+  "specVersion": "1.2",
+  "section": "4",
+  "description": "A sequence item trims whitespace as §1 defines it like any inline value; inside quotes it stays.",
+  "input": "k:\n- x \n- \"y \"\n",
+  "expect": {
+    "result": {
+      "k": [
+        "x",
+        "y "
+      ]
+    }
+  }
+}

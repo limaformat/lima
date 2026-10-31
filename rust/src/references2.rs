@@ -16,6 +16,10 @@ const PARTIAL_COUNT_LIMIT: usize = 128;
 const PARTIAL_NAME_LENGTH_LIMIT: usize = 128;
 const PARTIAL_NODE_LIMIT: usize = 4096;
 const RESULT_NODE_LIMIT: usize = 65536;
+/// Nodes a resolution may copy (References §4.1: limits are validated during expansion). Each value is resolved
+/// for at most four edge budgets, so a document within `RESULT_NODE_LIMIT` stays far below this. Past it the result
+/// cannot fit, and copying on would only fill the memory: a few KB of references can reach millions of nodes.
+const RESOLUTION_COPY_LIMIT: usize = 16 * RESULT_NODE_LIMIT;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ParseMode {
@@ -274,7 +278,49 @@ fn canonical(value: &PositionedValue) -> String {
     }
 }
 
-fn copied_with_insertion(value: &PositionedValue, token: &Token) -> PositionedValue {
+fn count_positioned(value: &PositionedValue) -> usize {
+    match value {
+        PositionedValue::Array { items, .. } => {
+            1 + items.iter().map(count_positioned).sum::<usize>()
+        }
+        PositionedValue::Mapping { entries, .. } => {
+            1 + entries
+                .iter()
+                .map(|(_, child)| count_positioned(child))
+                .sum::<usize>()
+        }
+        _ => 1,
+    }
+}
+
+fn copied_with_insertion(
+    value: &PositionedValue,
+    token: &Token,
+    ctx: &mut Context,
+) -> PositionedValue {
+    let earlier = ctx
+        .earliest_insertion
+        .as_ref()
+        .is_none_or(|at| (token.line, token.offset) < (at.line, at.offset));
+    if earlier {
+        ctx.earliest_insertion = Some(InsertedAt {
+            line: token.line,
+            offset: token.offset,
+            token: token.text.clone(),
+        });
+    }
+    if !ctx.overflowed {
+        ctx.copied += count_positioned(value);
+        ctx.overflowed = ctx.copied > RESOLUTION_COPY_LIMIT;
+    }
+    // the result is lost by now: resolution only goes on to see the earliest insertion
+    if ctx.overflowed {
+        return PositionedValue::Null {
+            line: 0,
+            inserted_at: None,
+            prior_insertions: Vec::new(),
+        };
+    }
     let mut copy = value.clone();
     let mark = InsertedAt {
         line: token.line,
@@ -341,6 +387,9 @@ struct Resolution {
 struct Context {
     diagnostics: Vec<(u32, usize, LimaError)>,
     cache: HashMap<(usize, u8), Resolution>,
+    copied: usize,
+    overflowed: bool,
+    earliest_insertion: Option<InsertedAt>,
 }
 
 fn token_error(code: Code, token: &Token, message: String) -> LimaError {
@@ -546,7 +595,7 @@ fn resolve_node(
                         }
                     } else if token.partial_path.is_some() {
                         Resolution {
-                            value: copied_with_insertion(selected, token),
+                            value: copied_with_insertion(selected, token, ctx),
                             complete: true,
                             unresolved: Vec::new(),
                         }
@@ -562,7 +611,7 @@ fn resolve_node(
                         };
                         if let Some(selected) = selected {
                             Resolution {
-                                value: copied_with_insertion(selected, token),
+                                value: copied_with_insertion(selected, token, ctx),
                                 complete: true,
                                 unresolved: Vec::new(),
                             }
@@ -643,6 +692,11 @@ fn resolve_node(
                             "scalar exceeds maximum length of {SCALAR_LENGTH_LIMIT} code points"
                         ),
                     );
+                    // the document has failed; a value that holds this one still exceeds the limit,
+                    // and none grows further
+                    if let Some((end, _)) = output.char_indices().nth(SCALAR_LENGTH_LIMIT + 1) {
+                        output.truncate(end);
+                    }
                 }
                 Resolution {
                     value: PositionedValue::String {
@@ -1095,6 +1149,9 @@ pub fn parse(front_matter: &str, mut options: ParseOptions) -> Result<LimaValue,
     let mut ctx = Context {
         diagnostics: Vec::new(),
         cache: HashMap::new(),
+        copied: 0,
+        overflowed: false,
+        earliest_insertion: None,
     };
     let mut resolved = Vec::with_capacity(document.len());
     let mut unresolved = Vec::new();
@@ -1104,6 +1161,20 @@ pub fn parse(front_matter: &str, mut options: ParseOptions) -> Result<LimaValue,
         let resolution = resolve_node(value, &document, &partials, MAX_EDGES, &mut stack, &mut ctx);
         unresolved.extend(resolution.unresolved);
         resolved.push((key.clone(), resolution.value));
+    }
+    if ctx.overflowed {
+        let winner = ctx.earliest_insertion.as_ref();
+        let line = winner.map_or(1, |at| at.line);
+        let mut error = LimaError::new(
+            Code::ResourceLimit,
+            line,
+            format!(
+                "Lima: result exceeds maximum size of {RESULT_NODE_LIMIT} total nodes at line {line}"
+            ),
+        );
+        error.token = winner.map(|at| at.token.clone().into_boxed_str());
+        error.column = winner.map(|at| at.offset as u32 + 1);
+        return Err(error);
     }
     if options.strict {
         for token in unresolved {

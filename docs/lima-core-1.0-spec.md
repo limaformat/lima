@@ -8,6 +8,8 @@ Lima is not a general-purpose data format. It is a small, predictable frontmatte
 
 **Changes from Core 1.1:** an unquoted key may be written in any script: it starts with a letter or number of Unicode 18.0 or with `_`, and after its first character it may also hold marks, as accents can be written, and `*` and `·`, as gendered words such as `autor*in` and `autor·in` are written (§5.1). Lima delivers and compares a key as it is written, code point by code point, and normalises no Unicode (§5.3). A key Core 1.1 recognised reads the same in Core 1.2; a line whose unquoted key holds characters that Core 1.2 admits and Core 1.1 did not, and which Core 1.1 therefore did not read as an entry, is an entry now when it otherwise has the form of an entry and stands where an entry may. For clarity, §1 now says what UTF-8 implies: a string with a lone surrogate is no document, and a parser rejects it. §7.1 states what each kind of line does where it stands in one table, in place of the paragraph that said it in prose; no outcome changes. In step with it, §6.1.5 and §10.1 say that indented freetext after a bare key leaves the key `null` only when no later line of its block is a member, as Core 1.1's §7.1 already said, and §10.1 lists every other line the table has strict mode reject.
 
+**Erratum to Core 1.2:** inline value processing (§4) trims whitespace as §1 defines it, not only spaces, as every value in a block already did: `draft: false` followed by a no-break space is the boolean.
+
 **Changes from Core 1.0** (errata 1.0.10): strict mode rejects a content line that belongs to no structure, which Core 1.0 skipped in both modes — a line indented where no block level is open, at the top level as one level down (§7.1 rule 5), an unindented line that matches no key pattern (§4), and a line of a block mapping whose key the key grammar rejects (§5.1). Non-strict mode skips these lines, as before. Core 1.1 also settles what Core 1.0 left unsaid, where implementations differed: a bare key's sequence may start at the key's own column, as YAML writes it (§7.2); a block holds mapping entries or sequence items, as its first entry or item decides, and a line non-strict mode skips ends neither the block nor the object item before it unless it is less indented (§7.1); an item whose value is a flow sequence is a nested sequence (§7.2); a `|` with no content lines is `''` (§6.1.5); indentation is spaces only, so a line indented by other whitespace, such as U+00A0, is unrecognised (§7.1), with whitespace defined once (§1); and the end of the input ends the last line as a line terminator does (§4), so a last `key:` is a bare key.
 
 ---
@@ -98,10 +100,10 @@ The separator between key and value is `: ` (colon followed by a single space) f
 
 1. Scan left-to-right, tracking quoted regions (single and double quotes with their respective escape rules).
 2. The first unescaped `#` outside a quoted region begins a comment — it and everything following it are removed.
-3. Trim leading and trailing spaces from the remaining text.
+3. Trim leading and trailing whitespace (§1) from the remaining text.
 4. If the remaining text begins with a quote character, it is a quoted value **only** when the matching closing quote is the final remaining character after trimming. Any non-whitespace content after the closing quote is invalid: non-strict mode falls back to a string (the entire remaining text), strict mode throws.
 5. For quoted values: strip the surrounding delimiters and apply the appropriate escape processing (see §6.1.2, §6.1.3). Content inside the quotes is never trimmed or further comment-stripped.
-6. For unquoted values: trim leading and trailing spaces again (a second trim, to handle trailing spaces left after comment removal). If the result is empty, produce `null`. Apply scalar type conversion.
+6. For unquoted values: trim leading and trailing whitespace again (a second trim, to handle trailing whitespace left after comment removal). If the result is empty, produce `null`. Apply scalar type conversion.
 
 Examples:
 

@@ -2,7 +2,7 @@
 import {
 	type LimaValue, canonicalString, codepointLength, countNodes, ingestPartialValue,
 	PARTIAL_COUNT_LIMIT, PARTIAL_NAME_LENGTH_LIMIT, PARTIAL_NODE_LIMIT,
-	RESULT_NODE_LIMIT, SCALAR_LENGTH_LIMIT,
+	RESOLUTION_COPY_LIMIT, RESULT_NODE_LIMIT, SCALAR_LENGTH_LIMIT,
 } from './value.js'
 import { isValidUnquotedKey } from './key-grammar.js'
 import { validateDocument } from './document.js'
@@ -32,17 +32,52 @@ type ReferenceResourceStatus = 'valid' | 'invalid' | 'unverifiable-partials'
 const referenceResourceStatuses = new WeakMap<Map<string, PositionedValue>, Exclude<ReferenceResourceStatus, 'unverifiable-partials'>>()
 
 type SourceDiagnostic = LimaDiagnostic & { line: number; offset: number }
-type Context = { diagnostics: SourceDiagnostic[]; cache?: WeakMap<PositionedValue, Map<number, Resolution>> }
+type Context = {
+	diagnostics: SourceDiagnostic[]
+	cache?: WeakMap<PositionedValue, Map<number, Resolution>>
+	copied: number
+	overflowed: boolean
+	earliestInsertion: InsertedAt | null
+}
 type Resolution = { value: PositionedValue; complete: boolean }
 
 /** Copies a pure-reference target and stamps the new insertion without
  * discarding provenance already attached to the copied root (R-112). */
-const copyWithInsertion = (target: PositionedValue, insertedAt: InsertedAt): PositionedValue => {
+const copyWithInsertion = (target: PositionedValue, insertedAt: InsertedAt, ctx: Context): PositionedValue => {
+	const earliest = ctx.earliestInsertion
+	ctx.earliestInsertion = earliest === null ? insertedAt : earliestParticipant([earliest, insertedAt])
+	if (!ctx.overflowed) {
+		ctx.copied += countPositioned(target)
+		ctx.overflowed = ctx.copied > RESOLUTION_COPY_LIMIT
+	}
+	// the result is lost by now: resolution only goes on to see the earliest insertion
+	if (ctx.overflowed) return { kind: 'null', line: 0 }
 	const copy = deepCopyPositioned(target)
 	const priorInsertions = copy.insertedAt === undefined
 		? copy.priorInsertions
 		: [...(copy.priorInsertions ?? []), copy.insertedAt]
 	return { ...copy, insertedAt, priorInsertions }
+}
+
+const countPositioned = (v: PositionedValue): number => {
+	let count = 1
+	if (v.kind === 'array') for (const item of v.items) count += countPositioned(item)
+	if (v.kind === 'mapping') for (const child of v.entries.values()) count += countPositioned(child)
+	return count
+}
+
+const newContext = (cache?: Context['cache']): Context => ({
+	diagnostics: [], copied: 0, overflowed: false, earliestInsertion: null, ...(cache ? { cache } : {}),
+})
+
+/** The error of a document whose references would copy past RESOLUTION_COPY_LIMIT: that of an oversized result. */
+const overflowError = (ctx: Context): LimaError => {
+	const winner = ctx.earliestInsertion
+	return new LimaError({
+		code: 'RESOURCE_LIMIT', line: winner?.line ?? 1, token: winner?.token,
+		...(winner?.offset !== undefined ? { column: winner.offset + 1 } : {}),
+		message: `Lima: result exceeds maximum size of ${RESULT_NODE_LIMIT} total nodes at line ${winner?.line ?? 1}`,
+	})
 }
 
 const addDiagnostic = (ctx: Context, diagnostic: Omit<SourceDiagnostic, 'offset'>, offset = 0): void => {
@@ -94,7 +129,7 @@ export const resolveDocumentReferenceTarget = (
 	const resourceStatus = documentReferenceResourceStatus(parsed)
 	if (resourceStatus === 'unverifiable-partials') return { status: resourceStatus }
 	if (resourceStatus === 'invalid') return { status: 'unresolved' }
-	const ctx: Context = { diagnostics: [], cache: new WeakMap() }
+	const ctx = newContext(new WeakMap())
 	const stack = new Set<PositionedValue>([target.root])
 	const resolved = resolveNode(
 		target.root,
@@ -104,7 +139,7 @@ export const resolveDocumentReferenceTarget = (
 		TARGET_EDGE_BUDGET,
 		stack,
 	)
-	if (!resolved.complete || ctx.diagnostics.length > 0) return { status: 'unresolved' }
+	if (!resolved.complete || ctx.overflowed || ctx.diagnostics.length > 0) return { status: 'unresolved' }
 	const selected = lookupPath(resolved.value, target.tail)
 	return selected === undefined
 		? { status: 'unresolved' }
@@ -165,9 +200,9 @@ const documentReferenceResourceStatus = (
 	const { document } = parsed
 	const cached = referenceResourceStatuses.get(document)
 	if (cached !== undefined) return cached
-	const ctx: Context = { diagnostics: [], cache: new WeakMap() }
+	const ctx = newContext(new WeakMap())
 	const resolved = resolveDocument(document, new Map(), ctx)
-	let valid = !ctx.diagnostics.some((diagnostic) => diagnostic.code === 'RESOURCE_LIMIT')
+	let valid = !ctx.overflowed && !ctx.diagnostics.some((diagnostic) => diagnostic.code === 'RESOURCE_LIMIT')
 	if (valid) {
 		try {
 			assertResolvedDocumentResourceLimits(resolved)
@@ -271,7 +306,7 @@ const resolveNodeUncached = (
 			// `partialToPositioned` never annotates partial targets: partials are
 			// inert and have no source token before this document insertion.
 			return {
-				value: copyWithInsertion(target, { line: pure.line, offset: pure.offset, token: pure.token }),
+				value: copyWithInsertion(target, { line: pure.line, offset: pure.offset, token: pure.token }, ctx),
 				complete: true,
 			}
 		}
@@ -284,7 +319,7 @@ const resolveNodeUncached = (
 		return {
 			// `selected` may itself be the root inserted by an earlier reference;
 			// both it and this outer copy participate in final-structure errors.
-			value: copyWithInsertion(selected, { line: pure.line, offset: pure.offset, token: pure.token }),
+			value: copyWithInsertion(selected, { line: pure.line, offset: pure.offset, token: pure.token }, ctx),
 			complete: true,
 		}
 	}
@@ -325,6 +360,8 @@ const resolveNodeUncached = (
 			code: 'RESOURCE_LIMIT', line: first.line, token: first.token,
 			message: `Lima: scalar exceeds maximum length of ${SCALAR_LENGTH_LIMIT} code points at line ${first.line}`,
 		}, first.offset)
+		// the document has failed; a value that holds this one still exceeds the limit, and none grows further
+		output = output.slice(0, 2 * (SCALAR_LENGTH_LIMIT + 1))
 	}
 	return { value: { ...node, value: output, references2: unresolvedTokens }, complete }
 }
@@ -432,8 +469,9 @@ const parseInternal = <T extends Record<string, unknown> = Meta>(
 		return parseCoreValidated<T>(frontMatter, options as CoreOptions | undefined)
 	}
 	const document = parseCoreWithPositions(frontMatter, { strict: options?.strict ?? false, onWarning: options?.onWarning })
-	const ctx: Context = { diagnostics: [], ...(useResolveCache ? { cache: new WeakMap() } : {}) }
+	const ctx = newContext(useResolveCache ? new WeakMap() : undefined)
 	const resolved = resolveDocument(document, partials, ctx)
+	if (ctx.overflowed) throw overflowError(ctx)
 	if (options?.strict) for (const value of resolved.values()) scanUnresolved(value, ctx)
 	if (ctx.diagnostics.length > 0) {
 		ctx.diagnostics.sort((a, b) => a.line - b.line || a.offset - b.offset)
