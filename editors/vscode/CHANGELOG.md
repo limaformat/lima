@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.4.0] — 2026-11-02
+## [0.4.1] — 2026-11-02
 
 The bundled parser is that of `@limaformat/lima` 0.7.1, with the fixes from
 the security review of 0.7. The version now matches the language server's.

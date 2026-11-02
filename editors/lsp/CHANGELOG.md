@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- The bundled parser is that of `@limaformat/lima` 0.7.1, with the fixes from
+  the security review of 0.7.
+
 ## 0.4.0
 
 - Diagnostics follow Lima Core 1.2 and References 2.1: the bundled parser is
