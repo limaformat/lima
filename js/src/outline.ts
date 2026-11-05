@@ -213,7 +213,9 @@ export function outline(frontMatter: string): LimaOutline {
 					(entry.exact ? s.line === entry.line : s.line <= entry.line) &&
 					(entry.exact || entry.sequence || keyColumn === undefined ||
 						s.start - (source.lastIndexOf('\n', s.start - 1) + 1) === keyColumn))
-				if (!site) throw new Error(`Lima outline: missing source site for ${JSON.stringify(entry.key)} at line ${entry.line}`)
+				// Incomplete content can produce a tree entry without a readable
+				// physical key. Omit that entry and its children, then keep walking.
+				if (!site) continue
 				keyColumn ??= site.start - (source.lastIndexOf('\n', site.start - 1) + 1)
 				if (entry.exact) checkDuplicateKey(seen.has(entry.key), entry.key, site.line, ctx)
 				seen.add(entry.key)

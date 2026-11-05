@@ -66,6 +66,24 @@ describe('outline', () => {
 		expect(result.keys.map((k) => k.key)).toEqual(['before', 'after'])
 		expect(result.diagnostics).toMatchObject([{ code: 'UNRECOGNIZED_LINE', line: 2 }])
 	})
+	test.each([
+		{ source: 'p:\n  a: 1\n   b: 2\n  : ', paths: [['p'], ['p', 'a']] },
+		{ source: 'items:\n  - k1:#\n   k2: v\n', paths: [['items']] },
+		{ source: 's:\n  - name:# A\n    -', paths: [['s']] },
+		{ source: 'l:\n  - a:# | # c\n    : # c\n', paths: [['l']] },
+		{ source: 'p:\n :\r\n[ 1ü\n', paths: [['p']] },
+		{ source: 'a:\n  k:\n    :\n      k:\n', paths: [['a'], ['a', 'k']] },
+	])('skips entries without source sites: $source', ({ source, paths: expected }) => {
+		expect(paths(source)).toEqual([...expected])
+		// Dropping an unreadable entry also drops its children, but neither
+		// preceding keys nor later siblings lose their source positions.
+		expect(paths(source + '\nsibling: ok\n')).toEqual([...expected, ['sibling']])
+	})
+	test('a missing nested source site does not hide the next nested sibling', () => {
+		expect(paths('a:\n  k:\n    :\n      k:\n  sibling: ok\n')).toEqual([
+			['a'], ['a', 'k'], ['a', 'sibling'],
+		])
+	})
 	test('duplicates retain each occurrence and report strict errors and later warnings', () => {
 		const result = outline('a: 1\na: 2\nb: 3\nb: 4')
 		expect(result.keys.map((k) => k.key)).toEqual(['a', 'a', 'b', 'b'])
@@ -139,11 +157,13 @@ describe('outline', () => {
 })
 
 const corpusRoot = new URL('../../corpus', import.meta.url).pathname
+const corpusInputs: { id: string; input: string }[] = []
 for (const file of new Glob('*/*.json').scanSync(corpusRoot)) {
 	if (file.startsWith('manifests/') || file.startsWith('schema/') || file.startsWith('runner/')) continue
 	const loaded = loadCase(`${corpusRoot}/${file}`)
 	if (!loaded.ok) throw new Error(`${loaded.sourceFile}: ${loaded.errors.join(', ')}`)
 	const { id, input } = loaded.case
+	corpusInputs.push({ id, input })
 	test(`outline corpus: ${id}`, () => {
 		try { parse(input, { strict: true }) } catch (error) {
 			if (!(error instanceof LimaError)) throw error
@@ -169,3 +189,39 @@ for (const file of new Glob('*/*.json').scanSync(corpusRoot)) {
 		visit(parseCore(input), [])
 	})
 }
+
+test('seeded corpus edits never throw and retain valid physical spans', () => {
+	let seed = 0x4c494d41
+	const random = (limit: number): number => {
+		seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
+		return Math.floor(seed / 0x100000000 * limit)
+	}
+	const insertions = [':', ' ', '\n', '#', '"', "'", '{', '}', '[', ']', ',', '-', '|', '\t']
+	// Sorting makes the seed independent of filesystem enumeration order.
+	for (const { id, input } of [...corpusInputs].sort((a, b) => a.id.localeCompare(b.id))) {
+		for (let sample = 0; sample < 4; sample++) {
+			let edited = input
+			const edits = 1 + random(3)
+			for (let edit = 0; edit < edits; edit++) {
+				const operation = random(3)
+				const position = random(edited.length + 1)
+				if (operation === 0) edited = edited.slice(0, position) + insertions[random(insertions.length)] + edited.slice(position)
+				else if (operation === 1) edited = edited.slice(0, position) + edited.slice(position + 1 + random(4))
+				else edited = edited.slice(0, position)
+			}
+			const context = `${id}, sample ${sample}, input ${JSON.stringify(edited)}`
+			// Calling outline directly also fails the test if it throws.
+			const result = outline(edited)
+			const physical = edited.startsWith('\uFEFF') ? edited.slice(1) : edited
+			for (const key of result.keys) {
+				expect(stripKeyQuotes(physical.slice(key.span.start.offset, key.span.end.offset)), context).toBe(key.key)
+			}
+			for (const span of [...result.keys.flatMap((key) => [key.span, key.separator]), ...result.comments]) {
+				expect(Number.isInteger(span.start.offset) && Number.isInteger(span.end.offset), context).toBe(true)
+				expect(span.start.offset, context).toBeGreaterThanOrEqual(0)
+				expect(span.end.offset, context).toBeGreaterThanOrEqual(span.start.offset)
+				expect(span.end.offset, context).toBeLessThanOrEqual(physical.length)
+			}
+		}
+	}
+})
