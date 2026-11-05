@@ -12,6 +12,12 @@ carry their own.
 
 ## [Unreleased]
 
+### Added
+
+- `outline(input)` returns decoded key paths, key and separator spans, comments,
+  and parser diagnostics for editors. Positions use UTF-16 code units in the
+  BOM-free physical input, with tolerant recovery for unfinished documents.
+
 ## [0.7.1] — 2026-10-31
 
 ### Security

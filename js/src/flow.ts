@@ -67,7 +67,7 @@ const trimEnd = (source: string, start: number, end: number): number => {
 }
 
 /** Stateful comma-item cursor over a flow container's original string. */
-class FlowCursor {
+export class FlowCursor {
 	itemStart = 0
 	itemEnd = 0
 	private nextStart: number
@@ -143,7 +143,7 @@ export const parseFlowSequence = <V, M>(val: string, ctx: ParseContext, line: nu
  * first `: ` that is not inside a quoted key (§5.1). Returns -1 when the
  * item has no separator.
  */
-const flowItemSeparator = (val: string, start: number, end: number): number => {
+export const flowItemSeparator = (val: string, start: number, end: number): number => {
 	let scan = start
 	if (val.charCodeAt(start) === 34 || val.charCodeAt(start) === 39) {
 		// §5.2: a single-quoted key is literal, so its first `'` closes.

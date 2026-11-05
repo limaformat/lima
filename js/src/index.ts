@@ -16,3 +16,5 @@ export { parseCore, type CoreOptions, type Diagnostic } from './core.js'
 export { LimaError, type LimaDiagnostic, type LimaDiagnosticCode } from './errors.js'
 export { parseReferences, parse, type ParseMode, type ParseOptions } from './references2.js'
 export type ReferencesOptions = import('./references2.js').ParseOptions
+
+export { outline, type LimaPoint, type LimaSpan, type LimaOutlineKey, type LimaOutline } from './outline.js'

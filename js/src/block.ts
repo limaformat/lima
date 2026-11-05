@@ -188,7 +188,7 @@ const unrecognizedKeyLine = (line: number, trimmed: string): LimaError => new Li
 })
 
 /** Shared block grammar consuming one mutable physical-line cursor. */
-const parseCursorBlock = <V, M>(
+export const parseCursorBlock = <V, M>(
 	cursor: BlockCursor, baseIndent: number, ctx: ParseContext, baseLine: number,
 	builder: ValueBuilder<V, M>, compact = false,
 ): V | null => {
