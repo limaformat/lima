@@ -61,7 +61,7 @@ word_counts:
     lima_core_ratio_to_toml: 2.5
     yaml_ratio_to_lima_core: 2.1
   implementations:
-    lima_core_code: 8655
+    lima_core_code: 8658
     lima_core_comments: 5390
     lima_core_comment_percentage: 38.4
     lima_references_code: 4330
@@ -72,11 +72,11 @@ word_counts:
     js_yaml_tag_implementations: 21
     js_yaml_exposed_schemas: 4
 package_sizes:
-  lima_npm_tarball_bytes: 73612
-  lima_npm_tarball_kilobytes_decimal: 73.6
+  lima_npm_tarball_bytes: 78635
+  lima_npm_tarball_kilobytes_decimal: 78.6
   js_yaml_npm_tarball_bytes: 338050
   js_yaml_npm_tarball_kilobytes_decimal: 338
-  js_yaml_ratio_to_lima: 4.6
+  js_yaml_ratio_to_lima: 4.3
 differential_test:
   seeds: 4
   documents_per_seed: 25000
