@@ -12,6 +12,8 @@ carry their own.
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-11-05
+
 ### Added
 
 - `outline(input)` returns decoded key paths, key and separator spans, comments,

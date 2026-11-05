@@ -1,6 +1,6 @@
 [package]
 name = "lima"
-version = "0.7.1"
+version = "0.8.0"
 edition = "2021"
 description = "Lima frontmatter parser — LIMA Is Metadata Annotation"
 license = "ISC"
