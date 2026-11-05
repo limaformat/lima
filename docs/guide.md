@@ -434,6 +434,7 @@ References 2.1 adds (Core §10.1 + References §7):
 ```ts
 import { parseCore, type CoreOptions } from '@limaformat/lima'
 import { parse, parseReferences, type ParseOptions, type ParseMode } from '@limaformat/lima'
+import { outline, type LimaOutline } from '@limaformat/lima'
 ```
 
 `parseCore` and `parse` both take
@@ -478,6 +479,22 @@ code should use `parse`.
 `parse(input, { mode: 'core' })` uses the same reference-unaware path as
 `parseCore`. Supplying `partials` together with `mode: 'core'` throws
 before parsing begins.
+
+**`outline(input)`** — where each key, comment and error stands in the
+source, for editors. It never throws for content: an unfinished line leaves
+the keys below it in place.
+
+```ts
+import { outline } from '@limaformat/lima'
+
+const { keys, comments, diagnostics } = outline('Autor:in: Michael # byline\n')
+keys[0].key         // 'Autor:in'
+keys[0].span.start  // { line: 1, column: 1, offset: 0 }
+```
+
+Spans are half-open; lines and columns start at 1, and columns and offsets
+count UTF-16 code units in the input without a leading BOM. `diagnostics`
+holds what a strict `parse` would report. JavaScript only.
 
 **Duplicate keys never go to `console.warn`** — or any other implicit
 output channel. Diagnostics are only ever delivered through `onWarning`;
