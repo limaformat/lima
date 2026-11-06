@@ -23,14 +23,15 @@ mean repeating that reconstruction.
 - **Core vs. References: what each entry point actually reaches, not file
   boundaries.** A shared file (`value.ts`, `core.ts`, `scalars.ts`,
   `block.ts`, `flow.ts`) contributes only the top-level declarations a given
-  entry point reaches — not the whole file. Three References 2.0 §2.4
+  entry point reaches — not the whole file. Four References 2.0 §2.4
   source-position helpers that `parseCore` never executes —
-  `stripCommentKeepEscapes` and `physicalRaw` (only reached inside a
+  `stripCommentKeepEscapes`, its `commentStart` reader, and `physicalRaw` (only reached inside a
   `wantSource` branch that is always false on the `parseCore` path) and
   `rawOffsetOf` (behind an early `source === undefined` return) — live in
   shared parser files but count as References. `inlineSource` and
   `elementSource` stay in Core: `parseCore` does call them, they just
-  return `undefined` immediately when there is no positioned source.
+  return `undefined` immediately when there is no positioned source. Outline-only
+  reporting helpers are excluded from both implementation buckets.
 - **js-yaml scope: `load()`'s transitive imports only** — parser,
   constructor, and every schema and tag module statically reachable from
   `load()`. `schema.ts` imports all four exposed schemas' tag modules
@@ -75,11 +76,11 @@ Current as of Core <!-- facts:language.core_version -->1.2<!-- /facts --> and `@
 |---|---:|
 | Lima Core <!-- facts:language.core_version -->1.2<!-- /facts --> specification | <!-- facts:word_counts.specifications.lima_core -->10,444<!-- /facts --> |
 | Lima References <!-- facts:language.references_version -->2.1<!-- /facts --> specification | <!-- facts:word_counts.specifications.lima_references -->3,189<!-- /facts --> |
-| Lima Core implementation code | <!-- facts:word_counts.implementations.lima_core_code -->8,658<!-- /facts --> |
-| Lima Core implementation comments | <!-- facts:word_counts.implementations.lima_core_comments -->5,390<!-- /facts --> |
-| Lima References additions code | <!-- facts:word_counts.implementations.lima_references_code -->4,330<!-- /facts --> |
-| Lima References additions comments | <!-- facts:word_counts.implementations.lima_references_comments -->1,506<!-- /facts --> |
-| npm tarball (`@limaformat/lima` <!-- facts:packages.version -->0.8.0<!-- /facts -->) | <!-- facts:package_sizes.lima_npm_tarball_bytes -->78,644<!-- /facts --> bytes (<!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->78.6<!-- /facts --> KB) |
+| Lima Core implementation code | <!-- facts:word_counts.implementations.lima_core_code -->8,869<!-- /facts --> |
+| Lima Core implementation comments | <!-- facts:word_counts.implementations.lima_core_comments -->5,373<!-- /facts --> |
+| Lima References additions code | <!-- facts:word_counts.implementations.lima_references_code -->4,352<!-- /facts --> |
+| Lima References additions comments | <!-- facts:word_counts.implementations.lima_references_comments -->1,518<!-- /facts --> |
+| npm tarball (`@limaformat/lima` <!-- facts:packages.version -->0.8.0<!-- /facts -->) | <!-- facts:package_sizes.lima_npm_tarball_bytes -->79,261<!-- /facts --> bytes (<!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->79.3<!-- /facts --> KB) |
 
 ## Calibration
 
@@ -142,7 +143,7 @@ dual-builder split changes shape again.
 
 Scripted by `scripts/facts.ts`: from `js/`, first run `bun run build`, then
 the facts script runs `npm pack --ignore-scripts --dry-run --json` and reads
-`.size`. For `@limaformat/lima` <!-- facts:packages.version -->0.8.0<!-- /facts --> that is <!-- facts:package_sizes.lima_npm_tarball_bytes -->78,644<!-- /facts --> bytes, i.e. <!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->78.6<!-- /facts --> KB (decimal, the
+`.size`. For `@limaformat/lima` <!-- facts:packages.version -->0.8.0<!-- /facts --> that is <!-- facts:package_sizes.lima_npm_tarball_bytes -->79,261<!-- /facts --> bytes, i.e. <!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->79.3<!-- /facts --> KB (decimal, the
 same unit as the js-yaml figure below). The installed, exactly pinned
 js-yaml <!-- facts:word_counts.implementations.js_yaml_version -->5.2.3<!-- /facts --> dependency is packed with the same command and measures
 <!-- facts:package_sizes.js_yaml_npm_tarball_bytes -->338,050<!-- /facts --> bytes (<!-- facts:package_sizes.js_yaml_npm_tarball_kilobytes_decimal -->338<!-- /facts --> KB). The

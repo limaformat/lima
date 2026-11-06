@@ -441,6 +441,25 @@ export const unescapeDQ = (s: string, strict = false, line = 0): string => {
 	})
 }
 
+/** UTF-16 offset of the first unescaped, unquoted hash, or -1. */
+export const commentStart = (val: string): number => {
+	let quote = 0
+	for (let i = 0; i < val.length; i++) {
+		const cc = val.charCodeAt(i)
+		if (quote) {
+			if (cc === 92) i++
+			else if (cc === quote) quote = 0
+		} else if (cc === 34 || cc === 39) {
+			quote = cc
+		} else if (cc === 92 && val.charCodeAt(i + 1) === 35) {
+			i++
+		} else if (cc === 35) {
+			return i
+		}
+	}
+	return -1
+}
+
 /**
  * The value text with a trailing `#` comment removed, but with `\#`
  * escapes left as written. This is the *physical* form a References 2.0
@@ -454,21 +473,8 @@ export const unescapeDQ = (s: string, strict = false, line = 0): string => {
  * use `is_trim_whitespace` here, not a host `trim_end` or `" \t"`.
  */
 export const stripCommentKeepEscapes = (val: string): string => {
-	let quote = 0
-	for (let i = 0; i < val.length; i++) {
-		const cc = val.charCodeAt(i)
-		if (quote) {
-			if (cc === 92) i++
-			else if (cc === quote) quote = 0
-		} else if (cc === 34 || cc === 39) {
-			quote = cc
-		} else if (cc === 92 && val.charCodeAt(i + 1) === 35) {
-			i++
-		} else if (cc === 35) {
-			return val.slice(0, i).trimEnd()
-		}
-	}
-	return val
+	const start = commentStart(val)
+	return start === -1 ? val : val.slice(0, start).trimEnd()
 }
 
 /**

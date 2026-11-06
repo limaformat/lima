@@ -1,17 +1,17 @@
 {
   "buckets": {
     "lima-core-1.1": {
-      "description": "Everything reachable from parseCore() — the nativeBuilder fast path. Three References 2.0 §2.4 positioned-source helpers that parseCore never executes (they are only reached inside a `wantSource` / `source === undefined` guard that is always false/undefined on this path) are attributed to References 2.0 even though they live in shared files: `stripCommentKeepEscapes`, `physicalRaw`, `rawOffsetOf`. `inlineSource` and `elementSource` stay here — parseCore does call them (they return `undefined` immediately when there is no positioned source). Run with --root pointed at the repo root (the default).",
+      "description": "Everything reachable from parseCore() — the nativeBuilder fast path. The References 2.0 §2.4 positioned-source helpers that parseCore never executes (they are only reached inside a `wantSource` / `source === undefined` guard that is always false/undefined on this path) are attributed to References 2.0 even though they live in shared files: `stripCommentKeepEscapes`, `commentStart`, `physicalRaw`, `rawOffsetOf`. Outline-only reporting helpers in the shared reader files are excluded as well. `inlineSource` and `elementSource` stay here — parseCore does call them (they return `undefined` immediately when there is no positioned source). Run with --root pointed at the repo root (the default).",
       "entries": [
-        { "file": "js/src/block.ts", "exclude": ["physicalRaw"] },
-        { "file": "js/src/flow.ts", "exclude": ["rawOffsetOf"] },
+        { "file": "js/src/block.ts", "exclude": ["physicalRaw", "sourceKeyReader", "sourceSequenceReader"] },
+        { "file": "js/src/flow.ts", "exclude": ["rawOffsetOf", "sourceKeyReader", "sourceValueReader", "flowValueReader"] },
         { "file": "js/src/normalize.ts" },
         { "file": "js/src/errors.ts" },
         { "file": "js/src/scanner.ts" },
         { "file": "js/src/structure.ts" },
         { "file": "js/src/builder.ts" },
         { "file": "js/src/chars.ts" },
-        { "file": "js/src/block-cursor.ts" },
+        { "file": "js/src/block-cursor.ts", "exclude": ["SourceBlockCursor"] },
         {
           "file": "js/src/value.ts",
           "exclude": [
@@ -30,7 +30,7 @@
         },
         {
           "file": "js/src/scalars.ts",
-          "exclude": ["InsertedAt", "PositionedValue", "hasActiveReferences2", "positionedBuilder", "toPlainValue", "LNull", "scanReferenceTokens2", "stripCommentKeepEscapes"]
+          "exclude": ["InsertedAt", "PositionedValue", "hasActiveReferences2", "positionedBuilder", "toPlainValue", "LNull", "scanReferenceTokens2", "stripCommentKeepEscapes", "commentStart"]
         },
         { "file": "js/src/index.ts", "include": ["parseCore"] }
       ]
@@ -51,7 +51,7 @@
         { "file": "js/src/core.ts", "include": ["parseCoreWithPositions", "depthOfPositioned", "toNativeFromPositioned"] },
         {
           "file": "js/src/scalars.ts",
-          "include": ["InsertedAt", "PositionedValue", "hasActiveReferences2", "positionedBuilder", "toPlainValue", "LNull", "scanReferenceTokens2", "stripCommentKeepEscapes"]
+          "include": ["InsertedAt", "PositionedValue", "hasActiveReferences2", "positionedBuilder", "toPlainValue", "LNull", "scanReferenceTokens2", "stripCommentKeepEscapes", "commentStart"]
         },
         { "file": "js/src/block.ts", "include": ["physicalRaw"] },
         { "file": "js/src/flow.ts", "include": ["rawOffsetOf"] },

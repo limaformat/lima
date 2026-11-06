@@ -139,6 +139,78 @@ describe('outline', () => {
 		expect(result.keys).toEqual([])
 		expect(result.comments).toEqual([])
 	})
+	test('reader positions cross BOM, CRLF, tabs, sequence keys and escaped hashes in flows', () => {
+		const source = '\uFEFFr:\r\n\t- a: [{x: v\\#hash, "😀": 2}, {last: 3}] # tail  \r\n\t  end: 4\r\n'
+		const physical = source.slice(1)
+		const result = outline(source)
+		expect(result.keys.map((key) => key.path)).toEqual([
+			['r'], ['r', '0', 'a'], ['r', '0', 'a', '0', 'x'],
+			['r', '0', 'a', '0', '😀'], ['r', '0', 'a', '1', 'last'], ['r', '0', 'end'],
+		])
+		const tokens = ['r', 'a', 'x', '"😀"', 'last', 'end']
+		for (const [index, token] of tokens.entries()) {
+			const start = physical.indexOf(token + ':')
+			const lineStart = physical.lastIndexOf('\n', start) + 1
+			const line = index === 0 ? 1 : index === tokens.length - 1 ? 3 : 2
+			expect(result.keys[index].span).toEqual({
+				start: { line, column: start - lineStart + 1, offset: start },
+				end: { line, column: start - lineStart + token.length + 1, offset: start + token.length },
+			})
+			expect(physical.slice(result.keys[index].separator.start.offset, result.keys[index].separator.end.offset))
+				.toBe(index === 0 ? ':' : ': ')
+		}
+		expect(result.comments.map((span) => physical.slice(span.start.offset, span.end.offset))).toEqual(['# tail  '])
+	})
+	test('the advancing reader reports comments on ignored lines and after scalar dedent', () => {
+		const source = '# before\r\nr:\r\n  text: |\r\n    # literal\r\n  next: x # inline  \r\n   ignored # skipped\r\n# after\r\n'
+		const result = outline(source)
+		expect(result.comments.map((span) => [span.start.line, source.slice(span.start.offset, span.end.offset)]))
+			.toEqual([[1, '# before'], [5, '# inline  '], [6, '# skipped'], [7, '# after']])
+		expect(result.keys.map((key) => key.path)).toEqual([['r'], ['r', 'text'], ['r', 'next']])
+	})
+	test('recovery discards unfinished flow key events and retains every later duplicate', () => {
+		const count = 2048
+		const source = 'r:\n' + '  bad: {x: []}\n'.repeat(count) + '  after: 1\n'
+		const result = outline(source)
+		expect(result.keys.length).toBe(count + 2)
+		expect(result.keys.slice(1, -1).every((key) => key.key === 'bad')).toBe(true)
+		expect(result.keys.at(-1)?.path).toEqual(['r', 'after'])
+		expect(result.diagnostics.length).toBe(count)
+		expect(result.diagnostics[0]).toMatchObject({ code: 'INVALID_FLOW_SYNTAX', line: 2 })
+		expect(result.diagnostics.at(-1)).toMatchObject({ code: 'DUPLICATE_KEY', line: count + 1 })
+	})
+	test('unreadable whole sequence items do not shift later item paths', () => {
+		const source = 'r:\n  - [[], 1]\n  - a: 1\n  - {bad: []}\n  - a: 2\n'
+		expect(paths(source)).toEqual([['r'], ['r', '0', 'a'], ['r', '1', 'a']])
+	})
+	test('a wide mapping retains all reader positions in source order', () => {
+		const source = 'r:\n' + Array.from({ length: 4000 }, (_, i) => `  k${i}: 1\n`).join('')
+		const result = outline(source)
+		expect(result.diagnostics).toEqual([])
+		expect(result.keys.length).toBe(4001)
+		for (let i = 1; i < result.keys.length; i++) {
+			expect(result.keys[i].path).toEqual(['r', `k${i - 1}`])
+			expect(result.keys[i].span.start.line).toBe(i + 1)
+			expect(result.keys[i].span.start.offset).toBeGreaterThan(result.keys[i - 1].span.end.offset)
+		}
+	})
+	test('a wide flow mapping reports physical offsets without reference anchors', () => {
+		const source = 'r: {first: escaped\\#hash, ' + Array.from({ length: 4000 }, (_, i) => `k${i}: 1`).join(', ') + '}\n'
+		const result = outline(source)
+		expect(result.diagnostics).toEqual([])
+		expect(result.keys.length).toBe(4002)
+		const last = result.keys.at(-1)!
+		expect(last.path).toEqual(['r', 'k3999'])
+		expect(last.span.start.offset).toBe(source.lastIndexOf('k3999'))
+		expect(last.span.end.offset).toBe(last.span.start.offset + 5)
+	})
+	test('an empty quoted continuation leaves no unmatched key event for its parent', () => {
+		const source = 'r:\n  outer:\n    - a: 1\n      "": 2\n      after: 3\n  sibling: 4\n'
+		expect(paths(source)).toEqual([
+			['r'], ['r', 'outer'], ['r', 'outer', '0', 'a'], ['r', 'outer', '0', ''],
+			['r', 'outer', '0', 'after'], ['r', 'sibling'],
+		])
+	})
 	test('malformed editor input never throws', () => {
 		let seed = 42
 		const random = (n: number) => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed % n }

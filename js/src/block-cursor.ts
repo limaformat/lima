@@ -1,4 +1,6 @@
 import { isTrimWhitespace } from './chars.js'
+import { commentStart } from './scalars.js'
+import type { SourcePositions } from './builder.js'
 
 /**
  * Allocation-free physical-line cursor over one top-level block extent.
@@ -68,6 +70,22 @@ export class BlockCursor {
 		return true
 	}
 
+	/** Consume the physical body of a block scalar, leaving the first dedented line. */
+	scalarLines(keyIndent: number): string[] {
+		this.next()
+		return this.scalarBody(keyIndent)
+	}
+
+	protected scalarBody(keyIndent: number): string[] {
+		const lines: string[] = []
+		while (this.valid) {
+			if (this.lineEnd - this.lineStart > this.asciiIndent && this.asciiIndent <= keyIndent) break
+			lines.push(this.source.slice(this.lineStart, this.lineEnd))
+			this.next()
+		}
+		return lines
+	}
+
 	get empty(): boolean {
 		return this.contentStart === this.lineEnd
 	}
@@ -76,4 +94,36 @@ export class BlockCursor {
 		return this.source.charCodeAt(this.contentStart)
 	}
 
+}
+
+/** Reports comments only as lines are consumed, never inside a scalar body. */
+export class SourceBlockCursor extends BlockCursor {
+	private commentFrom = 0
+	private scalar = false
+
+	constructor(source: string, start: number, end: number, private readonly positions: SourcePositions) {
+		super(source, start, end)
+	}
+
+	/** Exclude comment markers before this normalized UTF-16 offset on the current line. */
+	excludeCommentsBefore(offset: number): void {
+		this.commentFrom = offset
+	}
+
+	override next(): boolean {
+		if (this.valid && !this.scalar) {
+			const hash = commentStart(this.source.slice(this.commentFrom, this.lineEnd))
+			if (hash !== -1) this.positions.comment(this.commentFrom + hash, this.lineEnd)
+		}
+		const valid = super.next()
+		this.commentFrom = this.contentStart
+		return valid
+	}
+
+	protected override scalarBody(keyIndent: number): string[] {
+		this.scalar = true
+		const lines = super.scalarBody(keyIndent)
+		this.scalar = false
+		return lines
+	}
 }

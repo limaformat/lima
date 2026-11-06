@@ -3,7 +3,7 @@
 import { checkKeyLength, checkDuplicateKey, type ParseContext } from './normalize.js'
 import { parseQuotedOrTyped, parseScalarValue, stripKeyQuotes, closingQuoteIndex, isValidKey } from './scalars.js'
 import { LimaError } from './errors.js'
-import type { ValueBuilder } from './builder.js'
+import type { SourcePositions, ValueBuilder } from './builder.js'
 import type { ReferenceSource } from './reference-tokens2.js'
 import { isTrimWhitespace } from './chars.js'
 
@@ -106,7 +106,7 @@ const isNestedFlowConstruct = (item: string): boolean =>
 	(item.charCodeAt(0) === 91 && item.charCodeAt(item.length - 1) === 93) ||
 	(item.charCodeAt(0) === 123 && item.charCodeAt(item.length - 1) === 125)
 
-export const parseFlowSequence = <V, M>(val: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>, source?: ReferenceSource): V[] | null => {
+export const parseFlowSequence = <V, M>(val: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>, source?: ReferenceSource, offset = 0): V[] | null => {
 	if (val.charCodeAt(0) !== 91 || val.charCodeAt(val.length - 1) !== 93) return null
 	const innerStart = trimStart(val, 1, val.length - 1)
 	const innerEnd = trimEnd(val, innerStart, val.length - 1)
@@ -130,7 +130,7 @@ export const parseFlowSequence = <V, M>(val: string, ctx: ParseContext, line: nu
 			})
 		}
 		if (item.charCodeAt(0) === 123 && item.charCodeAt(item.length - 1) === 125) {
-			const nested = parseFlowMapping(item, ctx, line, builder, elementSource(source, val, start, end))
+			const nested = parseFlowMapping(item, ctx, line, builder, elementSource(source, val, start, end), offset + start)
 			if (nested !== null) { items.push(nested); continue }
 		}
 		items.push(parseQuotedOrTyped(item, ctx, line, builder, elementSource(source, val, start, end)))
@@ -155,10 +155,19 @@ export const flowItemSeparator = (val: string, start: number, end: number): numb
 	return sep === -1 || sep >= end ? -1 : sep
 }
 
-export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>, source?: ReferenceSource): V | null => {
+const sourceKeyReader = (positions: SourcePositions, offset: number) =>
+	(raw: string, strict: boolean, line: number, start: number, colon: number): string => {
+		const key = stripKeyQuotes(raw, strict, line)
+		positions.key(key, offset + start, offset + start + raw.length, offset + colon, line)
+		return key
+	}
+
+export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>, source?: ReferenceSource, offset = 0): V | null => {
 	if (val.charCodeAt(0) !== 123 || val.charCodeAt(val.length - 1) !== 125) return null
 	const innerStart = trimStart(val, 1, val.length - 1)
 	const innerEnd = trimEnd(val, innerStart, val.length - 1)
+	const positions = builder.sourcePositions
+	const readKey = positions ? sourceKeyReader(positions, offset) : stripKeyQuotes
 	const entries = builder.createMapping()
 	if (innerStart === innerEnd) return builder.mapping(entries, line)
 	const cursor = new FlowCursor(val, innerStart, innerEnd)
@@ -186,7 +195,7 @@ export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: num
 			// list is closed and does not cover this — same as the top level).
 			continue
 		}
-		const key = stripKeyQuotes(keyRaw, ctx.strict, line)
+		const key = readKey(keyRaw, ctx.strict, line, keyStart, colonPos)
 		checkKeyLength(key, line)
 		if (ctx.strict || ctx.onWarning !== undefined) {
 			checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
@@ -204,17 +213,27 @@ export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: num
 
 /** Parses a value that may be a flow collection, without probing both flow parsers for ordinary scalars. */
 export const parseFlowOrScalarValue = <V, M>(
-	raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>, source?: ReferenceSource,
+	raw: string, ctx: ParseContext, line: number, builder: ValueBuilder<V, M>, source?: ReferenceSource, offset = 0,
 ): V => {
 	const first = raw.charCodeAt(0)
 	if (first === 91) {
-		const sequence = parseFlowSequence(raw, ctx, line, builder, source)
+		const sequence = parseFlowSequence(raw, ctx, line, builder, source, offset)
 		if (sequence !== null) return builder.array(sequence, line)
 		return parseScalarValue(raw, ctx, line, builder, source)
 	} else if (first === 123) {
-		const mapping = parseFlowMapping(raw, ctx, line, builder, source)
+		const mapping = parseFlowMapping(raw, ctx, line, builder, source, offset)
 		if (mapping !== null) return mapping
 		return parseScalarValue(raw, ctx, line, builder, source)
 	}
 	return parseQuotedOrTyped(raw, ctx, line, builder, source)
 }
+
+/** Select recovery once, outside the block reader's key loop. */
+export const flowValueReader = (positions?: SourcePositions): typeof parseFlowOrScalarValue =>
+	positions ? sourceValueReader(positions) : parseFlowOrScalarValue
+
+// Structural values are still physical text; reference anchors would rescan
+// every flow prefix for codepoint columns that the outline never uses.
+const sourceValueReader = (positions: SourcePositions): typeof parseFlowOrScalarValue =>
+	(raw, ctx, line, builder, _source, offset) =>
+		positions.recover(() => parseFlowOrScalarValue(raw, ctx, line, builder, undefined, offset), builder.null(line))

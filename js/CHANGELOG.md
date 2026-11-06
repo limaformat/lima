@@ -12,6 +12,8 @@ carry their own.
 
 ## [Unreleased]
 
+- `outline()` now records key and comment positions in the parser readers, with linear recovery for malformed values.
+
 ## [0.8.0] — 2026-11-05
 
 ### Added

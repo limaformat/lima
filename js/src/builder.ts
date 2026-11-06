@@ -26,7 +26,26 @@
  */
 import type { ReferenceSource } from './reference-tokens2.js'
 
+/**
+ * Reader events for structural editor output. All positions are UTF-16 offsets
+ * in the normalized source; ends are exclusive, separator is the colon and
+ * line is one-based. A zero-width key denotes a tolerant entry without a
+ * physical separator; its value's events are still balanced but not emitted.
+ * Readers select reporting functions once on entry. Native/References builders
+ * never set this hook, so their key loops do no optional-sink checks.
+ */
+export interface SourcePositions {
+	key(key: string, start: number, end: number, separator: number, line: number): void
+	comment(start: number, end: number): void
+	/**
+	 * On failure, discard key events left unfinished by `read`. Return `fallback`
+	 * for non-resource LimaErrors; rethrow resource-limit and non-Lima errors.
+	 */
+	recover<T>(read: () => T, fallback: T): T
+}
+
 export interface ValueBuilder<V, M = Map<string, V>> {
+	readonly sourcePositions?: SourcePositions
 	/** Whether scalar builders need physical source anchors for editor positions. */
 	readonly positions?: boolean
 	null(line: number): V
