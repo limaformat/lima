@@ -13,6 +13,10 @@ carry their own.
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-11-06
+
+No changes in this implementation; the release changes the JavaScript package only.
+
 ## [0.8.0] — 2026-11-05
 
 No changes in this implementation; `outline()` is JavaScript-only.

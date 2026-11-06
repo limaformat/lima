@@ -12,7 +12,14 @@ carry their own.
 
 ## [Unreleased]
 
-- `outline()` now records key and comment positions in the parser readers, with linear recovery for malformed values.
+## [0.8.1] — 2026-11-06
+
+### Changed
+
+- `outline()` takes the positions of keys and comments from the parser's own readers as they read, instead of
+  matching the parsed tree to the lines afterwards. It grows linearly with its input (2,048 malformed lines in 15 ms
+  instead of 527); `parse` and `parseCore` keep their speed. For a few malformed inputs the result is now right where
+  the old matching took a key from another line.
 
 ## [0.8.0] — 2026-11-05
 
