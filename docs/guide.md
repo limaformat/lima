@@ -151,13 +151,14 @@ greater than the introducing key's — including lines starting with `#`
 (they're literal content, not comments, as long as they're still indented
 further than the key).
 
-Merge two lines into one with `^^` at the end of a line, **inside a `|`
-block only** — it has no special meaning elsewhere:
+Merge two lines into one with `^^` at the start of the continuing line,
+**inside a `|` block only** — it has no special meaning elsewhere. The line
+is joined to the one before it with a single space:
 
 ```yaml
 description: |
-  This is a very long sentence that ^^
-  continues on the next line as one.
+  This is a very long sentence that
+  ^^continues on the next line as one.
 ```
 
 There is no YAML-style `>` folded scalar — `|` + `^^` covers the same need
