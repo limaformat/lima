@@ -38,7 +38,8 @@ These constructs carry over from YAML to Lima with no rewriting needed:
 - Plain scalars, `key: value` mappings, nested mappings.
 - Block sequences (`- item`) and sequences of mapping objects.
 - Flow sequences (`[a, b, c]`) and one level of flow mapping (`{a: 1}`).
-- Comments (`#`), including `#` inside quoted strings staying literal.
+- Comments (`#`) after a space, and `#` inside quoted strings staying
+  literal. A `#` directly after other text is the exception; see below.
 - Double-quoted strings and their standard escapes (`\n`, `\t`, `\\`, `\"`,
   `\uXXXX`, …).
 - `null`/`~`/empty → `null`, `true`/`false` → boolean, plain integers and
@@ -50,6 +51,12 @@ These constructs carry over from YAML to Lima with no rewriting needed:
 These parse under both, but can produce a **different value**, not an
 error — the risky category, because nothing will visibly fail:
 
+- **A `#` directly after other text.** YAML starts a comment only at a
+  `#` after whitespace; Lima starts one at every unescaped `#` outside
+  quotes ([Core §6.1.4](lima-core-1.0-spec.md#614-unquoted-value-comment-escaping)). So
+  `link: https://example.org/page#section` is `https://example.org/page`
+  in Lima, with no error, but keeps its anchor in YAML. Quote the value or
+  write `\#`.
 - **Timestamps without a `T` separator or in a non-ISO shape.** Lima
   additionally recognises German (`DD.MM.YYYY`) and slash (`YYYY/MM/DD`)
   forms, but a YAML timestamp with a space between date and time and an
