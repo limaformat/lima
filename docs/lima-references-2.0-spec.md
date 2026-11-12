@@ -15,7 +15,9 @@ Lima Core 1.0 and, unchanged, to Core 1.1 (2026-10-28).
 
 Core 1.3 keeps a `#` that follows a character other than whitespace as text
 (Core §4). A token after such a `#`, part of a comment under Core 1.2, is an
-active token under Core 1.3: `b: ${a}#x` is an interpolation. The token
+active token under Core 1.3: `b: v#${a}` interpolates `a`. A token before it no
+longer stands alone: `b: ${a}#x`, a pure reference under Core 1.2, is an
+interpolation under Core 1.3. The token
 grammar and the resolution rules of this specification are the same under
 either Core version.
 
