@@ -7,10 +7,17 @@
 **Changes from References 2.0:** a key segment takes the characters of a Core 1.2 key (Core §5.1), and a partial name those characters and `/`, so a reference reaches every unquoted key: `${größe}`, `${autor*in}`, `$(personen/zoë)`. A text that held such a name in reference syntax and was literal in 2.0, `${größe}`, is a reference in 2.1.
 
 This document specifies the Lima References Extension 2.1. It is a normative
-addition to Lima Core 1.2 and must be read together with that specification.
-It supersedes Lima References 1.0 and 2.0 for parsers that claim References 2.1
-conformance; it does not modify Lima Core 1.2. References 2.0 was an addition
-to Lima Core 1.0 and, unchanged, to Core 1.1 (2026-10-28).
+addition to Lima Core 1.2 and, unchanged, to Lima Core 1.3 (2026-11-12), and
+must be read together with the Core specification the parser implements. It
+supersedes Lima References 1.0 and 2.0 for parsers that claim References 2.1
+conformance; it does not modify Lima Core. References 2.0 was an addition to
+Lima Core 1.0 and, unchanged, to Core 1.1 (2026-10-28).
+
+Core 1.3 keeps a `#` that follows a character other than whitespace as text
+(Core §4). A token after such a `#`, part of a comment under Core 1.2, is an
+active token under Core 1.3: `b: ${a}#x` is an interpolation. The token
+grammar and the resolution rules of this specification are the same under
+either Core version.
 
 A Lima Core parser treats all References 2.1 tokens as ordinary string content.
 A References 2.1 parser recognises only the syntax defined here. References 1.0
@@ -348,7 +355,7 @@ Core parsing followed by reference resolution as specified here. Its return
 contract is identical to `parseCore` in Lima Core §11.1.
 
 `parseCore(input, options?)` remains the explicit Core-only entry point defined
-by Lima Core 1.2. A call to `parse(input, { mode: "core" })` is
+by Lima Core §11.1. A call to `parse(input, { mode: "core" })` is
 semantically identical to `parseCore(input, options)` with the shared Core
 options: References 2.1 tokens remain literal, no partials are ingested, and no
 reference-resolution work is performed.
@@ -531,4 +538,4 @@ References 2.x is intentionally not syntax-compatible with References 1.0:
 | one-hop snapshot model | transitive resolution, maximum three edges |
 | `parseReferences` is primary | `parse` is primary; `parseReferences` is a deprecated alias |
 
-References 2.1 changes no semantics or API of Lima Core 1.2.
+References 2.1 changes no semantics or API of Lima Core 1.2 or Core 1.3.
