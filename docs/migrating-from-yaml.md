@@ -63,6 +63,11 @@ error — the risky category, because nothing will visibly fail:
   offset (`2024-03-01 09:00 +02:00`) matches none of Lima's three forms
   and becomes a **string**, not a Date. See [Types and
   dates](#types-and-dates).
+- **`True`, `Null`, `.inf`, `.nan`.** YAML reads them as a boolean, as
+  empty and as numbers; Lima reads them as text, as it reads `yes`. Of
+  these words only the lower-case `true`, `false` and `null` are not text.
+- **A version number shaped like a German date.** `version: 1.2.2024` is
+  text in YAML and the 1st of February 2024 in Lima. Quote it.
 - **Hex and octal numeric literals** (`0xFF`, `0o77`) — resolved as numbers
   by js-yaml's own *default* schema (`0xFF` → `255`, `0o77` → `63`,
   verified directly against `js-yaml`'s `CORE_SCHEMA`, not just its more
@@ -134,15 +139,16 @@ would otherwise misleadingly read "String".
 **The one confirmed divergence found by `compat/`'s own sample set:**
 YAML's single-quote escape doubles the quote (`'It''s fine'` → `It's fine`). Lima's single-quote escape is a backslash, matching its
 double-quote convention (`'It\'s fine'` → `It's fine`) — the doubling
-convention has no Lima equivalent and is **not an error**, so it fails
-silently:
+convention has no Lima equivalent. A strict reader, such as hadley, stops
+there with "non-whitespace content after closing quote"; a lenient one
+reads it silently as something else:
 
 ```yaml
 subtitle: 'It''s more complicated than you think'
 ```
 
-Under Lima this parses successfully as the literal string
-`"It''s more complicated than you think"` (quotes preserved, not
+Lenient Lima reads it as the literal string
+`"'It''s more complicated than you think'"` (quotes preserved, not
 collapsed) — reproduced directly in
 `fixtures/frontmatter-samples/14-special-characters-quoted.yaml`. Rewrite
 as `'It\'s more complicated than you think'` (backslash) or switch to a

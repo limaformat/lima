@@ -47,18 +47,29 @@ description: |
 
 - **`#` in a value starts a comment**, also inside an address: `https://example.org/page#section` is read as
   `https://example.org/page`. Write `\#`, or put the value in quotes.
-- **`yes`, `no`, `on`, `off`, `True` are text**, not yes or no; only `true` and `false` are.
-- **`01`, `+42`, `0xFF` are text**, not numbers, so nothing is read as a number that was not meant as one.
+- **`yes`, `no`, `on`, `off`, `True` are text**, not yes or no; only `true` and `false` are. `Null` and `NULL` are
+  text too; only `null`, `~` and nothing are empty.
+- **`01`, `+42`, `0xFF`, `.inf` and `.nan` are text**, not numbers, so nothing is read as a number that was not meant as
+  one. A whole number beyond `9007199254740991`, the largest every program keeps exactly, stays text with all its
+  digits.
 - **A date with a time needs the `T`**: `2026-11-02T09:00` is a date, `2026-11-02 09:00` is text.
+- **`1.2.2024` is a date**, the 1st of February 2024, as `02.11.2026` is. A version number of that shape needs quotes:
+  `version: "1.2.2024"`.
+- **A `|` block ends without a line break**, where YAML keeps one at its end.
 - **`>` is not there:** a long text is a `|` block, and `^^` joins its lines.
 - **Lines are not joined by indentation alone:** a line indented under a value without `|` is an error.
 - **No anchors, aliases or tags:** `&name`, `*name` and `!!str` are text. A value used twice is a reference (below).
 - **One document:** a `---` line is not part of Lima; the program strips the lines around front matter.
 - **A list holds no list**, and `[ ]` or `{ }` nest no deeper than one level.
 - **A key may appear once.**
+- **`''` does not stand for `'`:** `'It''s'` is an error when read strictly. Write `'It\'s'` or `"It's"`.
 
 A program may read Lima strictly, as hadley does: then every line Lima cannot place, such as a key without `: `, is an
 error with its line number, where a lenient reader would skip it.
+
+Some lines Lima reads, YAML refuses: a value with `: ` inside it (`description: Usage: run it`), a value that starts
+with `@` or `%`, and indentation with tabs. Where another program reads the same file as YAML, as tools do with an
+agent's `SKILL.md`, put such a value in quotes and indent with spaces.
 
 ## Keys in any language
 
