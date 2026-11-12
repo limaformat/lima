@@ -6,7 +6,7 @@ This document is the normative specification for Lima Core 1.3. It defines the s
 
 Lima is not a general-purpose data format. It is a small, predictable frontmatter format — the part of YAML that frontmatter actually needs, with well-defined types and no surprises.
 
-**Changes from Core 1.2:** Lima now reads four forms as YAML front matter writes them. A `#` begins a comment only at the start of a value or after a space or a tab, so `https://example.org/x#section` keeps its `#section`; `\#` still yields `#` (§4, §6.1.4, §8). An entry whose value is only a comment, `key: # note`, is a bare key, so a block may follow it, as after `key:` (§4, §7.1). A tab after the colon separates key and value as a space does (§5.1). An unquoted value that starts with `&`, `*` or `!`, which YAML reads as an anchor, an alias or a tag, throws in strict mode; non-strict mode reads it as a string, as before (§6.1.1, §10.1). So does a value that is a YAML block scalar header other than `|`, such as `>`, `|-` or `>2` (§6.1.6). A value Core 1.2 read reads the same in Core 1.3, except a value that holds a `#` after another character, which Core 1.2 cut there, and a strict value starting with `&`, `*` or `!` or a strict YAML block scalar header, which are errors now; a header followed by indented lines, an error at its first indented line in Core 1.2, is one at its own line now. Appendix E lists the forms of YAML that Lima does not read, with what a message names for each.
+**Changes from Core 1.2:** Lima now reads four forms as YAML front matter writes them. A `#` begins a comment only at the start of a value or after whitespace (§1), so `https://example.org/x#section` keeps its `#section`; `\#` still yields `#` (§4, §6.1.4, §8). An entry whose value is only a comment, `key: # note`, is a bare key, so a block may follow it, as after `key:` (§4, §7.1). A tab after the colon separates key and value as a space does (§5.1). An unquoted value that starts with `&`, `*` or `!`, which YAML reads as an anchor, an alias or a tag, throws in strict mode; non-strict mode reads it as a string, as before (§6.1.1, §10.1). So does a value that is a YAML block scalar header other than `|`, such as `>`, `|-` or `>2` (§6.1.6). A value Core 1.2 read reads the same in Core 1.3, except a value that holds a `#` after another character, which Core 1.2 cut there, and a strict value starting with `&`, `*` or `!` or a strict YAML block scalar header, which are errors now; a header followed by indented lines, an error at its first indented line in Core 1.2, is one at its own line now. Appendix E lists the forms of YAML that Lima does not read, with what a message names for each.
 
 **Changes from Core 1.1** (Core 1.2): an unquoted key may be written in any script: it starts with a letter or number of Unicode 18.0 or with `_`, and after its first character it may also hold marks, as accents can be written, and `*` and `·`, as gendered words such as `autor*in` and `autor·in` are written (§5.1). Lima delivers and compares a key as it is written, code point by code point, and normalises no Unicode (§5.3). A key Core 1.1 recognised reads the same in Core 1.2; a line whose unquoted key holds characters that Core 1.2 admits and Core 1.1 did not, and which Core 1.1 therefore did not read as an entry, is an entry now when it otherwise has the form of an entry and stands where an entry may. For clarity, §1 now says what UTF-8 implies: a string with a lone surrogate is no document, and a parser rejects it. §7.1 states what each kind of line does where it stands in one table, in place of the paragraph that said it in prose; no outcome changes. In step with it, §6.1.5 and §10.1 say that indented freetext after a bare key leaves the key `null` only when no later line of its block is a member, as Core 1.1's §7.1 already said, and §10.1 lists every other line the table has strict mode reject.
 
@@ -96,12 +96,12 @@ key:
   block content
 ```
 
-The separator between key and value is a colon followed by a space or a tab for inline values, or `:\n` (colon followed by a newline) for block values. Trailing spaces after the colon are ignored. The end of the input ends the last line as a line terminator does: a last `key:` is a bare key, `null` without a block. An entry whose value is empty after comment removal and trimming (steps 2 and 3 below) is a bare key too: `key: # note` may be followed by the key's block, as `key:` may (§7.1).
+The separator between key and value is a colon followed by a space or a tab for inline values, or `:\n` (colon followed by a newline) for block values. Whitespace after the colon is ignored. The end of the input ends the last line as a line terminator does: a last `key:` is a bare key, `null` without a block. An entry whose value is empty after comment removal and trimming (steps 2 and 3 below) is a bare key too: `key: # note` may be followed by the key's block, as `key:` may (§7.1).
 
 **Inline value processing:** The inline value scanner processes the full source value while respecting quote boundaries:
 
 1. Scan left-to-right, tracking quoted regions (single and double quotes with their respective escape rules).
-2. The first `#` outside a quoted region that is not escaped (§6.1.4) and that is the first character of the value or follows a space or a tab (U+0020, U+0009) begins a comment — it and everything following it are removed. Any other `#` is text.
+2. The first `#` outside a quoted region that is not escaped (§6.1.4) and that is the first character of the value or follows whitespace (§1) begins a comment — it and everything following it are removed. Any other `#` is text: a `#` after U+0085, which §1 does not count as whitespace, is text too.
 3. Trim leading and trailing whitespace (§1) from the remaining text.
 4. If the remaining text begins with a quote character, it is a quoted value **only** when the matching closing quote is the final remaining character after trimming. Any non-whitespace content after the closing quote is invalid: non-strict mode falls back to a string (the entire remaining text), strict mode throws.
 5. For quoted values: strip the surrounding delimiters and apply the appropriate escape processing (see §6.1.2, §6.1.3). Content inside the quotes is never trimmed or further comment-stripped.
@@ -259,7 +259,7 @@ Inside single-quoted strings, `#` is never a comment.
 
 #### 6.1.4 Unquoted Value Comment Escaping
 
-In unquoted values, `\#` is an escaped hash: the backslash is removed and `#` is kept as a literal character (not a comment). Only the immediately preceding backslash is considered — earlier backslashes are not counted. A `#` that neither starts the value nor follows a space or a tab is text without an escape (§4); `\#` yields `#` wherever it stands, so a value written for Core 1.2 reads the same.
+In unquoted values, `\#` is an escaped hash: the backslash is removed and `#` is kept as a literal character (not a comment). Only the immediately preceding backslash is considered — earlier backslashes are not counted. A `#` that neither starts the value nor follows whitespace is text without an escape (§4); `\#` yields `#` wherever it stands, so a value written for Core 1.2 reads the same.
 
 | Input | Result | Reason |
 | --- | --- | --- |
@@ -267,7 +267,7 @@ In unquoted values, `\#` is an escaped hash: the backslash is removed and `#` is
 | `text\\#rest` | `text\#rest` | second `\` escapes `#`; first `\` is literal |
 | `text\\\#rest` | `text\\#rest` | third `\` escapes `#`; first two are literal (two backslashes preserved) |
 | `text\\rest` | `text\\rest` | no `#` follows; both `\` are literal |
-| `text#rest` | `text#rest` | `#` after a character other than a space or a tab is text |
+| `text#rest` | `text#rest` | `#` after a character other than whitespace is text |
 | `text #rest` | `text` | unescaped `#` after a space starts a comment |
 | `text \#rest` | `text #rest` | `\#` → `#`, no comment |
 
@@ -534,7 +534,7 @@ Lima uses indentation to determine block structure. The following rules apply:
 
 What each kind of line does where it stands is the table below; rules 1–7 name its terms, and §6.1.5 and §7.2 define the structures it refers to. The document is a block mapping at column 0, so the rows for a block hold at the top level too.
 
-**Kinds of line.** A **blank line** holds whitespace only (§1). A **comment line** has `#` as its first non-whitespace character. An **entry** is a key and its separator (§4, §5): with an inline value, or a **bare key** with none, or with a value that is empty after comment removal (§4). An **item** is `-` alone or `-` followed by whitespace (§7.2): with a value, or a **bare item** `-` alone; an **object item** is an item whose value starts with an entry, and its **key column** is that entry's column. An **other line** is any other line with content: freetext, a key the key grammar rejects (§5.1), a quoted key that does not close on its line or has a space before its colon (§5.2), `---`, and a line whose content starts after whitespace other than spaces. A line's **column** is its indentation, the run of spaces at its start.
+**Kinds of line.** A **blank line** holds whitespace only (§1). A **comment line** has `#` as its first non-whitespace character. An **entry** is a key and its separator (§4, §5): with an inline value, or a **bare key**: with no value, or with one that is empty after comment removal and trimming (§4). An **item** is `-` alone or `-` followed by whitespace (§7.2): with a value, or a **bare item** `-` alone; an **object item** is an item whose value starts with an entry, and its **key column** is that entry's column. An **other line** is any other line with content: freetext, a key the key grammar rejects (§5.1), a quoted key that does not close on its line or has a space before its colon (§5.2), `---`, and a line whose content starts after whitespace other than spaces. A line's **column** is its indentation, the run of spaces at its start.
 
 The rows of the innermost structure open at a line apply: a `|` scalar before the first line after a bare key, that before an object item or a compact sequence, and those before the block they stand in.
 
@@ -696,13 +696,13 @@ author: {name: Alice, role: editor}
 
 - Items are separated by commas at the current flow depth, outside quoted strings.
 - Whitespace around items and commas is trimmed.
-- Each item must have the form `key: value` — the separator is `: ` (colon followed by exactly one space). A colon not followed by a space is no separator: before the first `: ` it is part of an unquoted key (§5.1), after it part of the value.
-- The first `: ` in each item is the separator. Everything after it is the value — colons in values are permitted: `{url: https://x:y}` → `url = 'https://x:y'`.
+- Each item must have the form `key: value` — the separator is a colon followed by a space or a tab (§5.1). A colon followed by anything else is no separator: before the first separator it is part of an unquoted key (§5.1), after it part of the value.
+- The first separator in each item separates key and value. Everything after it is the value — colons in values are permitted: `{url: https://x:y}` → `url = 'https://x:y'`.
 - Quoted keys follow the same rules as block quoted keys (§5.2).
 - Type coercion applies to unquoted values. Quoted values are returned as strings without coercion.
 - Trailing comma: non-strict — ignored; strict — throw.
 - Leading or consecutive commas: non-strict — skipped; strict — throw.
-- Missing `: ` separator: non-strict — string fallback for entire mapping; strict — throw.
+- Missing separator: non-strict — string fallback for entire mapping; strict — throw.
 - An unclosed `{`: non-strict — string fallback; strict — throw.
 
 **Nesting:** Flow mappings may not contain other flow mappings or flow sequences. Invalid nesting throws in both strict and non-strict mode — silent fallback to a broken string is not acceptable.
@@ -711,7 +711,7 @@ author: {name: Alice, role: editor}
 
 ## 8. Comments
 
-A `#` character begins a comment when it appears outside a quoted string, is not escaped with a preceding backslash, and is the first character of the value or follows a space or a tab (U+0020, U+0009). Any other `#` is text: `https://example.org/x#section` and `C#` keep theirs. Comment recognition uses the same quote-aware scanner defined in §4 (inline value processing) — it tracks quoted regions and respects escape rules. See §6.1.4 for the `\#` escape rule in unquoted values.
+A `#` character begins a comment when it appears outside a quoted string, is not escaped with a preceding backslash, and is the first character of the value or follows whitespace (§1). Any other `#` is text: `https://example.org/x#section` and `C#` keep theirs. Comment recognition uses the same quote-aware scanner defined in §4 (inline value processing) — it tracks quoted regions and respects escape rules. See §6.1.4 for the `\#` escape rule in unquoted values.
 
 Comments are stripped from inline values at all levels: top-level scalars, values inside block mappings, and values inside block array items.
 
@@ -790,7 +790,7 @@ Lima has two parse modes: non-strict (default) and strict.
 | Indented freetext first after a bare key, without a `\|` marker | skip; the key is `null` unless its block gains a member (§7.1) | throw |
 | Invalid date value (component validation) | string fallback | throw |
 | Float overflow to non-finite, or non-zero float underflow to zero | string fallback | throw |
-| Flow mapping missing `: ` separator | string fallback for mapping | throw |
+| Flow mapping missing its separator (§7.5) | string fallback for mapping | throw |
 | Flow nesting deeper than one level | throw | throw |
 | Unclosed `[` or `{` | string fallback | throw |
 | Trailing comma in flow sequence or mapping | ignore | throw |
@@ -1046,7 +1046,7 @@ unquoted-source    = ? non-newline source text processed by the
                        quote-aware pipeline in §4 ? ;
 ```
 
-`unquoted-source` ends before the first unescaped `#` outside quoted regions that is its first character or follows a space or a tab (§4). After comment removal and trimming, the resulting token is converted according to the scalar order in §6. An empty result produces `null`.
+`unquoted-source` ends before the first unescaped `#` outside quoted regions that is its first character or follows whitespace (§4). Strict mode rejects an unquoted value that starts with `&`, `*` or `!` (§6.1.1) or is a YAML block scalar header other than `|` (§6.1.6). After comment removal and trimming, the resulting token is converted according to the scalar order in §6. An empty result produces `null`.
 
 ### 15.6 Quoted Characters and Escapes
 
