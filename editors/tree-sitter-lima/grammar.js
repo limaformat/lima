@@ -1,7 +1,7 @@
 /**
  * @file Lima grammar for tree-sitter
  *
- * Lima Core 1.2 syntax + active References 2.1 tokens.
+ * Lima Core 1.3 syntax + active References 2.1 tokens.
  *
  * The external scanner (src/scanner.c) owns:
  *   - indentation (NEWLINE / INDENT / DEDENT)

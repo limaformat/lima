@@ -12,6 +12,13 @@ strings, keys, nulls, booleans, numbers, dates, escapes, and active
 `document_reference` / `partial_reference` leaves. Reference-like text in
 quoted strings and keys stays literal.
 
+A `#` is a `comment` only at the start of a line or a value or after
+whitespace, as Core 1.3 reads it: `https://example.org/x#top`, `\#x` and
+`[a,#x]` keep their `#` as text, and `key: # note` is a key with a comment,
+whose block may follow. A comment inside a flow collection, as in
+`[a, #x]`, leaves it unclosed: the value is a `plain_scalar` up to the
+comment. A tab after a key's colon separates key and value as a space does.
+
 `src/scanner.c` implements indentation, block-scalar boundaries, tolerant
 fallbacks, scalar classification, and exact Unicode <!-- facts:language.unicode_version -->18.0<!-- /facts --> block-key checks via
 the generated `src/unicode_key_table.h`. Tree-sitter regexes use `\p{L}`,
@@ -33,12 +40,11 @@ bun run ci
 ```
 
 `bun run corpus:check` materializes every fixture in `corpus/core`,
-`corpus/core-1.1`, `corpus/core-1.2`, `corpus/references-2.0`, and
-`corpus/references-2.1`, including generator-backed
-limit fixtures. Successful
-and semantic-only cases must have no `ERROR`/`MISSING`; syntax-error fixtures
-may use tolerant recovery, but any emitted error must start on the fixture's
-expected line.
+`corpus/core-1.1`, `corpus/core-1.2`, `corpus/core-1.3`,
+`corpus/references-2.0`, and `corpus/references-2.1`, including
+generator-backed limit fixtures. Successful and semantic-only cases must
+have no `ERROR`/`MISSING`; syntax-error fixtures may use tolerant recovery,
+but any emitted error must start on the fixture's expected line.
 
 `scripts/gen-corpus.ts` converts selected real fixtures into native
 `test/corpus/generated.txt` cases using manually maintained structural
