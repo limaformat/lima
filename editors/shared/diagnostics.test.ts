@@ -54,3 +54,33 @@ test("unresolved references are suppressed by default, surfaced when asked", () 
   const shown = check(doc, { ignoreUnresolvedReferences: false });
   expect(shown.some((d) => d.code === "UNRESOLVED_REFERENCE")).toBe(true);
 });
+
+test("Core 1.3: YAML node properties and block scalar headers name their cure", () => {
+  expect(check("note: *new*\n")).toMatchObject([
+    {
+      code: "UNSUPPORTED_YAML",
+      severity: "error",
+      line: 1,
+      message: expect.stringContaining("YAML reads it as an alias"),
+    },
+  ]);
+  expect(check("list:\n  - &anchor x\n")).toMatchObject([
+    { code: "UNSUPPORTED_YAML", line: 2, message: expect.stringContaining("quote the value") },
+  ]);
+  // the header's own line, not its first indented line
+  expect(check("body: >\n  folded\n")).toMatchObject([
+    { code: "UNSUPPORTED_YAML", line: 1, message: expect.stringContaining('Lima writes "|"') },
+  ]);
+  // non-strict mode reads them as strings
+  expect(check("note: *new*\nbody: >\n", { strict: false })).toEqual([]);
+});
+
+test("Core 1.3: what Core 1.3 reads otherwise is no finding", () => {
+  expect(check("link: https://example.org/x#top\ntags: [a,#x]\n")).toEqual([]);
+  expect(check("title:\tHello\n")).toEqual([]);
+  expect(check("author: # who wrote it\n  name: Alice\n")).toEqual([]);
+  expect(check("m: {k: }\n")).toEqual([]);
+  expect(check("tags: [a, #x]\n")).toMatchObject([
+    { code: "INVALID_FLOW_SYNTAX", line: 1, message: expect.stringContaining("unclosed flow sequence") },
+  ]);
+});

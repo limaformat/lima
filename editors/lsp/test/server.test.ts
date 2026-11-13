@@ -250,9 +250,28 @@ test("diagnostics and references survive the LSP round trip", async () => {
       ],
     });
 
-    const invalidDocumentChanged = nextDiagnostics();
+    const unsupportedYamlChanged = nextDiagnostics();
     await client.sendNotification(DidChangeTextDocumentNotification.type, {
       textDocument: { uri, version: 8 },
+      contentChanges: [
+        { text: "link: https://example.org/x#top\nbody: >\n  folded\n" },
+      ],
+    });
+    expect(await unsupportedYamlChanged).toMatchObject({
+      uri,
+      diagnostics: [
+        {
+          code: "UNSUPPORTED_YAML",
+          severity: 1,
+          message: expect.stringContaining('Lima writes "|"'),
+          range: { start: { line: 1, character: 0 } },
+        },
+      ],
+    });
+
+    const invalidDocumentChanged = nextDiagnostics();
+    await client.sendNotification(DidChangeTextDocumentNotification.type, {
+      textDocument: { uri, version: 9 },
       contentChanges: [{ text: "title: \ud800\n" }],
     });
     expect(await invalidDocumentChanged).toMatchObject({

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+Diagnostics follow Lima Core 1.3 through the bundled parser. In strict mode,
+an unquoted value that starts with `&`, `*` or `!` and a YAML block scalar
+header other than `|` (`>`, `|-`) are reported as `UNSUPPORTED_YAML`, the
+header at its own line, with what Lima writes instead; further YAML forms of
+the specification's Appendix E, such as a dotted key, a merge key or a
+directive, have hints. What Core 1.3 reads otherwise — a `#` after text,
+`key: # note` before its block, a tab after the colon — is no longer
+reported.
+
 Highlighting follows Lima Core 1.3:
 
 - A `#` begins a comment only at the start of a value or after whitespace,
