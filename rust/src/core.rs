@@ -23,7 +23,9 @@ use crate::normalize::{
     begin_warning_collection, check_duplicate_key, check_key_length, finish_warning_collection,
     DOCUMENT_SIZE_LIMIT, NESTING_DEPTH_LIMIT, TOP_LEVEL_KEY_LIMIT,
 };
-use crate::scalars::{is_valid_key, physical_raw, separator_index, strip_comment, strip_key_quotes};
+use crate::scalars::{
+    is_valid_key, physical_raw, separator_index, strip_comment, strip_key_quotes,
+};
 use crate::structure::{check_range_lines, RangeOwner};
 use crate::value::{
     Builder, LimaValue, PlainBuilder, PositionedBuilder, PositionedValue, ReferenceSource,
@@ -736,13 +738,18 @@ mod tests {
     }
 
     #[test]
-    fn spaced_key_with_separator_gets_key_grammar_hint_at_every_level() {
+    fn spaced_key_with_separator_names_the_quoted_key_at_every_level() {
+        // Core 1.3 Appendix E
         for input in ["x y: 2\n", "outer:\n  x y: 2\n"] {
             let error = parse_core(input, true).unwrap_err();
             assert!(error
                 .message
-                .contains("an unquoted key starts with a Unicode letter or number"));
+                .contains("(quote a key that holds spaces: 'x y':)"));
             assert!(!error.message.contains("a key needs \": \" after it"));
         }
+        let error = parse_core("x/y: 2\n", true).unwrap_err();
+        assert!(error
+            .message
+            .contains("an unquoted key starts with a Unicode letter or number"));
     }
 }

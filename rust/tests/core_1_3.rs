@@ -56,7 +56,11 @@ fn expect_error(input: &str, code: Code, line: u32) -> LimaError {
 /// As [`expect_error`], and the message ends with ` ` and `hint`.
 fn expect_error_with_hint(input: &str, code: Code, line: u32, hint: &str) {
     let error = expect_error(input, code, line);
-    assert!(error.message.ends_with(&format!(" {hint}")), "{}", error.message);
+    assert!(
+        error.message.ends_with(&format!(" {hint}")),
+        "{}",
+        error.message
+    );
 }
 
 /// Core 1.3 §4: a `#` begins a comment only at the start of a value or after whitespace.
