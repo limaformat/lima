@@ -29,14 +29,21 @@ type corpusCase struct {
 		Parameters map[string]any `json:"parameters"`
 	} `json:"generator"`
 	Expect struct {
-		Result   any        `json:"result"`
-		Error    *LimaError `json:"error"`
+		Result   any            `json:"result"`
+		Error    *expectedError `json:"error"`
 		Warnings []struct {
 			Code LimaDiagnosticCode `json:"code"`
 			Line int                `json:"line"`
 			Key  string             `json:"key"`
 		} `json:"warnings"`
 	} `json:"expect"`
+}
+
+// expectedError is a case's expected diagnostic: the fields it asserts, and
+// an excerpt its message contains.
+type expectedError struct {
+	LimaError
+	Contains string `json:"contains"`
 }
 
 type referencesSyntaxVersion uint8
@@ -71,7 +78,8 @@ func TestReferences2Corpus(t *testing.T) {
 	sort.Strings(paths)
 	paths21, _ := filepath.Glob("../corpus/references-2.1/*.json")
 	paths = append(paths, paths21...)
-	if len(paths) != 144 {
+	// 136 References 2.0, 8 References 2.1, 12 References 2.1 under Core 1.3
+	if len(paths) != 156 {
 		t.Fatalf("References 2.x corpus count changed: %d", len(paths))
 	}
 	pass, skip := 0, 0
@@ -272,22 +280,26 @@ func frozenManifestCaseCount(t *testing.T, manifestPath string) int {
 	return m.CaseCount
 }
 
-// supersededByCore11 is the set of Core 1.0 case ids Core 1.1 replaces.
-func supersededByCore11(t *testing.T) map[string]bool {
+// supersededCases is the set of earlier case ids the given suites replace,
+// as their manifests list them: Core 1.1 replaces Core 1.0 cases, Core 1.3
+// cases of Core 1.0 and 1.1.
+func supersededCases(t *testing.T, suites ...string) map[string]bool {
 	t.Helper()
-	b, err := os.ReadFile("../corpus/manifests/core-1.1.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var m struct {
-		Supersedes []string `json:"supersedes"`
-	}
-	if err := json.Unmarshal(b, &m); err != nil {
-		t.Fatal(err)
-	}
-	set := make(map[string]bool, len(m.Supersedes))
-	for _, id := range m.Supersedes {
-		set[id] = true
+	set := map[string]bool{}
+	for _, suite := range suites {
+		b, err := os.ReadFile("../corpus/manifests/" + suite + ".json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var m struct {
+			Supersedes []string `json:"supersedes"`
+		}
+		if err := json.Unmarshal(b, &m); err != nil {
+			t.Fatal(err)
+		}
+		for _, id := range m.Supersedes {
+			set[id] = true
+		}
 	}
 	return set
 }
@@ -311,7 +323,7 @@ func TestCoreCorpus(t *testing.T) {
 	if manifestCount := frozenManifestCaseCount(t, "../corpus/manifests/core-1.1.json"); len(paths11) != manifestCount {
 		t.Fatalf("Core 1.1 corpus count does not match the manifest: %d != %d", len(paths11), manifestCount)
 	}
-	superseded := supersededByCore11(t)
+	superseded := supersededCases(t, "core-1.1", "core-1.3")
 	paths = append(paths, paths11...)
 	paths12, globErr := filepath.Glob("../corpus/core-1.2/*.json")
 	if globErr != nil {
@@ -319,6 +331,17 @@ func TestCoreCorpus(t *testing.T) {
 	}
 	sort.Strings(paths12)
 	paths = append(paths, paths12...)
+	// Core 1.3: the cases of the earlier suites it supersedes are left out
+	// too, and its own cases (count-pinned against its manifest) join.
+	paths13, globErr := filepath.Glob("../corpus/core-1.3/*.json")
+	if globErr != nil {
+		t.Fatal(globErr)
+	}
+	sort.Strings(paths13)
+	if manifestCount := frozenManifestCaseCount(t, "../corpus/manifests/core-1.3.json"); len(paths13) != manifestCount {
+		t.Fatalf("Core 1.3 corpus count does not match the manifest: %d != %d", len(paths13), manifestCount)
+	}
+	paths = append(paths, paths13...)
 	pass := 0
 	skip := 0
 	for _, path := range paths {
@@ -375,8 +398,11 @@ func TestCoreCorpus(t *testing.T) {
 func errorAs(err error, target **LimaError) bool {
 	return errors.As(err, target)
 }
-func diagnosticMatches(got, want *LimaError) bool {
+func diagnosticMatches(got *LimaError, want *expectedError) bool {
 	if got == nil || got.Code != want.Code {
+		return false
+	}
+	if want.Contains != "" && !strings.Contains(got.Message, want.Contains) {
 		return false
 	}
 	if want.Line != 0 && got.Line != want.Line {

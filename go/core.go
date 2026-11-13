@@ -238,7 +238,7 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 			return nil
 		case li > keyColumn:
 			if strict {
-				return limaError(InvalidIndentation, lines[*idx].number, fmt.Sprintf("Lima: unexpected indentation at line %d: %q", lines[*idx].number, lineContent(lines[*idx])))
+				return limaError(InvalidIndentation, lines[*idx].number, fmt.Sprintf("Lima: unexpected indentation at line %d: %q%s", lines[*idx].number, lineContent(lines[*idx]), multilineValueHint))
 			}
 			*idx++
 			continue
@@ -277,7 +277,8 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 		}
 		*idx++
 		var cv *pvalue
-		if bare {
+		// Core 1.3 §4: a value that is only a comment leaves the key bare
+		if bare || isEmptyInlineValue(cc[s+2:]) {
 			cv, e = bareNestedValue(lineStructuralIndent(cl), cl.number, lines, idx, strict, onWarning, captureReferences)
 		} else {
 			rvRaw := cc[s+2:]
@@ -367,7 +368,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 		}
 		if lineIndent > indent {
 			if strict {
-				return nil, limaError(InvalidIndentation, l.number, fmt.Sprintf("Lima: unexpected indentation at line %d: %q", l.number, c))
+				return nil, limaError(InvalidIndentation, l.number, fmt.Sprintf("Lima: unexpected indentation at line %d: %q%s", l.number, c, multilineValueHint))
 			}
 			*idx++
 			continue
@@ -516,7 +517,8 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 			*idx++
 			var v *pvalue
 			var e error
-			if bare {
+			// Core 1.3 §4: a value that is only a comment leaves the key bare
+			if bare || isEmptyInlineValue(c[sep+2:]) {
 				// deeper than the key, or a sequence at its column (Core 1.1
 				// §7.2); bareNestedValue skips blank and comment lines first
 				v, e = bareNestedValue(indent, l.number, lines, idx, strict, onWarning, captureReferences)
@@ -570,9 +572,10 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 	lines := sourceLines(input)
 	var root []pentry
 	entryCount := 0
-	// Core 1.1: the inline value of the last top-level key, for the hint an
-	// indented line after a YAML marker earns (structure.go)
-	lastValue := ""
+	// Core 1.1: whether the last top-level key has an inline value, which
+	// opens no block, for the hint an indented line after it earns
+	// (structure.go)
+	afterInline := false
 	for i := 0; i < len(lines); {
 		l := lines[i]
 		if l.indent > 0 || trimWhitespace(l.text) == "" || strings.HasPrefix(l.text, "#") {
@@ -580,7 +583,7 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 			// before the first key, after an inline value, below a block's base
 			// indentation, or after a "|" scalar a line at column 0 ended
 			if strict && l.indent > 0 && !isBlankOrComment(l.text) {
-				return nil, indentedLine(l, lastValue)
+				return nil, indentedLine(l, afterInline)
 			}
 			i++
 			continue
@@ -643,8 +646,9 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 		i++
 		var v *pvalue
 		var e error
-		if bare {
-			lastValue = ""
+		// Core 1.3 §4: a value that is only a comment leaves the key bare
+		if bare || isEmptyInlineValue(c[sep+2:]) {
+			afterInline = false
 			j := i
 			// Core §4 rule 7 / §6.1.3: comment lines do not affect base
 			// indentation and are skipped — including here, in the lookahead
@@ -667,9 +671,9 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 			raw := trimWhitespace(c[sep+2:])
 			valueByte := sep + 2 + leadingWsBytes(c[sep+2:])
 			vcol := valueColOf(c, valueByte)
-			lastValue = raw
+			afterInline = true
 			if bv, ok, be := blockScalarValue(raw, 0, l.number, lines, &i, captureReferences); ok {
-				lastValue = ""
+				afterInline = false
 				v, e = bv, be
 			} else {
 				v, e = parseFlowOrScalar(stripComment(raw), strict, l.number, onWarning, captureReferences, inlineRefSource(captureReferences, l, c[valueByte:], vcol))

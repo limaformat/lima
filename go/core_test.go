@@ -135,15 +135,19 @@ func TestCore12UnicodeKeysAndMessageHints(t *testing.T) {
 	}
 }
 
-func TestSpacedKeyWithSeparatorGetsKeyGrammarHintAtEveryLevel(t *testing.T) {
+func TestSpacedKeyWithSeparatorNamesTheQuotedKeyAtEveryLevel(t *testing.T) {
+	// Core 1.3 Appendix E
 	for _, input := range []string{"x y: 2\n", "outer:\n  x y: 2\n"} {
 		_, err := ParseCore(input, true)
-		if err == nil || !strings.Contains(err.Error(), "an unquoted key starts with a Unicode letter or number") {
-			t.Fatalf("%q: got %v, want key-grammar hint", input, err)
+		if err == nil || !strings.Contains(err.Error(), "(quote a key that holds spaces: 'x y':)") {
+			t.Fatalf("%q: got %v, want the quoted key", input, err)
 		}
 		if strings.Contains(err.Error(), `a key needs ": " after it`) {
 			t.Fatalf("%q: got misleading separator hint: %v", input, err)
 		}
+	}
+	if _, err := ParseCore("x/y: 2\n", true); err == nil || !strings.Contains(err.Error(), "an unquoted key starts with a Unicode letter or number") {
+		t.Fatalf("got %v, want key-grammar hint", err)
 	}
 }
 

@@ -367,6 +367,77 @@ func stripKeyQuotes(s string, strict bool, line int) (string, error) {
 	return s, nil
 }
 
+// isCommentHash reports whether the unquoted, unescaped `#` at byte i of s
+// begins a comment (Core 1.3 §4): as the first character of the value, which
+// s starts with, or after whitespace (§1). Any other `#` is text.
+func isCommentHash(s string, i int) bool {
+	if i == 0 {
+		return true
+	}
+	r, _ := utf8.DecodeLastRuneInString(s[:i])
+	return isTrimWhitespace(r)
+}
+
+// isEmptyInlineValue reports whether an inline value is empty after comment
+// removal and trimming (Core 1.3 §4): its first character other than
+// whitespace (§1) is a `#`, which begins a comment there, or there is none.
+// Such an entry is a bare key, whose block may follow.
+func isEmptyInlineValue(value string) bool {
+	rest := trimLeftWhitespace(value)
+	return rest == "" || rest[0] == '#'
+}
+
+// isYAMLHeader reports a YAML block scalar header other than "|" (Core 1.3
+// §6.1.6, Appendix D yaml-header): ">", or "|" or ">" followed by a chomping
+// indicator ("-", "+") and an indentation digit ("1"–"9"), one or both, in
+// either order.
+func isYAMLHeader(s string) bool {
+	if s == "" || (s[0] != '>' && s[0] != '|') {
+		return false
+	}
+	chomping := func(c byte) bool { return c == '-' || c == '+' }
+	digit := func(c byte) bool { return c >= '1' && c <= '9' }
+	switch len(s) {
+	case 1:
+		return s[0] == '>'
+	case 2:
+		return chomping(s[1]) || digit(s[1])
+	case 3:
+		return (chomping(s[1]) && digit(s[2])) || (digit(s[1]) && chomping(s[2]))
+	}
+	return false
+}
+
+// yamlNodeProperty names what YAML reads a value starting with "&", "*" or
+// "!" as.
+var yamlNodeProperty = map[byte]string{'&': "an anchor", '*': "an alias", '!': "a tag"}
+
+// checkYAMLValue rejects, in strict mode, an unquoted value that starts with
+// "&", "*" or "!", or that is a YAML block scalar header other than "|"
+// (Core 1.3 §6.1.1, §6.1.6, §10.1); the message names what Lima writes
+// instead (§10.2, Appendix E). Mirrors js checkYamlValue.
+func checkYAMLValue(raw string, line int) error {
+	if raw == "" {
+		return nil
+	}
+	if property, ok := yamlNodeProperty[raw[0]]; ok {
+		return limaError(UnsupportedYAML, line, fmt.Sprintf(`Lima: unquoted value starting with "%c" at line %d (YAML reads it as %s; Lima has no anchors, aliases or tags: quote the value)`, raw[0], line, property))
+	}
+	if isYAMLHeader(raw) {
+		return limaError(UnsupportedYAML, line, fmt.Sprintf(`Lima: YAML block scalar header "%s" at line %d (Lima writes "|", and "^^" to join lines)`, raw, line))
+	}
+	return nil
+}
+
+// Appendix E: what a message names in place of a YAML form.
+const (
+	unterminatedHint     = ` (a quoted value ends on its line; write "|" for a value of several lines)`
+	doubledQuoteHint     = ` (YAML doubles the quote; Lima writes 'It\'s' or "It's")`
+	unclosedSequenceHint = ` (a flow sequence ends on its line; write a block sequence with "- ")`
+	unclosedMappingHint  = ` (a flow mapping ends on its line; write a block mapping)`
+	multilineValueHint   = ` (a value spans lines only after "|")`
+)
+
 // stripComment removes a trailing `#` comment and collapses each `\#`
 // *outside* a quoted string to `#` (Core §6.1.4 — the escaped-hash rule is
 // for unquoted values only). Inside `"..."` / `'...'` the backslash is left
@@ -403,7 +474,7 @@ func stripComment(s string) string {
 			out = append(out, '#')
 			i++
 			seg = i + 1
-		} else if c == '#' {
+		} else if c == '#' && isCommentHash(s, i) {
 			out = append(out, s[seg:i]...)
 			return trimRightWhitespace(string(out))
 		}
@@ -438,7 +509,7 @@ func stripCommentKeepEscapes(s string) string {
 			q = c
 		} else if c == '\\' && i+1 < len(s) && s[i+1] == '#' {
 			i++
-		} else if c == '#' {
+		} else if c == '#' && isCommentHash(s, i) {
 			return trimRightWhitespace(s[:i])
 		}
 	}
@@ -483,12 +554,20 @@ func parseScalar(raw string, strict bool, line int, captureReferences bool, src 
 		}
 		if strict {
 			if close < 0 {
-				return nil, limaError(InvalidQuote, line, fmt.Sprintf("Lima: unterminated quoted string at line %d", line))
+				return nil, limaError(InvalidQuote, line, fmt.Sprintf("Lima: unterminated quoted string at line %d%s", line, unterminatedHint))
 			}
-			return nil, limaError(InvalidQuote, line, fmt.Sprintf("Lima: non-whitespace content after closing quote at line %d", line))
+			hint := ""
+			if q == '\'' && raw[close+1] == '\'' {
+				hint = doubledQuoteHint
+			}
+			return nil, limaError(InvalidQuote, line, fmt.Sprintf("Lima: non-whitespace content after closing quote at line %d%s", line, hint))
 		}
 		// Non-strict: §6.1.2/§6.1.3 + §10.1 — the entire value falls back to
 		// a literal string (opening quote included), handled below.
+	} else if strict {
+		if e := checkYAMLValue(raw, line); e != nil {
+			return nil, e
+		}
 	}
 	if utf8.RuneCountInString(raw) > scalarLengthLimit {
 		return nil, checkStringLimit(raw, line)

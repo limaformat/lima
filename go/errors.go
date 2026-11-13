@@ -22,6 +22,10 @@ const (
 	UnrecognizedLine LimaDiagnosticCode = "UNRECOGNIZED_LINE"
 	// InvalidFlowSyntax reports malformed or forbidden flow syntax.
 	InvalidFlowSyntax LimaDiagnosticCode = "INVALID_FLOW_SYNTAX"
+	// UnsupportedYAML reports, in strict mode, an unquoted value that starts
+	// with "&", "*" or "!", or that is a YAML block scalar header other than
+	// "|" (Core 1.3).
+	UnsupportedYAML LimaDiagnosticCode = "UNSUPPORTED_YAML"
 	// DuplicateKey reports a repeated mapping key in strict mode.
 	DuplicateKey LimaDiagnosticCode = "DUPLICATE_KEY"
 	// ResourceLimit reports a normative size, depth, or count limit violation.

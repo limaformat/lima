@@ -43,9 +43,15 @@ func unrecognizedKeyLine(number int, text string) error {
 	return limaError(UnrecognizedLine, number, fmt.Sprintf(`Lima: unrecognised line at line %d: %q%s`, number, text, hint))
 }
 
-func indentedLine(l sourceLine, inlineValue string) error {
+// indentedLine is, in strict mode, an indented line no block took; after an
+// inline value it earns the hint of Appendix E.
+func indentedLine(l sourceLine, afterInline bool) error {
 	content := strings.TrimLeftFunc(l.text, isTrimWhitespace)
-	return limaError(InvalidIndentation, l.number, fmt.Sprintf("Lima: unexpected indentation at line %d: %q%s", l.number, content, yamlHint(inlineValue)))
+	hint := ""
+	if afterInline {
+		hint = multilineValueHint
+	}
+	return limaError(InvalidIndentation, l.number, fmt.Sprintf("Lima: unexpected indentation at line %d: %q%s", l.number, content, hint))
 }
 
 // unrecognizedHint is what a reader likely meant by an unrecognised line.
@@ -54,7 +60,10 @@ func unrecognizedHint(text string) string {
 		return hint
 	}
 	if text == "---" || text == "..." {
-		return " (a YAML document marker; Lima has one document)"
+		return ` (a YAML document marker; Lima has none, and the caller strips the front matter's own "---")`
+	}
+	if strings.HasPrefix(text, "%") {
+		return " (a YAML directive; Lima has no directives)"
 	}
 	if isSequenceItem(text) {
 		return " (a sequence item belongs to a key with no value of its own)"
@@ -62,7 +71,7 @@ func unrecognizedHint(text string) string {
 	if strings.HasPrefix(text, `"`) || strings.HasPrefix(text, "'") {
 		return " (a quoted key closes on its own line)"
 	}
-	if separator := strings.Index(text, ": "); separator >= 0 && !isValidUnquotedKey(text[:separator], false) {
+	if separator := findSep(text); separator >= 0 && !isValidUnquotedKey(text[:separator], false) {
 		return keyGrammarHint
 	}
 	// `author Odile`, `key:value`: key characters, but no ": " after them
@@ -72,17 +81,6 @@ func unrecognizedHint(text string) string {
 		return ` (a key needs ": " after it)`
 	}
 	return keyGrammarHint
-}
-
-// yamlHint is the hint a YAML block scalar marker in place of a value earns.
-func yamlHint(value string) string {
-	switch value {
-	case ">", ">-", ">+":
-		return fmt.Sprintf(` ("%s" is YAML's folded scalar; Lima writes "|" and continues a line with "^^")`, value)
-	case "|-", "|+":
-		return fmt.Sprintf(` ("%s" is a YAML chomping indicator; Lima writes "|")`, value)
-	}
-	return ""
 }
 
 // isSequenceItem reports whether a line's content begins a sequence item

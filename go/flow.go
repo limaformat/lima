@@ -14,14 +14,19 @@ import (
 type flowPart struct {
 	text  string
 	start int
+	// raw is the element before trimming, from rawStart: a flow mapping
+	// finds its separator there (Core 1.3 §7.5), so `{k: }` has one.
+	raw      string
+	rawStart int
 }
 
 // rawOffsetOf maps a byte offset in the decoded flow container `val` to the
 // corresponding offset in the physical container `raw`. The two differ only
 // by `\#` → `#` collapses outside quoted strings (stripComment keeps `\#`
-// inside quotes), so every `#` in `val` outside a quote is one such collapse
-// — `raw` has `\#` there. `#`, `\`, `"`, `'` are ASCII, so byte scanning is
-// safe (continuation bytes of a multi-byte rune are all >= 0x80).
+// inside quotes). A `#` in `val` outside a quote is such a collapse where
+// `raw` has `\#` at that place; any other `#` — one after text, which Core
+// 1.3 §4 keeps — is written as it is. `#`, `\`, `"`, `'` are ASCII, so byte
+// scanning is safe (continuation bytes of a multi-byte rune are all >= 0x80).
 func rawOffsetOf(raw, val string, valOffset int) int {
 	ri, vi := 0, 0
 	q := byte(0)
@@ -42,7 +47,7 @@ func rawOffsetOf(raw, val string, valOffset int) int {
 		}
 		if c == '"' || c == '\'' {
 			q = c
-		} else if c == '#' {
+		} else if c == '#' && ri < len(raw) && raw[ri] == '\\' {
 			vi++
 			ri += 2 // '#' in the decoded container <= '\#' in raw
 			continue
@@ -93,8 +98,10 @@ func flowParts(s string) []flowPart {
 	emit := func(end int) {
 		raw := s[seg:end]
 		out = append(out, flowPart{
-			text:  trimWhitespace(raw),
-			start: seg + len(raw) - len(trimLeftWhitespace(raw)),
+			text:     trimWhitespace(raw),
+			start:    seg + len(raw) - len(trimLeftWhitespace(raw)),
+			raw:      raw,
+			rawStart: seg,
 		})
 	}
 	q := byte(0)
@@ -128,6 +135,8 @@ func flowParts(s string) []flowPart {
 	emit(len(s))
 	return out
 }
+// findSep is the byte index of the colon of the key-value separator: the
+// first colon outside quotes followed by a space or a tab (§5.1), or -1.
 func findSep(s string) int {
 	q := byte(0)
 	esc := false
@@ -147,7 +156,7 @@ func findSep(s string) int {
 		}
 		if c == '"' || c == '\'' {
 			q = c
-		} else if c == ':' && s[i+1] == ' ' {
+		} else if c == ':' && (s[i+1] == ' ' || s[i+1] == '\t') {
 			return i
 		}
 	}
@@ -157,7 +166,7 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 	if strings.HasPrefix(raw, "[") {
 		if !strings.HasSuffix(raw, "]") {
 			if strict {
-				return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: unclosed flow sequence at line %d", line))
+				return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: unclosed flow sequence at line %d%s", line, unclosedSequenceHint))
 			}
 			return parseScalar(raw, strict, line, captureReferences, src)
 		}
@@ -195,15 +204,16 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 	if strings.HasPrefix(raw, "{") {
 		if !strings.HasSuffix(raw, "}") {
 			if strict {
-				return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: unclosed flow mapping at line %d", line))
+				return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: unclosed flow mapping at line %d%s", line, unclosedMappingHint))
 			}
 			return parseScalar(raw, strict, line, captureReferences, src)
 		}
-		innerOff := innerByteOffset(raw)
-		inner := trimWhitespace(raw[1 : len(raw)-1])
+		// the elements keep their whitespace, so that the separator is found
+		// before an element is trimmed (Core 1.3 §7.5)
+		body := raw[1 : len(raw)-1]
 		m := []pentry{}
-		if inner != "" {
-			for _, fp := range flowParts(inner) {
+		if trimWhitespace(body) != "" {
+			for _, fp := range flowParts(body) {
 				part := fp.text
 				if part == "" {
 					if strict {
@@ -211,14 +221,14 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 					}
 					continue
 				}
-				sep := findSep(part)
+				sep := findSep(fp.raw)
 				if sep < 0 {
 					if strict {
 						return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow mapping item (missing \": \") at line %d: %q", line, part))
 					}
 					return parseScalar(raw, strict, line, captureReferences, src)
 				}
-				keyRaw := trimWhitespace(part[:sep])
+				keyRaw := trimWhitespace(fp.raw[:sep])
 				if !isValidKey(keyRaw) {
 					// §5.1: not a usable key — the item is skipped in both
 					// modes (§10's strict list is closed and does not cover
@@ -241,12 +251,12 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 				if e := checkDuplicate(idx >= 0, key, line, strict, onWarning); e != nil {
 					return nil, e
 				}
-				valuePart := part[sep+2:]
+				valuePart := fp.raw[sep+2:]
 				rv := trimWhitespace(valuePart)
 				if strings.HasPrefix(rv, "[") || strings.HasPrefix(rv, "{") {
 					return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow nesting at line %d: %q", line, rv))
 				}
-				vStart := innerOff + fp.start + sep + 2 + len(valuePart) - len(trimLeftWhitespace(valuePart))
+				vStart := 1 + fp.rawStart + sep + 2 + len(valuePart) - len(trimLeftWhitespace(valuePart))
 				es := elementSource(src, raw, vStart, vStart+len(rv))
 				v, e := parseScalar(rv, strict, line, captureReferences, es)
 				if e != nil {
