@@ -312,17 +312,21 @@ test("Core 1.3 §6.1.5: key: | # note is the string |, followed by a comment", a
 });
 
 test("scalars match whole words only", async () => {
-  const t = await scopesFor(
-    "a: non-null\nb: true-ish\nc: version 1.2.3\nd: pages 10-20\ne: x~\nf: v1\ng: [10,20]\nh: [-5,-6]\n",
-  );
-  for (const word of ["null", "true", "1.2", "1.2.3", "3", "10", "20", "~", "1"]) {
-    expect(
-      t.some(([x, s]) => x === word && carries(s, "constant") && !carries(s, "punctuation")),
-      word,
-    ).toBe(word === "10" || word === "20");
+  for (const line of [
+    "a: non-null",
+    "b: true-ish",
+    "c: version 1.2.3",
+    "d: pages 10-20",
+    "e: x~",
+    "f: v1",
+  ]) {
+    const t = await scopesFor(line);
+    expect(t.some(([, s]) => carries(s, "constant")), line).toBe(false);
   }
-  expect(has(t, "-5", "constant.numeric.lima")).toBe(true);
-  expect(has(t, "-6", "constant.numeric.lima")).toBe(true);
+  const flow = await scopesFor("g: [10,20]\nh: [-5,-6]\n");
+  for (const number of ["10", "20", "-5", "-6"]) {
+    expect(has(flow, number, "constant.numeric.lima"), number).toBe(true);
+  }
 });
 
 test("^^ continuation marker at line start", async () => {
