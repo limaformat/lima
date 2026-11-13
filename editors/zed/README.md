@@ -52,7 +52,7 @@ The extension forwards Zed's `initialization_options` and `settings` for the
 
 The extension pins the `tree-sitter-lima` grammar (repository, commit, and
 subdirectory in `extension.toml`) and ships its `highlights.scm` query,
-providing Lima-aware syntax highlighting for Core <!-- facts:language.core_version -->1.2<!-- /facts --> and the active
+providing Lima-aware syntax highlighting for Core <!-- facts:language.core_version -->1.3<!-- /facts --> and the active
 References <!-- facts:language.references_version -->2.1<!-- /facts --> tokens. The pinned grammar uses exact Unicode <!-- facts:language.unicode_version -->18.0<!-- /facts --> checks for
 block keys and Tree-sitter Unicode properties for flow keys and references;
 see the grammar README for that engine-version approximation.

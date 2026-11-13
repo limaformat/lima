@@ -70,7 +70,7 @@ The parser is bundled from `../../js/src` so the checker and the published
 `@limaformat/lima` package never drift. Grammar lives in `syntaxes/`.
 Unquoted keys and reference path components use Oniguruma's Unicode `\p{L}`,
 `\p{M}`, and `\p{N}` properties. VS Code therefore follows the Unicode tables
-in its bundled Oniguruma rather than Core <!-- facts:language.core_version -->1.2<!-- /facts -->'s fixed Unicode <!-- facts:language.unicode_version -->18.0<!-- /facts --> table at
+in its bundled Oniguruma rather than Core <!-- facts:language.core_version -->1.3<!-- /facts -->'s fixed Unicode <!-- facts:language.unicode_version -->18.0<!-- /facts --> table at
 newly assigned code points.
 
 ## License

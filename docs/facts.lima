@@ -15,7 +15,7 @@ editors:
   lsp4ij_minimum_version: "0.21.0"
   node_minimum_version: "22"
 language:
-  core_version: "1.2"
+  core_version: "1.3"
   references_version: "2.1"
   unicode_version: "18.0"
 language_design:
@@ -28,55 +28,59 @@ corpus:
   suites:
     core_1_0:
       cases: 218
-      cases_in_default: 210
+      cases_in_default: 209
       baseline_cases: 149
       latest_errata_version: "1.0.10"
     core_1_1:
       cases: 126
-      cases_in_default: 126
+      cases_in_default: 124
       superseded_core_1_0_cases: 8
     core_1_2:
       cases: 150
       cases_in_default: 150
+    core_1_3:
+      cases: 135
+      cases_in_default: 135
+      superseded_earlier_cases: 3
     references_1_0:
       cases: 101
     references_2_0:
       cases: 136
       cases_in_default: 136
     references_2_1:
-      cases: 8
-      cases_in_default: 8
+      cases: 20
+      cases_in_default: 20
   default:
-    cases: 630
-    core_cases: 486
-    references_cases: 144
+    cases: 774
+    core_cases: 618
+    references_cases: 156
 word_counts:
   specifications:
-    lima_core: 10444
-    lima_references: 3189
+    lima_core: 12251
+    lima_references: 3281
     json_rfc_8259: 3998
     toml: 4254
     yaml_1_2_2: 21961
-    lima_core_ratio_to_json: 2.6
-    lima_core_ratio_to_toml: 2.5
-    yaml_ratio_to_lima_core: 2.1
+    lima_core_ratio_to_json: 3.1
+    lima_core_ratio_to_toml: 2.9
+    yaml_ratio_to_lima_core: 1.8
   implementations:
-    lima_core_code: 8869
-    lima_core_comments: 5373
-    lima_core_comment_percentage: 37.7
-    lima_references_code: 4352
-    lima_references_comments: 1518
+    lima_core_code: 9292
+    lima_core_comments: 5870
+    lima_core_comment_percentage: 38.7
+    lima_references_code: 4359
+    lima_references_comments: 1542
     js_yaml_code: 11787
     js_yaml_comments: 2144
     js_yaml_version: "5.2.3"
     js_yaml_tag_implementations: 21
     js_yaml_exposed_schemas: 4
 package_sizes:
-  lima_npm_tarball_bytes: 79387
-  lima_npm_tarball_kilobytes_decimal: 79.4
+  lima_npm_tarball_bytes: 83047
+  lima_npm_tarball_kilobytes_decimal: 83
   js_yaml_npm_tarball_bytes: 338050
   js_yaml_npm_tarball_kilobytes_decimal: 338
-  js_yaml_ratio_to_lima: 4.3
+  js_yaml_ratio_to_lima: 4.1
 differential_test:
   seeds: 4
   documents_per_seed: 25000

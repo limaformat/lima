@@ -153,6 +153,7 @@ const corpusFacts = () => {
 	const corpusRoot = join(repoRoot, 'corpus')
 	const core10Manifest = JSON.parse(read('corpus/manifests/core-1.0.json')) as { baselineCaseCount: number; specVersion: string }
 	const core11Manifest = JSON.parse(read('corpus/manifests/core-1.1.json')) as { supersedes: string[] }
+	const core13Manifest = JSON.parse(read('corpus/manifests/core-1.3.json')) as { supersedes: string[] }
 	const standalone = Object.fromEntries(DEFAULT_SUITES.map((suite) => {
 		const loaded = loadCorpus(corpusRoot, [suite])
 		if (loaded.failures.length) throw new Error(`${suite}: ${loaded.failures.length} corpus load failure(s)`)
@@ -178,6 +179,7 @@ const corpusFacts = () => {
 		core10Baseline: core10Manifest.baselineCaseCount,
 		core10ErrataVersion: core10Manifest.specVersion,
 		core11Supersedes: core11Manifest.supersedes.length,
+		core13Supersedes: core13Manifest.supersedes.length,
 		total: loaded.cases.length,
 		coreCases,
 		referencesCases,
@@ -308,6 +310,11 @@ const toFacts = (m: Measurements): FactTree => ({
 				superseded_core_1_0_cases: m.corpus.core11Supersedes,
 			},
 			core_1_2: { cases: m.corpus.standalone['core-1.2'], cases_in_default: m.corpus.defaultBySuite['core-1.2'] },
+			core_1_3: {
+				cases: m.corpus.standalone['core-1.3'],
+				cases_in_default: m.corpus.defaultBySuite['core-1.3'],
+				superseded_earlier_cases: m.corpus.core13Supersedes,
+			},
 			references_1_0: { cases: m.corpus.legacyReferences },
 			references_2_0: { cases: m.corpus.standalone['references-2.0'], cases_in_default: m.corpus.defaultBySuite['references-2.0'] },
 			references_2_1: { cases: m.corpus.standalone['references-2.1'], cases_in_default: m.corpus.defaultBySuite['references-2.1'] },
@@ -394,7 +401,7 @@ const checkOnlyDifferences = (measurements: Measurements): string[] => {
 		{ path: 'docs/lima-references-1.0-spec.md', text: '**Status:** Final · **Version:** 1.0.0' },
 		{ path: 'docs/lima-references-2.0-spec.md', text: `# Lima References ${measurements.referencesVersion} — Normative Specification` },
 		{ path: 'docs/lima-references-2.0-spec.md', text: `**Version:** ${measurements.referencesVersion}.0` },
-		{ path: 'docs/lima-references-2.0-spec.md', text: `addition to Lima Core ${measurements.coreVersion} and must be read together with that specification` },
+		{ path: 'docs/lima-references-2.0-spec.md', text: `unchanged, to Lima Core ${measurements.coreVersion} (` },
 	]
 	const differences: string[] = []
 	for (const path of checkOnlyFiles) {

@@ -35,7 +35,7 @@ The public entry points are:
 
 - `parse(input, options)` — Lima References <!-- facts:language.references_version -->2.1<!-- /facts --> by default: `${key}` reads
   document values and `$(partial)` reads supplied partials.
-- `parse_core(input, options)` — Lima Core <!-- facts:language.core_version -->1.2<!-- /facts --> only.
+- `parse_core(input, options)` — Lima Core <!-- facts:language.core_version -->1.3<!-- /facts --> only.
 - `parse_references(input, options)` — deprecated References <!-- facts:language.references_version -->2.1<!-- /facts --> alias for
   `parse`.
 
@@ -48,17 +48,17 @@ Both return `Result<LimaValue, LimaError>` — `LimaError` implements
 (`LimaDiagnosticCode`) for programmatic error handling, alongside a
 human-readable message.
 
-The crate implements Lima Core <!-- facts:language.core_version -->1.2<!-- /facts --> and Lima References <!-- facts:language.references_version -->2.1<!-- /facts -->. Rust API docs:
+The crate implements Lima Core <!-- facts:language.core_version -->1.3<!-- /facts --> and Lima References <!-- facts:language.references_version -->2.1<!-- /facts -->. Rust API docs:
 **[docs.rs/lima](https://docs.rs/lima)**.
 
 Why Lima exists, the case against YAML, and security rationale:
 **[repository README](https://github.com/limaformat/lima#readme)**.
 
-The [Lima Core <!-- facts:language.core_version -->1.2<!-- /facts -->](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
+The [Lima Core <!-- facts:language.core_version -->1.3<!-- /facts -->](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
 and [Lima References <!-- facts:language.references_version -->2.1<!-- /facts -->](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
 specifications are the normative source of truth — this crate implements
 them exactly, verified against the same
-[<!-- facts:corpus.default.cases -->630<!-- /facts -->-case conformance corpus](https://github.com/limaformat/lima/tree/main/corpus)
+[<!-- facts:corpus.default.cases -->774<!-- /facts -->-case conformance corpus](https://github.com/limaformat/lima/tree/main/corpus)
 (counts pinned by `tests/corpus.rs` and the private References 1.0 unit-test
 module) shared with the TypeScript implementation.
 

@@ -74,14 +74,14 @@ reference-inert: keys copied by reference substitution have no source occurrence
 and are omitted; only the diagnostic pass evaluates references, without partials.
 
 The **[guide](https://github.com/limaformat/lima/blob/main/docs/guide.md)**
-covers Core <!-- facts:language.core_version -->1.2<!-- /facts --> and References <!-- facts:language.references_version -->2.1<!-- /facts --> syntax, resource limits, strict mode, and the
+covers Core <!-- facts:language.core_version -->1.3<!-- /facts --> and References <!-- facts:language.references_version -->2.1<!-- /facts --> syntax, resource limits, strict mode, and the
 public API. The normative rules are defined in the
 **[References <!-- facts:language.references_version -->2.1<!-- /facts --> specification](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)**.
 
 Why Lima exists, the case against YAML, and security rationale:
 **[repository README](https://github.com/limaformat/lima#readme)**.
 
-The [Lima Core <!-- facts:language.core_version -->1.2<!-- /facts -->](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
+The [Lima Core <!-- facts:language.core_version -->1.3<!-- /facts -->](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
 and [Lima References <!-- facts:language.references_version -->2.1<!-- /facts -->](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
 specifications are the source of truth for these public entry points. The
 frozen References 1.0 implementation remains available internally to run its

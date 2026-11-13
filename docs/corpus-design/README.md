@@ -2,9 +2,10 @@
 
 **Status:** implemented — a byte-frozen <!-- facts:corpus.suites.core_1_0.baseline_cases -->149<!-- /facts -->-case Core 1.0.0 baseline with
 additive Core errata through <!-- facts:corpus.suites.core_1_0.latest_errata_version -->1.0.10<!-- /facts --> on top (<!-- facts:corpus.suites.core_1_0.cases -->218<!-- /facts --> Core 1.0 cases total), a
-frozen <!-- facts:corpus.suites.core_1_1.cases -->126<!-- /facts -->-case Core 1.1 corpus that supersedes <!-- facts:corpus.suites.core_1_1.superseded_core_1_0_cases -->8<!-- /facts --> of them, and
-<!-- facts:corpus.suites.core_1_2.cases -->150<!-- /facts --> Core 1.2 cases (<!-- facts:corpus.default.core_cases -->486<!-- /facts --> current Core cases in all), plus <!-- facts:corpus.suites.references_2_0.cases -->136<!-- /facts --> References 2.0 cases and
-<!-- facts:corpus.suites.references_2_1.cases -->8<!-- /facts --> References 2.1 cases; all counts are pinned by tests. The baseline also includes <!-- facts:corpus.suites.references_1_0.cases -->101<!-- /facts --> byte-frozen References 1.0 cases: that
+frozen <!-- facts:corpus.suites.core_1_1.cases -->126<!-- /facts -->-case Core 1.1 corpus that supersedes <!-- facts:corpus.suites.core_1_1.superseded_core_1_0_cases -->8<!-- /facts --> of them,
+<!-- facts:corpus.suites.core_1_2.cases -->150<!-- /facts --> Core 1.2 cases, a frozen <!-- facts:corpus.suites.core_1_3.cases -->135<!-- /facts -->-case Core 1.3 corpus that supersedes
+<!-- facts:corpus.suites.core_1_3.superseded_earlier_cases -->3<!-- /facts --> cases of Core 1.0 and 1.1 (<!-- facts:corpus.default.core_cases -->618<!-- /facts --> current Core cases in all), plus <!-- facts:corpus.suites.references_2_0.cases -->136<!-- /facts --> References 2.0 cases and
+<!-- facts:corpus.suites.references_2_1.cases -->20<!-- /facts --> References 2.1 cases; all counts are pinned by tests. The baseline also includes <!-- facts:corpus.suites.references_1_0.cases -->101<!-- /facts --> byte-frozen References 1.0 cases: that
 extension was published briefly in mid-2026 and superseded almost immediately
 by References 2.0, so the 1.0 corpus is kept and still run as a regression
 guard on internal code, not as a conformance target anyone is asked to claim.
@@ -448,8 +449,8 @@ bun run run:references-1
 bun run run:references-2
 ```
 
-The default `bun run run` runs the current conformance target: Core <!-- facts:language.core_version -->1.2<!-- /facts -->
-(<!-- facts:corpus.default.core_cases -->486<!-- /facts --> cases) plus References <!-- facts:language.references_version -->2.1<!-- /facts --> (<!-- facts:corpus.default.references_cases -->144<!-- /facts --> cases), <!-- facts:corpus.default.cases -->630<!-- /facts --> in all.
+The default `bun run run` runs the current conformance target: Core <!-- facts:language.core_version -->1.3<!-- /facts -->
+(<!-- facts:corpus.default.core_cases -->618<!-- /facts --> cases) plus References <!-- facts:language.references_version -->2.1<!-- /facts --> (<!-- facts:corpus.default.references_cases -->156<!-- /facts --> cases), <!-- facts:corpus.default.cases -->774<!-- /facts --> in all.
 `bun run run:core-1` runs the frozen Core 1.0 corpus alone, whose <!-- facts:corpus.suites.core_1_1.superseded_core_1_0_cases -->8<!-- /facts --> superseded cases a Core 1.1 parser
 fails by design. `bun run
 run:references-1` still runs the frozen References 1.0 baseline (101) as an

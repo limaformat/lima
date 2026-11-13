@@ -2,7 +2,7 @@
 
 A practical walkthrough of Lima syntax, the References Extension, resource
 limits, and the JavaScript/TypeScript API. This guide is descriptive, not
-normative — [Lima Core 1.2](lima-core-1.0-spec.md) and
+normative — [Lima Core 1.3](lima-core-1.0-spec.md) and
 [Lima References 2.1](lima-references-2.0-spec.md) are the source of truth.
 Where this guide and a spec disagree, the spec wins.
 
@@ -66,8 +66,8 @@ typed as one character and an `ö` typed as `o` plus a combining mark are two
 different keys. Editors write the first almost always.
 
 Since unquoted keys may themselves contain colons, the key/value separator
-is the *first* `: ` (colon + exactly one space) or `:\n` that isn't inside a
-quoted key:
+is the *first* colon followed by a space or a tab, or `:\n`, that isn't
+inside a quoted key:
 
 ```yaml
 og:title: Hello      # key = 'og:title', value = 'Hello'
@@ -126,12 +126,23 @@ left intact in non-strict mode and throws in strict mode.
 sequence: `\'` for a literal quote. Everything else, including backslashes,
 is literal — `'a\\b'` is the four characters `a\\b`, not `a\b`.
 
-**Comments in unquoted values** — `#` starts a comment; `\#` keeps a literal
-`#`. Only the immediately preceding backslash counts:
+**Comments in unquoted values** — `#` starts a comment at the start of a
+value or after whitespace; a `#` right after other text is text. `\#`
+always keeps a literal `#`; only the immediately preceding backslash counts:
 
 ```yaml
-link: https://example.com/page#section    # → 'https://example.com/page'
-link: https://example.com/page\#section   # → 'https://example.com/page#section'
+link: https://example.com/page#section    # → 'https://example.com/page#section'
+lang: C#                                  # → 'C#'
+color: #ff0000                            # → null — the whole value is a comment
+link: https://example.com/page #section   # → 'https://example.com/page'
+link: https://example.com/page \#section  # → 'https://example.com/page #section'
+```
+
+A key whose value is only a comment is a bare key, so its block may follow:
+
+```yaml
+author: # who wrote it
+  name: Alice                             # → { author: { name: 'Alice' } }
 ```
 
 `#` inside a single- or double-quoted string is never a comment — comment
@@ -162,7 +173,8 @@ description: |
 ```
 
 There is no YAML-style `>` folded scalar — `|` + `^^` covers the same need
-with less ambiguity.
+with less ambiguity. A YAML header such as `>`, `|-` or `>2` reads as a
+string in non-strict mode and throws in strict mode, at its own line.
 
 ### Types
 
@@ -412,10 +424,12 @@ What each kind of line does where it stands is one table in Core §7.1.
 | Empty flow element | `null` / skipped | throw |
 | Unknown or malformed escape sequence | left intact | throw |
 | Unterminated quoted string | string fallback | throw |
-| Inconsistent indentation (also a line indented after a top-level inline value, such as the lines after a YAML `>`) | skipped | throw |
+| Inconsistent indentation (also a line indented after a top-level inline value) | skipped | throw |
 | Unrecognised line: an unindented line that is no key (`author Odile`, `---`), or a key the key grammar rejects (`a.b: value`) at any level | skipped | throw |
 | Space before colon in a quoted block key | skipped | throw |
 | Content after a closing quote on an inline value | string fallback | throw |
+| An unquoted value that starts with `&`, `*` or `!` (a YAML anchor, alias or tag) | string | throw |
+| A YAML block scalar header other than `\|`, such as `>` or `\|-` | string | throw |
 
 References 2.1 adds (Core §10.1 + References §7):
 
@@ -545,7 +559,7 @@ version, until that's a documented, stable export.
 
 ## Where to go next
 
-- [Lima Core 1.2](lima-core-1.0-spec.md) and
+- [Lima Core 1.3](lima-core-1.0-spec.md) and
   [Lima References 2.1](lima-references-2.0-spec.md) — the normative specs;
   this guide simplifies, they decide.
 - [Repository README](../README.md) — why Lima exists, the case against

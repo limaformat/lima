@@ -15,6 +15,7 @@ export type LimaDiagnosticCode =
   | "INVALID_INDENTATION"
   | "UNRECOGNIZED_LINE"
   | "INVALID_FLOW_SYNTAX"
+  | "UNSUPPORTED_YAML"
   | "DUPLICATE_KEY"
   | "RESOURCE_LIMIT"
   | "UNRESOLVED_REFERENCE"
@@ -83,6 +84,7 @@ exposes the two-field shape the spec requires.
 - `INVALID_INDENTATION`
 - `UNRECOGNIZED_LINE` (Core 1.1)
 - `INVALID_FLOW_SYNTAX`
+- `UNSUPPORTED_YAML` (Core 1.3)
 - `DUPLICATE_KEY`
 - `RESOURCE_LIMIT`
 - `UNRESOLVED_REFERENCE`
@@ -101,6 +103,12 @@ the original nine codes. `INVALID_NUMBER` covers the two Core §6.4.2
 strict-mode number errors — float overflow to a non-finite value, and a
 syntactically non-zero float underflowing to zero — added for the same
 reason: neither is a date, quote, or resource-limit error.
+`UNSUPPORTED_YAML` (Core 1.3) is a strict-mode error for an unquoted value
+that YAML would read as something Lima does not have: one that starts with
+`&`, `*` or `!` (an anchor, an alias or a tag, Core §6.1.1), or a YAML block
+scalar header other than `|`, such as `>` or `|-` (Core §6.1.6). Neither is a
+quote, flow or indentation error, and the header is an error at its own line,
+whether lines follow it or not.
 `INVALID_REFERENCE_SHAPE` covers a *pure*-reference resolution producing
 a value that violates the shape of its insertion context — currently: a
 reference resolving to an array, inserted as a sequence item, which

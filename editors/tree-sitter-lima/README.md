@@ -1,6 +1,6 @@
 # tree-sitter-lima
 
-Tree-sitter grammar for Lima Core <!-- facts:language.core_version -->1.2<!-- /facts --> plus active References <!-- facts:language.references_version -->2.1<!-- /facts --> tokens.
+Tree-sitter grammar for Lima Core <!-- facts:language.core_version -->1.3<!-- /facts --> plus active References <!-- facts:language.references_version -->2.1<!-- /facts --> tokens.
 It is an editor-highlighting parser: reference resolution, strict-mode
 diagnostics, hover, and go-to-definition remain LSP responsibilities.
 

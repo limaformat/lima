@@ -5,12 +5,49 @@ All notable changes to `lima` are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This crate's version number tracks its own release history and is
 independent of the Lima specification versions — [Lima Core
-1.2](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
+1.3](https://github.com/limaformat/lima/blob/main/docs/lima-core-1.0-spec.md)
 and [Lima References
 2.1](https://github.com/limaformat/lima/blob/main/docs/lima-references-2.0-spec.md)
 carry their own.
 
 ## [Unreleased]
+
+Lima Core 1.3 (Draft): Lima reads five forms as YAML front matter writes
+them, and strict mode names what to write for the YAML forms it does not
+read (Core §10.2, Appendix E).
+
+### Added
+
+- The diagnostic code `LimaDiagnosticCode::UnsupportedYaml` (`UNSUPPORTED_YAML`).
+
+### Changed
+
+- A `#` begins a comment only at the start of a value or after whitespace
+  (Core §4), in flow sequences and flow mappings too, decided once over the
+  whole value: `https://example.org/x#top` and `C#` keep their `#`, and
+  `[a,#x]` is `["a", "#x"]`. `\#` still yields `#`. A References token after
+  such a `#` is active, and `${a}#x` is an interpolation.
+- An entry whose value is only a comment, `key: # note`, is a bare key: the
+  deeper lines after it are its block, at every level. `- # note` stays a
+  `null` item, and `key: null` and `key: ''` have an inline value.
+- A tab after the colon separates key and value as a space does, at the top
+  level, in blocks, in sequence items and in flow mappings.
+- A flow mapping finds its separator before the item is trimmed:
+  `{k: }` is `{k: null}`; `{k:}` has no separator.
+- Strict mode throws `UNSUPPORTED_YAML` for an unquoted value that starts
+  with `&`, `*` or `!`, and for a YAML block scalar header other than `|`
+  (`>`, `|-`, `>2`, …) at the header's own line, lines after it or not.
+  Non-strict mode reads both as strings, as before.
+- Error messages for YAML forms name the Lima form: quote the value, `|` and
+  `^^`, `'It\'s'`, no merge keys or directives, a quoted key with spaces,
+  nesting for `seo.title`, `|` for a value of several lines, a block
+  sequence for a flow sequence that does not close.
+
+### Fixed
+
+- `{k: }` was the string `{k: }`, and an error in strict mode (Core §7.5).
+- A flow value with a `#` after text took every `#` for `\#` in the position
+  map of its References tokens.
 
 ## [0.8.1] — 2026-11-06
 
