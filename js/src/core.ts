@@ -208,17 +208,6 @@ const parseCoreGeneric = <V, M>(
 		key: string, line: number, separatorEnd: number, isBlock: boolean,
 		inlineEnd: number | undefined, nextStart: number,
 	): void => {
-		// Core 1.3 §4: an inline value that is empty after comment removal and trimming makes a bare key, whose block
-		// starts on the next line
-		if (!isBlock) {
-			const lineEnd = inlineEnd ?? frontMatter.indexOf('\n', separatorEnd)
-			const valueEnd = lineEnd === -1 || lineEnd > nextStart ? nextStart : lineEnd
-			if (isEmptyInlineValue(frontMatter, separatorEnd, valueEnd)) {
-				isBlock = true
-				separatorEnd = valueEnd < nextStart ? valueEnd + 1 : nextStart
-			}
-		}
-
 		checkKeyLength(key, line)
 
 		// §4 step 3: an inline value begins after the spaces that follow `: `, however many there are — as in a
@@ -231,6 +220,14 @@ const parseCoreGeneric = <V, M>(
 				// printable ASCII other than SPACE is never whitespace: the common case ends here at once
 				if ((c > 0x20 && c < 0x7f) || c === 10 || !isTrimWhitespace(c)) break
 				rawStart++
+			}
+			// Core 1.3 §4: a value that is empty after comment removal and trimming — none, or a `#` where it starts —
+			// makes a bare key, whose block starts on the next line
+			const first = frontMatter.charCodeAt(rawStart)
+			if (rawStart >= nextStart || first === 10 || first === 35) {
+				const lineEnd = first === 35 ? inlineEnd ?? frontMatter.indexOf('\n', rawStart) : rawStart
+				isBlock = true
+				rawStart = lineEnd === -1 || lineEnd >= nextStart ? nextStart : lineEnd + 1
 			}
 		}
 

@@ -232,8 +232,8 @@ const blockParser = (
 				}
 				if (items !== null && pendingItem !== null) {
 					const bareKey = trimmed.charCodeAt(trimmed.length - 1) === 58
-					const colonPos = bareKey && trimmed.indexOf(' ') === -1 && trimmed.indexOf('\t') === -1
-						? -1 : findKeySep(trimmed)
+					// a line whose one colon ends it has no separator to search for
+					const colonPos = bareKey && trimmed.indexOf(':') === trimmed.length - 1 ? -1 : findKeySep(trimmed)
 					const keyRaw = colonPos !== -1
 						? trimEndSlice(trimmed, 0, colonPos)
 						: bareKey ? trimEndSlice(trimmed, 0, trimmed.length - 1) : ''
@@ -397,8 +397,8 @@ const blockParser = (
 					cursor.next(); continue
 				}
 				const bareKey = trimmed.charCodeAt(trimmed.length - 1) === 58
-				const colonPos = bareKey && trimmed.indexOf(' ') === -1 && trimmed.indexOf('\t') === -1
-					? -1 : findKeySep(trimmed)
+				// a line whose one colon ends it has no separator to search for
+				const colonPos = bareKey && trimmed.indexOf(':') === trimmed.length - 1 ? -1 : findKeySep(trimmed)
 				const keyRaw = colonPos !== -1
 					? trimEndSlice(trimmed, 0, colonPos)
 					: bareKey ? trimEndSlice(trimmed, 0, trimmed.length - 1) : ''
