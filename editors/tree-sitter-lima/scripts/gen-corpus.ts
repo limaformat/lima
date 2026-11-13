@@ -207,6 +207,55 @@ const EXPECTED_TREES: Record<string, string> = {
   (block_mapping_entry
     key: (key)
     value: (plain_scalar)))`,
+  // Core 1.3 §5.1: a tab after the colon separates key and value as a space does, in every key context; U+00A0 does
+  // not, and the line is unrecognised.
+  "core.separator.tab-top-level": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (number)))`,
+  "core.separator.tab-key-with-colon": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (number)))`,
+  "core.separator.tab-quoted-key": `(document
+  (block_mapping_entry
+    key: (single_quoted_key)
+    value: (number)))`,
+  "core.separator.tab-block-contexts": `(document
+  (block_mapping_entry
+    key: (key)
+    (block_mapping
+      (block_mapping_entry
+        key: (key)
+        value: (number))))
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        value: (number)
+        (block_mapping_entry
+          key: (key)
+          value: (number))))))`,
+  "core.separator.tab-flow-mapping": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key)
+      value: (number))))`,
+  "core.separator.tab-at-end-of-input": `(document
+  (block_mapping_entry
+    key: (key)))`,
+  "core.separator.nbsp-is-no-separator": `(document)`,
+  // A colon with nothing before it is no key (§5.1): `- :\tx` is an item whose value is `:\tx`.
+  "editor.separator.colon-without-key": `(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        value: (plain_scalar))
+      (block_sequence_item
+        value: (plain_scalar)))))`,
   "references-2.interpolation.block-scalar.basic": `(document
   (block_mapping_entry
     key: (key)
@@ -305,7 +354,7 @@ interface Fixture {
 }
 
 const fixtures = new Map<string, Fixture>();
-for (const subdir of ["core", "core-1.1", "core-1.2", "references-2.0", "references-2.1"]) {
+for (const subdir of ["core", "core-1.1", "core-1.2", "core-1.3", "references-2.0", "references-2.1"]) {
   const dir = join(SOURCE_ROOT, subdir);
   for (const name of readdirSync(dir)) {
     if (!name.endsWith(".json")) continue;
@@ -317,6 +366,10 @@ for (const subdir of ["core", "core-1.1", "core-1.2", "references-2.0", "referen
 fixtures.set("editor.block-sequence.bare-item-key-past-skipped-line", {
   id: "editor.block-sequence.bare-item-key-past-skipped-line",
   input: "list:\n  - a:\n      freetext\n        c: 1\n",
+});
+fixtures.set("editor.separator.colon-without-key", {
+  id: "editor.separator.colon-without-key",
+  input: "k:\n- :\tx\n- : y\n",
 });
 
 const cases: string[] = [];

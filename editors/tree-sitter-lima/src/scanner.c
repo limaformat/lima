@@ -223,7 +223,8 @@ static bool scan_dash(Scanner *s, TSLexer *lexer) {
       }
       if (c == ':' && !quoted) {
         int32_t d = lexer->lookahead;
-        if (d == ' ' || d == '\n' || d == '\r' || d == 0) {
+        // Core 1.3 §5.1: a tab after the colon separates key and value as a space does.
+        if (d == ' ' || d == '\t' || d == '\n' || d == '\r' || d == 0) {
           object_item = valid_key;
           break;
         }
@@ -668,9 +669,10 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
       lexer->mark_end(lexer);
       lexer->advance(lexer, false);
       int32_t d = lexer->lookahead;
-      if (d == ' ' || d == '\n' || d == '\r' || d == 0) {
-        // ':' separator → this is a key
-        if (can_key && key_position && valid_key) {
+      // Core 1.3 §5.1: a tab after the colon separates key and value as a space does.
+      if (d == ' ' || d == '\t' || d == '\n' || d == '\r' || d == 0) {
+        // ':' separator → this is a key, if one precedes it: a key starts with a key-initial (§5.1)
+        if (can_key && key_position && valid_key && started) {
           lexer->result_symbol = KEY;
           return true;
         }

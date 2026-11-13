@@ -388,6 +388,121 @@ valid: yes
     value: (plain_scalar)))
 
 ==================
+core.separator.tab-top-level
+==================
+k:	1
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (number)))
+
+==================
+core.separator.tab-key-with-colon
+==================
+a:b:	1
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (number)))
+
+==================
+core.separator.tab-quoted-key
+==================
+'k':	1
+
+---
+
+(document
+  (block_mapping_entry
+    key: (single_quoted_key)
+    value: (number)))
+
+==================
+core.separator.tab-block-contexts
+==================
+m:
+  n:	4
+s:
+  - o:	5
+    p:	6
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_mapping
+      (block_mapping_entry
+        key: (key)
+        value: (number))))
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        value: (number)
+        (block_mapping_entry
+          key: (key)
+          value: (number))))))
+
+==================
+core.separator.tab-flow-mapping
+==================
+k: {a:	1}
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key)
+      value: (number))))
+
+==================
+core.separator.tab-at-end-of-input
+==================
+k:	
+---
+
+(document
+  (block_mapping_entry
+    key: (key)))
+
+==================
+core.separator.nbsp-is-no-separator
+==================
+k: x
+
+---
+
+(document)
+
+==================
+editor.separator.colon-without-key
+==================
+k:
+- :	x
+- : y
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        value: (plain_scalar))
+      (block_sequence_item
+        value: (plain_scalar)))))
+
+==================
 references-2.interpolation.block-scalar.basic
 ==================
 author: Alice
