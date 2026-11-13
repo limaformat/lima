@@ -19,8 +19,9 @@
 //! modes.
 
 use crate::chars::is_trim_whitespace;
-use crate::errors::{LimaDiagnosticCode as Code, LimaError};
+use crate::errors::{LimaDiagnosticCode as Code, LimaError, MULTILINE_VALUE_HINT};
 use crate::key_hints::{specific_key_hint, KEY_GRAMMAR_HINT};
+use crate::scalars::separator_index;
 use crate::unicode_key::is_valid_unquoted;
 
 /// What the lines after a key belong to.
@@ -37,8 +38,7 @@ pub(crate) enum RangeOwner {
 }
 
 /// Checks the lines of `source` from `start` (a line start) to `end` that
-/// follow a key owned as `owner`; `line` is the 1-based line at `start`, and
-/// `inline_value` the value of that key, for the hint a YAML marker earns.
+/// follow a key owned as `owner`; `line` is the 1-based line at `start`.
 /// Returns the first line that belongs to no structure as an error.
 pub(crate) fn check_range_lines(
     source: &str,
@@ -46,7 +46,6 @@ pub(crate) fn check_range_lines(
     end: usize,
     line: u32,
     owner: RangeOwner,
-    inline_value: &str,
 ) -> Result<(), LimaError> {
     let mut pos = start;
     let mut current = line;
@@ -94,9 +93,9 @@ pub(crate) fn check_range_lines(
                     && !(owner == RangeOwner::Mapping && base.is_some_and(|b| indent >= b))
                 {
                     let marker = if owner == RangeOwner::Inline {
-                        yaml_hint(inline_value)
+                        MULTILINE_VALUE_HINT
                     } else {
-                        String::new()
+                        ""
                     };
                     return Err(LimaError::new(
                         Code::InvalidIndentation,
@@ -125,7 +124,14 @@ fn hint(text: &str) -> String {
         return hint;
     }
     if text == "---" || text == "..." {
-        return " (a YAML document marker; Lima has one document)".into();
+        return concat!(
+            " (a YAML document marker; Lima has none, ",
+            "and the caller strips the front matter's own \"---\")"
+        )
+        .into();
+    }
+    if text.starts_with('%') {
+        return " (a YAML directive; Lima has no directives)".into();
     }
     if is_item(text) {
         return " (a sequence item belongs to a key with no value of its own)".into();
@@ -133,7 +139,7 @@ fn hint(text: &str) -> String {
     if text.starts_with('"') || text.starts_with('\'') {
         return " (a quoted key closes on its own line)".into();
     }
-    if let Some(separator) = text.find(": ") {
+    if let Some(separator) = separator_index(text) {
         if !is_valid_unquoted(&text[..separator], false) {
             return KEY_GRAMMAR_HINT.into();
         }
@@ -145,17 +151,6 @@ fn hint(text: &str) -> String {
         return " (a key needs \": \" after it)".into();
     }
     KEY_GRAMMAR_HINT.into()
-}
-
-/// The hint a YAML block scalar marker in place of a value earns.
-fn yaml_hint(value: &str) -> String {
-    match value {
-        ">" | ">-" | ">+" => {
-            format!(" (\"{value}\" is YAML's folded scalar; Lima writes \"|\" and continues a line with \"^^\")")
-        }
-        "|-" | "|+" => format!(" (\"{value}\" is a YAML chomping indicator; Lima writes \"|\")"),
-        _ => String::new(),
-    }
 }
 
 /// §7.2: `-` alone or `-` followed by whitespace begins a sequence item (Core 1.1); `---` or `-x` does not.

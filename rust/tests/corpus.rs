@@ -44,6 +44,7 @@ fn code_name(code: LimaDiagnosticCode) -> &'static str {
         InvalidIndentation => "INVALID_INDENTATION",
         UnrecognizedLine => "UNRECOGNIZED_LINE",
         InvalidFlowSyntax => "INVALID_FLOW_SYNTAX",
+        UnsupportedYaml => "UNSUPPORTED_YAML",
         DuplicateKey => "DUPLICATE_KEY",
         ResourceLimit => "RESOURCE_LIMIT",
         UnresolvedReference => "UNRESOLVED_REFERENCE",
@@ -265,10 +266,21 @@ fn core_matches_conformance_corpus() {
         .unwrap(),
     )
     .unwrap();
-    let superseded: std::collections::HashSet<String> = manifest_11["supersedes"]
-        .as_array()
-        .unwrap()
-        .iter()
+    // Core 1.3 supersedes cases of Core 1.0 and 1.1 alike; its own cases
+    // (corpus/core-1.3/, count-pinned against its manifest) join below.
+    let manifest_13: Json = serde_json::from_str(
+        &fs::read_to_string(
+            corpus_dir()
+                .join("..")
+                .join("manifests")
+                .join("core-1.3.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let superseded: std::collections::HashSet<String> = [&manifest_11, &manifest_13]
+        .into_iter()
+        .flat_map(|manifest| manifest["supersedes"].as_array().unwrap())
         .map(|id| id.as_str().unwrap().to_string())
         .collect();
     let mut entries_11: Vec<_> = fs::read_dir(corpus_dir().join("..").join("core-1.1"))
@@ -292,6 +304,19 @@ fn core_matches_conformance_corpus() {
         .collect();
     entries_12.sort();
     entries.extend(entries_12);
+    let mut entries_13: Vec<_> = fs::read_dir(corpus_dir().join("..").join("core-1.3"))
+        .expect("corpus/core-1.3 directory should exist")
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("json"))
+        .collect();
+    entries_13.sort();
+    assert_eq!(
+        entries_13.len(),
+        manifest_13["caseCount"].as_u64().unwrap() as usize,
+        "Core 1.3 corpus case count does not match the manifest",
+    );
+    entries.extend(entries_13);
 
     for path in entries {
         let text = fs::read_to_string(&path).unwrap();
@@ -359,13 +384,22 @@ fn core_matches_conformance_corpus() {
                 Ok(_) => fail.push(format!("{id}: expected error, parsing succeeded")),
                 Err(e) => {
                     let expected_code = expected_error.get("code").and_then(Json::as_str);
-                    if expected_code == Some(code_name(e.code)) {
+                    let line_ok = expected_error
+                        .get("line")
+                        .and_then(Json::as_u64)
+                        .is_none_or(|line| e.line == Some(line as u32));
+                    let contains_ok = expected_error
+                        .get("contains")
+                        .and_then(Json::as_str)
+                        .is_none_or(|needle| e.message.contains(needle));
+                    if expected_code == Some(code_name(e.code)) && line_ok && contains_ok {
                         pass += 1;
                     } else {
                         fail.push(format!(
-                            "{id}: error code mismatch: got {}, expected {:?}",
+                            "{id}: error mismatch: got {} at line {:?} ({}), expected {expected_error:?}",
                             code_name(e.code),
-                            expected_code
+                            e.line,
+                            e.message
                         ));
                     }
                 }
@@ -533,9 +567,10 @@ fn references_matches_conformance_corpus() {
         "expected corpus fixtures under {}",
         references_corpus_dir().display()
     );
+    // 136 References 2.0, 8 References 2.1, 12 References 2.1 under Core 1.3
     assert_eq!(
         entries.len(),
-        144,
+        156,
         "References 2.x corpus case count changed"
     );
 

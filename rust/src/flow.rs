@@ -6,15 +6,17 @@ use crate::chars::is_trim_whitespace;
 use crate::errors::{LimaDiagnosticCode as Code, LimaError};
 use crate::normalize::{check_duplicate_key, check_key_length};
 use crate::scalars::{
-    closing_quote_index, is_valid_key, parse_quoted_or_typed, parse_scalar_value, strip_key_quotes,
+    closing_quote_index, is_valid_key, parse_quoted_or_typed, parse_scalar_value, separator_index,
+    strip_key_quotes,
 };
 use crate::value::{Builder, ReferenceSource};
 
 /// Maps a byte offset in the decoded container `val` to the corresponding
 /// offset in the physical container `raw`. The two differ only by `\#` → `#`
-/// collapses outside quoted strings (FR-5 keeps `\#` inside quotes), so every
-/// `#` in `val` outside a quote is one such collapse — `raw` has `\#` there.
-/// `#`, `\`, `"`, `'` are ASCII, so byte scanning is safe.
+/// collapses outside quoted strings (FR-5 keeps `\#` inside quotes). A `#` in
+/// `val` outside a quote is such a collapse where `raw` has `\#` at that
+/// place; any other `#` — one after text, which Core 1.3 §4 keeps — is
+/// written as it is. `#`, `\`, `"`, `'` are ASCII, so byte scanning is safe.
 fn raw_offset_of(raw: &str, val: &str, val_offset: usize) -> usize {
     let (rb, vb) = (raw.as_bytes(), val.as_bytes());
     let mut ri = 0usize;
@@ -33,7 +35,7 @@ fn raw_offset_of(raw: &str, val: &str, val_offset: usize) -> usize {
             }
         } else if c == b'"' || c == b'\'' {
             quote = c;
-        } else if c == b'#' {
+        } else if c == b'#' && rb.get(ri) == Some(&b'\\') {
             vi += 1;
             ri += 2; // '#' in the decoded container <= '\#' in raw
             continue;
@@ -106,6 +108,8 @@ struct FlowCursor<'a> {
     next_start: usize,
     item_start: usize,
     item_end: usize,
+    /// The item's end before trimming: its comma, or the end of the container.
+    item_raw_end: usize,
     done: bool,
 }
 
@@ -117,6 +121,7 @@ impl<'a> FlowCursor<'a> {
             next_start: start,
             item_start: 0,
             item_end: 0,
+            item_raw_end: 0,
             done: false,
         }
     }
@@ -150,6 +155,7 @@ impl<'a> FlowCursor<'a> {
         }
         self.item_start = trim_start_at(self.source, self.next_start, pos);
         self.item_end = trim_end_at(self.source, self.item_start, pos);
+        self.item_raw_end = pos;
         if pos < self.end {
             self.next_start = pos + 1;
         } else {
@@ -256,9 +262,11 @@ pub(crate) fn parse_flow_sequence_checked<B: Builder, const CHECK_DUPLICATES: bo
     Ok(Some(items))
 }
 
-/// Index of the key/value `: ` separator within a flow-mapping item — the
-/// first `: ` that is not inside a quoted key (§5.1). `None` when the item
-/// has no separator (or its quoted key is never closed).
+/// Index of the key/value separator within a flow-mapping item — the first
+/// colon followed by a space or a tab that is not inside a quoted key (§5.1,
+/// §7.5). `end` is the item's end before trimming, so `{k: }` has a
+/// separator (Core 1.3 §7.5). `None` when the item has no separator (or its
+/// quoted key is never closed).
 fn flow_item_separator(val: &str, start: usize, end: usize) -> Option<usize> {
     let b = val.as_bytes();
     let mut scan = start;
@@ -267,12 +275,7 @@ fn flow_item_separator(val: &str, start: usize, end: usize) -> Option<usize> {
         let close = closing_quote_index(&val[start..end], false)?;
         scan = start + close + 1;
     }
-    let sep = val[scan..end].find(": ").map(|p| p + scan)?;
-    if sep >= end {
-        None
-    } else {
-        Some(sep)
-    }
+    separator_index(&val[scan..end]).map(|p| p + scan)
 }
 
 /// `None` = `val` isn't `{...}`-shaped, or (non-strict only) a malformed
@@ -307,7 +310,9 @@ pub(crate) fn parse_flow_mapping_checked<B: Builder, const CHECK_DUPLICATES: boo
         return Ok(Some(B::v_mapping(entries, line)));
     }
 
-    let mut cursor = FlowCursor::new(val, inner_start, inner_end);
+    // the items end at the closing brace, so the last one keeps the
+    // whitespace its separator may need (§7.5)
+    let mut cursor = FlowCursor::new(val, inner_start, val.len() - 1);
     while cursor.next() {
         let (item_start, item_end) = (cursor.item_start, cursor.item_end);
         let item = &val[item_start..item_end];
@@ -331,7 +336,7 @@ pub(crate) fn parse_flow_mapping_checked<B: Builder, const CHECK_DUPLICATES: boo
                 Ok(None)
             }
         };
-        let Some(colon_pos) = flow_item_separator(val, item_start, item_end) else {
+        let Some(colon_pos) = flow_item_separator(val, item_start, cursor.item_raw_end) else {
             return malformed();
         };
 
@@ -350,7 +355,7 @@ pub(crate) fn parse_flow_mapping_checked<B: Builder, const CHECK_DUPLICATES: boo
             check_duplicate_key(B::m_has_key(&entries, &key), &key, line, strict)?;
         }
 
-        let value_start = trim_start_at(val, colon_pos + 2, item_end);
+        let value_start = trim_start_at(val, (colon_pos + 2).min(item_end), item_end);
         let value_end = trim_end_at(val, value_start, item_end);
         let raw_val = &val[value_start..value_end];
         if is_nested_flow_construct(raw_val) {

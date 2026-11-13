@@ -1097,6 +1097,7 @@ mod corpus_tests {
             InvalidIndentation => "INVALID_INDENTATION",
             UnrecognizedLine => "UNRECOGNIZED_LINE",
             InvalidFlowSyntax => "INVALID_FLOW_SYNTAX",
+            UnsupportedYaml => "UNSUPPORTED_YAML",
             DuplicateKey => "DUPLICATE_KEY",
             ResourceLimit => "RESOURCE_LIMIT",
             UnresolvedReference => "UNRESOLVED_REFERENCE",

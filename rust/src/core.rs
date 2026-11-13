@@ -23,7 +23,7 @@ use crate::normalize::{
     begin_warning_collection, check_duplicate_key, check_key_length, finish_warning_collection,
     DOCUMENT_SIZE_LIMIT, NESTING_DEPTH_LIMIT, TOP_LEVEL_KEY_LIMIT,
 };
-use crate::scalars::{is_valid_key, physical_raw, strip_comment, strip_key_quotes};
+use crate::scalars::{is_valid_key, physical_raw, separator_index, strip_comment, strip_key_quotes};
 use crate::structure::{check_range_lines, RangeOwner};
 use crate::value::{
     Builder, LimaValue, PlainBuilder, PositionedBuilder, PositionedValue, ReferenceSource,
@@ -53,12 +53,13 @@ struct TopKey {
 fn find_key_sep(s: &str) -> Option<usize> {
     let b = s.as_bytes();
     let first = *b.first()?;
+    let separated = |i: usize| matches!(b.get(i), Some(b' ' | b'\t'));
     if first == b'\'' {
         let mut i = 1;
         while i < b.len() && b[i] != first {
             i += 1;
         }
-        if b.get(i + 1) == Some(&b':') && b.get(i + 2) == Some(&b' ') {
+        if b.get(i + 1) == Some(&b':') && separated(i + 2) {
             return Some(i + 1);
         }
         return None;
@@ -72,12 +73,12 @@ fn find_key_sep(s: &str) -> Option<usize> {
                 1
             };
         }
-        if b.get(i + 1) == Some(&b':') && b.get(i + 2) == Some(&b' ') {
+        if b.get(i + 1) == Some(&b':') && separated(i + 2) {
             return Some(i + 1);
         }
         return None;
     }
-    s.find(": ")
+    separator_index(s)
 }
 
 /// Finds every `key:`/`key: value` line starting at column 0 (no leading
@@ -173,6 +174,27 @@ fn has_space_before_colon(line: &str) -> bool {
         i += 1;
     }
     i > ws_start && b.get(i) == Some(&b':')
+}
+
+/// Core 1.3 §4: where the block of a top-level entry starts when its inline
+/// value, from `value_start` up to the next key at `end`, is empty after
+/// comment removal and trimming, which makes the entry a bare key; `None`
+/// for any other value. Reads only the whitespace before the value, and the
+/// comment of a bare key.
+fn bare_key_block_start(source: &str, value_start: usize, end: usize) -> Option<usize> {
+    let mut pos = value_start;
+    for c in source[value_start..end].chars() {
+        if c == '\n' || !is_trim_whitespace(c) {
+            break;
+        }
+        pos += c.len_utf8();
+    }
+    let rest = &source[pos..end];
+    if !(rest.is_empty() || rest.starts_with(['\n', '#'])) {
+        return None;
+    }
+    let line_end = rest.find('\n').map_or(end, |p| pos + p);
+    Some((line_end + 1).min(end))
 }
 
 fn line_at(source: &str, byte_pos: usize) -> u32 {
@@ -310,7 +332,7 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
         let first = top_keys
             .first()
             .map_or(front_matter.len(), |tk| tk.key_start);
-        check_range_lines(front_matter, 0, first, 1, RangeOwner::None, "")?;
+        check_range_lines(front_matter, 0, first, 1, RangeOwner::None)?;
     }
 
     let mut root: B::Mapping = B::m_create();
@@ -326,13 +348,21 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             check_duplicate_key(B::m_has_key(&root, &tk.key), &tk.key, tk.line, strict)?;
         }
 
+        // Core 1.3 §4: an inline value that is empty after comment removal and
+        // trimming makes a bare key, whose block starts on the next line
+        let span_end = next_start.min(front_matter.len());
+        let block_start = if tk.is_block {
+            Some(tk.value_start)
+        } else {
+            bare_key_block_start(front_matter, tk.value_start, span_end)
+        };
         // an inline value's line end and whether it is a `|` marker, for the
         // strict check below
         let mut inline_line: Option<(usize, bool)> = None;
-        let value = if tk.is_block {
+        let value = if let Some(block_start) = block_start {
             parse_block_range_checked::<B, CHECK_DUPLICATES>(
                 front_matter,
-                tk.value_start,
+                block_start,
                 next_start,
                 strict,
                 tk.line + 1,
@@ -340,7 +370,6 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             )?
             .unwrap_or(B::v_null(tk.line))
         } else {
-            let span_end = next_start.min(front_matter.len());
             // §4 step 3: an inline value begins after the spaces that follow `: `, however many there are — as
             // in a block mapping — so that the scalar paths below and the source column see the value itself.
             // The newline that ends the line is not skipped.
@@ -418,33 +447,24 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
         // Core 1.1: the lines after the key's own line, up to the next key,
         // belong to its block or to nothing
         if strict {
-            if tk.is_block {
+            if let Some(block_start) = block_start {
                 check_range_lines(
                     front_matter,
-                    tk.value_start,
+                    block_start,
                     next_start,
                     tk.line + 1,
                     RangeOwner::Mapping,
-                    "",
                 )?;
             } else if let Some((line_end, marker)) =
                 inline_line.filter(|&(nl, _)| nl + 1 < next_start)
             {
-                // lines follow the key's own line; the inline value is read
-                // only for the hint an error earns
+                // lines follow the key's own line
                 let owner = if marker {
                     RangeOwner::Scalar
                 } else {
                     RangeOwner::Inline
                 };
-                check_range_lines(
-                    front_matter,
-                    line_end + 1,
-                    next_start,
-                    tk.line + 1,
-                    owner,
-                    front_matter[tk.value_start..line_end].trim_matches(is_trim_whitespace),
-                )?;
+                check_range_lines(front_matter, line_end + 1, next_start, tk.line + 1, owner)?;
             }
         }
         B::m_set(&mut root, tk.key, value);

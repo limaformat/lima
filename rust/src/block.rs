@@ -9,13 +9,13 @@ use crate::block_cursor::BlockCursor;
 use crate::block_scalar::build_block_scalar;
 use crate::chars::is_trim_whitespace;
 use crate::core::tab_adjust_slice;
-use crate::errors::{LimaDiagnosticCode as Code, LimaError};
+use crate::errors::{LimaDiagnosticCode as Code, LimaError, MULTILINE_VALUE_HINT};
 use crate::flow::{parse_flow_or_scalar_value_checked, parse_flow_sequence_checked};
 use crate::key_hints::{specific_key_hint, KEY_GRAMMAR_HINT};
 use crate::normalize::{check_duplicate_key, check_key_length, NESTING_DEPTH_LIMIT};
 use crate::scalars::{
-    closing_quote_index, is_valid_key, parse_quoted_or_typed, physical_raw, strip_comment,
-    strip_key_quotes,
+    closing_quote_index, is_empty_inline_value, is_valid_key, parse_quoted_or_typed, physical_raw,
+    separator_index, strip_comment, strip_key_quotes,
 };
 use crate::value::{Builder, ReferenceSource};
 
@@ -94,22 +94,24 @@ fn inline_or_block_scalar<'a, B: Builder, const CHECK_DUPLICATES: bool>(
     ))
 }
 
-/// Finds the key/value separator: the first unquoted `: `, or (for a
-/// quoted key) the `: ` immediately after the matching closing quote.
-/// §5.1: the separator must sit outside the quoted key, so this scans past
-/// its (escape-aware) closing quote first. Double-quoted keys honour `\"`;
-/// a single-quoted key is literal (§5.2), so its first `'` closes.
+/// Finds the key/value separator: the first unquoted colon followed by a
+/// space or a tab (§5.1), or (for a quoted key) such a colon immediately
+/// after the matching closing quote. §5.1: the separator must sit outside
+/// the quoted key, so this scans past its (escape-aware) closing quote
+/// first. Double-quoted keys honour `\"`; a single-quoted key is literal
+/// (§5.2), so its first `'` closes.
 fn find_key_sep(s: &str) -> Option<usize> {
     let b = s.as_bytes();
     let first = *b.first()?;
     if first == b'\'' || first == b'"' {
         let close = closing_quote_index(s, false)?;
-        if b.get(close + 1) == Some(&b':') && b.get(close + 2) == Some(&b' ') {
+        let separated = matches!(b.get(close + 2), Some(b' ' | b'\t'));
+        if b.get(close + 1) == Some(&b':') && separated {
             return Some(close + 1);
         }
         return None;
     }
-    s.find(": ")
+    separator_index(s)
 }
 
 fn trim_slice(source: &str, start: usize, end: usize) -> &str {
@@ -253,6 +255,54 @@ fn block_of_bare_key<B: Builder, const CHECK_DUPLICATES: bool>(
     Ok(None)
 }
 
+/// The value of an entry on the cursor's line whose content is `content`,
+/// its key at `key_column` and its separator's colon at `colon` (`None` for
+/// a `key:` that ends the line). An inline value that is empty after comment
+/// removal and trimming makes a bare key, whose block may follow (Core 1.3
+/// §4, §7.1); `|` alone is a block scalar (§6.1.5). Leaves the cursor on the
+/// next unread line. Mirrors `js/src/block.ts`'s `entryValue`.
+fn entry_value<B: Builder, const CHECK_DUPLICATES: bool>(
+    cursor: &mut BlockCursor,
+    content: &str,
+    colon: Option<usize>,
+    key_column: usize,
+    line: u32,
+    strict: bool,
+    base_line: u32,
+) -> Result<B::Value, LimaError> {
+    let colon = match colon {
+        Some(colon) if !is_empty_inline_value(&content[colon + 2..]) => colon,
+        _ => {
+            cursor.next();
+            skip_empty_and_comment_lines(cursor);
+            let block =
+                block_of_bare_key::<B, CHECK_DUPLICATES>(cursor, key_column, strict, base_line)?;
+            return Ok(block.unwrap_or(B::v_null(line)));
+        }
+    };
+    let raw_undecoded = trim_slice(content, colon + 2, content.len());
+    let raw = if raw_undecoded != "|" && raw_undecoded.contains('#') {
+        strip_comment(raw_undecoded)
+    } else {
+        raw_undecoded.to_string()
+    };
+    let value_col = if B::POSITIONED {
+        cursor.ascii_indent + colon + 2 + leading_ws_len(&content[colon + 2..])
+    } else {
+        0
+    };
+    inline_or_block_scalar::<B, CHECK_DUPLICATES>(
+        &raw,
+        raw_undecoded == "|",
+        key_column,
+        line,
+        value_col,
+        raw_undecoded,
+        cursor,
+        strict,
+    )
+}
+
 /// Shared block grammar consuming one mutable physical-line cursor; a
 /// `compact` sequence (Core 1.1 §7.2) ends at its column's first line that is
 /// no item.
@@ -298,7 +348,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     return Err(LimaError::new(
                         Code::InvalidIndentation,
                         line,
-                        format!("Lima: unexpected indentation at line {line}: \"{trimmed}\""),
+                        format!("Lima: unexpected indentation at line {line}: \"{trimmed}\"{MULTILINE_VALUE_HINT}"),
                     ));
                 }
                 cursor.next();
@@ -320,44 +370,12 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                         return Err(unrecognized_key_line(line, trimmed));
                     }
                     cursor.next();
-                } else if let Some(colon_pos) = colon_pos {
+                } else if colon_pos.is_some() || trimmed.ends_with(':') {
                     let key = strip_key_quotes(key_raw, strict, line)?;
                     check_key_length(&key, line)?;
-                    let raw_undecoded = trim_slice(trimmed, colon_pos + 2, trimmed.len());
-                    let raw = if raw_undecoded != "|" && raw_undecoded.contains('#') {
-                        strip_comment(raw_undecoded)
-                    } else {
-                        raw_undecoded.to_string()
-                    };
-                    let key_indent = cursor.ascii_indent;
-                    let value_col = if B::POSITIONED {
-                        cursor.ascii_indent
-                            + colon_pos
-                            + 2
-                            + leading_ws_len(&trimmed[colon_pos + 2..])
-                    } else {
-                        0
-                    };
-                    let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
-                        &raw,
-                        raw_undecoded == "|",
-                        key_indent,
-                        line,
-                        value_col,
-                        raw_undecoded,
-                        cursor,
-                        strict,
+                    let value = entry_value::<B, CHECK_DUPLICATES>(
+                        cursor, trimmed, colon_pos, indent, line, strict, base_line,
                     )?;
-                    B::m_set(pending, key, value);
-                } else if trimmed.ends_with(':') {
-                    let key = strip_key_quotes(key_raw, strict, line)?;
-                    check_key_length(&key, line)?;
-                    cursor.next();
-                    skip_empty_and_comment_lines(cursor);
-                    let value = block_of_bare_key::<B, CHECK_DUPLICATES>(
-                        cursor, indent, strict, base_line,
-                    )?
-                    .unwrap_or(B::v_null(line));
                     B::m_set(pending, key, value);
                 } else {
                     if strict {
@@ -373,7 +391,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     return Err(LimaError::new(
                         Code::InvalidIndentation,
                         line,
-                        format!("Lima: unexpected indentation at line {line}: \"{trimmed}\""),
+                        format!("Lima: unexpected indentation at line {line}: \"{trimmed}\"{MULTILINE_VALUE_HINT}"),
                     ));
                 }
                 cursor.next();
@@ -467,8 +485,9 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 cursor.next();
                 continue;
             }
+            let colon_pos = find_key_sep(&after_dash);
             if !matches!(first, Some(b'"') | Some(b'\'') | Some(b'-'))
-                && !after_dash.contains(": ")
+                && colon_pos.is_none()
                 && !after_dash.ends_with(':')
             {
                 items.push(parse_quoted_or_typed::<B>(
@@ -481,7 +500,6 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                 continue;
             }
 
-            let colon_pos = find_key_sep(&after_dash);
             if is_dash_only_or_prefixed(&after_dash) {
                 if strict {
                     let content = cursor_content(cursor).to_string();
@@ -559,26 +577,14 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                         break;
                     }
                     check_key_length(&ckey, continuation_line)?;
-                    let cvalue_undecoded = trim_slice(cont_line, csep + 2, cont_line.len());
-                    let cvalue = if cvalue_undecoded != "|" && cvalue_undecoded.contains('#') {
-                        strip_comment(cvalue_undecoded)
-                    } else {
-                        cvalue_undecoded.to_string()
-                    };
-                    let cvalue_col = if B::POSITIONED {
-                        cursor.indent + csep + 2 + leading_ws_len(&cont_line[csep + 2..])
-                    } else {
-                        0
-                    };
-                    let cvalue = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
-                        &cvalue,
-                        cvalue_undecoded == "|",
+                    let cvalue = entry_value::<B, CHECK_DUPLICATES>(
+                        cursor,
+                        cont_line,
+                        Some(csep),
                         ckey_indent,
                         continuation_line,
-                        cvalue_col,
-                        cvalue_undecoded,
-                        cursor,
                         strict,
+                        base_line,
                     )?;
                     B::m_set(&mut item, ckey, cvalue);
                 }
@@ -640,55 +646,24 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
                     return Err(unrecognized_key_line(line, &trimmed));
                 }
                 cursor.next();
-            } else if let Some(colon_pos) = colon_pos {
+            } else if colon_pos.is_some() || trimmed.ends_with(':') {
                 let entries = entries.get_or_insert_with(B::m_create);
-                let key = strip_key_quotes(trim_end_slice(&trimmed, 0, colon_pos), strict, line)?;
+                let key_end = colon_pos.unwrap_or(trimmed.len() - 1);
+                let key = strip_key_quotes(trim_end_slice(&trimmed, 0, key_end), strict, line)?;
                 check_key_length(&key, line)?;
                 if CHECK_DUPLICATES {
                     check_duplicate_key(B::m_has_key(entries, &key), &key, line, strict)?;
                 }
-                let raw_undecoded = trim_slice(&trimmed, colon_pos + 2, trimmed.len());
-                let raw = if raw_undecoded != "|" && raw_undecoded.contains('#') {
-                    strip_comment(raw_undecoded)
-                } else {
-                    raw_undecoded.to_string()
-                };
-                let value_col = if B::POSITIONED {
-                    cursor.ascii_indent + colon_pos + 2 + leading_ws_len(&trimmed[colon_pos + 2..])
-                } else {
-                    0
-                };
-                let value = inline_or_block_scalar::<B, CHECK_DUPLICATES>(
-                    &raw,
-                    raw_undecoded == "|",
+                let value = entry_value::<B, CHECK_DUPLICATES>(
+                    cursor,
+                    &trimmed,
+                    colon_pos,
                     base_indent,
                     line,
-                    value_col,
-                    raw_undecoded,
-                    cursor,
-                    strict,
-                )?;
-                B::m_set(entries, key, value);
-            } else if let Some(key_part) = trimmed.strip_suffix(':') {
-                let key =
-                    strip_key_quotes(trim_end_slice(key_part, 0, key_part.len()), strict, line)?;
-                check_key_length(&key, line)?;
-                {
-                    let entries_ref = entries.get_or_insert_with(B::m_create);
-                    if CHECK_DUPLICATES {
-                        check_duplicate_key(B::m_has_key(entries_ref, &key), &key, line, strict)?;
-                    }
-                }
-                cursor.next();
-                skip_empty_and_comment_lines(cursor);
-                let value = block_of_bare_key::<B, CHECK_DUPLICATES>(
-                    cursor,
-                    base_indent,
                     strict,
                     base_line,
-                )?
-                .unwrap_or(B::v_null(line));
-                B::m_set(entries.get_or_insert_with(B::m_create), key, value);
+                )?;
+                B::m_set(entries, key, value);
             } else {
                 if strict {
                     return Err(LimaError::new(

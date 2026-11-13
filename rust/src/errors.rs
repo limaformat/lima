@@ -24,6 +24,9 @@ pub enum LimaDiagnosticCode {
     InvalidIndentation,
     UnrecognizedLine,
     InvalidFlowSyntax,
+    /// Core 1.3, strict mode: an unquoted value that starts with `&`, `*` or
+    /// `!`, or that is a YAML block scalar header other than `|`.
+    UnsupportedYaml,
     DuplicateKey,
     ResourceLimit,
     UnresolvedReference,
@@ -42,6 +45,9 @@ pub struct LimaError {
     pub path: Option<Box<str>>,
     pub column: Option<u32>,
 }
+
+/// Appendix E: a line deeper than an inline value continues no value (Core §7.1 rule 5).
+pub(crate) const MULTILINE_VALUE_HINT: &str = " (a value spans lines only after \"|\")";
 
 impl LimaError {
     pub fn new(code: LimaDiagnosticCode, line: u32, message: impl Into<String>) -> Self {

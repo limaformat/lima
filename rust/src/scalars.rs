@@ -702,14 +702,23 @@ pub fn parse_quoted_or_typed<B: Builder>(
         }
         if strict {
             let message = if close.is_none() {
-                format!("Lima: unterminated quoted string at line {line}")
+                format!("Lima: unterminated quoted string at line {line}{UNTERMINATED_HINT}")
             } else {
-                format!("Lima: non-whitespace content after closing quote at line {line}")
+                // YAML doubles a quote inside a single-quoted value (Appendix E)
+                let next = close.and_then(|c| bytes.get(c + 1));
+                let hint = if quote == b'\'' && next == Some(&b'\'') {
+                    DOUBLED_QUOTE_HINT
+                } else {
+                    ""
+                };
+                format!("Lima: non-whitespace content after closing quote at line {line}{hint}")
             };
             return Err(LimaError::new(Code::InvalidQuote, line, message));
         }
         // Non-strict: §6.1.2/§6.1.3 + §10.1 — the entire value falls back to
         // a literal string (opening quote included), handled below.
+    } else if strict {
+        check_yaml_value(raw, line)?;
     }
 
     if !raw.is_empty() && raw != "null" && raw != "~" && raw != "true" && raw != "false" {
@@ -721,6 +730,84 @@ pub fn parse_quoted_or_typed<B: Builder>(
     }
     build_typed::<B>(raw, strict, line, source)
 }
+
+/// Core 1.3 §4 step 2: an unquoted, unescaped `#` begins a comment only as
+/// the first character of the value or after whitespace (§1); any other `#`
+/// is text. `chars` starts where the value starts. Mirrors
+/// `js/src/scalars.ts`'s `isCommentHash`.
+fn is_comment_hash(chars: &[char], i: usize) -> bool {
+    i == 0 || is_trim_whitespace(chars[i - 1])
+}
+
+/// Core 1.3 §4: whether an inline value is empty after comment removal and
+/// trimming — its first character other than whitespace (§1) is a `#`,
+/// which begins a comment there, or there is none. Such an entry is a bare
+/// key, whose block may follow. Reads only the whitespace before the value.
+pub(crate) fn is_empty_inline_value(value: &str) -> bool {
+    let rest = value.trim_start_matches(is_trim_whitespace);
+    rest.is_empty() || rest.starts_with('#')
+}
+
+/// The byte index of the first colon in `s` that a space or a tab follows —
+/// the key-value separator of an unquoted key (§5.1), whose other colons
+/// belong to the key.
+pub(crate) fn separator_index(s: &str) -> Option<usize> {
+    let b = s.as_bytes();
+    (1..b.len())
+        .find(|&i| b[i - 1] == b':' && matches!(b[i], b' ' | b'\t'))
+        .map(|i| i - 1)
+}
+
+/// Core 1.3 §6.1.6 and Appendix D `yaml-header`: `>`, or `|` or `>`
+/// followed by a chomping indicator (`-`, `+`) and an indentation digit
+/// (`1`–`9`), one or both, in either order.
+fn is_yaml_header(value: &str) -> bool {
+    let b = value.as_bytes();
+    let chomping = |c: u8| c == b'-' || c == b'+';
+    let digit = |c: u8| (b'1'..=b'9').contains(&c);
+    match b {
+        [b'>'] => true,
+        [b'>' | b'|', a] => chomping(*a) || digit(*a),
+        [b'>' | b'|', a, c] => (chomping(*a) && digit(*c)) || (digit(*a) && chomping(*c)),
+        _ => false,
+    }
+}
+
+/// Core 1.3 §6.1.1, §6.1.6 and §10.1: in strict mode an unquoted value that
+/// starts with `&`, `*` or `!`, or that is a YAML block scalar header other
+/// than `|`, is an error; the message names what Lima writes instead
+/// (§10.2, Appendix E). Mirrors `js/src/scalars.ts`'s `checkYamlValue`.
+fn check_yaml_value(raw: &str, line: u32) -> Result<(), LimaError> {
+    let property = match raw.as_bytes().first() {
+        Some(b'&') => Some(('&', "an anchor")),
+        Some(b'*') => Some(('*', "an alias")),
+        Some(b'!') => Some(('!', "a tag")),
+        _ => None,
+    };
+    if let Some((c, property)) = property {
+        return Err(LimaError::new(
+            Code::UnsupportedYaml,
+            line,
+            format!("Lima: unquoted value starting with \"{c}\" at line {line} (YAML reads it as {property}; Lima has no anchors, aliases or tags: quote the value)"),
+        ));
+    }
+    if is_yaml_header(raw) {
+        return Err(LimaError::new(
+            Code::UnsupportedYaml,
+            line,
+            format!("Lima: YAML block scalar header \"{raw}\" at line {line} (Lima writes \"|\", and \"^^\" to join lines)"),
+        ));
+    }
+    Ok(())
+}
+
+// Appendix E: what a message names in place of a YAML form.
+const UNTERMINATED_HINT: &str =
+    " (a quoted value ends on its line; write \"|\" for a value of several lines)";
+const DOUBLED_QUOTE_HINT: &str = " (YAML doubles the quote; Lima writes 'It\\'s' or \"It's\")";
+const UNCLOSED_SEQUENCE_HINT: &str =
+    " (a flow sequence ends on its line; write a block sequence with \"- \")";
+const UNCLOSED_MAPPING_HINT: &str = " (a flow mapping ends on its line; write a block mapping)";
 
 /// The value text with a trailing `#` comment removed, but with `\#`
 /// escapes left as written — the *physical* form a References 2.0 token's
@@ -744,7 +831,7 @@ pub fn strip_comment_keep_escapes(val: &str) -> String {
             quote = Some(c);
         } else if c == '\\' && chars.get(i + 1) == Some(&'#') {
             i += 1;
-        } else if c == '#' {
+        } else if c == '#' && is_comment_hash(&chars, i) {
             let cut: String = chars[..i].iter().collect();
             // Project whitespace set, not Rust's `char::is_whitespace` — the
             // latter trims U+0085 (NEL) and keeps U+FEFF, both wrong here.
@@ -782,7 +869,7 @@ pub fn strip_comment(val: &str) -> String {
             out.push('#');
             i += 1;
             seg = i + 1;
-        } else if c == '#' {
+        } else if c == '#' && is_comment_hash(&chars, i) {
             out.extend(&chars[seg..i]);
             return out.trim_end_matches(is_trim_whitespace).to_string();
         }
@@ -814,11 +901,15 @@ pub fn parse_scalar_value<B: Builder>(
     if strict {
         if let Some(&first) = raw.as_bytes().first() {
             if first == b'[' || first == b'{' {
-                let kind = if first == b'[' { "sequence" } else { "mapping" };
+                let (kind, hint) = if first == b'[' {
+                    ("sequence", UNCLOSED_SEQUENCE_HINT)
+                } else {
+                    ("mapping", UNCLOSED_MAPPING_HINT)
+                };
                 return Err(LimaError::new(
                     Code::InvalidFlowSyntax,
                     line,
-                    format!("Lima: unclosed flow {kind} at line {line}"),
+                    format!("Lima: unclosed flow {kind} at line {line}{hint}"),
                 ));
             }
         }
