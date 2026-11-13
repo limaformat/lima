@@ -411,6 +411,10 @@ func checkYAMLValue(raw string, line int) error {
 	if raw == "" {
 		return nil
 	}
+	// the common case, a value that starts with neither, costs two byte tests
+	if c := raw[0]; c != '&' && c != '*' && c != '!' && c != '>' && c != '|' {
+		return nil
+	}
 	if property, ok := yamlNodeProperty[raw[0]]; ok {
 		return limaError(UnsupportedYAML, line, fmt.Sprintf(`Lima: unquoted value starting with "%c" at line %d (YAML reads it as %s; Lima has no anchors, aliases or tags: quote the value)`, raw[0], line, property))
 	}
