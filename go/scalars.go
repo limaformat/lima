@@ -378,15 +378,6 @@ func isCommentHash(s string, i int) bool {
 	return isTrimWhitespace(r)
 }
 
-// isEmptyInlineValue reports whether an inline value is empty after comment
-// removal and trimming (Core 1.3 §4): its first character other than
-// whitespace (§1) is a `#`, which begins a comment there, or there is none.
-// Such an entry is a bare key, whose block may follow.
-func isEmptyInlineValue(value string) bool {
-	rest := trimLeftWhitespace(value)
-	return rest == "" || rest[0] == '#'
-}
-
 // isYAMLHeader reports a YAML block scalar header other than "|" (Core 1.3
 // §6.1.6, Appendix D yaml-header): ">", or "|" or ">" followed by a chomping
 // indicator ("-", "+") and an indentation digit ("1"–"9"), one or both, in

@@ -277,8 +277,13 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 		}
 		*idx++
 		var cv *pvalue
-		// Core 1.3 §4: a value that is only a comment leaves the key bare
-		if bare || isEmptyInlineValue(cc[s+2:]) {
+		var rv string
+		if !bare {
+			rv = trimWhitespace(cc[s+2:])
+		}
+		// Core 1.3 §4: a value that is empty after comment removal and
+		// trimming, none or a comment, leaves the key bare
+		if rv == "" || rv[0] == '#' {
 			cv, e = bareNestedValue(lineStructuralIndent(cl), cl.number, lines, idx, strict, onWarning, captureReferences)
 		} else {
 			rvRaw := cc[s+2:]
@@ -287,11 +292,11 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 			// not Go's `strings.TrimSpace` (which also eats U+0085 etc.), so
 			// raw and decoded scans stay in lockstep (§2.4).
 			valueByte := cl.indent + s + 2 + leadingWsBytes(rvRaw)
-			if bv, ok, be := blockScalarValue(trimWhitespace(rvRaw), cl.indent, cl.number, lines, idx, captureReferences); ok {
+			if bv, ok, be := blockScalarValue(rv, cl.indent, cl.number, lines, idx, captureReferences); ok {
 				cv, e = bv, be
 			} else {
 				src := inlineRefSource(captureReferences, cl, cl.text[valueByte:], valueColOf(cl.text, valueByte))
-				cv, e = parseFlowOrScalar(stripComment(trimWhitespace(rvRaw)), strict, cl.number, onWarning, captureReferences, src)
+				cv, e = parseFlowOrScalar(stripComment(rv), strict, cl.number, onWarning, captureReferences, src)
 			}
 		}
 		if e != nil {
@@ -517,13 +522,17 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 			*idx++
 			var v *pvalue
 			var e error
-			// Core 1.3 §4: a value that is only a comment leaves the key bare
-			if bare || isEmptyInlineValue(c[sep+2:]) {
+			var raw string
+			if !bare {
+				raw = trimWhitespace(c[sep+2:])
+			}
+			// Core 1.3 §4: a value that is empty after comment removal and
+			// trimming, none or a comment, leaves the key bare
+			if raw == "" || raw[0] == '#' {
 				// deeper than the key, or a sequence at its column (Core 1.1
 				// §7.2); bareNestedValue skips blank and comment lines first
 				v, e = bareNestedValue(indent, l.number, lines, idx, strict, onWarning, captureReferences)
 			} else {
-				raw := trimWhitespace(c[sep+2:])
 				valueByte := l.indent + sep + 2 + leadingWsBytes(c[sep+2:])
 				vcol := valueColOf(l.text, valueByte)
 				if bv, ok, be := blockScalarValue(raw, indent, l.number, lines, idx, captureReferences); ok {
@@ -646,8 +655,13 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 		i++
 		var v *pvalue
 		var e error
-		// Core 1.3 §4: a value that is only a comment leaves the key bare
-		if bare || isEmptyInlineValue(c[sep+2:]) {
+		var raw string
+		if !bare {
+			raw = trimWhitespace(c[sep+2:])
+		}
+		// Core 1.3 §4: a value that is empty after comment removal and
+		// trimming, none or a comment, leaves the key bare
+		if raw == "" || raw[0] == '#' {
 			afterInline = false
 			j := i
 			// Core §4 rule 7 / §6.1.3: comment lines do not affect base
@@ -668,7 +682,6 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 				v = pv(Null{}, l.number)
 			}
 		} else {
-			raw := trimWhitespace(c[sep+2:])
 			valueByte := sep + 2 + leadingWsBytes(c[sep+2:])
 			vcol := valueColOf(c, valueByte)
 			afterInline = true
