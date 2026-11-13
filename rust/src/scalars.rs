@@ -739,15 +739,6 @@ fn is_comment_hash(chars: &[char], i: usize) -> bool {
     i == 0 || is_trim_whitespace(chars[i - 1])
 }
 
-/// Core 1.3 §4: whether an inline value is empty after comment removal and
-/// trimming — its first character other than whitespace (§1) is a `#`,
-/// which begins a comment there, or there is none. Such an entry is a bare
-/// key, whose block may follow. Reads only the whitespace before the value.
-pub(crate) fn is_empty_inline_value(value: &str) -> bool {
-    let rest = value.trim_start_matches(is_trim_whitespace);
-    rest.is_empty() || rest.starts_with('#')
-}
-
 /// The byte index of the first colon in `s` that a space or a tab follows —
 /// the key-value separator of an unquoted key (§5.1), whose other colons
 /// belong to the key.

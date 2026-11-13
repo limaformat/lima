@@ -14,8 +14,8 @@ use crate::flow::{parse_flow_or_scalar_value_checked, parse_flow_sequence_checke
 use crate::key_hints::{specific_key_hint, KEY_GRAMMAR_HINT};
 use crate::normalize::{check_duplicate_key, check_key_length, NESTING_DEPTH_LIMIT};
 use crate::scalars::{
-    closing_quote_index, is_empty_inline_value, is_valid_key, parse_quoted_or_typed, physical_raw,
-    separator_index, strip_comment, strip_key_quotes,
+    closing_quote_index, is_valid_key, parse_quoted_or_typed, physical_raw, separator_index,
+    strip_comment, strip_key_quotes,
 };
 use crate::value::{Builder, ReferenceSource};
 
@@ -270,17 +270,19 @@ fn entry_value<B: Builder, const CHECK_DUPLICATES: bool>(
     strict: bool,
     base_line: u32,
 ) -> Result<B::Value, LimaError> {
-    let colon = match colon {
-        Some(colon) if !is_empty_inline_value(&content[colon + 2..]) => colon,
-        _ => {
-            cursor.next();
-            skip_empty_and_comment_lines(cursor);
-            let block =
-                block_of_bare_key::<B, CHECK_DUPLICATES>(cursor, key_column, strict, base_line)?;
-            return Ok(block.unwrap_or(B::v_null(line)));
-        }
+    let (colon, raw_undecoded) = match colon {
+        Some(colon) => (colon, trim_slice(content, colon + 2, content.len())),
+        None => (0, ""),
     };
-    let raw_undecoded = trim_slice(content, colon + 2, content.len());
+    // Core 1.3 §4: a value that is empty after comment removal and trimming,
+    // none or a comment, leaves the key bare, and its block follows
+    if raw_undecoded.is_empty() || raw_undecoded.starts_with('#') {
+        cursor.next();
+        skip_empty_and_comment_lines(cursor);
+        let block =
+            block_of_bare_key::<B, CHECK_DUPLICATES>(cursor, key_column, strict, base_line)?;
+        return Ok(block.unwrap_or(B::v_null(line)));
+    }
     let raw = if raw_undecoded != "|" && raw_undecoded.contains('#') {
         strip_comment(raw_undecoded)
     } else {
