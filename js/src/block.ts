@@ -12,7 +12,7 @@
 import { type ParseContext, checkKeyLength, checkDuplicateKey, NESTING_DEPTH_LIMIT } from './normalize.js'
 import {
 	stripKeyQuotes, stripComment, stripCommentKeepEscapes,
-	parseQuotedOrTyped, closingQuoteIndex, isValidKey, separatorIndex,
+	parseQuotedOrTyped, closingQuoteIndex, isValidKey, isEmptyInlineValue, separatorIndex,
 } from './scalars.js'
 import { KEY_GRAMMAR_HINT, specificKeyHint } from './key-hints.js'
 import { parseFlowOrScalarValue, parseFlowSequence, flowValueReader } from './flow.js'
@@ -164,8 +164,8 @@ const sourceKeyReader = (cursor: BlockCursor, positions: SourcePositions) => {
 		const start = cursor.contentStart + prefix
 		const separator = start + colon
 		// Core §4 / §15.4: the physical colon must precede a space or a tab or
-		// end the line/input. Comment stripping could make a colon look like it
-		// ends the value, so its parsed position alone is insufficient.
+		// end the line/input. Comment stripping can make `- name:# unfinished`
+		// look like a bare key, so its parsed colon alone is insufficient.
 		const next = cursor.source.charCodeAt(separator + 1)
 		const readable = separator === cursor.lineEnd - 1 || next === 32 || next === 9
 		positions.key(key, start, readable ? start + raw.length : start, separator, line)
@@ -200,28 +200,6 @@ const blockParser = (
 		return null
 	}
 
-	/**
-	 * The value of an entry on the cursor's line whose content is `content`, its key at `keyColumn` and its separator's
-	 * colon at `colon` (-1 for a `key:` that ends the line). An inline value that is empty after comment removal and
-	 * trimming makes a bare key, whose block may follow (Core 1.3 §4, §7.1); `|` alone is a block scalar (§6.1.5).
-	 * Leaves the cursor on the next unread line.
-	 */
-	const entryValue = <V, M>(
-		cursor: BlockCursor, content: string, colon: number, keyColumn: number, line: number,
-		ctx: ParseContext, baseLine: number, builder: ValueBuilder<V, M>,
-	): V => {
-		const rawUndecoded = colon === -1 ? '' : trimSlice(content, colon + 2, content.length)
-		const marker = rawUndecoded === '|'
-		const raw = marker || !rawUndecoded.includes('#') ? rawUndecoded : uncomment(rawUndecoded)
-		if (raw === '') {
-			cursor.next()
-			skipEmptyAndCommentLines(cursor)
-			return blockOfBareKey(cursor, keyColumn, ctx, baseLine, builder) ?? builder.null(line)
-		}
-		const valueCol = builder.positions === true ? cursor.indent + colon + 2 + leadingWsLen(content.slice(colon + 2)) : 0
-		return parseInlineValue(raw, marker, keyColumn, line, valueCol, rawUndecoded, cursor, ctx, builder, readValue)
-	}
-
 	const parseCursorBlock = <V, M>(
 		cursor: BlockCursor, baseIndent: number, ctx: ParseContext, baseLine: number,
 		builder: ValueBuilder<V, M>, compact = false,
@@ -253,8 +231,9 @@ const blockParser = (
 					cursor.next(); continue
 				}
 				if (items !== null && pendingItem !== null) {
-					const colonPos = findKeySep(trimmed)
-					const bareKey = colonPos === -1 && trimmed.charCodeAt(trimmed.length - 1) === 58
+					const bareKey = trimmed.charCodeAt(trimmed.length - 1) === 58
+					const colonPos = bareKey && trimmed.indexOf(' ') === -1 && trimmed.indexOf('\t') === -1
+						? -1 : findKeySep(trimmed)
 					const keyRaw = colonPos !== -1
 						? trimEndSlice(trimmed, 0, colonPos)
 						: bareKey ? trimEndSlice(trimmed, 0, trimmed.length - 1) : ''
@@ -263,10 +242,28 @@ const blockParser = (
 						// mode, as at the top level (Core 1.1 §10.1)
 						if (ctx.strict) throw unrecognizedKeyLine(line, trimmed)
 						cursor.next()
-					} else if (colonPos !== -1 || bareKey) {
-						const key = readKey(keyRaw, ctx.strict, line, bareKey ? trimmed.length - 1 : colonPos)
+					} else if (colonPos !== -1) {
+						const key = readKey(keyRaw, ctx.strict, line, colonPos)
 						checkKeyLength(key, line)
-						builder.setMapping(pendingItem, key, entryValue(cursor, trimmed, colonPos, indent, line, ctx, baseLine, builder))
+						const rawUndecoded = trimSlice(trimmed, colonPos + 2, trimmed.length)
+						let raw = rawUndecoded
+						if (raw !== '|' && raw.includes('#')) raw = uncomment(raw)
+						if (raw === '') {
+							// Core 1.3 §4: a value that is only a comment leaves the key bare, and its block follows
+							cursor.next()
+							skipEmptyAndCommentLines(cursor)
+							builder.setMapping(pendingItem, key, blockOfBareKey(cursor, indent, ctx, baseLine, builder) ?? builder.null(line))
+							continue
+						}
+						const valueCol = wantSource ? cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2)) : 0
+						builder.setMapping(pendingItem, key, parseInlineValue(raw, rawUndecoded === '|', indent, line, valueCol, rawUndecoded, cursor, ctx, builder, readValue))
+					} else if (bareKey) {
+						const key = readKey(keyRaw, ctx.strict, line, trimmed.length - 1)
+						checkKeyLength(key, line)
+						cursor.next()
+						skipEmptyAndCommentLines(cursor)
+						const nested = blockOfBareKey(cursor, indent, ctx, baseLine, builder)
+						builder.setMapping(pendingItem, key, nested ?? builder.null(line))
 					} else {
 						if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
 							message: `Lima: unexpected syntax in array item continuation at line ${line}: "${trimmed}"` })
@@ -356,14 +353,19 @@ const blockParser = (
 						const csep = findKeySep(contLine)
 						if (csep === -1) break
 						const ckeyRaw = trimEndSlice(contLine, 0, csep)
-						if (!isValidKey(ckeyRaw)) break
+						// Core 1.3 §4: a key whose value is only a comment is bare; the block loop reads it as one
+						if (!isValidKey(ckeyRaw) || isEmptyInlineValue(contLine, csep + 2, contLine.length)) break
 						const ckey = readKey(ckeyRaw, ctx.strict, continuationLine, csep, 0, true)
 						if (!ckey) break
 						checkKeyLength(ckey, continuationLine)
+						const valueUndecoded = trimSlice(contLine, csep + 2, contLine.length)
+						let value = valueUndecoded
+						if (value !== '|' && value.includes('#')) value = uncomment(value)
 						// contLine starts exactly at contentStart (no leading trim), so
 						// the value's column is the indent plus its offset in contLine.
+						const cValueCol = wantSource ? cursor.indent + csep + 2 + leadingWsLen(contLine.slice(csep + 2)) : 0
 						builder.setMapping(pendingItem, ckey,
-							entryValue(cursor, contLine, csep, ckeyIndent, continuationLine, ctx, baseLine, builder))
+							parseInlineValue(value, valueUndecoded === '|', ckeyIndent, continuationLine, cValueCol, valueUndecoded, cursor, ctx, builder, readValue))
 					}
 				} else if (afterDash.endsWith(':') && isValidKey(trimSlice(afterDash, 0, afterDash.length - 1))) {
 					const key = readKey(trimSlice(afterDash, 0, afterDash.length - 1), ctx.strict, line, afterDash.length - 1, dashPrefixLen(cursor))
@@ -394,8 +396,9 @@ const blockParser = (
 						message: `Lima: mixed map and array entries for the same key at line ${line}` })
 					cursor.next(); continue
 				}
-				const colonPos = findKeySep(trimmed)
-				const bareKey = colonPos === -1 && trimmed.charCodeAt(trimmed.length - 1) === 58
+				const bareKey = trimmed.charCodeAt(trimmed.length - 1) === 58
+				const colonPos = bareKey && trimmed.indexOf(' ') === -1 && trimmed.indexOf('\t') === -1
+					? -1 : findKeySep(trimmed)
 				const keyRaw = colonPos !== -1
 					? trimEndSlice(trimmed, 0, colonPos)
 					: bareKey ? trimEndSlice(trimmed, 0, trimmed.length - 1) : ''
@@ -404,13 +407,34 @@ const blockParser = (
 					// mode, as at the top level (Core 1.1 §10.1)
 					if (ctx.strict) throw unrecognizedKeyLine(line, trimmed)
 					cursor.next()
-				} else if (colonPos !== -1 || bareKey) {
+				} else if (colonPos !== -1) {
 					if (entries === null) entries = builder.createMapping()
-					const key = readKey(keyRaw, ctx.strict, line, bareKey ? trimmed.length - 1 : colonPos)
+					const key = readKey(keyRaw, ctx.strict, line, colonPos)
 					checkKeyLength(key, line)
 					if (ctx.strict || ctx.onWarning !== undefined)
 						checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
-					builder.setMapping(entries, key, entryValue(cursor, trimmed, colonPos, baseIndent, line, ctx, baseLine, builder))
+					const rawUndecoded = trimSlice(trimmed, colonPos + 2, trimmed.length)
+					let raw = rawUndecoded
+					if (raw !== '|' && raw.includes('#')) raw = uncomment(raw)
+					if (raw === '') {
+						// Core 1.3 §4: a value that is only a comment leaves the key bare, and its block follows
+						cursor.next()
+						skipEmptyAndCommentLines(cursor)
+						builder.setMapping(entries, key, blockOfBareKey(cursor, baseIndent, ctx, baseLine, builder) ?? builder.null(line))
+						continue
+					}
+					const valueCol = wantSource ? cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2)) : 0
+					builder.setMapping(entries, key, parseInlineValue(raw, rawUndecoded === '|', baseIndent, line, valueCol, rawUndecoded, cursor, ctx, builder, readValue))
+				} else if (bareKey) {
+					if (entries === null) entries = builder.createMapping()
+					const key = readKey(keyRaw, ctx.strict, line, trimmed.length - 1)
+					checkKeyLength(key, line)
+					if (ctx.strict || ctx.onWarning !== undefined)
+						checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
+					cursor.next()
+					skipEmptyAndCommentLines(cursor)
+					const nested = blockOfBareKey(cursor, baseIndent, ctx, baseLine, builder)
+					builder.setMapping(entries, key, nested ?? builder.null(line))
 				} else {
 					if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
 						message: `Lima: indented freetext without a block scalar marker at line ${line}: "${trimmed}"` })
