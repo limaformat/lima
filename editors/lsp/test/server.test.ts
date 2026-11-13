@@ -10,6 +10,7 @@ import {
   InitializeRequest,
   InitializedNotification,
   PublishDiagnosticsNotification,
+  SemanticTokensRequest,
   ShutdownRequest,
   type PublishDiagnosticsParams,
   createProtocolConnection,
@@ -64,6 +65,10 @@ test("diagnostics and references survive the LSP round trip", async () => {
     expect(initializeResult.capabilities).toMatchObject({
       hoverProvider: true,
       definitionProvider: true,
+      semanticTokensProvider: {
+        legend: { tokenTypes: ["property", "comment"], tokenModifiers: [] },
+        full: true,
+      },
     });
     await client.sendNotification(InitializedNotification.type, {});
 
@@ -284,6 +289,61 @@ test("diagnostics and references survive the LSP round trip", async () => {
       textDocument: { uri },
     });
     expect(await closed).toEqual({ uri, diagnostics: [] });
+
+    await client.sendRequest(ShutdownRequest.type);
+  } finally {
+    client.dispose();
+    server.dispose();
+  }
+}, 5_000);
+
+test("semantic tokens mark keys and comments as outline() reads them", async () => {
+  const [clientStream, serverStream] = duplexPair();
+  const server = createLimaLanguageServer(serverStream, serverStream);
+  const client = createProtocolConnection(clientStream, clientStream);
+  const opened = new Map<string, () => void>();
+  client.onNotification(PublishDiagnosticsNotification.type, ({ uri }) =>
+    opened.get(uri)?.(),
+  );
+  client.listen();
+  const open = (uri: string, languageId: string, text: string) => {
+    const published = new Promise<void>((resolve) => opened.set(uri, resolve));
+    void client.sendNotification(DidOpenTextDocumentNotification.type, {
+      textDocument: { uri, languageId, version: 1, text },
+    });
+    return published;
+  };
+  const tokens = async (uri: string) =>
+    (await client.sendRequest(SemanticTokensRequest.type, { textDocument: { uri } }))?.data;
+
+  try {
+    await client.sendRequest(InitializeRequest.type, {
+      processId: null,
+      rootUri: null,
+      capabilities: {},
+    });
+    await client.sendNotification(InitializedNotification.type, {});
+
+    await open(
+      "file:///tokens.lima",
+      "lima",
+      "author: # who\n  name: Alice\nlink: https://example.org/x#top\n",
+    );
+    // line delta, start delta, length, type (0 property, 1 comment), modifiers
+    expect(await tokens("file:///tokens.lima")).toEqual([
+      0, 0, 6, 0, 0,
+      0, 8, 5, 1, 0,
+      1, 2, 4, 0, 0,
+      1, 0, 4, 0, 0,
+    ]);
+
+    await open("file:///post.md", "markdown", "---\ntitle: Hello # hi\n---\n# Post\n");
+    expect(await tokens("file:///post.md")).toEqual([
+      1, 0, 5, 0, 0,
+      0, 13, 4, 1, 0,
+    ]);
+
+    expect(await tokens("file:///unopened.lima")).toEqual([]);
 
     await client.sendRequest(ShutdownRequest.type);
   } finally {

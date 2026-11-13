@@ -7,6 +7,7 @@ import {
   type Diagnostic,
   type InitializeResult,
   MarkupKind,
+  SemanticTokensBuilder,
   TextDocumentSyncKind,
 } from "vscode-languageserver/node.js";
 import type { TextDocument } from "vscode-languageserver-textdocument";
@@ -19,6 +20,10 @@ import {
 import { limaDocumentText } from "../../shared/document-text.js";
 import { findingRange } from "../../shared/finding-range.js";
 import { ReferenceResolver } from "../../shared/references.js";
+import {
+  SEMANTIC_TOKEN_TYPES,
+  SemanticTokenCache,
+} from "../../shared/semantic-tokens.js";
 import { DocumentStore } from "./document-store.js";
 
 const DEFAULT_CONFIG: Required<CheckOptions> = {
@@ -52,6 +57,7 @@ export function createLimaLanguageServer(
   const connection = createConnection(input, output);
   let config = DEFAULT_CONFIG;
   const references = new ReferenceResolver();
+  const semanticTokens = new SemanticTokenCache();
 
   const refresh = (document: TextDocument): void => {
     const target = limaDocumentText(document.languageId, document.getText());
@@ -67,6 +73,7 @@ export function createLimaLanguageServer(
     refresh,
     (uri) => {
       references.delete(uri);
+      semanticTokens.delete(uri);
       void connection.sendDiagnostics({ uri, diagnostics: [] });
     },
     options.debounceMs ?? DEBOUNCE_MS,
@@ -82,6 +89,13 @@ export function createLimaLanguageServer(
           textDocumentSync: TextDocumentSyncKind.Incremental,
           hoverProvider: true,
           definitionProvider: true,
+          semanticTokensProvider: {
+            legend: {
+              tokenTypes: [...SEMANTIC_TOKEN_TYPES],
+              tokenModifiers: [],
+            },
+            full: true,
+          },
         },
         serverInfo: {
           name: "lima-language-server",
@@ -129,14 +143,37 @@ export function createLimaLanguageServer(
     return definition ? { uri: document.uri, range: definition } : null;
   });
 
-  connection.onShutdown(() => {
+  // Keys and comments as outline() reads them, over the grammar's colours.
+  connection.languages.semanticTokens.on(({ textDocument }) => {
+    const builder = new SemanticTokensBuilder();
+    // A client asks for open documents only; the handler's type has no null.
+    const document = documents.documents.get(textDocument.uri);
+    if (!document) return builder.build();
+    const tokens = semanticTokens.tokens(
+      document.uri,
+      document.version,
+      document.languageId,
+      () => document.getText(),
+    );
+    for (const token of tokens) {
+      builder.push(
+        token.line,
+        token.character,
+        token.length,
+        SEMANTIC_TOKEN_TYPES.indexOf(token.type),
+        0,
+      );
+    }
+    return builder.build();
+  });
+
+  const clear = (): void => {
     documents.dispose();
     references.clear();
-  });
-  connection.onExit(() => {
-    documents.dispose();
-    references.clear();
-  });
+    semanticTokens.clear();
+  };
+  connection.onShutdown(clear);
+  connection.onExit(clear);
 
   documents.listen(connection);
   connection.listen();
@@ -145,8 +182,7 @@ export function createLimaLanguageServer(
     connection,
     documents,
     dispose(): void {
-      documents.dispose();
-      references.clear();
+      clear();
       connection.dispose();
     },
   };

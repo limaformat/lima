@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+New, and no part of Lima Core 1.3: semantic highlighting. The extension
+marks keys (`property`) and comments (`comment`) where the parser's
+`outline()` finds them, in `.lima` files and in Markdown and MDX front
+matter. A theme with semantic highlighting colours them so; the TextMate
+grammar stays the colouring underneath, and where it colours text as a
+comment that the parser reads as content, such as a `#` line inside a `|`
+scalar, a token cannot take that colour away. The outline is read once per
+document version, when VS Code asks for its tokens.
+
 Diagnostics follow Lima Core 1.3 through the bundled parser. In strict mode,
 an unquoted value that starts with `&`, `*` or `!` and a YAML block scalar
 header other than `|` (`>`, `|-`) are reported as `UNSUPPORTED_YAML`, the

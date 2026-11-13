@@ -17,6 +17,12 @@ Syntax highlighting, live diagnostics, and reference navigation for
   stay literal inside quoted strings, matching the spec.
 - **Markdown / MDX frontmatter** — the `---` … `---` block at the top of a
   `.md` or `.mdx` file is highlighted as Lima.
+- **Semantic highlighting** — keys and comments are also marked where the
+  real parser finds them (its `outline()`), as standard `property` and
+  `comment` tokens, which a theme with semantic highlighting colours over
+  the grammar. The grammar stays the colouring underneath: where it colours
+  text as a comment that the parser reads as content, such as a `#` line
+  inside a `|` scalar, a token cannot take that colour away.
 
 ### Diagnostics
 

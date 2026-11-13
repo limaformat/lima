@@ -4,8 +4,11 @@ type Provider = Record<string, (...args: unknown[]) => unknown>;
 
 let hoverProvider: Provider | undefined;
 let definitionProvider: Provider | undefined;
+let semanticTokensProvider: Provider | undefined;
 let hoverSelector: unknown;
 let definitionSelector: unknown;
+let semanticTokensSelector: unknown;
+let semanticTokensLegend: unknown;
 let strict = true;
 let openDocument: ((document: unknown) => void) | undefined;
 const published = new Map<string, unknown[]>();
@@ -31,6 +34,21 @@ mock.module("vscode", () => ({
     ) {}
   },
   DiagnosticSeverity: { Error: 0, Warning: 1 },
+  SemanticTokensLegend: class SemanticTokensLegend {
+    constructor(
+      readonly tokenTypes: string[],
+      readonly tokenModifiers: string[],
+    ) {}
+  },
+  SemanticTokensBuilder: class SemanticTokensBuilder {
+    private readonly tokens: number[][] = [];
+    push(...token: number[]) {
+      this.tokens.push(token);
+    }
+    build() {
+      return this.tokens;
+    }
+  },
   Diagnostic: class Diagnostic {
     source?: string;
     code?: string;
@@ -63,6 +81,16 @@ mock.module("vscode", () => ({
       definitionProvider = provider;
       return disposable;
     },
+    registerDocumentSemanticTokensProvider: (
+      selector: unknown,
+      provider: Provider,
+      legend: unknown,
+    ) => {
+      semanticTokensSelector = selector;
+      semanticTokensProvider = provider;
+      semanticTokensLegend = legend;
+      return disposable;
+    },
   },
   workspace: {
     textDocuments: [],
@@ -79,7 +107,7 @@ mock.module("vscode", () => ({
   },
 }));
 
-test("activate registers hover and definition providers", async () => {
+test("activate registers hover, definition and semantic token providers", async () => {
   const { activate } = await import("../src/extension.js");
   const subscriptions: unknown[] = [];
 
@@ -92,9 +120,14 @@ test("activate registers hover and definition providers", async () => {
   ];
   expect(hoverSelector).toEqual(expectedSelector);
   expect(definitionSelector).toEqual(expectedSelector);
+  expect(semanticTokensSelector).toEqual(expectedSelector);
+  expect(semanticTokensLegend).toEqual({
+    tokenTypes: ["property", "comment"],
+    tokenModifiers: [],
+  });
   expect(hoverProvider?.provideHover).toBeFunction();
   expect(definitionProvider?.provideDefinition).toBeFunction();
-  expect(subscriptions).toHaveLength(9);
+  expect(subscriptions).toHaveLength(11);
 
   const document = {
     uri: { toString: () => "file:///strict.lima" },
@@ -159,3 +192,28 @@ test("Core 1.3 diagnostics reach the editor with code, line and hint", async () 
   );
   expect(published.get("file:///ok.lima")).toEqual([]);
 });
+
+test("semantic tokens mark keys and comments, in front matter at the document's lines", async () => {
+  const { activate } = await import("../src/extension.js");
+  activate({ subscriptions: [] } as never);
+
+  // line, character, length, type (0 property, 1 comment)
+  expect(
+    semanticTokensProvider?.provideDocumentSemanticTokens(
+      textDocument("file:///tokens.lima", "lima", "author: # who\n  name: Alice\n"),
+    ),
+  ).toEqual([
+    [0, 0, 6, 0],
+    [0, 8, 5, 1],
+    [1, 2, 4, 0],
+  ]);
+  expect(
+    semanticTokensProvider?.provideDocumentSemanticTokens(
+      textDocument("file:///post.mdx", "mdx", "---\ntitle: Hello # hi\n---\n# Post\n"),
+    ),
+  ).toEqual([
+    [1, 0, 5, 0],
+    [1, 13, 4, 1],
+  ]);
+});
+

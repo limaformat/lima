@@ -2,7 +2,9 @@
 
 Language Server Protocol support for [Lima](https://limaformat.dev). The
 server reports parser errors and warnings, explains References <!-- facts:language.references_version -->2.1<!-- /facts --> tokens on
-hover, and navigates `${document.path}` references to their definitions.
+hover, navigates `${document.path}` references to their definitions, and
+provides semantic tokens: standard `property` tokens for keys and `comment`
+tokens for comments, where the parser's `outline()` finds them.
 These features work in standalone `.lima` files and in Lima frontmatter in
 Markdown and MDX documents.
 

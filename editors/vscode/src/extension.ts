@@ -5,7 +5,9 @@
  * documents and the frontmatter block of Markdown / MDX, and reports the
  * spec's diagnostics — codes, messages, positions — as editor squiggles.
  * Active References 2.0 tokens also provide hover information, and
- * document references can navigate to their target line.
+ * document references can navigate to their target line. Semantic tokens
+ * mark keys and comments as the parser's outline() reads them, over the
+ * TextMate grammar's colours.
  */
 
 import * as vscode from "vscode";
@@ -15,6 +17,10 @@ import { check, type LimaFinding } from "../../shared/diagnostics.js";
 import { limaDocumentText } from "../../shared/document-text.js";
 import { findingRange } from "../../shared/finding-range.js";
 import { ReferenceResolver } from "../../shared/references.js";
+import {
+  SEMANTIC_TOKEN_TYPES,
+  SemanticTokenCache,
+} from "../../shared/semantic-tokens.js";
 
 export function activate(context: vscode.ExtensionContext): void {
   const collection = vscode.languages.createDiagnosticCollection("lima");
@@ -24,6 +30,8 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push({ dispose: () => debouncer.disposeAll() });
   const references = new ReferenceResolver();
   context.subscriptions.push({ dispose: () => references.clear() });
+  const semanticTokens = new SemanticTokenCache();
+  context.subscriptions.push({ dispose: () => semanticTokens.clear() });
 
   const schedule = (document: vscode.TextDocument) => {
     const key = document.uri.toString();
@@ -39,6 +47,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidCloseTextDocument((doc) => {
       collection.delete(doc.uri);
       references.delete(doc.uri.toString());
+      semanticTokens.delete(doc.uri.toString());
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("lima.diagnostics")) {
@@ -79,6 +88,34 @@ export function activate(context: vscode.ExtensionContext): void {
           : null;
       },
     }),
+  );
+
+  const legend = new vscode.SemanticTokensLegend([...SEMANTIC_TOKEN_TYPES], []);
+  context.subscriptions.push(
+    vscode.languages.registerDocumentSemanticTokensProvider(
+      documentSelector,
+      {
+        provideDocumentSemanticTokens(document) {
+          const builder = new vscode.SemanticTokensBuilder(legend);
+          const tokens = semanticTokens.tokens(
+            document.uri.toString(),
+            document.version,
+            document.languageId,
+            () => document.getText(),
+          );
+          for (const token of tokens) {
+            builder.push(
+              token.line,
+              token.character,
+              token.length,
+              SEMANTIC_TOKEN_TYPES.indexOf(token.type),
+            );
+          }
+          return builder.build();
+        },
+      },
+      legend,
+    ),
   );
 
   for (const doc of vscode.workspace.textDocuments) refresh(doc, collection);

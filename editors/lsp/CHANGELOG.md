@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- New, and no part of Lima Core 1.3: semantic tokens
+  (`textDocument/semanticTokens/full`). The server marks keys (`property`)
+  and comments (`comment`) where the parser's `outline()` finds them, in
+  `.lima` documents and in Markdown and MDX front matter, at the document's
+  lines, so that an editor without a Lima grammar colours them as the parser
+  reads them. The outline is read once per document version, when a client
+  asks for its tokens.
 - Diagnostics follow Lima Core 1.3 through the bundled parser. In strict
   mode, an unquoted value that starts with `&`, `*` or `!` and a YAML block
   scalar header other than `|` (`>`, `|-`) are reported as
