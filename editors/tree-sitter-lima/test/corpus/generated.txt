@@ -388,6 +388,361 @@ valid: yes
     value: (plain_scalar)))
 
 ==================
+core.comments.url-fragment-and-color
+==================
+link: https://example.org/x#top
+color: #ff0000
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    (comment)))
+
+==================
+core.comments.escaped-hash
+==================
+k: \#x
+j: \\#x
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))
+
+==================
+core.comments.hash-after-nbsp
+==================
+k: x #c
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)
+    (comment)))
+
+==================
+core.comments.hash-after-nel
+==================
+x: foo# c
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))
+
+==================
+core.comments.hash-after-closing-quote
+==================
+k: "x"#y
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))
+
+==================
+core.comments.hash-in-quotes
+==================
+k: '#x'
+'#': x
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (single_quoted_string))
+  (block_mapping_entry
+    key: (single_quoted_key)
+    value: (plain_scalar)))
+
+==================
+editor.comments.hash-after-space-in-quotes
+==================
+k: ' #x'
+j: "a\n #x"
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (single_quoted_string))
+  (block_mapping_entry
+    key: (key)
+    value: (double_quoted_string
+      (escape_sequence))))
+
+==================
+core.comments.flow-sequence-hash-after-comma
+==================
+k: [a,#x]
+j: [#x]
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_sequence
+      (flow_plain_scalar)
+      (flow_plain_scalar)))
+  (block_mapping_entry
+    key: (key)
+    value: (flow_sequence
+      (flow_plain_scalar))))
+
+==================
+core.comments.flow-sequence-hash-after-space
+==================
+k: [a, #x]
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)
+    (comment)))
+
+==================
+core.comments.flow-mapping-hash-after-text
+==================
+k: {a: x#y}
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key)
+      value: (flow_plain_scalar))))
+
+==================
+references-2.core-1-3.flow-hash-and-token
+==================
+a: 42
+b: [a#b,${a}]
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    value: (flow_sequence
+      (flow_plain_scalar)
+      (flow_plain_scalar
+        (document_reference)))))
+
+==================
+references-2.core-1-3.token-after-hash
+==================
+a: 42
+b: v#${a}
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (document_reference))))
+
+==================
+references-2.core-1-3.token-before-hash
+==================
+a: 42
+b: ${a}#x
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (document_reference))))
+
+==================
+references-2.core-1-3.token-before-comment
+==================
+a: 42
+b: ${a} #x
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (document_reference))
+    (comment)))
+
+==================
+references-2.core-1-3.token-in-comment
+==================
+a: 42
+b: #${a}
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    (comment)))
+
+==================
+core.bare-key.comment-only-value-opens-block
+==================
+k: # c
+  a: 1
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (comment)
+    (block_mapping
+      (block_mapping_entry
+        key: (key)
+        value: (number)))))
+
+==================
+core.bare-key.comment-only-value-without-block
+==================
+k: # c
+j: 1
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (comment))
+  (block_mapping_entry
+    key: (key)
+    value: (number)))
+
+==================
+core.bare-key.comment-only-value-compact-sequence
+==================
+k: #c
+- x
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (comment)
+    (block_sequence
+      (block_sequence_item
+        value: (plain_scalar)))))
+
+==================
+core.bare-key.comment-only-value-nested
+==================
+m:
+  k: # c
+    a: 1
+  j: 2
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_mapping
+      (block_mapping_entry
+        key: (key)
+        (comment)
+        (block_mapping
+          (block_mapping_entry
+            key: (key)
+            value: (number))))
+      (block_mapping_entry
+        key: (key)
+        value: (number)))))
+
+==================
+core.bare-key.comment-only-value-first-key-of-item
+==================
+k:
+  - b: # c
+      c: 1
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        (comment)
+        (block_mapping
+          (block_mapping_entry
+            key: (key)
+            value: (number)))))))
+
+==================
+core.bare-key.comment-only-value-in-object-item
+==================
+k:
+  - a: x
+    b: #c
+      c: 1
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        value: (plain_scalar)
+        (block_mapping_entry
+          key: (key)
+          (comment)
+          (block_mapping
+            (block_mapping_entry
+              key: (key)
+              value: (number))))))))
+
+==================
 core.separator.tab-top-level
 ==================
 k:	1
@@ -501,6 +856,56 @@ k:
         value: (plain_scalar))
       (block_sequence_item
         value: (plain_scalar)))))
+
+==================
+core.flow-mapping.flow-mapping-empty-value
+==================
+a: {k: }
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key))))
+
+==================
+core.flow-mapping.flow-mapping-empty-value-tab
+==================
+a: {k:	}
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key))))
+
+==================
+core.flow-mapping.flow-mapping-empty-value-later-item
+==================
+a: {x: 1, k: }
+
+---
+
+(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key)
+      value: (number)
+      key: (flow_key))))
+
+==================
+core.errata.single-quoted-key-no-escape
+==================
+'a\'b': x
+
+---
+
+(document)
 
 ==================
 references-2.interpolation.block-scalar.basic

@@ -59,11 +59,12 @@ if (build.exitCode !== 0) {
   process.exit(1);
 }
 
-// Historical fixtures stay alongside the current Core 1.2 / References 2.1 corpus.
+// Historical fixtures stay alongside the current Core 1.3 / References 2.1 corpus.
 const fixtures = [
   ...loadFixtures(join(CORPUS_DIR, "core")),
   ...loadFixtures(join(CORPUS_DIR, "core-1.1")),
   ...loadFixtures(join(CORPUS_DIR, "core-1.2")),
+  ...loadFixtures(join(CORPUS_DIR, "core-1.3")),
   ...loadFixtures(join(CORPUS_DIR, "references-2.0")),
   ...loadFixtures(join(CORPUS_DIR, "references-2.1")),
 ];

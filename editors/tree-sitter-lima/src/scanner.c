@@ -37,6 +37,9 @@ typedef struct {
   bool pending_obj;
   uint16_t obj_indent;
   bool line_start;
+  // The last token ended right before a `#` that follows whitespace or starts a line: that `#` begins a comment
+  // (Core 1.3 §4). Only a token whose next character is that `#` sets it, so no other token comes between.
+  bool comment_follows;
 } Scanner;
 
 static bool is_ws(int32_t c) { return c == ' ' || c == '\t'; }
@@ -59,8 +62,14 @@ static void pop_ind(Scanner *s) {
   if (s->ind_len > 1) s->ind_len--;
 }
 
-static void skip_hws(TSLexer *lexer) {
-  while (is_ws(lexer->lookahead)) lexer->advance(lexer, true);
+// Returns whether it skipped any whitespace.
+static bool skip_hws(TSLexer *lexer) {
+  bool skipped = false;
+  while (is_ws(lexer->lookahead)) {
+    lexer->advance(lexer, true);
+    skipped = true;
+  }
+  return skipped;
 }
 
 static uint32_t unicode_key_category(int32_t c) {
@@ -93,6 +102,13 @@ static bool is_key_start(int32_t c) {
   return is_key_initial(c) || c == '"' || c == '\'';
 }
 
+static bool only_comment_valid(const bool *valid_symbols) {
+  for (int symbol = 0; symbol < COMMENT; symbol++) {
+    if (valid_symbols[symbol]) return false;
+  }
+  return true;
+}
+
 // ---- lifecycle ----
 
 void *tree_sitter_lima_external_scanner_create(void) {
@@ -122,6 +138,7 @@ unsigned tree_sitter_lima_external_scanner_serialize(void *p, char *buffer) {
   buffer[size++] = (char)(s->obj_indent & 0xff);
   buffer[size++] = (char)(s->obj_indent >> 8);
   buffer[size++] = s->line_start ? 1 : 0;
+  buffer[size++] = s->comment_follows ? 1 : 0;
   return size;
 }
 
@@ -136,6 +153,7 @@ void tree_sitter_lima_external_scanner_deserialize(void *p, const char *buffer, 
   s->pending_obj = false;
   s->obj_indent = 0;
   s->line_start = true;
+  s->comment_follows = false;
   if (length == 0) return;
   unsigned size = 0;
   uint16_t n = (unsigned char)buffer[size++];
@@ -158,6 +176,7 @@ void tree_sitter_lima_external_scanner_deserialize(void *p, const char *buffer, 
     s->obj_indent |= (unsigned char)buffer[size++] << 8;
   }
   if (size < length) s->line_start = buffer[size++] != 0;
+  if (size < length) s->comment_follows = buffer[size++] != 0;
 }
 
 // ---- block scalar marker ----
@@ -317,6 +336,8 @@ static bool scan_bs_body(Scanner *s, TSLexer *lexer) {
 
     if (indent <= s->bs_key_indent) {
       s->in_bs = false;
+      // A dedented `#` line ends the scalar and is a comment (§6.1.5, §8).
+      s->comment_follows = c == '#';
       lexer->mark_end(lexer);
       lexer->result_symbol = DEDENT;
       return true;
@@ -490,32 +511,37 @@ slash:
   return false;
 }
 
-static bool scan_quoted_fallback(TSLexer *lexer, const bool *valid_symbols) {
+static bool scan_quoted_fallback(Scanner *s, TSLexer *lexer, const bool *valid_symbols) {
   int32_t quote = lexer->lookahead;
   if (quote != '\'' && quote != '"') return false;
 
+  // Where only a key can begin, a single quote opens a key, which is literal (§5.2): `\'` closes it.
+  bool key_only = valid_symbols[KEY] && !valid_symbols[PLAIN_TEXT];
   bool escaped = false;
   bool closed = false;
   bool trailing = false;
+  bool after_whitespace = false;
+  bool comment = false;
   lexer->advance(lexer, false);
   for (;;) {
     int32_t c = lexer->lookahead;
     if (c == '\n' || c == '\r' || c == 0) break;
+    // Core 1.3 §4: after the closing quote, a `#` begins a comment only after whitespace (§1); `"x"#y` is content
+    // after the quote.
+    if (closed && c == '#' && after_whitespace) {
+      comment = true;
+      break;
+    }
     lexer->advance(lexer, false);
     if (closed) {
-      if (c == ':' && valid_symbols[KEY]) return false;
-      if (c != ' ' && c != '\t' && c != '#') trailing = true;
-      if (c == '#') {
-        while (lexer->lookahead != '\n' && lexer->lookahead != '\r' && lexer->lookahead != 0) {
-          lexer->advance(lexer, false);
-        }
-        break;
-      }
+      if (c == ':' && valid_symbols[KEY] && !trailing) return false;
+      if (c != ' ' && c != '\t') trailing = true;
+      after_whitespace = is_trim_ws(c);
       continue;
     }
     if (escaped) {
       escaped = false;
-    } else if (c == '\\') {
+    } else if (c == '\\' && !(key_only && quote == '\'')) {
       escaped = true;
     } else if (c == quote) {
       closed = true;
@@ -523,12 +549,17 @@ static bool scan_quoted_fallback(TSLexer *lexer, const bool *valid_symbols) {
   }
 
   if (valid_symbols[PLAIN_TEXT] && (!closed || trailing)) {
+    s->comment_follows = comment;
     lexer->mark_end(lexer);
     lexer->result_symbol = PLAIN_TEXT;
     return true;
   }
 
-  if (!closed && valid_symbols[UNRECOGNIZED_LINE]) {
+  // A quoted key that is unclosed, or that its colon does not follow, leaves the line unrecognised (§5.2).
+  if ((!closed || trailing || key_only) && valid_symbols[UNRECOGNIZED_LINE]) {
+    while (lexer->lookahead != '\n' && lexer->lookahead != '\r' && lexer->lookahead != 0) {
+      lexer->advance(lexer, false);
+    }
     if (lexer->lookahead == '\r') {
       lexer->advance(lexer, false);
       if (lexer->lookahead == '\n') lexer->advance(lexer, false);
@@ -543,7 +574,7 @@ static bool scan_quoted_fallback(TSLexer *lexer, const bool *valid_symbols) {
   return false;
 }
 
-static bool scan_flow_fallback(TSLexer *lexer, const bool *valid_symbols) {
+static bool scan_flow_fallback(Scanner *s, TSLexer *lexer, const bool *valid_symbols) {
   if (!valid_symbols[PLAIN_TEXT]) return false;
   int32_t opening = lexer->lookahead;
   if (opening != '[' && opening != '{') return false;
@@ -555,11 +586,20 @@ static bool scan_flow_fallback(TSLexer *lexer, const bool *valid_symbols) {
   bool item_content = false;
   bool item_colon = false;
   bool key_space = false;
+  bool after_whitespace = false;
+  bool comment = false;
 
   for (;;) {
     int32_t c = lexer->lookahead;
     if (c == '\n' || c == '\r' || c == 0) break;
+    // Core 1.3 §4, §7.4, §7.5: a `#` after whitespace (§1) begins a comment, removed from the whole value before it
+    // is split into items: `[a, #x]` is unclosed. `[a,#x]` and `[#x]` hold the text `#x`.
+    if (c == '#' && !quote && after_whitespace) {
+      comment = true;
+      break;
+    }
     lexer->advance(lexer, false);
+    after_whitespace = is_trim_ws(c);
     if (quote) {
       if (escaped) escaped = false;
       else if (c == '\\') escaped = true;
@@ -604,6 +644,13 @@ static bool scan_flow_fallback(TSLexer *lexer, const bool *valid_symbols) {
     }
   }
 
+  if (comment) {
+    // The collection is unclosed: the value is text up to the comment.
+    s->comment_follows = true;
+    lexer->mark_end(lexer);
+    lexer->result_symbol = PLAIN_TEXT;
+    return true;
+  }
   if (depth == 0 && !invalid_mapping_item) return false;
   while (lexer->lookahead != '\n' && lexer->lookahead != '\r' && lexer->lookahead != 0) {
     lexer->advance(lexer, false);
@@ -621,7 +668,8 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
   bool key_position = start_column >= top_ind(s) ||
                       (s->pending_obj && start_column == s->obj_indent);
 
-  if (c == '#' || c == '\n' || c == '\r' || c == 0) return false;
+  // A `#` that reaches here is text: the caller has taken a `#` that begins a comment.
+  if (c == '\n' || c == '\r' || c == 0) return false;
   if (c == '$' && !(can_key && key_position)) return false;
   if (c == '"' || c == '\'') return false;
   if (c == '[' || c == '{') return false;
@@ -629,7 +677,8 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
   char buf[80];
   int len = 0;
   bool dollar = false;
-  unsigned backslashes = 0;
+  bool after_whitespace = false;
+  bool comment_follows = false;
   bool started = false;
   bool valid_key = true;
   bool first_key_character = true;
@@ -647,7 +696,7 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
         }
         if (len < 79) buf[len++] = (char)c;
         lexer->advance(lexer, false);
-        backslashes = 0;
+        after_whitespace = false;
         started = true;
         continue;
       }
@@ -655,19 +704,16 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
       break;
     }
     if (flow && (c == ',' || c == ']' || c == '}')) break;
-    if (c == '#') {
-      if (backslashes % 2 == 1) {
-        if (len < 79) buf[len++] = (char)c;
-        lexer->advance(lexer, false);
-        backslashes = 0;
-        started = true;
-        continue;
-      }
+    // Core 1.3 §4: a `#` begins a comment only after whitespace (§1). After any other character it is text, after
+    // `\` too (§6.1.4), so `https://example.org/x#top` and `C#` keep theirs.
+    if (c == '#' && after_whitespace) {
+      comment_follows = true;
       break;
     }
     if (c == ':') {
       lexer->mark_end(lexer);
       lexer->advance(lexer, false);
+      after_whitespace = false;
       int32_t d = lexer->lookahead;
       // Core 1.3 §5.1: a tab after the colon separates key and value as a space does.
       if (d == ' ' || d == '\t' || d == '\n' || d == '\r' || d == 0) {
@@ -679,13 +725,11 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
         // In a scalar, colon-space is ordinary content (for example
         // "label: Value: ${name}").
         if (len < 79) buf[len++] = ':';
-        backslashes = 0;
         started = true;
         continue;
       }
       // ':' followed by a non-space char is part of the key/value
       if (len < 79) buf[len++] = ':';
-      backslashes = 0;
       started = true;
       continue;
     }
@@ -695,8 +739,7 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
     }
     first_key_character = false;
     if (len < 79) buf[len++] = (char)c;
-    if (c == '\\') backslashes++;
-    else backslashes = 0;
+    after_whitespace = is_trim_ws(c);
     lexer->advance(lexer, false);
     started = true;
   }
@@ -723,6 +766,7 @@ static bool scan_value(Scanner *s, TSLexer *lexer, bool flow, const bool *valid_
     return true;
   }
 
+  s->comment_follows = comment_follows;
   if (len > 0 && len < 79) {
     buf[len] = 0;
     if (valid_symbols[NULL_TOKEN] && match_null(buf)) {
@@ -834,6 +878,9 @@ static bool scan_structural(Scanner *s, TSLexer *lexer, const bool *valid_symbol
     }
   }
 
+  // A comment line follows: the token ends at its `#`, which begins a comment (§8).
+  s->comment_follows = peeked;
+
   // Core 1.1 §7.2: a bare key may open a compact sequence in its own
   // column. A duplicate indentation-stack value represents that synthetic
   // block until the first same-column line that is not an item.
@@ -889,14 +936,18 @@ static bool scan_structural(Scanner *s, TSLexer *lexer, const bool *valid_symbol
 
 bool tree_sitter_lima_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
   Scanner *s = (Scanner *)payload;
+  // It holds for the start of this call only; the token this call returns sets it anew.
+  bool comment_follows = s->comment_follows;
+  s->comment_follows = false;
 
   if (s->in_bs && (valid_symbols[BLOCK_TEXT] || valid_symbols[BLOCK_NEWLINE] ||
                    valid_symbols[CONTINUATION] || valid_symbols[DEDENT])) {
     return scan_bs_body(s, lexer);
   }
 
-  bool starts_at_line_start = s->line_start || lexer->get_column(lexer) == 0;
-  skip_hws(lexer);
+  bool at_column_zero = lexer->get_column(lexer) == 0;
+  bool starts_at_line_start = s->line_start || at_column_zero;
+  bool after_whitespace = skip_hws(lexer) || at_column_zero || comment_follows;
 
   int32_t c = lexer->lookahead;
 
@@ -906,11 +957,15 @@ bool tree_sitter_lima_external_scanner_scan(void *payload, TSLexer *lexer, const
          !(valid_symbols[NEWLINE] || valid_symbols[INDENT] || valid_symbols[DEDENT])) {
     lexer->advance(lexer, true);
     skip_hws(lexer);
+    after_whitespace = true;
     c = lexer->lookahead;
   }
 
-  // Comment (external + extra): emit a comment node for a '#' at any position.
-  if (c == '#' && valid_symbols[COMMENT]) {
+  // Comment (external + extra). Core 1.3 §4, §8: a `#` begins a comment only at the start of a line or after
+  // whitespace (§1); a value starts after the separator's whitespace. Any other `#` is text. Where the grammar wants
+  // nothing from this scanner but a comment, inside a quoted string or key, in a flow collection or before a colon,
+  // a `#` is text too: a flow value that holds a comment is plain text already (scan_flow_fallback).
+  if (c == '#' && valid_symbols[COMMENT] && after_whitespace && !only_comment_valid(valid_symbols)) {
     while (c != '\n' && c != '\r' && c != 0) {
       lexer->advance(lexer, false);
       c = lexer->lookahead;
@@ -967,12 +1022,12 @@ bool tree_sitter_lima_external_scanner_scan(void *payload, TSLexer *lexer, const
   }
 
   if (c == '\'' || c == '"') {
-    bool scanned = scan_quoted_fallback(lexer, valid_symbols);
+    bool scanned = scan_quoted_fallback(s, lexer, valid_symbols);
     if (scanned) s->line_start = valid_symbols[UNRECOGNIZED_LINE];
     return scanned;
   }
 
-  if ((c == '[' || c == '{') && scan_flow_fallback(lexer, valid_symbols)) {
+  if ((c == '[' || c == '{') && scan_flow_fallback(s, lexer, valid_symbols)) {
     s->line_start = false;
     return true;
   }

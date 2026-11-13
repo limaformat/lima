@@ -207,6 +207,176 @@ const EXPECTED_TREES: Record<string, string> = {
   (block_mapping_entry
     key: (key)
     value: (plain_scalar)))`,
+  // Core 1.3 §4, §8: a `#` begins a comment only at the start of a value or after whitespace (§1), in flow values
+  // too; any other `#` is text, `\#` included.
+  "core.comments.url-fragment-and-color": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    (comment)))`,
+  "core.comments.escaped-hash": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))`,
+  "core.comments.hash-after-nbsp": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)
+    (comment)))`,
+  "core.comments.hash-after-nel": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))`,
+  "core.comments.hash-after-closing-quote": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)))`,
+  "core.comments.hash-in-quotes": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (single_quoted_string))
+  (block_mapping_entry
+    key: (single_quoted_key)
+    value: (plain_scalar)))`,
+  "editor.comments.hash-after-space-in-quotes": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (single_quoted_string))
+  (block_mapping_entry
+    key: (key)
+    value: (double_quoted_string
+      (escape_sequence))))`,
+  "core.comments.flow-sequence-hash-after-comma": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_sequence
+      (flow_plain_scalar)
+      (flow_plain_scalar)))
+  (block_mapping_entry
+    key: (key)
+    value: (flow_sequence
+      (flow_plain_scalar))))`,
+  // `[a, #x]` is unclosed once its comment is removed: a plain scalar and a comment.
+  "core.comments.flow-sequence-hash-after-space": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar)
+    (comment)))`,
+  "core.comments.flow-mapping-hash-after-text": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key)
+      value: (flow_plain_scalar))))`,
+  "references-2.core-1-3.flow-hash-and-token": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    value: (flow_sequence
+      (flow_plain_scalar)
+      (flow_plain_scalar
+        (document_reference)))))`,
+  "references-2.core-1-3.token-after-hash": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (document_reference))))`,
+  "references-2.core-1-3.token-before-hash": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (document_reference))))`,
+  "references-2.core-1-3.token-before-comment": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    value: (plain_scalar
+      (document_reference))
+    (comment)))`,
+  "references-2.core-1-3.token-in-comment": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (number))
+  (block_mapping_entry
+    key: (key)
+    (comment)))`,
+  // Core 1.3 §4, §7.1: `key: # note` is a bare key with a comment; its block may follow.
+  "core.bare-key.comment-only-value-opens-block": `(document
+  (block_mapping_entry
+    key: (key)
+    (comment)
+    (block_mapping
+      (block_mapping_entry
+        key: (key)
+        value: (number)))))`,
+  "core.bare-key.comment-only-value-without-block": `(document
+  (block_mapping_entry
+    key: (key)
+    (comment))
+  (block_mapping_entry
+    key: (key)
+    value: (number)))`,
+  "core.bare-key.comment-only-value-compact-sequence": `(document
+  (block_mapping_entry
+    key: (key)
+    (comment)
+    (block_sequence
+      (block_sequence_item
+        value: (plain_scalar)))))`,
+  "core.bare-key.comment-only-value-nested": `(document
+  (block_mapping_entry
+    key: (key)
+    (block_mapping
+      (block_mapping_entry
+        key: (key)
+        (comment)
+        (block_mapping
+          (block_mapping_entry
+            key: (key)
+            value: (number))))
+      (block_mapping_entry
+        key: (key)
+        value: (number)))))`,
+  "core.bare-key.comment-only-value-first-key-of-item": `(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        (comment)
+        (block_mapping
+          (block_mapping_entry
+            key: (key)
+            value: (number)))))))`,
+  "core.bare-key.comment-only-value-in-object-item": `(document
+  (block_mapping_entry
+    key: (key)
+    (block_sequence
+      (block_sequence_item
+        key: (key)
+        value: (plain_scalar)
+        (block_mapping_entry
+          key: (key)
+          (comment)
+          (block_mapping
+            (block_mapping_entry
+              key: (key)
+              value: (number))))))))`,
   // Core 1.3 §5.1: a tab after the colon separates key and value as a space does, in every key context; U+00A0 does
   // not, and the line is unrecognised.
   "core.separator.tab-top-level": `(document
@@ -256,6 +426,26 @@ const EXPECTED_TREES: Record<string, string> = {
         value: (plain_scalar))
       (block_sequence_item
         value: (plain_scalar)))))`,
+  // Core 1.3 §7.5: the separator is found before the item is trimmed, so `{k: }` has the key `k` and no value.
+  "core.flow-mapping.flow-mapping-empty-value": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key))))`,
+  "core.flow-mapping.flow-mapping-empty-value-tab": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key))))`,
+  "core.flow-mapping.flow-mapping-empty-value-later-item": `(document
+  (block_mapping_entry
+    key: (key)
+    value: (flow_mapping
+      key: (flow_key)
+      value: (number)
+      key: (flow_key))))`,
+  // A single-quoted key is literal (§5.2): `'a\'` is the key, and `b':` after it leaves the line unrecognised.
+  "core.errata.single-quoted-key-no-escape": `(document)`,
   "references-2.interpolation.block-scalar.basic": `(document
   (block_mapping_entry
     key: (key)
@@ -370,6 +560,11 @@ fixtures.set("editor.block-sequence.bare-item-key-past-skipped-line", {
 fixtures.set("editor.separator.colon-without-key", {
   id: "editor.separator.colon-without-key",
   input: "k:\n- :\tx\n- : y\n",
+});
+// Inside quotes a `#` is never a comment (§4), after a space neither.
+fixtures.set("editor.comments.hash-after-space-in-quotes", {
+  id: "editor.comments.hash-after-space-in-quotes",
+  input: "k: ' #x'\nj: \"a\\n #x\"\n",
 });
 
 const cases: string[] = [];
