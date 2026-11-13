@@ -1,0 +1,25 @@
+{
+  "id": "core.separator.tab-block-contexts",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "5.1",
+  "description": "Core 1.3: a tab separates in a block mapping, in an object item and in its later keys. Non-strict mode.",
+  "input": "m:\n  n:\t4\ns:\n  - o:\t5\n    p:\t6\n",
+  "expect": {
+    "result": {
+      "m": {
+        "n": 4
+      },
+      "s": [
+        {
+          "o": 5,
+          "p": 6
+        }
+      ]
+    }
+  },
+  "tags": [
+    "separator",
+    "tabs"
+  ]
+}

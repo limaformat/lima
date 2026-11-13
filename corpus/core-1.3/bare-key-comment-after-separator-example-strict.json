@@ -1,0 +1,23 @@
+{
+  "id": "core.bare-key.comment-after-separator-example.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "8",
+  "description": "Core 1.3: the example of §8, a comment after the separator. Strict mode.",
+  "input": "author: # who wrote it\n  name: Alice\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "author": {
+        "name": "Alice"
+      }
+    }
+  },
+  "tags": [
+    "bare-key",
+    "comments",
+    "strict"
+  ]
+}

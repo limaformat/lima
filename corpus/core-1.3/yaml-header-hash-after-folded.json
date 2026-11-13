@@ -1,0 +1,17 @@
+{
+  "id": "core.yaml-header.hash-after-folded",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "15.7",
+  "description": "Core 1.3: no yaml-header: a # right after > is text, so the value is >#c. A string in both modes. Non-strict mode.",
+  "input": "k: >#c\n",
+  "expect": {
+    "result": {
+      "k": ">#c"
+    }
+  },
+  "tags": [
+    "yaml",
+    "block-scalar"
+  ]
+}

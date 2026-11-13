@@ -1,0 +1,19 @@
+{
+  "id": "references-2.core-1-3.mapping-token-before-hash",
+  "spec": "references",
+  "specVersion": "2.1",
+  "section": "3.4",
+  "description": "References 2.1 under Core 1.3: ${m}#x interpolates, and a mapping cannot be interpolated. Non-strict mode.",
+  "input": "m: {x: 1}\nb: ${m}#x\n",
+  "expect": {
+    "error": {
+      "code": "INVALID_INTERPOLATION",
+      "line": 2
+    }
+  },
+  "tags": [
+    "references",
+    "comments",
+    "error"
+  ]
+}

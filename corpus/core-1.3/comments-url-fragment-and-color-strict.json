@@ -1,0 +1,21 @@
+{
+  "id": "core.comments.url-fragment-and-color.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: a URL keeps its fragment; a # at the start of a value begins a comment (§4 examples). Strict mode.",
+  "input": "link: https://example.org/x#top\ncolor: #ff0000\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "link": "https://example.org/x#top",
+      "color": null
+    }
+  },
+  "tags": [
+    "comments",
+    "strict"
+  ]
+}

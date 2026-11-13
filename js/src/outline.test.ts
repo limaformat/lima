@@ -35,7 +35,7 @@ describe('outline', () => {
 		expect(result.comments.map((s) => source.slice(s.start.offset, s.end.offset))).toEqual(['# comment'])
 	})
 	test('comments use the value reader, including quoted and escaped hashes', () => {
-		const source = 'a: value # comment  \nb: "# quoted"\nc: escaped\\#hash#tail\n# whole line\n'
+		const source = 'a: value # comment  \nb: "# quoted"\nc: escaped\\#hash #tail\nd: text#hash\n# whole line\n'
 		expect(outline(source).comments.map((s) => source.slice(s.start.offset, s.end.offset)))
 			.toEqual(['# comment  ', '#tail', '# whole line'])
 	})

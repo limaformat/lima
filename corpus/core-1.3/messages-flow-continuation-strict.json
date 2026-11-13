@@ -1,0 +1,24 @@
+{
+  "id": "core.messages.flow-continuation.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "7.4",
+  "description": "Core 1.3 §10.2, Appendix E: the message names what Lima writes instead of the YAML form. Strict mode.",
+  "input": "k: [a,\n  b]\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_FLOW_SYNTAX",
+      "line": 1,
+      "contains": "\"- \""
+    }
+  },
+  "tags": [
+    "messages",
+    "yaml",
+    "strict",
+    "error"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "core.comments.hash-after-nbsp.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: U+00A0 is whitespace (§1), so a # after it begins a comment. Strict mode.",
+  "input": "k: x #c\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "k": "x"
+    }
+  },
+  "tags": [
+    "comments",
+    "strict"
+  ]
+}

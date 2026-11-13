@@ -15,9 +15,10 @@
  * these lines, as Core 1.0 did in both modes.
  */
 import { isTrimWhitespace } from './chars.js'
-import { LimaError, printableLine } from './errors.js'
+import { LimaError, MULTILINE_VALUE_HINT, printableLine } from './errors.js'
 import { isValidUnquotedKey } from './key-grammar.js'
 import { KEY_GRAMMAR_HINT, specificKeyHint } from './key-hints.js'
+import { separatorIndex } from './scalars.js'
 
 /**
  * What the lines after a key belong to: nothing (`none`, before the first key; `inline`, after an inline value), a
@@ -27,11 +28,10 @@ export type RangeOwner = 'none' | 'inline' | 'mapping' | 'scalar'
 
 /**
  * Checks the lines of `frontMatter` from `start` (a line start) to `end` that follow a key owned as `owner`; `line`
- * is the 1-based line at `start`; `valueStart` to `valueEnd` is the inline value of that key, read only for the hint a
- * YAML marker earns in the error. Throws for the first line that belongs to no structure.
+ * is the 1-based line at `start`. Throws for the first line that belongs to no structure.
  */
 export function checkRangeLines(
-	frontMatter: string, start: number, end: number, line: number, owner: RangeOwner, valueStart = 0, valueEnd = 0,
+	frontMatter: string, start: number, end: number, line: number, owner: RangeOwner,
 ): void {
 	let pos = start
 	let current = line
@@ -72,7 +72,7 @@ export function checkRangeLines(
 				throw new LimaError({
 					code: 'INVALID_INDENTATION', line: current,
 					message: `Lima: unexpected indentation at line ${current}: "${frontMatter.slice(first, stop)}"${
-						owner === 'inline' ? yamlHint(frontMatter.slice(valueStart, valueEnd).trim()) : ''}`,
+						owner === 'inline' ? MULTILINE_VALUE_HINT : ''}`,
 				})
 			}
 		}
@@ -94,22 +94,17 @@ export const isBlockScalarMarker = (frontMatter: string, rawStart: number, lineE
 const hint = (text: string): string => {
 	const specific = specificKeyHint(text)
 	if (specific !== undefined) return specific
-	if (text === '---' || text === '...') return ' (a YAML document marker; Lima has one document)'
+	if (text === '---' || text === '...') {
+		return ' (a YAML document marker; Lima has none, and the caller strips the front matter\'s own "---")'
+	}
+	if (text.startsWith('%')) return ' (a YAML directive; Lima has no directives)'
 	if (isItem(text)) return ' (a sequence item belongs to a key with no value of its own)'
 	if (text.startsWith('"') || text.startsWith("'")) return ' (a quoted key closes on its own line)'
-	const separator = text.indexOf(': ')
+	const separator = separatorIndex(text, 0, text.length)
 	if (separator >= 0 && !isValidUnquotedKey(text.slice(0, separator))) return KEY_GRAMMAR_HINT
 	// `author Odile`, `key:value`: key characters, but no ": " after them
 	if (!text.includes(':') || isValidUnquotedKey(text.split(' ')[0]!)) return ' (a key needs ": " after it)'
 	return KEY_GRAMMAR_HINT
-}
-
-/** The hint a YAML block scalar marker in place of a value earns; none for any other value. */
-const yamlHint = (value: string): string => {
-	if (value === '>' || value === '>-' || value === '>+')
-		return ` ("${value}" is YAML's folded scalar; Lima writes "|" and continues a line with "^^")`
-	if (value === '|-' || value === '|+') return ` ("${value}" is a YAML chomping indicator; Lima writes "|")`
-	return ''
 }
 
 /** §7.2: `-` alone or `-` followed by whitespace begins a sequence item (Core 1.1); `---` or `-x` does not. */

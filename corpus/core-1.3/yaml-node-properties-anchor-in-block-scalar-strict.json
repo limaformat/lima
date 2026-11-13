@@ -1,0 +1,21 @@
+{
+  "id": "core.yaml-node-properties.anchor-in-block-scalar.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.5",
+  "description": "Core 1.3: a | scalar that starts with & is a string in both modes. Strict mode.",
+  "input": "k: |\n  &x\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "k": "&x"
+    }
+  },
+  "tags": [
+    "yaml",
+    "block-scalar",
+    "strict"
+  ]
+}

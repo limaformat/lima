@@ -1,0 +1,17 @@
+{
+  "id": "core.yaml-node-properties.quoted-anchor",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.1",
+  "description": "Core 1.3: a quoted value that starts with & is a string in both modes. Non-strict mode.",
+  "input": "k: '&x'\n",
+  "expect": {
+    "result": {
+      "k": "&x"
+    }
+  },
+  "tags": [
+    "yaml",
+    "quoting"
+  ]
+}

@@ -12,12 +12,12 @@
 import { type ParseContext, checkKeyLength, checkDuplicateKey, NESTING_DEPTH_LIMIT } from './normalize.js'
 import {
 	stripKeyQuotes, stripComment, stripCommentKeepEscapes,
-	parseQuotedOrTyped, closingQuoteIndex, isValidKey,
+	parseQuotedOrTyped, closingQuoteIndex, isValidKey, separatorIndex,
 } from './scalars.js'
 import { KEY_GRAMMAR_HINT, specificKeyHint } from './key-hints.js'
 import { parseFlowOrScalarValue, parseFlowSequence, flowValueReader } from './flow.js'
 import { buildBlockScalar } from './block-scalar.js'
-import { LimaError, printableLine } from './errors.js'
+import { LimaError, MULTILINE_VALUE_HINT, printableLine } from './errors.js'
 import type { SourcePositions, ValueBuilder } from './builder.js'
 import type { ReferenceSource } from './reference-tokens2.js'
 import { isTrimWhitespace } from './chars.js'
@@ -73,17 +73,19 @@ export const parseInlineValue = <V, M>(
 	return buildBlockScalar(bodyLines, keyIndent, keyLine, ctx, builder).value
 }
 
+/** The colon of a line's key-value separator: a colon followed by a space or a tab (§5.1), or -1. */
 export const findKeySep = (s: string): number => {
 	const first = s.charCodeAt(0)
 	if (first === 39 || first === 34) {
-		// §5.1: the `: ` separator must sit outside the quoted key, so scan
+		// §5.1: the separator must sit outside the quoted key, so scan
 		// past its closing quote first. Double-quoted keys honour `\"`; a
 		// single-quoted key is literal (§5.2), so its first `'` closes.
 		const close = closingQuoteIndex(s, false)
-		if (close !== -1 && s.charCodeAt(close + 1) === 58 && s.charCodeAt(close + 2) === 32) return close + 1
-		return -1
+		if (close === -1 || s.charCodeAt(close + 1) !== 58) return -1
+		const next = s.charCodeAt(close + 2)
+		return next === 32 || next === 9 ? close + 1 : -1
 	}
-	return s.indexOf(': ')
+	return separatorIndex(s, 0, s.length)
 }
 
 /**
@@ -161,10 +163,11 @@ const sourceKeyReader = (cursor: BlockCursor, positions: SourcePositions) => {
 		if (requireNonempty && !key) return key
 		const start = cursor.contentStart + prefix
 		const separator = start + colon
-		// Core §4 / §15.4: the physical colon must precede a space or end the
-		// line/input. Comment stripping can make `- name:# unfinished` look
-		// like a bare key, so its parsed colon alone is insufficient.
-		const readable = separator === cursor.lineEnd - 1 || cursor.source.charCodeAt(separator + 1) === 32
+		// Core §4 / §15.4: the physical colon must precede a space or a tab or
+		// end the line/input. Comment stripping could make a colon look like it
+		// ends the value, so its parsed position alone is insufficient.
+		const next = cursor.source.charCodeAt(separator + 1)
+		const readable = separator === cursor.lineEnd - 1 || next === 32 || next === 9
 		positions.key(key, start, readable ? start + raw.length : start, separator, line)
 		cursor.excludeCommentsBefore(separator + 1)
 		return key
@@ -197,6 +200,28 @@ const blockParser = (
 		return null
 	}
 
+	/**
+	 * The value of an entry on the cursor's line whose content is `content`, its key at `keyColumn` and its separator's
+	 * colon at `colon` (-1 for a `key:` that ends the line). An inline value that is empty after comment removal and
+	 * trimming makes a bare key, whose block may follow (Core 1.3 §4, §7.1); `|` alone is a block scalar (§6.1.5).
+	 * Leaves the cursor on the next unread line.
+	 */
+	const entryValue = <V, M>(
+		cursor: BlockCursor, content: string, colon: number, keyColumn: number, line: number,
+		ctx: ParseContext, baseLine: number, builder: ValueBuilder<V, M>,
+	): V => {
+		const rawUndecoded = colon === -1 ? '' : trimSlice(content, colon + 2, content.length)
+		const marker = rawUndecoded === '|'
+		const raw = marker || !rawUndecoded.includes('#') ? rawUndecoded : uncomment(rawUndecoded)
+		if (raw === '') {
+			cursor.next()
+			skipEmptyAndCommentLines(cursor)
+			return blockOfBareKey(cursor, keyColumn, ctx, baseLine, builder) ?? builder.null(line)
+		}
+		const valueCol = builder.positions === true ? cursor.indent + colon + 2 + leadingWsLen(content.slice(colon + 2)) : 0
+		return parseInlineValue(raw, marker, keyColumn, line, valueCol, rawUndecoded, cursor, ctx, builder, readValue)
+	}
+
 	const parseCursorBlock = <V, M>(
 		cursor: BlockCursor, baseIndent: number, ctx: ParseContext, baseLine: number,
 		builder: ValueBuilder<V, M>, compact = false,
@@ -224,12 +249,12 @@ const blockParser = (
 				}
 				if (pendingItem !== null && indent > pendingColumn) {
 					if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
-						message: `Lima: unexpected indentation at line ${line}: "${trimmed}"` })
+						message: `Lima: unexpected indentation at line ${line}: "${trimmed}"${MULTILINE_VALUE_HINT}` })
 					cursor.next(); continue
 				}
 				if (items !== null && pendingItem !== null) {
-					const bareKey = trimmed.charCodeAt(trimmed.length - 1) === 58
-					const colonPos = bareKey && trimmed.indexOf(' ') === -1 ? -1 : findKeySep(trimmed)
+					const colonPos = findKeySep(trimmed)
+					const bareKey = colonPos === -1 && trimmed.charCodeAt(trimmed.length - 1) === 58
 					const keyRaw = colonPos !== -1
 						? trimEndSlice(trimmed, 0, colonPos)
 						: bareKey ? trimEndSlice(trimmed, 0, trimmed.length - 1) : ''
@@ -238,21 +263,10 @@ const blockParser = (
 						// mode, as at the top level (Core 1.1 §10.1)
 						if (ctx.strict) throw unrecognizedKeyLine(line, trimmed)
 						cursor.next()
-					} else if (colonPos !== -1) {
-						const key = readKey(keyRaw, ctx.strict, line, colonPos)
+					} else if (colonPos !== -1 || bareKey) {
+						const key = readKey(keyRaw, ctx.strict, line, bareKey ? trimmed.length - 1 : colonPos)
 						checkKeyLength(key, line)
-						const rawUndecoded = trimSlice(trimmed, colonPos + 2, trimmed.length)
-						let raw = rawUndecoded
-						if (raw !== '|' && raw.includes('#')) raw = uncomment(raw)
-						const valueCol = wantSource ? cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2)) : 0
-						builder.setMapping(pendingItem, key, parseInlineValue(raw, rawUndecoded === '|', indent, line, valueCol, rawUndecoded, cursor, ctx, builder, readValue))
-					} else if (bareKey) {
-						const key = readKey(keyRaw, ctx.strict, line, trimmed.length - 1)
-						checkKeyLength(key, line)
-						cursor.next()
-						skipEmptyAndCommentLines(cursor)
-						const nested = blockOfBareKey(cursor, indent, ctx, baseLine, builder)
-						builder.setMapping(pendingItem, key, nested ?? builder.null(line))
+						builder.setMapping(pendingItem, key, entryValue(cursor, trimmed, colonPos, indent, line, ctx, baseLine, builder))
 					} else {
 						if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
 							message: `Lima: unexpected syntax in array item continuation at line ${line}: "${trimmed}"` })
@@ -260,7 +274,7 @@ const blockParser = (
 					}
 				} else {
 					if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
-						message: `Lima: unexpected indentation at line ${line}: "${trimmed}"` })
+						message: `Lima: unexpected indentation at line ${line}: "${trimmed}"${MULTILINE_VALUE_HINT}` })
 					cursor.next()
 				}
 				continue
@@ -303,12 +317,11 @@ const blockParser = (
 					else items.push(builder.null(line))
 					cursor.next(); continue
 				}
-				if (first !== 34 && first !== 39 && first !== 45 &&
-					afterDash.indexOf(': ') === -1 && !afterDash.endsWith(':')) {
+				const colonPos = findKeySep(afterDash)
+				if (first !== 34 && first !== 39 && first !== 45 && colonPos === -1 && !afterDash.endsWith(':')) {
 					items.push(parseQuotedOrTyped(afterDash, ctx, line, builder, dashSource))
 					cursor.next(); continue
 				}
-				const colonPos = findKeySep(afterDash)
 				if (afterDash === '-' || DASH_PREFIX_RE.test(afterDash)) {
 					if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
 						message: `Lima: nested block sequence at line ${line}: "${cursorContent(cursor)}"` })
@@ -347,14 +360,10 @@ const blockParser = (
 						const ckey = readKey(ckeyRaw, ctx.strict, continuationLine, csep, 0, true)
 						if (!ckey) break
 						checkKeyLength(ckey, continuationLine)
-						const valueUndecoded = trimSlice(contLine, csep + 2, contLine.length)
-						let value = valueUndecoded
-						if (value !== '|' && value.includes('#')) value = uncomment(value)
 						// contLine starts exactly at contentStart (no leading trim), so
 						// the value's column is the indent plus its offset in contLine.
-						const cValueCol = wantSource ? cursor.indent + csep + 2 + leadingWsLen(contLine.slice(csep + 2)) : 0
 						builder.setMapping(pendingItem, ckey,
-							parseInlineValue(value, valueUndecoded === '|', ckeyIndent, continuationLine, cValueCol, valueUndecoded, cursor, ctx, builder, readValue))
+							entryValue(cursor, contLine, csep, ckeyIndent, continuationLine, ctx, baseLine, builder))
 					}
 				} else if (afterDash.endsWith(':') && isValidKey(trimSlice(afterDash, 0, afterDash.length - 1))) {
 					const key = readKey(trimSlice(afterDash, 0, afterDash.length - 1), ctx.strict, line, afterDash.length - 1, dashPrefixLen(cursor))
@@ -385,8 +394,8 @@ const blockParser = (
 						message: `Lima: mixed map and array entries for the same key at line ${line}` })
 					cursor.next(); continue
 				}
-				const bareKey = trimmed.charCodeAt(trimmed.length - 1) === 58
-				const colonPos = bareKey && trimmed.indexOf(' ') === -1 ? -1 : findKeySep(trimmed)
+				const colonPos = findKeySep(trimmed)
+				const bareKey = colonPos === -1 && trimmed.charCodeAt(trimmed.length - 1) === 58
 				const keyRaw = colonPos !== -1
 					? trimEndSlice(trimmed, 0, colonPos)
 					: bareKey ? trimEndSlice(trimmed, 0, trimmed.length - 1) : ''
@@ -395,27 +404,13 @@ const blockParser = (
 					// mode, as at the top level (Core 1.1 §10.1)
 					if (ctx.strict) throw unrecognizedKeyLine(line, trimmed)
 					cursor.next()
-				} else if (colonPos !== -1) {
+				} else if (colonPos !== -1 || bareKey) {
 					if (entries === null) entries = builder.createMapping()
-					const key = readKey(keyRaw, ctx.strict, line, colonPos)
+					const key = readKey(keyRaw, ctx.strict, line, bareKey ? trimmed.length - 1 : colonPos)
 					checkKeyLength(key, line)
 					if (ctx.strict || ctx.onWarning !== undefined)
 						checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
-					const rawUndecoded = trimSlice(trimmed, colonPos + 2, trimmed.length)
-					let raw = rawUndecoded
-					if (raw !== '|' && raw.includes('#')) raw = uncomment(raw)
-					const valueCol = wantSource ? cursor.indent + colonPos + 2 + leadingWsLen(trimmed.slice(colonPos + 2)) : 0
-					builder.setMapping(entries, key, parseInlineValue(raw, rawUndecoded === '|', baseIndent, line, valueCol, rawUndecoded, cursor, ctx, builder, readValue))
-				} else if (bareKey) {
-					if (entries === null) entries = builder.createMapping()
-					const key = readKey(keyRaw, ctx.strict, line, trimmed.length - 1)
-					checkKeyLength(key, line)
-					if (ctx.strict || ctx.onWarning !== undefined)
-						checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
-					cursor.next()
-					skipEmptyAndCommentLines(cursor)
-					const nested = blockOfBareKey(cursor, baseIndent, ctx, baseLine, builder)
-					builder.setMapping(entries, key, nested ?? builder.null(line))
+					builder.setMapping(entries, key, entryValue(cursor, trimmed, colonPos, baseIndent, line, ctx, baseLine, builder))
 				} else {
 					if (ctx.strict) throw new LimaError({ code: 'INVALID_INDENTATION', line,
 						message: `Lima: indented freetext without a block scalar marker at line ${line}: "${trimmed}"` })

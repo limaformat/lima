@@ -1,0 +1,23 @@
+{
+  "id": "core.yaml-header.folded-marker.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.6",
+  "description": "Core 1.3: > is an error at its own line in strict mode. Replaces core.block-scalar.folded-marker.strict. Strict mode.",
+  "input": "desc: >\n  Hello\n  World\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "UNSUPPORTED_YAML",
+      "line": 1
+    }
+  },
+  "tags": [
+    "yaml",
+    "block-scalar",
+    "strict",
+    "error"
+  ]
+}

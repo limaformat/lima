@@ -1,0 +1,22 @@
+{
+  "id": "core.comments.hash-in-quotes.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.3",
+  "description": "A # inside a quoted value or key is never a comment. Strict mode.",
+  "input": "k: '#x'\n'#': x\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "k": "#x",
+      "#": "x"
+    }
+  },
+  "tags": [
+    "comments",
+    "quoting",
+    "strict"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "core.separator.nbsp-is-no-separator",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Whitespace after the colon other than a space or a tab makes no separator; the line is unrecognised. Non-strict mode.",
+  "input": "k: x\n",
+  "expect": {
+    "result": {}
+  },
+  "tags": [
+    "separator"
+  ]
+}

@@ -10,6 +10,7 @@ import { type ParseContext, checkStringLimit } from './normalize.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
 import { scanReferenceTokens2, type ReferenceSource, type ReferenceToken2 } from './reference-tokens2.js'
+import { isTrimWhitespace } from './chars.js'
 
 /**
  * `insertedAt` is never set by Core — it's a References-only annotation
@@ -441,7 +442,13 @@ export const unescapeDQ = (s: string, strict = false, line = 0): string => {
 	})
 }
 
-/** UTF-16 offset of the first unescaped, unquoted hash, or -1. */
+/**
+ * Core 1.3 §4 step 2: an unquoted, unescaped `#` begins a comment only as the first character of the value or after
+ * whitespace (§1); any other `#` is text. `val` starts where the value starts, so index 0 is its first character.
+ */
+const isCommentHash = (val: string, i: number): boolean => i === 0 || isTrimWhitespace(val.charCodeAt(i - 1))
+
+/** UTF-16 offset of the hash that begins a comment (Core 1.3 §4), or -1. */
 export const commentStart = (val: string): number => {
 	let quote = 0
 	for (let i = 0; i < val.length; i++) {
@@ -453,11 +460,71 @@ export const commentStart = (val: string): number => {
 			quote = cc
 		} else if (cc === 92 && val.charCodeAt(i + 1) === 35) {
 			i++
-		} else if (cc === 35) {
+		} else if (cc === 35 && isCommentHash(val, i)) {
 			return i
 		}
 	}
 	return -1
+}
+
+/**
+ * Index of the first colon from `start` before `end` that a space or a tab follows, before `end` — the key-value
+ * separator of an unquoted key (§5.1), whose colons need neither — or -1.
+ */
+export const separatorIndex = (s: string, start: number, end: number): number => {
+	for (let colon = s.indexOf(':', start); colon !== -1 && colon + 1 < end; colon = s.indexOf(':', colon + 1)) {
+		const next = s.charCodeAt(colon + 1)
+		if (next === 32 || next === 9) return colon
+	}
+	return -1
+}
+
+/**
+ * Core 1.3 §4: whether the inline value from `start` to `end` is empty after comment removal and trimming — its first
+ * character other than whitespace (§1) is a `#`, which begins a comment there, or there is none. Such an entry is a
+ * bare key, whose block may follow. Reads only the whitespace before the value.
+ */
+export const isEmptyInlineValue = (source: string, start: number, end: number): boolean => {
+	while (start < end && isTrimWhitespace(source.charCodeAt(start))) start++
+	return start >= end || source.charCodeAt(start) === 35
+}
+
+/**
+ * Core 1.3 §6.1.6 and Appendix D `yaml-header`: `>`, or `|` or `>` followed by a chomping indicator (`-`, `+`) and an
+ * indentation digit (`1`–`9`), one or both, in either order.
+ */
+export const isYamlHeader = (value: string): boolean => {
+	const first = value.charCodeAt(0)
+	if (first !== 62 && first !== 124) return false
+	if (value.length === 1) return first === 62
+	const isChomping = (c: number): boolean => c === 45 || c === 43
+	const isDigit = (c: number): boolean => c >= 49 && c <= 57
+	const a = value.charCodeAt(1)
+	if (value.length === 2) return isChomping(a) || isDigit(a)
+	const b = value.charCodeAt(2)
+	return value.length === 3 && ((isChomping(a) && isDigit(b)) || (isDigit(a) && isChomping(b)))
+}
+
+const YAML_NODE_PROPERTY: Record<string, string> = { '&': 'an anchor', '*': 'an alias', '!': 'a tag' }
+
+/**
+ * Core 1.3 §6.1.1, §6.1.6 and §10.1: in strict mode an unquoted value that starts with `&`, `*` or `!`, or that is a
+ * YAML block scalar header other than `|`, throws; the message names what Lima writes instead (§10.2, Appendix E).
+ */
+const checkYamlValue = (raw: string, first: number, line: number): void => {
+	if (first === 38 || first === 42 || first === 33) {
+		const c = raw[0]
+		throw new LimaError({
+			code: 'UNSUPPORTED_YAML', line,
+			message: `Lima: unquoted value starting with "${c}" at line ${line} (YAML reads it as ${YAML_NODE_PROPERTY[c]}; Lima has no anchors, aliases or tags: quote the value)`,
+		})
+	}
+	if ((first === 62 || first === 124) && isYamlHeader(raw)) {
+		throw new LimaError({
+			code: 'UNSUPPORTED_YAML', line,
+			message: `Lima: YAML block scalar header "${raw}" at line ${line} (Lima writes "|", and "^^" to join lines)`,
+		})
+	}
 }
 
 /**
@@ -502,7 +569,7 @@ export const stripComment = (val: string): string => {
 			out += val.slice(seg, i) + '#'
 			i++
 			seg = i + 1
-		} else if (cc === 35) {
+		} else if (cc === 35 && isCommentHash(val, i)) {
 			return (out + val.slice(seg, i)).trimEnd()
 		}
 	}
@@ -523,6 +590,14 @@ export const stripKeyQuotes = (s: string, strict = false, line = 0): string => {
 	}
 	return s
 }
+
+/** Appendix E: a quoted value ends on its line. */
+const UNTERMINATED_HINT = ' (a quoted value ends on its line; write "|" for a value of several lines)'
+/** Appendix E: a flow collection ends on its line. */
+const UNCLOSED_SEQUENCE_HINT = ' (a flow sequence ends on its line; write a block sequence with "- ")'
+const UNCLOSED_MAPPING_HINT = ' (a flow mapping ends on its line; write a block mapping)'
+/** Appendix E: YAML's `'It''s'`. */
+const DOUBLED_QUOTE_HINT = ` (YAML doubles the quote; Lima writes 'It\\'s' or "It's")`
 
 /**
  * Quoted-or-typed scalar, shared by every value position (top-level inline
@@ -546,12 +621,13 @@ export const parseQuotedOrTyped = <V, M>(
 		}
 		if (ctx.strict) {
 			throw close === -1
-				? new LimaError({ code: 'INVALID_QUOTE', line, message: `Lima: unterminated quoted string at line ${line}` })
-				: new LimaError({ code: 'INVALID_QUOTE', line, message: `Lima: non-whitespace content after closing quote at line ${line}` })
+				? new LimaError({ code: 'INVALID_QUOTE', line, message: `Lima: unterminated quoted string at line ${line}${UNTERMINATED_HINT}` })
+				: new LimaError({ code: 'INVALID_QUOTE', line, message: `Lima: non-whitespace content after closing quote at line ${line}${
+					first === 39 && raw.charCodeAt(close + 1) === 39 ? DOUBLED_QUOTE_HINT : ''}` })
 		}
 		// Non-strict: §6.1.2/§6.1.3 + §10.1 — the entire value falls back to
 		// a literal string (opening quote included), handled below.
-	}
+	} else if (ctx.strict) checkYamlValue(raw, first, line)
 	if (raw !== '' && raw !== 'null' && raw !== '~' && raw !== 'true' && raw !== 'false' &&
 		!((first >= 48 && first <= 57) || first === 45 || first === 46)) {
 		checkStringLimit(raw, line)
@@ -567,7 +643,7 @@ export const parseScalarValue = <V, M>(
 	if (ctx.strict && (first === 91 || first === 123)) {
 		throw new LimaError({
 			code: 'INVALID_FLOW_SYNTAX', line,
-			message: `Lima: unclosed flow ${first === 91 ? 'sequence' : 'mapping'} at line ${line}`,
+			message: `Lima: unclosed flow ${first === 91 ? 'sequence' : 'mapping'} at line ${line}${first === 91 ? UNCLOSED_SEQUENCE_HINT : UNCLOSED_MAPPING_HINT}`,
 		})
 	}
 	return parseQuotedOrTyped(raw, ctx, line, builder, source)

@@ -1,0 +1,16 @@
+{
+  "id": "core.comments.hash-after-nel",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: U+0085 is no whitespace (§1), so a # after it is text. Replaces core.comments.whitespace-boundary.nel-is-content. Non-strict mode.",
+  "input": "x: foo# c\n",
+  "expect": {
+    "result": {
+      "x": "foo# c"
+    }
+  },
+  "tags": [
+    "comments"
+  ]
+}

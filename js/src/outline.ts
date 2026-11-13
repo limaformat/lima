@@ -9,7 +9,7 @@ import {
 } from './normalize.js'
 import { parse } from './references2.js'
 import { scanKeys } from './scanner.js'
-import { stripCommentKeepEscapes, stripKeyQuotes } from './scalars.js'
+import { isEmptyInlineValue, stripCommentKeepEscapes, stripKeyQuotes } from './scalars.js'
 import { isBlockScalarMarker } from './structure.js'
 
 export interface LimaPoint {
@@ -169,6 +169,14 @@ function readOutline(
 		} else {
 			cursor.next()
 			cursor.excludeCommentsBefore(match.rawStart)
+			// Core 1.3 §4: a value that is only a comment leaves the key bare, and its block follows; the cursor stands on
+			// the key's line, which reports the comment as it moves on
+			if (isEmptyInlineValue(source, match.rawStart, cursor.lineEnd)) {
+				const value = parseBlockRange(source, cursor.lineEnd, end, ctx, match.line, builder, { mayExceed: false }, cursor)
+				if (value) walk(value, [key])
+				while (cursor.valid) cursor.next()
+				continue
+			}
 			const raw = source.slice(match.rawStart, cursor.lineEnd)
 			const value = stripCommentKeepEscapes(raw).trim()
 			const column = match.rawStart - match.matchStart + raw.length - raw.trimStart().length
@@ -227,7 +235,7 @@ export function outline(frontMatter: string): LimaOutline {
 		const emit = (position: KeyPosition, path: readonly string[]): void => {
 			checkKeyLength(position.key, position.line)
 			const colon = span(position.separator, position.separator + 1)
-			const separator = input[colon.end.offset] === ' '
+			const separator = input[colon.end.offset] === ' ' || input[colon.end.offset] === '\t'
 				? { start: colon.start, end: { ...colon.end, column: colon.end.column + 1, offset: colon.end.offset + 1 } }
 				: colon
 			keys.push({ key: position.key, path: [...path, position.key], span: span(position.start, position.end), separator })

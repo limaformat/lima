@@ -1,0 +1,23 @@
+{
+  "id": "core.yaml-node-properties.anchor-value.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.1",
+  "description": "Core 1.3: an unquoted value that starts with & is an error in strict mode, a string otherwise. Strict mode.",
+  "input": "k: &x\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "UNSUPPORTED_YAML",
+      "line": 1,
+      "contains": "quote the value"
+    }
+  },
+  "tags": [
+    "yaml",
+    "strict",
+    "error"
+  ]
+}

@@ -106,8 +106,8 @@ describe('unrecognised key hints', () => {
 		['top level', 'x y: 2\n'],
 		['nested', 'outer:\n  x y: 2\n'],
 	] as const) {
-		it(`uses the key-grammar hint for a spaced ${level} key with a separator`, () => {
-			expect(() => parseCore(input, { strict: true })).toThrow(keyGrammarHint)
+		it(`names the quoted key for a spaced ${level} key with a separator (Core 1.3 Appendix E)`, () => {
+			expect(() => parseCore(input, { strict: true })).toThrow("(quote a key that holds spaces: 'x y':)")
 			try {
 				parseCore(input, { strict: true })
 			} catch (error) {
@@ -115,4 +115,8 @@ describe('unrecognised key hints', () => {
 			}
 		})
 	}
+
+	it('keeps the key-grammar hint for a key that quoting alone would not mend', () => {
+		expect(() => parseCore('x/y: 2\n', { strict: true })).toThrow(keyGrammarHint)
+	})
 })

@@ -1,0 +1,23 @@
+{
+  "id": "core.errata.single-quoted-key-no-escape.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "15.6",
+  "description": "Core 1.2 erratum: a single-quoted key admits no escape; in 'a\\'b': x the second ' closes the key, and the line is unrecognised. Strict mode.",
+  "input": "'a\\'b': x\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "UNRECOGNIZED_LINE",
+      "line": 1
+    }
+  },
+  "tags": [
+    "keys",
+    "quoting",
+    "strict",
+    "error"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "core.comments.hash-after-text",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: a # after a character other than whitespace is text, so the value keeps it. Non-strict mode.",
+  "input": "k: x#y\n",
+  "expect": {
+    "result": {
+      "k": "x#y"
+    }
+  },
+  "tags": [
+    "comments"
+  ]
+}

@@ -91,7 +91,9 @@ const matchSeparator = (s: string, pos: number): number => {
 	// either another space or the same non-`\n` stop character) — so
 	// falling straight through to the single-space alternative, without a
 	// loop, is exactly equivalent to real regex backtracking here.
-	if (s.charCodeAt(pos) === 32) return -(pos + 1)
+	// Core 1.3 §5.1: a tab after the colon separates as a space does
+	const c = s.charCodeAt(pos)
+	if (c === 32 || c === 9) return -(pos + 1)
 	return 0
 }
 

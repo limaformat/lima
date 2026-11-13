@@ -160,8 +160,8 @@ export function validateCase(doc: unknown): ValidationResult {
 	if ('spec' in doc && !SPEC_VALUES.includes(doc.spec as string)) {
 		fail(errors, 'spec', `must be one of ${SPEC_VALUES.join(', ')}`)
 	}
-	if ('specVersion' in doc && !['1.0', '1.1', '1.2', '2.0', '2.1'].includes(doc.specVersion as string)) {
-		fail(errors, 'specVersion', 'must be one of 1.0, 1.1, 1.2, 2.0, 2.1')
+	if ('specVersion' in doc && !['1.0', '1.1', '1.2', '1.3', '2.0', '2.1'].includes(doc.specVersion as string)) {
+		fail(errors, 'specVersion', 'must be one of 1.0, 1.1, 1.2, 1.3, 2.0, 2.1')
 	}
 	if ((doc.specVersion === '2.0' || doc.specVersion === '2.1') && doc.spec !== 'references') {
 		fail(errors, 'specVersion', '2.x is defined only for the References extension')

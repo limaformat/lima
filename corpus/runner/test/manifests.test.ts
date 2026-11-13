@@ -11,7 +11,7 @@ import {
 } from '../src/manifests'
 
 const corpusRoot = join(import.meta.dir, '..', '..')
-const suites = ['core-1.0', 'core-1.1', 'references-1.0'] as const
+const suites = ['core-1.0', 'core-1.1', 'core-1.3', 'references-1.0'] as const
 const loadManifest = (name: string): SuiteManifest =>
 	JSON.parse(readFileSync(join(corpusRoot, 'manifests', `${name}.json`), 'utf8'))
 
@@ -26,6 +26,17 @@ describe('frozen Lima corpus manifests', () => {
 	it('regenerating core-1.1 keeps what it supersedes', () => {
 		const prior = loadManifest('core-1.1')
 		expect(regenerateManifest(corpusRoot, prior, prior.specVersion).supersedes).toEqual(prior.supersedes)
+	})
+
+	it('core-1.3 supersedes only cases of core-1.0 and core-1.1, which keep their place in their baselines', () => {
+		const earlier = new Set(['core-1.0', 'core-1.1'].flatMap((name) => loadManifest(name).cases.map((c) => c.id)))
+		const { supersedes } = loadManifest('core-1.3')
+		expect(supersedes).toEqual([
+			'core.block-scalar.chomping-indicator.strict',
+			'core.block-scalar.folded-marker.strict',
+			'core.comments.whitespace-boundary.nel-is-content',
+		])
+		for (const id of supersedes ?? []) expect(earlier.has(id)).toBe(true)
 	})
 
 	for (const name of suites) {

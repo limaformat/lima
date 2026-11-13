@@ -1,0 +1,22 @@
+{
+  "id": "core.bare-key.comment-only-value-without-block.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.2",
+  "description": "Core 1.3: a bare key by its comment and with no deeper line is null. Strict mode.",
+  "input": "k: # c\nj: 1\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "k": null,
+      "j": 1
+    }
+  },
+  "tags": [
+    "bare-key",
+    "comments",
+    "strict"
+  ]
+}

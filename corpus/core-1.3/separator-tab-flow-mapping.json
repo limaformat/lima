@@ -1,0 +1,20 @@
+{
+  "id": "core.separator.tab-flow-mapping",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "7.5",
+  "description": "Core 1.3: a tab after the colon separates in a flow mapping. Non-strict mode.",
+  "input": "k: {a:\t1}\n",
+  "expect": {
+    "result": {
+      "k": {
+        "a": 1
+      }
+    }
+  },
+  "tags": [
+    "separator",
+    "tabs",
+    "flow"
+  ]
+}

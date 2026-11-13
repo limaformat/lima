@@ -1,0 +1,22 @@
+{
+  "id": "core.yaml-node-properties.alias-example.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.1",
+  "description": "Core 1.3: the example of §6.1.1. Strict mode.",
+  "input": "note: *new*\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "UNSUPPORTED_YAML",
+      "line": 1
+    }
+  },
+  "tags": [
+    "yaml",
+    "strict",
+    "error"
+  ]
+}

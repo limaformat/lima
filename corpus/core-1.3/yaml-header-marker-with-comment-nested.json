@@ -1,0 +1,21 @@
+{
+  "id": "core.yaml-header.marker-with-comment-nested",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.5",
+  "description": "Core 1.3: | is decided before comment removal, so `| # c` is the string |; the deeper line belongs to no block. Non-strict mode.",
+  "input": "m:\n  a: | # c\n    text\n",
+  "expect": {
+    "result": {
+      "m": {
+        "a": "|"
+      }
+    }
+  },
+  "tags": [
+    "yaml",
+    "block-scalar",
+    "comments",
+    "indentation"
+  ]
+}

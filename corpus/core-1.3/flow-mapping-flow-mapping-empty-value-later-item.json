@@ -1,0 +1,19 @@
+{
+  "id": "core.flow-mapping.flow-mapping-empty-value-later-item",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "7.5",
+  "description": "Core 1.3: a later item with an empty value is null too. Non-strict mode.",
+  "input": "a: {x: 1, k: }\n",
+  "expect": {
+    "result": {
+      "a": {
+        "x": 1,
+        "k": null
+      }
+    }
+  },
+  "tags": [
+    "flow"
+  ]
+}

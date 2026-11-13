@@ -1,0 +1,17 @@
+{
+  "id": "core.comments.escaped-hash",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.4",
+  "description": "Core 1.3: \\# still yields #, and only the backslash right before the # escapes it. Non-strict mode.",
+  "input": "k: \\#x\nj: \\\\#x\n",
+  "expect": {
+    "result": {
+      "k": "#x",
+      "j": "\\#x"
+    }
+  },
+  "tags": [
+    "comments"
+  ]
+}

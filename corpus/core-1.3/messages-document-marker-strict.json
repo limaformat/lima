@@ -1,0 +1,24 @@
+{
+  "id": "core.messages.document-marker.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3 §10.2, Appendix E: the message names what Lima writes instead of the YAML form. Strict mode.",
+  "input": "---\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "UNRECOGNIZED_LINE",
+      "line": 1,
+      "contains": "document marker"
+    }
+  },
+  "tags": [
+    "messages",
+    "yaml",
+    "strict",
+    "error"
+  ]
+}

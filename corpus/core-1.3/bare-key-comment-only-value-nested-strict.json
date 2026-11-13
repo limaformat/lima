@@ -1,0 +1,26 @@
+{
+  "id": "core.bare-key.comment-only-value-nested.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "7.1",
+  "description": "Core 1.3: in a block mapping, a key whose value is only a comment takes the deeper block. Strict mode.",
+  "input": "m:\n  k: # c\n    a: 1\n  j: 2\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "m": {
+        "k": {
+          "a": 1
+        },
+        "j": 2
+      }
+    }
+  },
+  "tags": [
+    "bare-key",
+    "comments",
+    "strict"
+  ]
+}

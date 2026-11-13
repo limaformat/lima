@@ -1,7 +1,9 @@
 /** Core §15.8 flow collections: `[...]` sequences and `{...}` mappings. */
 
 import { checkKeyLength, checkDuplicateKey, type ParseContext } from './normalize.js'
-import { parseQuotedOrTyped, parseScalarValue, stripKeyQuotes, closingQuoteIndex, isValidKey } from './scalars.js'
+import {
+	parseQuotedOrTyped, parseScalarValue, stripKeyQuotes, closingQuoteIndex, isValidKey, separatorIndex,
+} from './scalars.js'
 import { LimaError } from './errors.js'
 import type { SourcePositions, ValueBuilder } from './builder.js'
 import type { ReferenceSource } from './reference-tokens2.js'
@@ -10,8 +12,9 @@ import { isTrimWhitespace } from './chars.js'
 /**
  * Maps a UTF-16 offset in the decoded container `val` to the corresponding
  * offset in the physical container `raw`. The two differ only by `\#` → `#`
- * collapses outside quoted strings (FR-5 keeps `\#` inside quotes), so every
- * `#` in `val` outside a quote is one such collapse — `raw` has `\#` there.
+ * collapses outside quoted strings (FR-5 keeps `\#` inside quotes). A `#` in
+ * `val` outside a quote is such a collapse where `raw` has `\#` at that place;
+ * any other `#` — one after text, which Core 1.3 §4 keeps — is written as it is.
  * Brackets, commas, quotes and quoted content are identical in both.
  */
 const rawOffsetOf = (raw: string, val: string, valOffset: number): number => {
@@ -25,7 +28,7 @@ const rawOffsetOf = (raw: string, val: string, valOffset: number): number => {
 			if (vc === quote) quote = 0
 		} else if (vc === 34 || vc === 39) {
 			quote = vc
-		} else if (vc === 35) {
+		} else if (vc === 35 && raw.charCodeAt(ri) === 92) {
 			vi += 1; ri += 2; continue // '#' in the decoded container ⇐ '\#' in raw
 		}
 		vi += 1; ri += 1
@@ -70,6 +73,8 @@ const trimEnd = (source: string, start: number, end: number): number => {
 export class FlowCursor {
 	itemStart = 0
 	itemEnd = 0
+	/** The item's end before trimming: its comma, or the end of the container. */
+	itemRawEnd = 0
 	private nextStart: number
 	private done = false
 
@@ -94,6 +99,7 @@ export class FlowCursor {
 		}
 		this.itemStart = trimStart(this.source, this.nextStart, pos)
 		this.itemEnd = trimEnd(this.source, this.itemStart, pos)
+		this.itemRawEnd = pos
 		if (pos < this.end) this.nextStart = pos + 1
 		else this.done = true
 		return true
@@ -139,9 +145,10 @@ export const parseFlowSequence = <V, M>(val: string, ctx: ParseContext, line: nu
 }
 
 /**
- * Index of the key/value `: ` separator within a flow-mapping item — the
- * first `: ` that is not inside a quoted key (§5.1). Returns -1 when the
- * item has no separator.
+ * Index of the key/value separator within a flow-mapping item — the first
+ * colon followed by a space or a tab that is not inside a quoted key (§5.1,
+ * §7.5). `end` is the item's end before trimming, so `{k: }` has a separator
+ * (Core 1.3 §7.5). Returns -1 when the item has no separator.
  */
 export const flowItemSeparator = (val: string, start: number, end: number): number => {
 	let scan = start
@@ -151,8 +158,7 @@ export const flowItemSeparator = (val: string, start: number, end: number): numb
 		if (close === -1) return -1
 		scan = start + close + 1
 	}
-	const sep = val.indexOf(': ', scan)
-	return sep === -1 || sep >= end ? -1 : sep
+	return separatorIndex(val, scan, end)
 }
 
 const sourceKeyReader = (positions: SourcePositions, offset: number) =>
@@ -170,7 +176,8 @@ export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: num
 	const readKey = positions ? sourceKeyReader(positions, offset) : stripKeyQuotes
 	const entries = builder.createMapping()
 	if (innerStart === innerEnd) return builder.mapping(entries, line)
-	const cursor = new FlowCursor(val, innerStart, innerEnd)
+	// the items end at the closing brace, so the last one keeps the whitespace its separator may need (§7.5)
+	const cursor = new FlowCursor(val, innerStart, val.length - 1)
 	while (cursor.next()) {
 		const itemStart = cursor.itemStart, itemEnd = cursor.itemEnd
 		const item = val.slice(itemStart, itemEnd)
@@ -178,7 +185,7 @@ export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: num
 			if (ctx.strict) throw new LimaError({ code: 'INVALID_FLOW_SYNTAX', line, message: `Lima: empty element in flow mapping at line ${line}` })
 			continue
 		}
-		const colonPos = flowItemSeparator(val, itemStart, itemEnd)
+		const colonPos = flowItemSeparator(val, itemStart, cursor.itemRawEnd)
 		if (colonPos === -1) {
 			if (ctx.strict) throw new LimaError({
 				code: 'INVALID_FLOW_SYNTAX', line,
@@ -200,7 +207,7 @@ export const parseFlowMapping = <V, M>(val: string, ctx: ParseContext, line: num
 		if (ctx.strict || ctx.onWarning !== undefined) {
 			checkDuplicateKey(builder.hasMappingKey(entries, key), key, line, ctx)
 		}
-		const valueStart = trimStart(val, colonPos + 2, itemEnd)
+		const valueStart = trimStart(val, Math.min(colonPos + 2, itemEnd), itemEnd)
 		const valueEnd = trimEnd(val, valueStart, itemEnd)
 		const rawVal = val.slice(valueStart, valueEnd)
 		if (isNestedFlowConstruct(rawVal)) {

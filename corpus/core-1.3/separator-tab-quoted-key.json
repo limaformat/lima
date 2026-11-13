@@ -1,0 +1,17 @@
+{
+  "id": "core.separator.tab-quoted-key",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "5.2",
+  "description": "Core 1.3: a tab after the colon of a quoted key separates. Non-strict mode.",
+  "input": "'k':\t1\n",
+  "expect": {
+    "result": {
+      "k": 1
+    }
+  },
+  "tags": [
+    "separator",
+    "tabs"
+  ]
+}

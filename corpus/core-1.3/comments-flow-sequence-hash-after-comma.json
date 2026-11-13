@@ -1,0 +1,23 @@
+{
+  "id": "core.comments.flow-sequence-hash-after-comma",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "7.4",
+  "description": "Core 1.3: the boundary is decided once over the whole flow value; a # after , or [ is text. Non-strict mode.",
+  "input": "k: [a,#x]\nj: [#x]\n",
+  "expect": {
+    "result": {
+      "k": [
+        "a",
+        "#x"
+      ],
+      "j": [
+        "#x"
+      ]
+    }
+  },
+  "tags": [
+    "comments",
+    "flow"
+  ]
+}

@@ -1,0 +1,825 @@
+{
+  "suite": "core-1.3",
+  "frozen": true,
+  "baselineVersion": "1.3.0",
+  "baselineCaseCount": 135,
+  "specVersion": "1.3.0",
+  "caseCount": 135,
+  "supersedes": [
+    "core.block-scalar.chomping-indicator.strict",
+    "core.block-scalar.folded-marker.strict",
+    "core.comments.whitespace-boundary.nel-is-content"
+  ],
+  "cases": [
+    {
+      "path": "core-1.3/bare-key-comment-after-separator-example-strict.json",
+      "id": "core.bare-key.comment-after-separator-example.strict",
+      "sha256": "b11ae95baae7d6aba9226030904ed357b81d5ebdf498d1ee92a41ce8cc69c14b",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-after-separator-example.json",
+      "id": "core.bare-key.comment-after-separator-example",
+      "sha256": "5808f127279d580cee68c0ca8f4c4d1ac310849a4d2ff257f249fd6e80632d82",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-item-opens-no-block-strict.json",
+      "id": "core.bare-key.comment-only-item-opens-no-block.strict",
+      "sha256": "5882870dbd6797e45e363b0652fe298edf0b6fbc30820bc1c7b812ee2a5eb73d",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-item-opens-no-block.json",
+      "id": "core.bare-key.comment-only-item-opens-no-block",
+      "sha256": "a87ba6ebd65289407f9ded3a318c898dd3a5c909e9bd159b587844911b81ef5e",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-compact-sequence-strict.json",
+      "id": "core.bare-key.comment-only-value-compact-sequence.strict",
+      "sha256": "c5045de924082e3c5fed36d2c3583e49e22bfcb2b3e721073ea4c5e477ce5587",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-compact-sequence.json",
+      "id": "core.bare-key.comment-only-value-compact-sequence",
+      "sha256": "5d26572f8def3840e13a221f8196c20c12e5658b460fe9e89f1cff0e8ae25c41",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-first-key-of-item-strict.json",
+      "id": "core.bare-key.comment-only-value-first-key-of-item.strict",
+      "sha256": "d8a89f8513bd87d5648ba6a8ce53b71eba57ec16a50c6db10e100734a53d1abe",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-first-key-of-item.json",
+      "id": "core.bare-key.comment-only-value-first-key-of-item",
+      "sha256": "cb3ee1af0c69772444d3b24c02a16c104b778db79e8642b348d3c0b3d45aafd8",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-in-object-item-strict.json",
+      "id": "core.bare-key.comment-only-value-in-object-item.strict",
+      "sha256": "11863b8cc0bc68d48dcd6a2b75d38ae32757d300418af9a3b92d9f7345f24cb4",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-in-object-item.json",
+      "id": "core.bare-key.comment-only-value-in-object-item",
+      "sha256": "60eb68601c3da04b6b2779f1aed5a2471ee02f7bfe35d795985c17469887cdda",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-nested-strict.json",
+      "id": "core.bare-key.comment-only-value-nested.strict",
+      "sha256": "75d17b05b6da5f0954c43bc3ab74143e00a793ac830e321b65ed823e4f9ef975",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-nested.json",
+      "id": "core.bare-key.comment-only-value-nested",
+      "sha256": "291f304a53113409ba65530286ec5b2dc5301cd5de4bfb18e6319edabdfa2785",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-opens-block-strict.json",
+      "id": "core.bare-key.comment-only-value-opens-block.strict",
+      "sha256": "446a6a25901bf7e58ce74962561894aabf6d994108618c12a5620aab7ae18255",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-opens-block.json",
+      "id": "core.bare-key.comment-only-value-opens-block",
+      "sha256": "1e6dd57c21125654e262ea1038dd86712b1edc514b41099081a1f759e00819f8",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-without-block-strict.json",
+      "id": "core.bare-key.comment-only-value-without-block.strict",
+      "sha256": "98e4fe3f361f835a4bb4e25d596639c0dff2760c129b19d2e16575010587491a",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-comment-only-value-without-block.json",
+      "id": "core.bare-key.comment-only-value-without-block",
+      "sha256": "d623ed0210288ee32f1ce137a5e58d392e1bd254f35ed1653cfdf81114a504c7",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-empty-quoted-is-no-bare-key-strict.json",
+      "id": "core.bare-key.empty-quoted-is-no-bare-key.strict",
+      "sha256": "305dd2cffb865545af844ea7e9fd3a945f73c8915129f49a34fe59bf34a0df71",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-empty-quoted-is-no-bare-key.json",
+      "id": "core.bare-key.empty-quoted-is-no-bare-key",
+      "sha256": "cf053cac2f5b4de69debf91f74d56cfecd3c32bb3f2b7d726db7e92bd752d317",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-null-is-no-bare-key-strict.json",
+      "id": "core.bare-key.null-is-no-bare-key.strict",
+      "sha256": "6b427675c3988471c9f0c18b436aaa8af9af695c33b82ee8bcc8989ff57f7d09",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/bare-key-null-is-no-bare-key.json",
+      "id": "core.bare-key.null-is-no-bare-key",
+      "sha256": "3f179e0532742c5dabf3f1e8ea03b89ab47308ca2ff368c2747b393009e87585",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-escaped-hash-strict.json",
+      "id": "core.comments.escaped-hash.strict",
+      "sha256": "53c29c9bcf2c653e3f6cd8889f9ebc69dc931f42c9db3f56ec9f106b8f09a811",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-escaped-hash.json",
+      "id": "core.comments.escaped-hash",
+      "sha256": "f50bec6ddb88df4a44cf4feac3c663b2f5e2573705dc4b165e84737eea64702d",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-flow-mapping-hash-after-text-strict.json",
+      "id": "core.comments.flow-mapping-hash-after-text.strict",
+      "sha256": "7012114cecb383b4c36355d86518f32605ae67e61d9310dc3a7acc7cf38a4934",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-flow-mapping-hash-after-text.json",
+      "id": "core.comments.flow-mapping-hash-after-text",
+      "sha256": "bb0bad72388d4194541ca7fa88a67944ba618d9a9d5415bce95e9c2b0b590efa",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-flow-sequence-hash-after-comma-strict.json",
+      "id": "core.comments.flow-sequence-hash-after-comma.strict",
+      "sha256": "fc68d80eedecd08e786b8894f8cc6840937ee4e0686ea77a69f2a30ef4ef67d1",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-flow-sequence-hash-after-comma.json",
+      "id": "core.comments.flow-sequence-hash-after-comma",
+      "sha256": "2b28404527d0eb94fe4b9625a706d65951c4e0c04a6942ca619e12163fe8694a",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-flow-sequence-hash-after-space-strict.json",
+      "id": "core.comments.flow-sequence-hash-after-space.strict",
+      "sha256": "95bbeac16205f894e8b59b91b9e44ac2b5988660c94714df666a4d961f4906ac",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-flow-sequence-hash-after-space.json",
+      "id": "core.comments.flow-sequence-hash-after-space",
+      "sha256": "ccfecaaef411d44260e1798a74a900974a6dfe6fdf962cc325f2c2f96f4915f2",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-closing-quote-strict.json",
+      "id": "core.comments.hash-after-closing-quote.strict",
+      "sha256": "ab34dabcbe83310f9f8147be5b599a129447f933bb78db81b2f1aa3fb03b0948",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-closing-quote.json",
+      "id": "core.comments.hash-after-closing-quote",
+      "sha256": "dbf3a316e659e9752d096bb0ea23aa3243fa51e4bddad55df794fba87e117637",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-feff-strict.json",
+      "id": "core.comments.hash-after-feff.strict",
+      "sha256": "b6552f2c3635bc3c18d66a035b436dcb1ca1f808b4a25c727c8b114eeb8017cf",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-feff.json",
+      "id": "core.comments.hash-after-feff",
+      "sha256": "931863e14215404aa078da0534be9040c2802f385d4a152088b764651e6b39f2",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-nbsp-strict.json",
+      "id": "core.comments.hash-after-nbsp.strict",
+      "sha256": "67ac01388c795e0622d5566433b426a9a6ae8bda152551f769a551b1d5ab6c23",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-nbsp.json",
+      "id": "core.comments.hash-after-nbsp",
+      "sha256": "de9d8f7291132cf2d23dfd80641c37a48117ac44a399e3b2fe5949c731287c0a",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-nel-strict.json",
+      "id": "core.comments.hash-after-nel.strict",
+      "sha256": "18c09ebc07b606e38587fb3513f3c832eea5a194a5a63385764c41c9512a5813",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-nel.json",
+      "id": "core.comments.hash-after-nel",
+      "sha256": "9c44811030f87e684b6a8bad3132d24492f190605241ef09bc002cb60138d0b8",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-text-strict.json",
+      "id": "core.comments.hash-after-text.strict",
+      "sha256": "32e390439b2e9dc64d9948e4d44f8b59e8282e37e5b3bf3dbd40bca1866ea3cb",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-text.json",
+      "id": "core.comments.hash-after-text",
+      "sha256": "2cb70a535fca15004f6f0296b05874d7f56333be4b15e15c1be63506e3273eae",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-in-quotes-strict.json",
+      "id": "core.comments.hash-in-quotes.strict",
+      "sha256": "3f227e2d1856506f6a1fbc77166e9f91dc1235c0a282d43c8e1f09c480c10098",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-in-quotes.json",
+      "id": "core.comments.hash-in-quotes",
+      "sha256": "1934fd8660787a81178f236c7f58c8f374f64110002a151460aa19b6938845fb",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-url-fragment-and-color-strict.json",
+      "id": "core.comments.url-fragment-and-color.strict",
+      "sha256": "5327aa56a89d66750016537217a6112473f7fdddab35eadac1fde3e87d16e807",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-url-fragment-and-color.json",
+      "id": "core.comments.url-fragment-and-color",
+      "sha256": "36b6093f86585cb13cb189ea1c763790cb34f195d30a903c82d120f2b63c44e1",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/errata-single-quoted-key-no-escape-strict.json",
+      "id": "core.errata.single-quoted-key-no-escape.strict",
+      "sha256": "c063c9a684bf5d88eb71212ac834d8fd07e7d811d7c0ae3ad8884be0295d2b5f",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/errata-single-quoted-key-no-escape.json",
+      "id": "core.errata.single-quoted-key-no-escape",
+      "sha256": "ad28a6301369ff36299d49423b9d7a6453c735deff2e9c587e899a7b1bd248db",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/errata-tab-after-line-separator-kept-strict.json",
+      "id": "core.errata.tab-after-line-separator-kept.strict",
+      "sha256": "7eaaba0bfd4fa1b6e99184b7d9f163421b63498ca338dd3107d136eeab37e92c",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/errata-tab-after-line-separator-kept.json",
+      "id": "core.errata.tab-after-line-separator-kept",
+      "sha256": "48b69c7d8b4c0ad253c7a26f81249fe5a81bde47dcfe9122ee8f93f5084be61e",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/errata-tab-after-nbsp-kept-strict.json",
+      "id": "core.errata.tab-after-nbsp-kept.strict",
+      "sha256": "7874b1dd42c8f3f91009ee9b912dac0453eea480c42ff33cbd6f7bae5b342e4a",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/errata-tab-after-nbsp-kept.json",
+      "id": "core.errata.tab-after-nbsp-kept",
+      "sha256": "aa2fd0489acb9d4d66240bd9174d949f2975572742f9a89b0d073de34bbd27ee",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/errata-trim-nbsp-strict.json",
+      "id": "core.errata.trim-nbsp.strict",
+      "sha256": "eff8fec44f247bf4d4d81c8ba40a0f6f809eed5108bb190385831bbbebfc8d82",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/errata-trim-nbsp.json",
+      "id": "core.errata.trim-nbsp",
+      "sha256": "818cc5c2806050b5ea3bea4c3650822d48841f29043b3a1d89831a6818acfe75",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/flow-mapping-flow-mapping-colon-alone-strict.json",
+      "id": "core.flow-mapping.flow-mapping-colon-alone.strict",
+      "sha256": "09d3325f739015ece67cce2a78685bab9db5cc3910f622226676f55a38fbc6b6",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/flow-mapping-flow-mapping-colon-alone.json",
+      "id": "core.flow-mapping.flow-mapping-colon-alone",
+      "sha256": "bcb4116a7c0a93362aa7b66c8a9fc5ac2524dfd5c2972025e9fc9cd0b93d95f0",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/flow-mapping-flow-mapping-empty-value-later-item-strict.json",
+      "id": "core.flow-mapping.flow-mapping-empty-value-later-item.strict",
+      "sha256": "cb101966cfab7ddd3132062581ad4e9086e2e75c9ca5337000ee38c8886492ac",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/flow-mapping-flow-mapping-empty-value-later-item.json",
+      "id": "core.flow-mapping.flow-mapping-empty-value-later-item",
+      "sha256": "f60d2db2e77074aa313bf93aa4432aa5c62839d3d47b28af30b9515839dce314",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/flow-mapping-flow-mapping-empty-value-strict.json",
+      "id": "core.flow-mapping.flow-mapping-empty-value.strict",
+      "sha256": "a1424899400d54980d9587dba093b2ae70f4eee634e662f16db0da00e0095c21",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/flow-mapping-flow-mapping-empty-value-tab-strict.json",
+      "id": "core.flow-mapping.flow-mapping-empty-value-tab.strict",
+      "sha256": "cbe355d9f2771c2489972f1c803fea1fd1e9ac9a61a49e03807fff1088725ba9",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/flow-mapping-flow-mapping-empty-value-tab.json",
+      "id": "core.flow-mapping.flow-mapping-empty-value-tab",
+      "sha256": "34ee8ced4a40391f2d626d122b513a197a8ef4694e92ccc5c16f3b3be010c2eb",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/flow-mapping-flow-mapping-empty-value.json",
+      "id": "core.flow-mapping.flow-mapping-empty-value",
+      "sha256": "6b6f329582a05859590292d576da61cc4cb087099f79c7062487d4574be46cfc",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/limits-nesting-depth-16-by-comment-only-value-strict.json",
+      "id": "core.limits.nesting-depth-16-by-comment-only-value.strict",
+      "sha256": "4921eaae8fdafdab1dfafd3544b3fa52b58003ee54846ba92597ef02d4641146",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/limits-nesting-depth-16-by-comment-only-value.json",
+      "id": "core.limits.nesting-depth-16-by-comment-only-value",
+      "sha256": "32827f2679b38b50ef39b3add5fe0562824e860ecf6d145c178de826e992cfc9",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/limits-nesting-depth-17-by-comment-only-value-strict.json",
+      "id": "core.limits.nesting-depth-17-by-comment-only-value.strict",
+      "sha256": "cf839f01b1ad01074f5c61d80de40381447a5d79337f3ad01441c1607e44fc84",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/limits-nesting-depth-17-by-comment-only-value.json",
+      "id": "core.limits.nesting-depth-17-by-comment-only-value",
+      "sha256": "416a065d7229f0631e8752d22d8e083540f4d8ee1635c6310938cb9c30b9282e",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/limits-scalar-length-hash-after-text-strict.json",
+      "id": "core.limits.scalar-length-hash-after-text.strict",
+      "sha256": "bbac7117fba67eaef3c77bbc24b8a1aa6ccf303957f070d566b481a009e21e1f",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/limits-scalar-length-hash-after-text.json",
+      "id": "core.limits.scalar-length-hash-after-text",
+      "sha256": "ae586d54182fde3fe299ca938425f7d9b576a8c939c60726ef9cbb6ba0990ea8",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/messages-directive-strict.json",
+      "id": "core.messages.directive.strict",
+      "sha256": "e87f3b93a331008f40fa3e2462968041b602008f7f192e16707a61167a2bea61",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/messages-document-marker-strict.json",
+      "id": "core.messages.document-marker.strict",
+      "sha256": "b59b443554416c378a1a81980903dc6d6e8cd28fac1ea93757a91564ddc3f35b",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/messages-dotted-key-strict.json",
+      "id": "core.messages.dotted-key.strict",
+      "sha256": "a31c5b2cb322e793644206df37d3b710a0dec2f9544a6a709010eb7a2db48df8",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/messages-doubled-quote-strict.json",
+      "id": "core.messages.doubled-quote.strict",
+      "sha256": "1f2f89762eedac5d7a0ca6265bb70d368f20091a17e39fa5a26fa388edd615ad",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/messages-flow-continuation-strict.json",
+      "id": "core.messages.flow-continuation.strict",
+      "sha256": "003f3a587fe925a0015b410fac13b458ba3d152c234570a9588a2b4945606553",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/messages-merge-key-strict.json",
+      "id": "core.messages.merge-key.strict",
+      "sha256": "3e2117d7c56887725e6511e5faf5709332b75a82cf1b2e52a5c390c1e20af920",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/messages-plain-continuation-strict.json",
+      "id": "core.messages.plain-continuation.strict",
+      "sha256": "698311580e0475c69cd3172b3783311b25f19ca991bb093a9f248ba8ef04cba2",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/messages-quoted-continuation-strict.json",
+      "id": "core.messages.quoted-continuation.strict",
+      "sha256": "298d789ee1f1666a5d2d5bb13ae985954ca589be263565ea354f18d332fdc621",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/messages-spaced-key-strict.json",
+      "id": "core.messages.spaced-key.strict",
+      "sha256": "d130308cbaffdfbe66d99ef6c1737576bcffd1eae91770ad220922d0ab9c06dc",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-nbsp-is-no-separator-strict.json",
+      "id": "core.separator.nbsp-is-no-separator.strict",
+      "sha256": "2404a78507615b4f8f87b388803502438414ac26fa778aed8a8df97f95fabb00",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-nbsp-is-no-separator.json",
+      "id": "core.separator.nbsp-is-no-separator",
+      "sha256": "28e7f1b926c62575c96bd9934a7c44a071a78223d31d46c6fd696b7451526ef2",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-at-end-of-input-strict.json",
+      "id": "core.separator.tab-at-end-of-input.strict",
+      "sha256": "71d00a19f6dd4207559316b242a8e4d1b1ef06022c1791bfbe30094164806c34",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-at-end-of-input.json",
+      "id": "core.separator.tab-at-end-of-input",
+      "sha256": "4211645e711808a7b7c693d580300ca1238d25be69d650ca8ad21479bba4f084",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-block-contexts-strict.json",
+      "id": "core.separator.tab-block-contexts.strict",
+      "sha256": "258b3eb026d71a712531c427f1c48bdfeb41908d6c7ca6d1bec8c6a219d66da1",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-block-contexts.json",
+      "id": "core.separator.tab-block-contexts",
+      "sha256": "11f1926935f3f4b4c2af0c727f04b8c05ec8929bb95570d8d5405d880995cc75",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-flow-mapping-strict.json",
+      "id": "core.separator.tab-flow-mapping.strict",
+      "sha256": "edffc0cea61412184fb9b255a5a9e30a069646f398ce401d0b3b773689158d06",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-flow-mapping.json",
+      "id": "core.separator.tab-flow-mapping",
+      "sha256": "02b9a0183f211c98d53c9cfb1ae66ed54c49e44603f0e1a31ebf157db28370a6",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-key-count-limit-strict.json",
+      "id": "core.separator.tab-key-count-limit.strict",
+      "sha256": "5e6075fc4d85756beda0e51b2c5a17c175dd323ec19c64f326bdd68dc8ed7cc5",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-key-count-limit.json",
+      "id": "core.separator.tab-key-count-limit",
+      "sha256": "f5761c8c36399bb8a833c3b6134daec7a5bc3c63ace91bf6ba97648a9180848d",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-key-with-colon-strict.json",
+      "id": "core.separator.tab-key-with-colon.strict",
+      "sha256": "f257f493c18a71c99fc19f9fb98a150a3269dc81de1e09a70a1fbe253d18af59",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-key-with-colon.json",
+      "id": "core.separator.tab-key-with-colon",
+      "sha256": "64ff4e11d7a6af3bcdbe5f9374bee3c855e6db4aaf104f1b3e6d07cc03419f2c",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-quoted-key-strict.json",
+      "id": "core.separator.tab-quoted-key.strict",
+      "sha256": "07e89845cdf4eaa34168abe605c90caefd5ea536d8af417a9969c6cc99180d76",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-quoted-key.json",
+      "id": "core.separator.tab-quoted-key",
+      "sha256": "b9d4feb0be5475b3df1ae8578e0a5b2fccce0bbbf41c41f5c133477e06255715",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-top-level-strict.json",
+      "id": "core.separator.tab-top-level.strict",
+      "sha256": "525c55540c8c6e2d23d2d2be134a3d3d9f0884c230b8519ce33647cfedf92161",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/separator-tab-top-level.json",
+      "id": "core.separator.tab-top-level",
+      "sha256": "e553002fb84943268aa3d40efbd906c2807c653653a29436bb560612937f0a63",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-block-scalar-hash-and-continuation-strict.json",
+      "id": "core.yaml-header.block-scalar-hash-and-continuation.strict",
+      "sha256": "e748e8e24dea58766a87e9adc779d71beb482195f0d9474563053661f6eec873",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-block-scalar-hash-and-continuation.json",
+      "id": "core.yaml-header.block-scalar-hash-and-continuation",
+      "sha256": "18dac576704804b0a8200a7c93db86c57a85e0dbfdbeb693a5f3c12aa01ae611",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-chomping-indicator-strict.json",
+      "id": "core.yaml-header.chomping-indicator.strict",
+      "sha256": "a7ca89237c0d29f4c49114c39b0bf85dbe4941d58eddd21d1bfd609fa31165dd",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-digit-and-chomping-strict.json",
+      "id": "core.yaml-header.digit-and-chomping.strict",
+      "sha256": "173e2595eed7ffa82fd9936385c23bf3d22d91798bfc6623e5ae33570acd1f6f",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-digit-and-chomping.json",
+      "id": "core.yaml-header.digit-and-chomping",
+      "sha256": "854715397305c41031505bd2c96058909a7a8b96d70d12aab534723ad396333a",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-folded-and-text-strict.json",
+      "id": "core.yaml-header.folded-and-text.strict",
+      "sha256": "a7b852d87fc57df1b3ef69f4653502050520e03f9756bb467b078cff3b0d5fb5",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-folded-and-text.json",
+      "id": "core.yaml-header.folded-and-text",
+      "sha256": "103b4a78d2a24704d388151b538c7d7e02bb328466ba90bf88600d37f03f1b0e",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-folded-marker-strict.json",
+      "id": "core.yaml-header.folded-marker.strict",
+      "sha256": "df4166ea9e505073ce23408f8c885585c288ea3ae0b64031620b894faab0c1bb",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-folded-strict.json",
+      "id": "core.yaml-header.folded.strict",
+      "sha256": "405f65b98966ee46f6c3eedd0b3f3412d68c7e61c376f5ae3b5918d4e90856e2",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-folded-with-comment-strict.json",
+      "id": "core.yaml-header.folded-with-comment.strict",
+      "sha256": "053562f573f52e6908ac7a1d33dd0dd2e3919bfb3ae21df66c7132c381b0539e",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-folded-with-comment.json",
+      "id": "core.yaml-header.folded-with-comment",
+      "sha256": "8b97785d1588c2854ec6842f37542be2a4bb91ddf96688e2798fbc5be0a8a73c",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-folded-with-lines-strict.json",
+      "id": "core.yaml-header.folded-with-lines.strict",
+      "sha256": "61eb23b8f83d700bfd4fa0a30c27bcb118ea30bc884ba543bd2980367e7a677b",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-folded-with-lines.json",
+      "id": "core.yaml-header.folded-with-lines",
+      "sha256": "481dc33b26a0a1f8d68f583fb7fe3e9c837243ab3f760ace1b5e069d38aecd78",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-folded-word-strict.json",
+      "id": "core.yaml-header.folded-word.strict",
+      "sha256": "9afbb7d33aee6c931ae91d8559dd2f135b5696768d110970850eca3df2318906",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-folded-word.json",
+      "id": "core.yaml-header.folded-word",
+      "sha256": "f52640983976d2c13f65e10ce1f5e96e28873b6f5f8b17a94d5b48a530d0029c",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-folded.json",
+      "id": "core.yaml-header.folded",
+      "sha256": "1ea14ca060c8b75a0b1e8d8a56c4213a7da38aba861cbd12eb646b765693aba6",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-hash-after-folded-strict.json",
+      "id": "core.yaml-header.hash-after-folded.strict",
+      "sha256": "244fe0aff463d05511e699b2340644bd8e915e5dfbcd9b27b1c7407b41edd4e0",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-hash-after-folded.json",
+      "id": "core.yaml-header.hash-after-folded",
+      "sha256": "7cf788cd1b03ad843e77522d11cc09538271b17b84e98e638bb90290df00df9d",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-in-flow-sequence-strict.json",
+      "id": "core.yaml-header.in-flow-sequence.strict",
+      "sha256": "fa3642c094f12dc4f37697d65467611f567798b7b4867c5e65aa05fc2c0c8855",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-in-flow-sequence.json",
+      "id": "core.yaml-header.in-flow-sequence",
+      "sha256": "19cfd40422cb239c9893e8e0b11b957c8bc42500deb64700d44d2300db913a15",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-marker-with-comment-nested-strict.json",
+      "id": "core.yaml-header.marker-with-comment-nested.strict",
+      "sha256": "621ebf7f6e6cda199b5935ce387e1d250e8a8769a77a9a6b91dd071a3b5d0056",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-marker-with-comment-nested.json",
+      "id": "core.yaml-header.marker-with-comment-nested",
+      "sha256": "ddf774885dcb616cbf1a538a2fe84b4a8e966c10499df549bc7152800c2d2450",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-strip-strict.json",
+      "id": "core.yaml-header.strip.strict",
+      "sha256": "c1770bccfe1b68ad8fb5752f24e5c905ccef6bf55a983c0c3c236c7111899ab1",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-strip.json",
+      "id": "core.yaml-header.strip",
+      "sha256": "06d9c550c843600edf3274f10bafd04beac48259449c146de34c47f8aed00564",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-two-chomping-strict.json",
+      "id": "core.yaml-header.two-chomping.strict",
+      "sha256": "bc64f8ef32f3628eda1a31d8b773826108bd3d2806ff9d6e9504626c6abac7b7",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-two-chomping.json",
+      "id": "core.yaml-header.two-chomping",
+      "sha256": "1b8002bf2ec86e738302c639a32b422344fd6ac10ce40fcdc5d6cafd903ca0dc",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-two-digits-strict.json",
+      "id": "core.yaml-header.two-digits.strict",
+      "sha256": "fd493c7b632a6c25e3047dc74d17a253ea9facead29476d940642a11d905f55f",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-two-digits.json",
+      "id": "core.yaml-header.two-digits",
+      "sha256": "60e34465a63f6822b01fa4d5a044bd466c28b4d5e9f7897bbf98df4f335c21dc",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-zero-digit-strict.json",
+      "id": "core.yaml-header.zero-digit.strict",
+      "sha256": "7aaec2674c1b81865b7f9fe6f2b05767a024e8e3d581cc0d13724405ab909083",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-header-zero-digit.json",
+      "id": "core.yaml-header.zero-digit",
+      "sha256": "bc55cd90115c1c3dfab664fcb9c1afb5fb69d62c2d9d556066bc6179836336fc",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-alias-example-strict.json",
+      "id": "core.yaml-node-properties.alias-example.strict",
+      "sha256": "5e621ce7240eafb1481ae61584b0b5f55aacb12fe2007a7a3a6d3ecfddb43204",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-alias-example.json",
+      "id": "core.yaml-node-properties.alias-example",
+      "sha256": "6d82f2f5871480ffd7618738b218d0baecbce0ac45bc3bac6c7bbe9fc237566d",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-alias-item-strict.json",
+      "id": "core.yaml-node-properties.alias-item.strict",
+      "sha256": "08886ab75f549b75870c7e606fdcae064d71dbf98d2509dbd0c0defdb772696b",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-alias-item.json",
+      "id": "core.yaml-node-properties.alias-item",
+      "sha256": "1fbcb6b1cba7f68b6a2faa8ef47931aff3b4109ea827ad0ef9d85b37f9d9374e",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-anchor-in-block-scalar-strict.json",
+      "id": "core.yaml-node-properties.anchor-in-block-scalar.strict",
+      "sha256": "a59cacb5b48276a425cfbfef1276f8a648312e4aaa95a03a2e72962dc1233a5d",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-anchor-in-block-scalar.json",
+      "id": "core.yaml-node-properties.anchor-in-block-scalar",
+      "sha256": "142b9d4a3c854df3625192e75ae5879c770721cf4707ad2d7c99ab9d3b14a5ef",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-anchor-in-flow-mapping-strict.json",
+      "id": "core.yaml-node-properties.anchor-in-flow-mapping.strict",
+      "sha256": "35fb7284844c4220d54387ca4ab572553016d5840fe4f5854ecf9d2f52a1efab",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-anchor-in-flow-mapping.json",
+      "id": "core.yaml-node-properties.anchor-in-flow-mapping",
+      "sha256": "9b409bfd931dfedeadd374004387c2d8dbfdc00e671af0d833b7397c34b11996",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-anchor-value-strict.json",
+      "id": "core.yaml-node-properties.anchor-value.strict",
+      "sha256": "18c0c69dfdc3d4d1a53959c8e2066bba9aa984127520574b49a06b4e6e0ea68a",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-anchor-value.json",
+      "id": "core.yaml-node-properties.anchor-value",
+      "sha256": "12d58c015d48d541a671c406c1141247cb8207f83a70757c85254f324eac7f51",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-quoted-anchor-strict.json",
+      "id": "core.yaml-node-properties.quoted-anchor.strict",
+      "sha256": "abea5f1f89ffda396fb733c86f9b2ddc6869dda3513cdf964018700247a6b105",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-quoted-anchor.json",
+      "id": "core.yaml-node-properties.quoted-anchor",
+      "sha256": "9fb7c80530ce60d6d4edc04052700ad22f79922d0df38e7f19b6d6707a1f2926",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-tag-in-flow-sequence-strict.json",
+      "id": "core.yaml-node-properties.tag-in-flow-sequence.strict",
+      "sha256": "4f65ebd4cbf42e4f1254e79182bdcf9ffa2fc600f6654872e92c5145b5449bb9",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-tag-in-flow-sequence.json",
+      "id": "core.yaml-node-properties.tag-in-flow-sequence",
+      "sha256": "f89a24abb1e21fef0aad97e6489fbb4743a1ef4b0955ae957ef8722cd1cf66c6",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-tag-nested-strict.json",
+      "id": "core.yaml-node-properties.tag-nested.strict",
+      "sha256": "284971ecdc0bcf12e6c468d1f577b9b1b1a3225d38aa1925bf31d655c7982057",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/yaml-node-properties-tag-nested.json",
+      "id": "core.yaml-node-properties.tag-nested",
+      "sha256": "aa571b5b36e5d9b234f549221983d7db4edac857ef94e52f9c002e238549afe0",
+      "since": "1.3.0"
+    }
+  ]
+}

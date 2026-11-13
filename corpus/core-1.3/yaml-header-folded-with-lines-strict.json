@@ -1,0 +1,24 @@
+{
+  "id": "core.yaml-header.folded-with-lines.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.6",
+  "description": "Core 1.3: a header followed by indented lines is an error at its own line in strict mode; non-strict mode reads the string and skips the lines. Strict mode.",
+  "input": "k: >\n  text\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "UNSUPPORTED_YAML",
+      "line": 1
+    }
+  },
+  "tags": [
+    "yaml",
+    "block-scalar",
+    "indentation",
+    "strict",
+    "error"
+  ]
+}

@@ -27,7 +27,7 @@ import {
 import { validateDocument } from './document.js'
 import {
 	type PositionedValue, unescapeDQ, stripComment, stripCommentKeepEscapes, positionedBuilder,
-	NO_SPAN_VALUE, parseSimpleScalarSpan,
+	NO_SPAN_VALUE, parseSimpleScalarSpan, isEmptyInlineValue,
 } from './scalars.js'
 import { isTrimWhitespace } from './chars.js'
 import { parseFlowOrScalarValue } from './flow.js'
@@ -151,11 +151,13 @@ const parseCoreGeneric = <V, M>(
 	if (frontMatter.includes('\t')) {
 		// Record how many columns each line's leading whitespace grew, so a
 		// References 2.0 token can be reported at its *original* column (§2.4).
+		// A line ends at U+000A only (§3 step 1 made it the one line terminator): no `m` flag, under which `^` would
+		// also match after U+2028 and U+2029 and expand a tab there.
 		ctx.tabAdjust = []
-		frontMatter = frontMatter.replace(/^([ \t]*)/gm, (leading) => {
+		frontMatter = frontMatter.replace(/(^|\n)([ \t]*)/g, (_, lineStart: string, leading: string) => {
 			const expanded = leading.includes('\t') ? leading.replace(/\t/g, '  ') : leading
 			ctx.tabAdjust!.push(expanded.length - leading.length)
-			return expanded
+			return lineStart + expanded
 		})
 	}
 	if (frontMatter.includes(' \n') || frontMatter.endsWith(' ')) {
@@ -164,7 +166,8 @@ const parseCoreGeneric = <V, M>(
 		// followed them (a newline, or nothing at end of string) — same
 		// result as ` +(?=\n|$)` → '', without relying on a construct RE2
 		// (and RE2-family engines like Rust's `regex` crate) don't support.
-		frontMatter = frontMatter.replace(/( +)(\n|$)/gm, '$2')
+		// No `m` flag either: `$` would also match before U+2028 and U+2029.
+		frontMatter = frontMatter.replace(/( +)(\n|$)/g, '$2')
 	}
 
 	if (strict) {
@@ -187,6 +190,17 @@ const parseCoreGeneric = <V, M>(
 		key: string, line: number, separatorEnd: number, isBlock: boolean,
 		inlineEnd: number | undefined, nextStart: number,
 	): void => {
+		// Core 1.3 §4: an inline value that is empty after comment removal and trimming makes a bare key, whose block
+		// starts on the next line
+		if (!isBlock) {
+			const lineEnd = inlineEnd ?? frontMatter.indexOf('\n', separatorEnd)
+			const valueEnd = lineEnd === -1 || lineEnd > nextStart ? nextStart : lineEnd
+			if (isEmptyInlineValue(frontMatter, separatorEnd, valueEnd)) {
+				isBlock = true
+				separatorEnd = valueEnd < nextStart ? valueEnd + 1 : nextStart
+			}
+		}
+
 		checkKeyLength(key, line)
 
 		// §4 step 3: an inline value begins after the spaces that follow `: `, however many there are — as in a
@@ -345,9 +359,9 @@ const parseCoreGeneric = <V, M>(
 				const lineEnd = m.isBlock ? m.rawStart - 1 : (m.inlineEnd ?? frontMatter.indexOf('\n', m.rawStart))
 				// no line after the key's own one: nothing to check, the usual case
 				if (lineEnd !== -1 && lineEnd + 1 < nextStart) {
-					const owner = m.isBlock ? 'mapping'
+					const owner = m.isBlock || isEmptyInlineValue(frontMatter, m.rawStart, lineEnd) ? 'mapping'
 						: isBlockScalarMarker(frontMatter, m.rawStart, lineEnd) ? 'scalar' : 'inline'
-					checkRangeLines(frontMatter, lineEnd + 1, nextStart, m.line + 1, owner, m.rawStart, lineEnd)
+					checkRangeLines(frontMatter, lineEnd + 1, nextStart, m.line + 1, owner)
 				}
 			}
 		}

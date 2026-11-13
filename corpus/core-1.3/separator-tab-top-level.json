@@ -1,0 +1,17 @@
+{
+  "id": "core.separator.tab-top-level",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "5.1",
+  "description": "Core 1.3: a tab after the colon separates key and value as a space does. Non-strict mode.",
+  "input": "k:\t1\n",
+  "expect": {
+    "result": {
+      "k": 1
+    }
+  },
+  "tags": [
+    "separator",
+    "tabs"
+  ]
+}

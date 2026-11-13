@@ -1,0 +1,18 @@
+{
+  "id": "core.yaml-node-properties.alias-item",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.1",
+  "description": "Core 1.3: an item that starts with * is an error in strict mode, at its line. Non-strict mode.",
+  "input": "k:\n- *x\n",
+  "expect": {
+    "result": {
+      "k": [
+        "*x"
+      ]
+    }
+  },
+  "tags": [
+    "yaml"
+  ]
+}

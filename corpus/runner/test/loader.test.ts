@@ -2,7 +2,7 @@ import { describe, it, expect } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { loadCase, loadCorpus, supersededByCore11 } from '../src/loader'
+import { loadCase, loadCorpus, supersededBy, supersededByCore11 } from '../src/loader'
 
 const corpusRoot = join(import.meta.dir, '..', '..')
 
@@ -103,13 +103,25 @@ describe('loadCase', () => {
 })
 
 describe('loadCorpus', () => {
-	it('loads the default target through Core 1.2 + References 2.1 with zero failures', () => {
+	it('loads the default target through Core 1.3 + References 2.1 with zero failures', () => {
 		const { cases, failures } = loadCorpus(corpusRoot)
 		expect(failures).toEqual([])
 		// 149 Core 1.0.0 + 62 Core 1.0.1-1.0.9 (2026-09 review errata) + 7 Core 1.0.10, without the 8 Core 1.1
 		// supersedes, + 126 Core 1.1.0 + 136 References 2.0 + 150 Core 1.2 (19 for Unicode keys and documents, 124 for
-		// the lines of §7.1) + 5 References 2.1.
-		expect(cases.length).toBe(630)
+		// the lines of §7.1) + 5 References 2.1, without the 3 Core 1.3 supersedes, + 135 Core 1.3 + 12 References 2.1
+		// under Core 1.3.
+		expect(cases.length).toBe(774)
+	})
+
+	it('drops the Core 1.0 and 1.1 cases Core 1.3 supersedes, which their own suites still hold', () => {
+		const superseded = supersededBy(corpusRoot, 'core-1.3')
+		expect(superseded.size).toBe(3)
+		const earlier = loadCorpus(corpusRoot, ['core-1.0', 'core-1.1']).cases.map((c) => c.id)
+		for (const id of superseded) expect(earlier).toContain(id)
+		const current = loadCorpus(corpusRoot, ['core-1.0', 'core-1.1', 'core-1.3']).cases.map((c) => c.id)
+		for (const id of superseded) expect(current).not.toContain(id)
+		expect(current).toHaveLength(earlier.length - 3 + 135)
+		expect(loadCorpus(corpusRoot, ['core-1.3']).cases.every((c) => c.specVersion === '1.3')).toBe(true)
 	})
 
 	it('drops the Core 1.0 cases Core 1.1 supersedes, which the 1.0 suite alone still holds', () => {

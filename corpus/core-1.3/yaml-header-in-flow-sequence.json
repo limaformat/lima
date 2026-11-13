@@ -1,0 +1,20 @@
+{
+  "id": "core.yaml-header.in-flow-sequence",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.6",
+  "description": "Core 1.3: the header test holds for every unquoted value, a flow sequence item too. Non-strict mode.",
+  "input": "k: [>]\n",
+  "expect": {
+    "result": {
+      "k": [
+        ">"
+      ]
+    }
+  },
+  "tags": [
+    "yaml",
+    "block-scalar",
+    "flow"
+  ]
+}

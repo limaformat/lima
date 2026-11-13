@@ -1,0 +1,23 @@
+{
+  "id": "core.yaml-node-properties.tag-in-flow-sequence.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.1",
+  "description": "Core 1.3: a flow sequence item that starts with ! is an error in strict mode. Strict mode.",
+  "input": "k: [!x]\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "UNSUPPORTED_YAML",
+      "line": 1
+    }
+  },
+  "tags": [
+    "yaml",
+    "flow",
+    "strict",
+    "error"
+  ]
+}

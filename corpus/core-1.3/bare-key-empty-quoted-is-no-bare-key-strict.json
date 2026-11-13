@@ -1,0 +1,24 @@
+{
+  "id": "core.bare-key.empty-quoted-is-no-bare-key.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: `k: ''` has an inline value; a deeper line belongs to no block. Strict mode.",
+  "input": "k: ''\n  a: 1\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_INDENTATION",
+      "line": 2
+    }
+  },
+  "tags": [
+    "bare-key",
+    "comments",
+    "indentation",
+    "strict",
+    "error"
+  ]
+}

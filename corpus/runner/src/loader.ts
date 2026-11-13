@@ -8,7 +8,7 @@ import type { DiagnosticExpectation } from './errors'
 export interface LoadedCase {
 	id: string
 	spec: 'core' | 'references'
-	specVersion: '1.0' | '1.1' | '1.2' | '2.0' | '2.1'
+	specVersion: '1.0' | '1.1' | '1.2' | '1.3' | '2.0' | '2.1'
 	section: string
 	description: string
 	input: string
@@ -52,7 +52,7 @@ export function loadCase(jsonPath: string): LoadResult {
 	const d = doc as {
 		id: string
 		spec: 'core' | 'references'
-		specVersion?: '1.0' | '1.1' | '1.2' | '2.0' | '2.1'
+		specVersion?: '1.0' | '1.1' | '1.2' | '1.3' | '2.0' | '2.1'
 		section: string
 		description: string
 		input?: string
@@ -146,18 +146,21 @@ export interface LoadedCorpus {
 
 /**
  * Loads every case in the selected versioned suite directories. The default
- * is the current conformance target: Core 1.1 + References 2.0. Core 1.1 is
+ * is the current conformance target: Core 1.3 + References 2.1. Core 1.1 is
  * the Core 1.0 corpus without the cases `corpus/manifests/core-1.1.json`
- * lists as superseded, plus `corpus/core-1.1/`; loading `core-1.1` drops the
- * superseded cases from a `core-1.0` loaded with it. The frozen 1.0
- * baselines alone stay loadable on request (`--suite core-1.0`, `--suite
- * references-1.0`). A single malformed case is reported as a failure rather
- * than aborting the whole load.
+ * lists as superseded, plus `corpus/core-1.1/`; Core 1.3 likewise drops the
+ * cases of the earlier suites that `corpus/manifests/core-1.3.json` lists,
+ * and adds `corpus/core-1.3/`. Loading a superseding suite drops the cases it
+ * supersedes from the other suites loaded with it. The earlier suites alone
+ * stay loadable on request (`--suite core-1.0`, `--suite references-1.0`). A
+ * single malformed case is reported as a failure rather than aborting the
+ * whole load.
  */
 export const SUITE_DIRECTORIES = {
 	'core-1.0': 'core',
 	'core-1.1': 'core-1.1',
 	'core-1.2': 'core-1.2',
+	'core-1.3': 'core-1.3',
 	'references-1.0': 'references',
 	'references-2.0': 'references-2.0',
 	'references-2.1': 'references-2.1',
@@ -165,14 +168,27 @@ export const SUITE_DIRECTORIES = {
 
 export type SuiteName = keyof typeof SUITE_DIRECTORIES
 
-export const DEFAULT_SUITES: readonly SuiteName[] = ['core-1.0', 'core-1.1', 'core-1.2', 'references-2.0', 'references-2.1']
+export const DEFAULT_SUITES: readonly SuiteName[] = [
+	'core-1.0', 'core-1.1', 'core-1.2', 'core-1.3', 'references-2.0', 'references-2.1',
+]
 
-/** The ids of the Core 1.0 cases Core 1.1 replaces (`supersedes` in its manifest). */
-export const supersededByCore11 = (corpusRoot: string): ReadonlySet<string> =>
+/** The suites whose manifest lists cases of earlier suites they replace (`supersedes`). */
+const SUPERSEDING_SUITES = ['core-1.1', 'core-1.3'] as const satisfies readonly SuiteName[]
+
+/** The ids of the earlier cases `suite` replaces (`supersedes` in its manifest). */
+export const supersededBy = (corpusRoot: string, suite: (typeof SUPERSEDING_SUITES)[number]): ReadonlySet<string> =>
 	new Set(
-		(JSON.parse(readFileSync(join(corpusRoot, 'manifests', 'core-1.1.json'), 'utf8')) as { supersedes: string[] })
+		(JSON.parse(readFileSync(join(corpusRoot, 'manifests', `${suite}.json`), 'utf8')) as { supersedes: string[] })
 			.supersedes,
 	)
+
+/** The ids of the Core 1.0 cases Core 1.1 replaces (`supersedes` in its manifest). */
+export const supersededByCore11 = (corpusRoot: string): ReadonlySet<string> => supersededBy(corpusRoot, 'core-1.1')
+
+const SPEC_VERSION_OF_SUITE: Record<SuiteName, LoadedCase['specVersion']> = {
+	'core-1.0': '1.0', 'core-1.1': '1.1', 'core-1.2': '1.2', 'core-1.3': '1.3',
+	'references-1.0': '1.0', 'references-2.0': '2.0', 'references-2.1': '2.1',
+}
 
 export function loadCorpus(
 	corpusRoot: string,
@@ -180,7 +196,11 @@ export function loadCorpus(
 ): LoadedCorpus {
 	const cases: LoadedCase[] = []
 	const failures: LoadedCorpus['failures'] = []
-	const superseded = suites.includes('core-1.1') ? supersededByCore11(corpusRoot) : new Set<string>()
+	// each superseded id, with the suite that replaces it: the case stays in its own suite when that one is not loaded
+	const superseded = new Map<string, SuiteName>()
+	for (const suite of SUPERSEDING_SUITES) {
+		if (suites.includes(suite)) for (const id of supersededBy(corpusRoot, suite)) superseded.set(id, suite)
+	}
 
 	for (const suite of suites) {
 		const area = SUITE_DIRECTORIES[suite]
@@ -195,8 +215,9 @@ export function loadCorpus(
 			if (!entry.endsWith('.json')) continue
 			const result = loadCase(join(dir, entry))
 			if (result.ok) {
-				if (suite === 'core-1.0' && superseded.has(result.case.id)) continue
-				const expectedVersion = suite === 'references-2.1' ? '2.1' : suite === 'references-2.0' ? '2.0' : suite === 'core-1.2' ? '1.2' : suite === 'core-1.1' ? '1.1' : '1.0'
+				const replacedBy = superseded.get(result.case.id)
+				if (replacedBy !== undefined && replacedBy !== suite) continue
+				const expectedVersion = SPEC_VERSION_OF_SUITE[suite]
 				if (result.case.specVersion !== expectedVersion) {
 					failures.push({
 						sourceFile: result.case.sourceFile,

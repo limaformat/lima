@@ -1,0 +1,16 @@
+{
+  "id": "core.errata.tab-after-line-separator-kept",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "3",
+  "description": "Core 1.2 erratum: U+2028 ends no line (§3 step 1 leaves U+000A the one line terminator), so a tab after it is no leading tab. Non-strict mode.",
+  "input": "k: a \tb\n",
+  "expect": {
+    "result": {
+      "k": "a \tb"
+    }
+  },
+  "tags": [
+    "tabs"
+  ]
+}

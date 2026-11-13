@@ -1,0 +1,49 @@
+{
+  "id": "core.limits.nesting-depth-16-by-comment-only-value",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "9",
+  "description": "Core 1.3: sixteen levels, the deepest opened by `k: # c`, are within the nesting depth limit. Non-strict mode.",
+  "input": "k:\n  k:\n    k:\n      k:\n        k:\n          k:\n            k:\n              k:\n                k:\n                  k:\n                    k:\n                      k:\n                        k:\n                          k:\n                            k:\n                              k: # c\n                                k: v\n",
+  "expect": {
+    "result": {
+      "k": {
+        "k": {
+          "k": {
+            "k": {
+              "k": {
+                "k": {
+                  "k": {
+                    "k": {
+                      "k": {
+                        "k": {
+                          "k": {
+                            "k": {
+                              "k": {
+                                "k": {
+                                  "k": {
+                                    "k": {
+                                      "k": "v"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    "limit",
+    "bare-key"
+  ]
+}

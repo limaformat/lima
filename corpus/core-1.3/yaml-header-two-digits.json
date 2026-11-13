@@ -1,0 +1,17 @@
+{
+  "id": "core.yaml-header.two-digits",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "15.7",
+  "description": "Core 1.3: no yaml-header: a header has one indentation digit. A string in both modes. Non-strict mode.",
+  "input": "k: >10\n",
+  "expect": {
+    "result": {
+      "k": ">10"
+    }
+  },
+  "tags": [
+    "yaml",
+    "block-scalar"
+  ]
+}

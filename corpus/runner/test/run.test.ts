@@ -8,7 +8,7 @@ describe('runCorpus', () => {
 	it('loads and classifies every case with zero load failures', () => {
 		const { outcomes, loadFailures } = runCorpus(corpusRoot)
 		expect(loadFailures).toEqual([])
-		expect(outcomes).toHaveLength(630)
+		expect(outcomes).toHaveLength(774)
 	})
 
 	it('gives every case a definite classification and, for FAIL/BLOCKED, at least one reason', () => {
@@ -35,8 +35,9 @@ describe('runCorpus', () => {
 		// agree on referenceless input in both directions. A result case is
 		// diffed value-for-value; an error case must throw the same
 		// diagnostic code at the same line through parse() too. A regression
-		// surfaces as a FAIL whose reason starts with "parse()".
-		const { outcomes } = runCorpus(corpusRoot, ['core-1.0', 'core-1.1'])
+		// surfaces as a FAIL whose reason starts with "parse()". The Core suites as the current target holds them: the
+		// cases a later suite supersedes are left out (the parser reads Core 1.3).
+		const { outcomes } = runCorpus(corpusRoot, ['core-1.0', 'core-1.1', 'core-1.2', 'core-1.3'])
 		const crossCheckFailures = outcomes.filter(
 			(o) => o.classification === 'FAIL' && o.reasons.some((r) => r.startsWith('parse()')),
 		)
@@ -525,7 +526,8 @@ describe('runCorpus', () => {
 		const counts = { PASS: 0, FAIL: 0, BLOCKED: 0 }
 		for (const o of outcomes) counts[o.classification]++
 		// Core 1.2 / References 2.1 add 148 cases to the 472-case target: Unicode keys and documents, and the lines of §7.1.
-		expect(counts).toEqual({ PASS: 630, FAIL: 0, BLOCKED: 0 })
+		// Core 1.3 replaces 3 of them and adds 135, and References 2.1 under Core 1.3 another 12.
+		expect(counts).toEqual({ PASS: 774, FAIL: 0, BLOCKED: 0 })
 	})
 
 	it('no longer has any case failing solely on the prototype-free binding check', () => {

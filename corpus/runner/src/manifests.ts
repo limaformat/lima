@@ -18,7 +18,7 @@ export interface ManifestEntry {
 }
 
 export interface SuiteManifest {
-	suite: 'core-1.0' | 'core-1.1' | 'references-1.0'
+	suite: 'core-1.0' | 'core-1.1' | 'core-1.3' | 'references-1.0'
 	frozen: true
 	/** The immutable baseline revision. */
 	baselineVersion: string
@@ -27,13 +27,13 @@ export interface SuiteManifest {
 	/** The highest revision represented in `cases`. */
 	specVersion: string
 	caseCount: number
-	/** Core 1.1: the ids of the Core 1.0 cases this suite replaces; they stay in the frozen 1.0 baseline. */
+	/** Core 1.1 and 1.3: the ids of the earlier cases this suite replaces; they stay in their own suites. */
 	supersedes?: string[]
 	cases: ManifestEntry[]
 }
 
 const directoryFor = (suite: SuiteManifest['suite']): string =>
-	suite === 'core-1.0' ? 'core' : suite === 'core-1.1' ? 'core-1.1' : 'references'
+	suite === 'core-1.0' ? 'core' : suite === 'references-1.0' ? 'references' : suite
 
 /**
  * SHA-256 over the baseline set — every entry whose `since` equals
@@ -69,6 +69,9 @@ export const BASELINE_DIGESTS: Record<SuiteManifest['suite'], string> = {
 	// Core 1.1 (2026-10-28): lines that belong to no structure throw in strict mode; the eight Core 1.0 cases it
 	// replaces stay in the 1.0 baseline above (docs/decisions/top-level-indentation-after-inline-value.md).
 	'core-1.1': 'ef987f6e0bb667dedf1baa56ddb40bad5492cc91503ec96e9d103a4fc0ebca99',
+	// Core 1.3 (Draft, 2026-11-12): the comment boundary, bare keys after a comment, the tab separator, and YAML forms
+	// strict mode rejects; it replaces three cases of core-1.0 and core-1.1, which stay in their own baselines.
+	'core-1.3': '00c9feec989385c40cc1269bf940f149e7de5f4bc689808595f2cebe60c30352',
 	// References 1.0 baseline amended once, 2026-09: the §5.1 key-grammar fix
 	// (MAJOR 1) drops the unquoted `{($a): v}` flow key in
 	// references/unsupported-references-in-keys-remain-literal.json — a case

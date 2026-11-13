@@ -1,0 +1,22 @@
+{
+  "id": "core.separator.tab-at-end-of-input.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: a key followed by a tab alone is a bare key; at the end of the input it is null. Strict mode.",
+  "input": "k:\t",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "k": null
+    }
+  },
+  "tags": [
+    "separator",
+    "tabs",
+    "bare-key",
+    "strict"
+  ]
+}

@@ -19,6 +19,7 @@ export type LimaDiagnosticCode =
 	| 'INVALID_INDENTATION'
 	| 'UNRECOGNIZED_LINE'
 	| 'INVALID_FLOW_SYNTAX'
+	| 'UNSUPPORTED_YAML'
 	| 'DUPLICATE_KEY'
 	| 'RESOURCE_LIMIT'
 	| 'UNRESOLVED_REFERENCE'
@@ -35,6 +36,9 @@ export interface LimaDiagnostic {
 	partial?: string
 	path?: string
 }
+
+/** Appendix E: a line deeper than an inline value continues no value (Core §7.1 rule 5). */
+export const MULTILINE_VALUE_HINT = ' (a value spans lines only after "|")'
 
 /** A line of the source for a message: shortened, and no control or direction character reaches a terminal. */
 export const printableLine = (text: string): string =>

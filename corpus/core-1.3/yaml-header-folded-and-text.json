@@ -1,0 +1,17 @@
+{
+  "id": "core.yaml-header.folded-and-text",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "15.7",
+  "description": "Core 1.3: no yaml-header: the value is more than the header. A string in both modes. Non-strict mode.",
+  "input": "k: > text\n",
+  "expect": {
+    "result": {
+      "k": "> text"
+    }
+  },
+  "tags": [
+    "yaml",
+    "block-scalar"
+  ]
+}

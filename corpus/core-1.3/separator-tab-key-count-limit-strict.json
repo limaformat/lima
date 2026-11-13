@@ -1,0 +1,24 @@
+{
+  "id": "core.separator.tab-key-count-limit.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "9",
+  "description": "Core 1.3: 129 top-level entries separated by tabs are 129 entries, one more than the limit. Strict mode.",
+  "input": "k0:\t0\nk1:\t1\nk2:\t2\nk3:\t3\nk4:\t4\nk5:\t5\nk6:\t6\nk7:\t7\nk8:\t8\nk9:\t9\nk10:\t10\nk11:\t11\nk12:\t12\nk13:\t13\nk14:\t14\nk15:\t15\nk16:\t16\nk17:\t17\nk18:\t18\nk19:\t19\nk20:\t20\nk21:\t21\nk22:\t22\nk23:\t23\nk24:\t24\nk25:\t25\nk26:\t26\nk27:\t27\nk28:\t28\nk29:\t29\nk30:\t30\nk31:\t31\nk32:\t32\nk33:\t33\nk34:\t34\nk35:\t35\nk36:\t36\nk37:\t37\nk38:\t38\nk39:\t39\nk40:\t40\nk41:\t41\nk42:\t42\nk43:\t43\nk44:\t44\nk45:\t45\nk46:\t46\nk47:\t47\nk48:\t48\nk49:\t49\nk50:\t50\nk51:\t51\nk52:\t52\nk53:\t53\nk54:\t54\nk55:\t55\nk56:\t56\nk57:\t57\nk58:\t58\nk59:\t59\nk60:\t60\nk61:\t61\nk62:\t62\nk63:\t63\nk64:\t64\nk65:\t65\nk66:\t66\nk67:\t67\nk68:\t68\nk69:\t69\nk70:\t70\nk71:\t71\nk72:\t72\nk73:\t73\nk74:\t74\nk75:\t75\nk76:\t76\nk77:\t77\nk78:\t78\nk79:\t79\nk80:\t80\nk81:\t81\nk82:\t82\nk83:\t83\nk84:\t84\nk85:\t85\nk86:\t86\nk87:\t87\nk88:\t88\nk89:\t89\nk90:\t90\nk91:\t91\nk92:\t92\nk93:\t93\nk94:\t94\nk95:\t95\nk96:\t96\nk97:\t97\nk98:\t98\nk99:\t99\nk100:\t100\nk101:\t101\nk102:\t102\nk103:\t103\nk104:\t104\nk105:\t105\nk106:\t106\nk107:\t107\nk108:\t108\nk109:\t109\nk110:\t110\nk111:\t111\nk112:\t112\nk113:\t113\nk114:\t114\nk115:\t115\nk116:\t116\nk117:\t117\nk118:\t118\nk119:\t119\nk120:\t120\nk121:\t121\nk122:\t122\nk123:\t123\nk124:\t124\nk125:\t125\nk126:\t126\nk127:\t127\nk128:\t128\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "RESOURCE_LIMIT",
+      "line": 1
+    }
+  },
+  "tags": [
+    "separator",
+    "tabs",
+    "limit",
+    "strict",
+    "error"
+  ]
+}

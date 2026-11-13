@@ -1,0 +1,23 @@
+{
+  "id": "core.comments.hash-after-closing-quote.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: a # right after a closing quote is text, so content follows the closing quote (§4 step 4). Strict mode.",
+  "input": "k: \"x\"#y\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_QUOTE",
+      "line": 1
+    }
+  },
+  "tags": [
+    "comments",
+    "quoting",
+    "strict",
+    "error"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "core.messages.quoted-continuation.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.2",
+  "description": "Core 1.3 §10.2, Appendix E: the message names what Lima writes instead of the YAML form. Strict mode.",
+  "input": "k: \"a\n  b\"\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_QUOTE",
+      "line": 1,
+      "contains": "\"|\""
+    }
+  },
+  "tags": [
+    "messages",
+    "yaml",
+    "strict",
+    "error"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "core.limits.nesting-depth-17-by-comment-only-value",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "9",
+  "description": "Core 1.3: seventeen levels, the deepest opened by `k: # c`, exceed the nesting depth limit. Non-strict mode.",
+  "input": "k:\n  k:\n    k:\n      k:\n        k:\n          k:\n            k:\n              k:\n                k:\n                  k:\n                    k:\n                      k:\n                        k:\n                          k:\n                            k:\n                              k:\n                                k: # c\n                                  k: v\n",
+  "expect": {
+    "error": {
+      "code": "RESOURCE_LIMIT",
+      "line": 1
+    }
+  },
+  "tags": [
+    "limit",
+    "bare-key",
+    "error"
+  ]
+}

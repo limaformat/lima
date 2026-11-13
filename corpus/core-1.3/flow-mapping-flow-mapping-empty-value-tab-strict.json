@@ -1,0 +1,23 @@
+{
+  "id": "core.flow-mapping.flow-mapping-empty-value-tab.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "7.5",
+  "description": "Core 1.3: {k:<tab>} has a separator and the value null. Strict mode.",
+  "input": "a: {k:\t}\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "a": {
+        "k": null
+      }
+    }
+  },
+  "tags": [
+    "flow",
+    "tabs",
+    "strict"
+  ]
+}

@@ -70,9 +70,9 @@ describe('strings', () => {
 		expect(result.desc).toBe('>')
 	})
 
-	it('a freetext line after `>` throws in strict mode, naming the YAML folded scalar (Core 1.1 §7.1 rule 5)', () => {
+	it('`>` throws at its own line in strict mode, naming `|` and `^^` (Core 1.3 §6.1.6)', () => {
 		expect(() => parse('desc: >\n  Hello\n  World', { strict: true })).toThrow(
-			/unexpected indentation at line 2: "Hello" \(">" is YAML's folded scalar; Lima writes "\|"/,
+			'Lima: YAML block scalar header ">" at line 1 (Lima writes "|", and "^^" to join lines)',
 		)
 	})
 
@@ -136,8 +136,9 @@ describe('strings', () => {
 		expect(() => parse('value:\n  freetext\n', { strict: true })).toThrow('Lima')
 	})
 
-	it('# in an unquoted URL is treated as a comment', () => {
-		expect(parse('link: https://example.com/page#section')).toEqual({ link: 'https://example.com/page' })
+	it('# after text in an unquoted URL is text (Core 1.3 §4)', () => {
+		expect(parse('link: https://example.com/page#section')).toEqual({ link: 'https://example.com/page#section' })
+		expect(parse('link: https://example.com/page #section')).toEqual({ link: 'https://example.com/page' })
 	})
 
 	it('# inside a quoted string is preserved — not treated as a comment', () => {

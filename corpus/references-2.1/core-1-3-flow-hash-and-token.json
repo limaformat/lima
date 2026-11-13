@@ -1,0 +1,22 @@
+{
+  "id": "references-2.core-1-3.flow-hash-and-token",
+  "spec": "references",
+  "specVersion": "2.1",
+  "section": "2.4",
+  "description": "References 2.1 under Core 1.3: a # after text in a flow sequence is text, and the token after it resolves at its own position. Non-strict mode.",
+  "input": "a: 42\nb: [a#b,${a}]\n",
+  "expect": {
+    "result": {
+      "a": 42,
+      "b": [
+        "a#b",
+        42
+      ]
+    }
+  },
+  "tags": [
+    "references",
+    "comments",
+    "flow"
+  ]
+}
