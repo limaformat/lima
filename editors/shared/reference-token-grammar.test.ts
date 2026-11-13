@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { scanReferenceTokens2 } from "../../js/src/reference-tokens2.js";
+import { fragmentToJavaScript } from "./grammar-fragments.js";
 
 type TokenKind = "document" | "partial";
 
@@ -129,5 +130,5 @@ function emacsToJavaScript(pattern: string): string {
 }
 
 function fullMatch(pattern: string, token: string): boolean {
-  return new RegExp(`^(?:${pattern})$`, "u").test(token);
+  return new RegExp(`^(?:${fragmentToJavaScript(pattern)})$`, "u").test(token);
 }

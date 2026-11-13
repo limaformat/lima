@@ -5,7 +5,7 @@
 
 ;;; Commentary:
 
-;; Syntax highlighting for Lima Core 1.2 and active References 2.1 tokens.
+;; Syntax highlighting for Lima Core 1.3 and active References 2.1 tokens.
 
 ;;; Code:
 
@@ -17,15 +17,20 @@
 
 ;; GENERATED:emacs-key
 (defconst lima--key-regexp
-  "[[:alnum:]_]\\(?:[[:alnum:]_:*\\u00B7-]\\|\\p{^}\\)*\\|'[^']*'\\|\"\\(?:\\\\.\\|[^\"\\\\]\\)*\"")
+  "[[:alnum:]_]\\(?:[[:alnum:]_:*\u00B7-]\\|\\p{^}\\)*\\|'[^']*'\\|\"\\(?:\\\\.\\|[^\"\\\\]\\)*\"")
 
 ;; GENERATED:emacs-document-reference
 (defconst lima--document-reference-regexp
-  "\\${[[:alnum:]_]\\(?:[[:alnum:]_:*\\u00B7-]\\|\\p{^}\\)*\\(?:\\.[[:alnum:]_]\\(?:[[:alnum:]_:*\\u00B7-]\\|\\p{^}\\)*\\)*}")
+  "\\${[[:alnum:]_]\\(?:[[:alnum:]_:*\u00B7-]\\|\\p{^}\\)*\\(?:\\.[[:alnum:]_]\\(?:[[:alnum:]_:*\u00B7-]\\|\\p{^}\\)*\\)*}")
 
 ;; GENERATED:emacs-partial-reference
 (defconst lima--partial-reference-regexp
-  "\\$([[:alnum:]_]\\(?:[[:alnum:]_:*\\u00B7-]\\|\\p{^}\\|/\\)*\\(?:\\.[[:alnum:]_]\\(?:[[:alnum:]_:*\\u00B7-]\\|\\p{^}\\)*\\)*)")
+  "\\$([[:alnum:]_]\\(?:[[:alnum:]_:*\u00B7-]\\|\\p{^}\\|/\\)*\\(?:\\.[[:alnum:]_]\\(?:[[:alnum:]_:*\u00B7-]\\|\\p{^}\\)*\\)*)")
+
+;; Lima Core 1.3 §1 whitespace.
+;; GENERATED:emacs-whitespace
+(defconst lima--whitespace-regexp
+  "[\t-\r \u00A0\u1680\u2000-\u200A\u2028-\u2029\u202F\u205F\u3000\uFEFF]")
 
 (defconst lima--mapping-key-regexp
   (concat "^\\([ \t]*\\)\\(" lima--key-regexp
@@ -97,6 +102,14 @@ BEFORE-CLASS and AFTER-CLASS name characters disallowed on each side."
   (lima--match-bounded
    lima--number-regexp "[[:word:].-]" "[[:word:].-]" limit))
 
+(defun lima--comment-hash-p (position)
+  "Return non-nil when an unquoted # at POSITION begins a comment.
+Lima Core 1.3 §4: at the start of a line or after whitespace; any other #,
+an escaped \\# among them, is text."
+  (let ((previous (char-before position)))
+    (or (null previous)
+        (string-match-p lima--whitespace-regexp (char-to-string previous)))))
+
 (defun lima--context-at (position)
   "Return the lexical context at POSITION on its line.
 The result is `double', `single', `comment', or nil.  Lima quotes only open
@@ -128,7 +141,7 @@ at a value boundary, so apostrophes in words such as YAML's stay literal."
               (forward-char 1))
              (t (forward-char 1))))
            ((and (eq character ?#)
-                 (not (eq previous ?\\)))
+                 (lima--comment-hash-p (point)))
             (setq context 'comment))
            ((and (memq character '(?\" ?'))
                  (or (null previous)
@@ -176,11 +189,11 @@ at a value boundary, so apostrophes in words such as YAML's stay literal."
   (lima--match-in-context "\\\\\\(?:\\\\\\|'\\)" 'single limit))
 
 (defun lima--match-comment (limit)
-  "Find the next unescaped comment outside quotes before LIMIT."
+  "Find the next comment outside quotes before LIMIT."
   (let (found)
     (while (and (not found) (re-search-forward "#" limit t))
       (let ((start (match-beginning 0)))
-        (when (and (not (eq (char-before start) ?\\))
+        (when (and (lima--comment-hash-p start)
                    (null (lima--context-at start)))
           (set-match-data (list start (min limit (line-end-position))))
           (setq found t))))
@@ -194,9 +207,10 @@ at a value boundary, so apostrophes in words such as YAML's stay literal."
      (1 font-lock-builtin-face))
     ("^[ \t]*\\(\\^\\^\\)"
      (1 font-lock-keyword-face))
-    (":\\s-+\\(|\\)[ \t]*\\(?:\\(#.*\\)\\)?$"
-     (1 font-lock-keyword-face)
-     (2 font-lock-comment-face t t))
+    ;; `|' alone after the separator; `key: | # note' is the string `|'.
+    (,(concat ":[ \t]" lima--whitespace-regexp "*\\(|\\)"
+              lima--whitespace-regexp "*$")
+     (1 font-lock-keyword-face))
     (,lima--flow-mapping-key-regexp
      (1 font-lock-variable-name-face)
      (3 font-lock-builtin-face))

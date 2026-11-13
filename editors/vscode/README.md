@@ -67,7 +67,11 @@ plus `bun install` leaves a working extension. `bun run watch` while
 developing.
 
 The parser is bundled from `../../js/src` so the checker and the published
-`@limaformat/lima` package never drift. Grammar lives in `syntaxes/`.
+`@limaformat/lima` package never drift. Grammar lives in `syntaxes/`; its
+shared patterns come from `../shared/grammar-fragments.ts` (`bun run
+generate:grammar-fragments` in `../lsp`). Every pattern is RE2 syntax — no
+lookaround, backreference, atomic group or possessive quantifier — which
+`bun test ../shared` in `../lsp` checks with Go's `regexp/syntax`.
 Unquoted keys and reference path components use Oniguruma's Unicode `\p{L}`,
 `\p{M}`, and `\p{N}` properties. VS Code therefore follows the Unicode tables
 in its bundled Oniguruma rather than Core <!-- facts:language.core_version -->1.3<!-- /facts -->'s fixed Unicode <!-- facts:language.unicode_version -->18.0<!-- /facts --> table at

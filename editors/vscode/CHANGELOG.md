@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+Highlighting follows Lima Core 1.3:
+
+- A `#` begins a comment only at the start of a value or after whitespace,
+  in flow values too: `https://example.org/x#top`, `C#` and `[a,#x]` keep
+  their `#`, `[a, #x]` has a comment. `\#` stays text.
+- A tab after the colon separates key and value as a space does; a colon
+  followed by other whitespace, such as U+00A0, does not.
+- `key: # note` is a key with a comment, and the block after it is
+  highlighted as the key's; `key: | # note` is the string `|`, not a block
+  scalar.
+
+The grammar is written in RE2 syntax: it has no lookaround, backreference,
+atomic group or possessive quantifier, and a test checks every pattern with
+Go's `regexp/syntax`. With that:
+
+- An unterminated string, `[` or `{` ends with its line, as Lima reads it,
+  instead of colouring the lines after it.
+- Keys of object items (`- name: Alice`) are highlighted, and a `|` after
+  them or after a dash is a block scalar marker.
+- A boolean, `null`, a number or a date is highlighted as a whole word;
+  words joined by `-` (`non-null`, `10-20`) and versions (`1.2.3`) are not.
+
 ## [0.4.1] — 2026-11-02
 
 The bundled parser is that of `@limaformat/lima` 0.7.1, with the fixes from

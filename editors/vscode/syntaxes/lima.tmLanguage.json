@@ -3,9 +3,9 @@
   "name": "Lima",
   "scopeName": "source.lima",
   "fileTypes": ["lima"],
+  "comment": "Every pattern is RE2 syntax: no lookaround, backreference, atomic group or possessive quantifier (editors/shared/grammar-fragments.ts). Patterns marked GENERATED are written by editors/shared/scripts/generate-grammar-fragments.ts.",
   "patterns": [
     { "include": "#comment" },
-    { "include": "#block-scalar" },
     { "include": "#mapping-key" },
     { "include": "#array-dash" },
     { "include": "#line-continuation" },
@@ -13,20 +13,11 @@
   ],
   "repository": {
     "comment": {
-      "comment": "Comment: an unescaped # outside quotes starts a comment and runs to end of line (Core 1.0 §6.1.4). No preceding whitespace is required. GENERATED:textmate-comment",
-      "match": "(?<!\\\\)(#).*$",
+      "comment": "Lima Core 1.3 §4, §8: outside quotes, a # begins a comment at the start of a line or after whitespace; any other #, \\# too, is text. The whitespace before it is matched outside the comment's scope. GENERATED:textmate-comment",
+      "match": "(?:^|[\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}-\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}])((#).*)",
       "captures": {
-        "1": { "name": "punctuation.definition.comment.lima" }
-      },
-      "name": "comment.line.number-sign.lima"
-    },
-
-    "block-scalar": {
-      "comment": "Literal block scalar: exactly `|` as the complete inline value (Lima Core §15.7). `>` folded scalars are not supported. GENERATED:textmate-block-scalar",
-      "match": "(?<=:)([ \\t]+)(\\|)[ \\t]*(?:(#).*)?$",
-      "captures": {
-        "2": { "name": "keyword.operator.block-scalar.lima" },
-        "3": { "name": "comment.line.number-sign.lima" }
+        "1": { "name": "comment.line.number-sign.lima" },
+        "2": { "name": "punctuation.definition.comment.lima" }
       }
     },
 
@@ -39,23 +30,31 @@
     },
 
     "mapping-key": {
-      "comment": "key: — unquoted, single-quoted, or double-quoted key followed by a colon and a space or end of line. A double-quoted key's backslash escapes (Core §5.2) keep an escaped quote from closing it early. GENERATED:textmate-mapping-key",
-      "match": "^(\\s*)([\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")(\\s*)(:)(?=\\s|$)",
+      "comment": "An entry, after an object item's dash too: an unquoted, single-quoted or double-quoted key, and a colon followed by a space, a tab or the end of the line (Core 1.3 §5.1). The rule consumes the separator's whitespace, so it also matches what may start the value there: `|` alone, a literal block scalar (§6.1.5), or a comment, which leaves the key bare (§4). A double-quoted key's backslash escapes (Core §5.2) keep an escaped quote from closing it early. GENERATED:textmate-mapping-key",
+      "match": "^[ \\t]*(?:(-)[\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}-\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]+)?([\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\x{00B7}-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")[ \\t]*(:)(?:$|[ \\t][\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}-\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]*(?:(\\|)[\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}-\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]*$|((#).*))?)",
       "captures": {
+        "1": { "name": "punctuation.definition.list.begin.lima" },
         "2": { "name": "entity.name.tag.lima" },
-        "4": { "name": "punctuation.separator.key-value.lima" }
+        "3": { "name": "punctuation.separator.key-value.lima" },
+        "4": { "name": "keyword.operator.block-scalar.lima" },
+        "5": { "name": "comment.line.number-sign.lima" },
+        "6": { "name": "punctuation.definition.comment.lima" }
       }
     },
 
     "array-dash": {
-      "comment": "Block sequence item marker: - at the start of a line.",
-      "match": "^(\\s*)(-)(?=\\s|$)",
+      "comment": "Block sequence item marker: `-` at the start of a line, alone or followed by whitespace (Core 1.3 §7.2), and what may start the item's value: `|` alone or a comment. `>` folded scalars are not supported. GENERATED:textmate-array-dash",
+      "match": "^[ \\t]*(-)(?:$|[\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}-\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]+(?:(\\|)[\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}-\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]*$|((#).*))?)",
       "captures": {
-        "2": { "name": "punctuation.definition.list.begin.lima" }
+        "1": { "name": "punctuation.definition.list.begin.lima" },
+        "2": { "name": "keyword.operator.block-scalar.lima" },
+        "3": { "name": "comment.line.number-sign.lima" },
+        "4": { "name": "punctuation.definition.comment.lima" }
       }
     },
 
     "value": {
+      "comment": "Scalars match where the scan stands; a date comes before plain words and plain words before the other scalars, so that these match whole words only.",
       "patterns": [
         { "include": "#reference-document" },
         { "include": "#reference-partial" },
@@ -63,81 +62,66 @@
         { "include": "#flow-mapping" },
         { "include": "#quoted-string-double" },
         { "include": "#quoted-string-single" },
+        { "include": "#date" },
+        { "include": "#plain-word" },
         { "include": "#constant-null" },
         { "include": "#constant-bool" },
-        { "include": "#date" },
         { "include": "#number" }
       ]
     },
 
     "reference-document": {
       "comment": "Lima References 2.1 §2.1: ${document.path} reads a value from the current document. Inactive (literal) inside quoted strings. GENERATED:textmate-document-reference",
-      "match": "\\$\\{[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*(?:\\.[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*)*\\}",
+      "match": "\\$\\{[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\x{00B7}-]*(?:\\.[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\x{00B7}-]*)*\\}",
       "name": "variable.other.reference.document.lima"
     },
 
     "reference-partial": {
       "comment": "Lima References 2.1 §2.2: $(partial.path) reads from the partials option. GENERATED:textmate-partial-reference",
-      "match": "\\$\\([\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*/\\u00B7-]*(?:\\.[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*)*\\)",
+      "match": "\\$\\([\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*/\\x{00B7}-]*(?:\\.[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\x{00B7}-]*)*\\)",
       "name": "variable.other.reference.partial.lima"
     },
 
     "flow-sequence": {
-      "comment": "Inline sequence: [a, b, c]",
+      "comment": "Inline sequence: [a, b, c]. A flow collection ends on its line (Core §7.4), so an unclosed `[` ends with the line.",
       "begin": "\\[",
-      "end": "\\]",
+      "end": "(\\])|$",
       "beginCaptures": { "0": { "name": "punctuation.definition.sequence.begin.lima" } },
-      "endCaptures": { "0": { "name": "punctuation.definition.sequence.end.lima" } },
+      "endCaptures": { "1": { "name": "punctuation.definition.sequence.end.lima" } },
       "patterns": [
         { "include": "#comment" },
-        { "include": "#reference-document" },
-        { "include": "#reference-partial" },
-        { "include": "#flow-sequence" },
-        { "include": "#flow-mapping" },
-        { "include": "#quoted-string-double" },
-        { "include": "#quoted-string-single" },
-        { "include": "#constant-null" },
-        { "include": "#constant-bool" },
-        { "include": "#date" },
-        { "include": "#number" },
+        { "include": "#value" },
         { "match": ",", "name": "punctuation.separator.sequence.lima" }
       ]
     },
 
     "flow-mapping": {
-      "comment": "Inline mapping: {key: val, key2: val2}",
+      "comment": "Inline mapping: {key: val, key2: val2}. Ends on its line (Core §7.5), as a flow sequence does.",
       "begin": "\\{",
-      "end": "\\}",
+      "end": "(\\})|$",
       "beginCaptures": { "0": { "name": "punctuation.definition.mapping.begin.lima" } },
-      "endCaptures": { "0": { "name": "punctuation.definition.mapping.end.lima" } },
+      "endCaptures": { "1": { "name": "punctuation.definition.mapping.end.lima" } },
       "patterns": [
         { "include": "#comment" },
         {
-          "comment": "GENERATED:textmate-flow-mapping-key",
-          "match": "([\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")(\\s*)(:)(?=\\s)",
+          "comment": "A key and its separator, a colon followed by a space or a tab (Core 1.3 §7.5), and a comment right after it, which leaves the mapping unclosed. GENERATED:textmate-flow-mapping-key",
+          "match": "([\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\x{00B7}-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\")[ \\t]*(:)[ \\t][\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}-\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]*((#).*)?",
           "captures": {
             "1": { "name": "entity.name.tag.lima" },
-            "3": { "name": "punctuation.separator.key-value.lima" }
+            "2": { "name": "punctuation.separator.key-value.lima" },
+            "3": { "name": "comment.line.number-sign.lima" },
+            "4": { "name": "punctuation.definition.comment.lima" }
           }
         },
-        { "include": "#reference-document" },
-        { "include": "#reference-partial" },
-        { "include": "#flow-sequence" },
-        { "include": "#flow-mapping" },
-        { "include": "#quoted-string-double" },
-        { "include": "#quoted-string-single" },
-        { "include": "#constant-null" },
-        { "include": "#constant-bool" },
-        { "include": "#date" },
-        { "include": "#number" },
+        { "include": "#value" },
         { "match": ",", "name": "punctuation.separator.mapping.lima" }
       ]
     },
 
     "quoted-string-double": {
-      "comment": "Lima Core §6.1.2. Only opens when the quote is at a value boundary, not mid-word — an unquoted value may contain a literal \" or '. Valid escapes: \\\\ \\\" \\/ \\n \\r \\t \\b \\f \\uXXXX \\UXXXXXXXX \\xXX; any other \\x is unknown (strict: error; non-strict: left literal).",
-      "begin": "(?<!\\w)\"",
-      "end": "\"",
+      "comment": "Lima Core §6.1.2. Only opens where no word character precedes the quote (\\B), not mid-word — an unquoted value may contain a literal \" or '. A string ends on its line. Valid escapes: \\\\ \\\" \\/ \\n \\r \\t \\b \\f \\uXXXX \\UXXXXXXXX \\xXX; any other \\x is unknown (strict: error; non-strict: left literal).",
+      "begin": "\\B\"",
+      "end": "\"|$",
       "name": "string.quoted.double.lima",
       "patterns": [
         {
@@ -152,9 +136,9 @@
     },
 
     "quoted-string-single": {
-      "comment": "Lima Core §6.1.3. Only opens at a value boundary, not mid-word — otherwise an apostrophe in an unquoted value (\"YAML's\") would start a bogus string. Only special sequence is \\' (an escaped quote); \\\\ is a two-character literal run.",
-      "begin": "(?<!\\w)'",
-      "end": "'",
+      "comment": "Lima Core §6.1.3. Only opens where no word character precedes the quote (\\B) — otherwise an apostrophe in an unquoted value (\"YAML's\") would start a bogus string. A string ends on its line. Only special sequence is \\' (an escaped quote); \\\\ is a two-character literal run.",
+      "begin": "\\B'",
+      "end": "'|$",
       "name": "string.quoted.single.lima",
       "patterns": [
         { "match": "\\\\\\\\", "name": "constant.character.escape.lima" },
@@ -162,24 +146,32 @@
       ]
     },
 
+    "plain-word": {
+      "comment": "Words that hold no scalar although a part of one looks like it: joined by `-` (non-null, 10-20) or digits joined by two or more dots (1.2.3). No scope. GENERATED:textmate-plain-word",
+      "match": "\\w+(?:-\\w+)+|\\d+(?:\\.\\d+){2,}"
+    },
+
     "constant-null": {
-      "match": "(?<![\\w\\-])(null|~)(?![\\w\\-])",
+      "comment": "GENERATED:textmate-null",
+      "match": "\\bnull\\b|\\B~\\B",
       "name": "constant.language.null.lima"
     },
 
     "constant-bool": {
-      "match": "(?<![\\w\\-])(true|false)(?![\\w\\-])",
+      "comment": "GENERATED:textmate-boolean",
+      "match": "\\b(?:true|false)\\b",
       "name": "constant.language.boolean.lima"
     },
 
     "date": {
-      "comment": "Lima Core §6.5.1: ISO 8601 (with optional time and offset), plus German DD.MM.YYYY and slash DD/MM/YYYY forms.",
-      "match": "(?<![\\w\\-])(?:\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}(?::\\d{2})?(?:Z|[+\\-]\\d{2}:\\d{2})?)?|\\d{1,2}[.\\/]\\d{1,2}[.\\/]\\d{4}(?:[T ]\\d{2}:\\d{2}(?::\\d{2})?)?)(?![\\w])",
+      "comment": "Lima Core §6.5.1: ISO 8601 (with optional time and offset), plus German DD.MM.YYYY and slash DD/MM/YYYY forms. GENERATED:textmate-date",
+      "match": "\\b(?:\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}(?::\\d{2})?(?:Z|[+\\-]\\d{2}:\\d{2})?)?|\\d{1,2}[./]\\d{1,2}[./]\\d{4}(?:[T ]\\d{2}:\\d{2}(?::\\d{2})?)?)\\b",
       "name": "constant.other.date.lima"
     },
 
     "number": {
-      "match": "(?<![\\w\\-.])-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+\\-]?\\d+)?(?![\\w\\-.])",
+      "comment": "GENERATED:textmate-number",
+      "match": "(?:\\B-|\\b)(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+\\-]?\\d+)?\\b",
       "name": "constant.numeric.lima"
     }
   }

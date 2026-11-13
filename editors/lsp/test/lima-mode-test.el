@@ -13,17 +13,26 @@
    "quoted: \"${site.name}\" '$(partial.name)'\n"
    "plain: YAML's apostrophe does not start a string\n"
    "body: | # comment\n"
+   "block: |\n"
    "  ^^continued\n"
    "not-a-block: >\n"
    "double: \"\\n \\q\"\n"
    "single: '\\\\ \\''\n"
    "flow: [true, null, 12, 2026-09-14, {name: ${title}}]\n"
    "commented: value # ${ignored}\n"
-   "tight-comment: hello#${should_be_comment}\n"
+   "tight-hash: hello#${not_a_comment}\n"
    "escaped-hash: hello\\#literal\n"
    "quoted-hash: \"hello#not-a-comment\"\n"
-   "escaped-then-comment: hello\\#literal#${actual_comment}\n"
-   "quoted-then-comment: \"hello#literal\"#${outer_comment}\n"))
+   "escaped-then-comment: hello\\#literal #${actual_comment}\n"
+   "quoted-then-hash: \"hello#literal\"#${after_quote}\n"
+   "quoted-then-comment: \"hello#literal\" #${outer_comment}\n"
+   "link: https://example.org/x#top\n"
+   "nbsp: x\u00a0#after-nbsp\n"
+   "flow-hash: [a,#in-flow]\n"
+   "flow-comment: [a, #flow-comment]\n"
+   "author: # who wrote it\n"
+   "  name: Alice\n"
+   "tab:\tseparated\n"))
 
 (defun lima-test--face-at (text occurrence &optional offset)
   "Return face at OFFSET within OCCURRENCE of TEXT after fontification."
@@ -59,7 +68,9 @@
               'font-lock-variable-name-face))
   (should (eq (lima-test--face-at lima-test--document "$(personen/zoë.name)")
               'font-lock-preprocessor-face))
-  (should (eq (lima-test--face-at lima-test--document "| #" 0)
+  (should-not (eq (lima-test--face-at lima-test--document "| #" 0)
+                  'font-lock-keyword-face))
+  (should (eq (lima-test--face-at lima-test--document "|\n  ^^" 0)
               'font-lock-keyword-face))
   (should (eq (lima-test--face-at lima-test--document "^^continued")
               'font-lock-keyword-face))
@@ -102,22 +113,43 @@
   (should (eq (lima-test--face-at lima-test--document "${ignored}")
               'font-lock-comment-face)))
 
-(ert-deftest lima-mode-comments-do-not-require-leading-whitespace ()
-  (should (eq (lima-test--face-at lima-test--document
-                                  "#${should_be_comment}")
-              'font-lock-comment-face))
-  (should (eq (lima-test--face-at lima-test--document
-                                  "${should_be_comment}")
-              'font-lock-comment-face))
+(ert-deftest lima-mode-comments-begin-only-after-whitespace ()
+  ;; Lima Core 1.3 §4: a # begins a comment at the start of a value or after
+  ;; whitespace; any other # is text.
+  (should-not (eq (lima-test--face-at lima-test--document "#${not_a_comment}")
+                  'font-lock-comment-face))
+  (should (eq (lima-test--face-at lima-test--document "${not_a_comment}")
+              'font-lock-variable-name-face))
   (should-not (eq (lima-test--face-at lima-test--document "#literal")
                   'font-lock-comment-face))
-  (should (eq (lima-test--face-at lima-test--document
-                                  "#not-a-comment")
+  (should (eq (lima-test--face-at lima-test--document "#not-a-comment")
               'font-lock-string-face))
   (should (eq (lima-test--face-at lima-test--document "${actual_comment}")
               'font-lock-comment-face))
+  (should-not (eq (lima-test--face-at lima-test--document "#${after_quote}")
+                  'font-lock-comment-face))
   (should (eq (lima-test--face-at lima-test--document "${outer_comment}")
+              'font-lock-comment-face))
+  (should-not (eq (lima-test--face-at lima-test--document "#top")
+                  'font-lock-comment-face))
+  (should (eq (lima-test--face-at lima-test--document "#after-nbsp")
+              'font-lock-comment-face))
+  (should-not (eq (lima-test--face-at lima-test--document "#in-flow")
+                  'font-lock-comment-face))
+  (should (eq (lima-test--face-at lima-test--document "#flow-comment")
               'font-lock-comment-face)))
+
+(ert-deftest lima-mode-reads-core-1-3-separators-and-bare-keys ()
+  (should (eq (lima-test--face-at lima-test--document "author")
+              'font-lock-variable-name-face))
+  (should (eq (lima-test--face-at lima-test--document "# who wrote it")
+              'font-lock-comment-face))
+  (should (eq (lima-test--face-at lima-test--document "  name: Alice" 2)
+              'font-lock-variable-name-face))
+  (should (eq (lima-test--face-at lima-test--document "tab:")
+              'font-lock-variable-name-face))
+  (should-not (eq (lima-test--face-at "nbsp:\u00a0value" "nbsp")
+                  'font-lock-variable-name-face)))
 
 (ert-deftest lima-mode-highlights-every-element-in-dense-flow-sequences ()
   (should (eq (lima-test--face-at "a: [10,20]" "a: [10,20]" 4)

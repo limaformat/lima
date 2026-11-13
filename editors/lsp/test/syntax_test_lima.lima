@@ -1,4 +1,5 @@
 # SYNTAX TEST "Packages/User/Lima.sublime-syntax"
+# Columns count UTF-8 bytes, as Sublime syntax tests do.
 
 title: ${site.name} / $(partial.name)
 # ^^^ entity.name.tag.lima
@@ -8,14 +9,14 @@ title: ${site.name} / $(partial.name)
 
 größe: ${größe}
 # ^^^^^ entity.name.tag.lima
-#       ^^^^^^^^ variable.other.reference.document.lima
+#        ^^^^^^^^^^ variable.other.reference.document.lima
 題名: Japanese
 # ^^ entity.name.tag.lima
 autor*in: ${autor*in}
-# ^^^^^^^^ entity.name.tag.lima
-#          ^^^^^^^^^^^ variable.other.reference.document.lima
+# ^^^^^^ entity.name.tag.lima
+#         ^^^^^^^^^^^ variable.other.reference.document.lima
 autor·in: $(personen/zoë.name)
-# ^^^^^^^^ entity.name.tag.lima
+# ^^^^^^^ entity.name.tag.lima
 #          ^^^^^^^^^^^^^^^^^^^ variable.other.reference.partial.lima
 ̈mark: no
 # ^ source.lima - entity.name.tag.lima
@@ -31,25 +32,67 @@ quoted: "${site.name}" '$(partial.name)'
 plain: YAML's apostrophe does not start a string
 #          ^ source.lima - string.quoted.single.lima
 
-tight-comment: hello#${should_be_comment}
-#                   ^ comment.line.number-sign.lima
-#                    ^ comment.line.number-sign.lima - variable.other.reference
-escaped-hash: hello\#literal
-#                   ^ source.lima - comment.line.number-sign.lima
+tight-hash: hello#${not_a_comment}
+#                ^ source.lima - comment.line.number-sign.lima
+#                 ^^^^^^^^^^^^^^^^ variable.other.reference.document.lima
+link: https://example.org/x#top
+#                          ^ source.lima - comment.line.number-sign.lima
+spaced-comment: hello #${a_comment}
+#                     ^ comment.line.number-sign.lima punctuation.definition.comment.lima
+#                      ^ comment.line.number-sign.lima - variable.other.reference
+escaped-hash: hello \#literal
+#                    ^ source.lima - comment.line.number-sign.lima
 quoted-hash: "hello#not-a-comment"
 #                  ^ string.quoted.double.lima - comment.line.number-sign.lima
-escaped-then-comment: hello\#literal#${actual_comment}
-#                                  ^ source.lima - comment.line.number-sign.lima
-#                                          ^ comment.line.number-sign.lima - variable.other.reference
-quoted-then-comment: "hello#literal"#${outer_comment}
-#                           ^ string.quoted.double.lima - comment.line.number-sign.lima
-#                                    ^ comment.line.number-sign.lima - variable.other.reference
+quoted-then-hash: "hello#literal"#text
+#                                ^ source.lima - comment.line.number-sign.lima
+quoted-then-comment: "hello#literal" #${outer_comment}
+#                                    ^ comment.line.number-sign.lima
+#                                     ^ comment.line.number-sign.lima - variable.other.reference
+nbsp-comment: x #c
+#                ^ comment.line.number-sign.lima
+nel-hash: x#c
+#            ^ source.lima - comment.line.number-sign.lima
 
-body: | # comment
+flow-hash: [a,#x] {k: x#y}
+#             ^ source.lima - comment.line.number-sign.lima
+#                      ^ source.lima - comment.line.number-sign.lima
+#               ^ punctuation.definition.sequence.end.lima
+#                        ^ punctuation.definition.mapping.end.lima
+flow-comment: [a, #x]
+#                 ^^^ comment.line.number-sign.lima
+after-unclosed: 1
+# <- entity.name.tag.lima
+#               ^ constant.numeric.lima
+
+tab-separator:	Hello
+# <- entity.name.tag.lima
+#            ^ punctuation.separator.key-value.lima
+nbsp-separator: Hello
+# <- source.lima - entity.name.tag.lima
+flow-tab: {a:	b, c:d}
+#          ^ entity.name.tag.lima
+#                 ^ source.lima - entity.name.tag.lima
+
+author: # who wrote it
+# <- entity.name.tag.lima
+#       ^^^^^^^^^^^^^^ comment.line.number-sign.lima
+  name: Alice
+# ^^^^ entity.name.tag.lima
+items:
+  - name: Alice
+# ^ punctuation.definition.list.begin.lima
+#   ^^^^ entity.name.tag.lima
+  - # nothing
+#   ^^^^^^^^^ comment.line.number-sign.lima
+
+body: |
 #     ^ keyword.operator.block-scalar.lima
-#       ^ comment.line.number-sign.lima
   ^^continued
 # ^^ keyword.operator.line-continuation.lima
+pipe-string: | # note
+#            ^ source.lima - keyword.operator.block-scalar.lima
+#              ^^^^^^ comment.line.number-sign.lima
 
 body-spaces:  |
 #             ^ keyword.operator.block-scalar.lima
@@ -58,6 +101,12 @@ body-tab:	 |
 
 not-a-block: >
 #            ^ source.lima - keyword.operator.block-scalar.lima
+
+words: non-null true-ish 1.2.3 10-20
+#          ^^^^ source.lima - constant
+#                    ^^^ source.lima - constant
+#                        ^^^^^ source.lima - constant
+#                              ^^^^^ source.lima - constant
 
 double: "\n \q"
 #        ^^ constant.character.escape.lima

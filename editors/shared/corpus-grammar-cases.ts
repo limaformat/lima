@@ -29,14 +29,35 @@ interface CorpusFile {
 
 const CORPUS = resolve(__dirname, "../..", "corpus");
 
+const GRAMMAR_TAGS = new Set(["comment", "comments", "quoted", "quoting"]);
+
+/** The cases a later suite replaces, by that suite's manifest. */
+const SUPERSEDED = new Set(
+  ["core-1.1", "core-1.3"].flatMap(
+    (suite) =>
+      (
+        JSON.parse(
+          readFileSync(resolve(CORPUS, "manifests", `${suite}.json`), "utf8"),
+        ) as { supersedes: string[] }
+      ).supersedes,
+  ),
+);
+
 /**
- * One-line comment/quote fixtures from the normative conformance corpus.
- * Offsets are JavaScript/UTF-16 offsets, matching TextMate, Sublime, and
- * Emacs buffer positions for the ASCII delimiters in these cases.
+ * Comment and quote fixtures from the normative conformance corpus of Core
+ * 1.3 and References 2.1, one case per line: the grammars read line by line.
+ * The comment oracle is the parser's own boundary on that line, so a line
+ * inside a `|` block scalar, whose `#` is content, cannot be judged alone;
+ * fixtures with block scalars are left out. Offsets are JavaScript/UTF-16
+ * offsets, as TextMate counts them, and Emacs buffer positions for these
+ * lines, which hold no character outside the BMP; the Sublime generator turns
+ * them into the UTF-8 byte columns its syntax tests count.
  */
 export const CORPUS_GRAMMAR_CASES: CorpusGrammarCase[] = [
   ...readCorpusDirectory("core"),
+  ...readCorpusDirectory("core-1.1"),
   ...readCorpusDirectory("core-1.2"),
+  ...readCorpusDirectory("core-1.3"),
   ...readCorpusDirectory("references-2.0"),
   ...readCorpusDirectory("references-2.1"),
 ].sort((a, b) => a.id.localeCompare(b.id));
@@ -52,26 +73,30 @@ function readCorpusDirectory(directory: string): CorpusGrammarCase[] {
       ) as CorpusFile;
       if (
         typeof fixture.input !== "string" ||
-        !fixture.tags?.some((tag) => tag === "comment" || tag === "quoted") ||
-        fixture.input.trimEnd().includes("\n")
+        SUPERSEDED.has(fixture.id) ||
+        !fixture.tags?.some((tag) => GRAMMAR_TAGS.has(tag)) ||
+        fixture.tags.includes("block-scalar")
       ) {
         return [];
       }
 
       // Drop transport newlines used by corpus JSON while retaining any
-      // trailing spaces that are part of the actual one-line fixture.
-      const input = fixture.input.replace(/(?:\r?\n)+$/, "");
-      const commentStart = findCommentStart(input);
-      return [
-        {
-          id: fixture.id,
-          input,
-          commentStart,
-          quoteRanges: findQuoteRanges(
-            commentStart === null ? input : input.slice(0, commentStart),
-          ),
-        },
-      ];
+      // trailing spaces that are part of the actual fixture lines.
+      const lines = fixture.input.replace(/(?:\r?\n)+$/, "").split(/\r?\n|\r/);
+      return lines.flatMap((input, index) => {
+        if (input.trim() === "") return [];
+        const commentStart = findCommentStart(input);
+        return [
+          {
+            id: lines.length === 1 ? fixture.id : `${fixture.id}:${index + 1}`,
+            input,
+            commentStart,
+            quoteRanges: findQuoteRanges(
+              commentStart === null ? input : input.slice(0, commentStart),
+            ),
+          },
+        ];
+      });
     });
 }
 

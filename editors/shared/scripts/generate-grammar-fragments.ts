@@ -1,14 +1,21 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-  BLOCK_SCALAR,
+  ARRAY_DASH,
+  BOOLEAN,
   COMMENT,
+  DATE,
   DOCUMENT_REFERENCE,
   EMACS_DOCUMENT_REFERENCE,
   EMACS_KEY,
   EMACS_PARTIAL_REFERENCE,
-  KEY,
+  EMACS_WHITESPACE,
+  FLOW_MAPPING_KEY,
+  MAPPING_KEY,
+  NULL,
+  NUMBER,
   PARTIAL_REFERENCE,
+  PLAIN_WORD,
 } from "../grammar-fragments.js";
 
 const ROOT = resolve(__dirname, "../../..");
@@ -35,11 +42,16 @@ function update(path: string, generate: (source: string) => string): void {
 function generateTextMate(source: string): string {
   const generated = [
     ["textmate-comment", COMMENT],
-    ["textmate-block-scalar", BLOCK_SCALAR],
-    ["textmate-mapping-key", String.raw`^(\s*)(${KEY})(\s*)(:)(?=\s|$)`],
+    ["textmate-mapping-key", MAPPING_KEY],
+    ["textmate-array-dash", ARRAY_DASH],
     ["textmate-document-reference", DOCUMENT_REFERENCE],
     ["textmate-partial-reference", PARTIAL_REFERENCE],
-    ["textmate-flow-mapping-key", String.raw`(${KEY})(\s*)(:)(?=\s)`],
+    ["textmate-flow-mapping-key", FLOW_MAPPING_KEY],
+    ["textmate-plain-word", PLAIN_WORD],
+    ["textmate-null", NULL],
+    ["textmate-boolean", BOOLEAN],
+    ["textmate-date", DATE],
+    ["textmate-number", NUMBER],
   ].reduce(
     (current, [marker, pattern]) =>
       replaceLineAfterMarker(
@@ -56,22 +68,25 @@ function generateTextMate(source: string): string {
 
 function generateSublime(source: string): string {
   return [
-    ["sublime-key", "key", yamlDoubleQuoted(KEY)],
-    ["sublime-comment", "- match", yamlSingleQuoted(COMMENT)],
-    ["sublime-block-scalar", "- match", yamlSingleQuoted(BLOCK_SCALAR)],
-    [
-      "sublime-document-reference",
-      "- match",
-      yamlSingleQuoted(DOCUMENT_REFERENCE),
-    ],
-    [
-      "sublime-partial-reference",
-      "- match",
-      yamlSingleQuoted(PARTIAL_REFERENCE),
-    ],
+    ["sublime-comment", COMMENT],
+    ["sublime-mapping-key", MAPPING_KEY],
+    ["sublime-array-dash", ARRAY_DASH],
+    ["sublime-flow-mapping-key", FLOW_MAPPING_KEY],
+    ["sublime-document-reference", DOCUMENT_REFERENCE],
+    ["sublime-partial-reference", PARTIAL_REFERENCE],
+    ["sublime-plain-word", PLAIN_WORD],
+    ["sublime-null", NULL],
+    ["sublime-boolean", BOOLEAN],
+    ["sublime-date", DATE],
+    ["sublime-number", NUMBER],
   ].reduce(
-    (current, [marker, key, value]) =>
-      replaceLineAfterMarker(current, `GENERATED:${marker}`, key, value),
+    (current, [marker, pattern]) =>
+      replaceLineAfterMarker(
+        current,
+        `GENERATED:${marker}`,
+        "- match",
+        yamlSingleQuoted(pattern),
+      ),
     source,
   );
 }
@@ -89,6 +104,7 @@ function generateEmacs(source: string): string {
       "lima--partial-reference-regexp",
       EMACS_PARTIAL_REFERENCE,
     ],
+    ["emacs-whitespace", "lima--whitespace-regexp", EMACS_WHITESPACE],
   ].reduce(
     (current, [marker, name, pattern]) =>
       replaceElispConstant(current, `GENERATED:${marker}`, name, pattern),
@@ -136,7 +152,7 @@ function replaceElispConstant(
   if (!block.startsWith(`(defconst ${name}\n`)) {
     throw new Error(`${marker}: expected defconst ${name}`);
   }
-  const rendered = `(defconst ${name}\n  ${json(pattern)})`;
+  const rendered = `(defconst ${name}\n  ${elispString(pattern)})`;
   return `${source.slice(0, blockStart)}${rendered}${source.slice(blockEnd)}`;
 }
 
@@ -153,10 +169,19 @@ function json(value: string): string {
   return JSON.stringify(value);
 }
 
-function yamlSingleQuoted(value: string): string {
-  return `'${value.replaceAll("'", "''")}'`;
+/**
+ * An Emacs Lisp string literal. JSON's escapes are Lisp's too; a character
+ * outside ASCII is written `\uXXXX`, so that no invisible whitespace stands
+ * in lima-mode.el.
+ */
+function elispString(value: string): string {
+  return json(value).replace(
+    /[^\x00-\x7f]/g,
+    (character) =>
+      `\\u${character.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0")}`,
+  );
 }
 
-function yamlDoubleQuoted(value: string): string {
-  return json(value);
+function yamlSingleQuoted(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
 }

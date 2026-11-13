@@ -41,12 +41,6 @@ function generateSublime(): string {
     for (const quote of fixture.quoteRanges) {
       addSublimeQuoteAssertions(lines, fixture.input, quote);
     }
-    for (const quote of fixture.quoteRanges.filter(({ closed }) => !closed)) {
-      // Sublime syntax tests share tokenizer state across their source lines.
-      // Close an intentionally unterminated fixture (and any surrounding flow
-      // collection) so it cannot affect the next independent corpus case.
-      lines.push(`${quote.quote === "double" ? '"' : "'"}]}`);
-    }
     lines.push("");
   }
   return `${lines.join("\n")}\n`;
@@ -58,7 +52,8 @@ function addSublimeCommentAssertions(
 ): void {
   if (fixture.commentStart !== null) {
     lines.push(
-      sublimeAssertion(
+      ...sublimeAssertions(
+        fixture.input,
         fixture.commentStart,
         fixture.input.length - fixture.commentStart,
         "comment.line.number-sign.lima",
@@ -66,7 +61,8 @@ function addSublimeCommentAssertions(
     );
     if (fixture.commentStart > 0) {
       lines.push(
-        sublimeAssertion(
+        ...sublimeAssertions(
+          fixture.input,
           fixture.commentStart - 1,
           1,
           "source.lima - comment.line.number-sign.lima",
@@ -77,7 +73,8 @@ function addSublimeCommentAssertions(
   }
   for (const index of hashOffsets(fixture.input)) {
     lines.push(
-      sublimeAssertion(
+      ...sublimeAssertions(
+        fixture.input,
         index,
         1,
         "source.lima - comment.line.number-sign.lima",
@@ -96,25 +93,36 @@ function addSublimeQuoteAssertions(
     quote.kind === "key"
       ? "entity.name.tag.lima"
       : `string.quoted.${quote.quote}.lima`;
-  if (start === 0) {
-    // Native syntax-test caret annotations cannot occupy columns 0 or 1,
-    // because those columns contain `# `. Use the start-of-line arrow for
-    // column 0 and cover the remainder from column 2 onward.
-    lines.push(`# <- ${scope}`);
-    if (end > 2) lines.push(sublimeAssertion(2, end - 2, scope));
-  } else {
-    lines.push(sublimeAssertion(start, end - start, scope));
-  }
+  lines.push(...sublimeAssertions(input, start, end - start, scope));
   if (end < input.length) {
-    lines.push(sublimeAssertion(end, 1, `source.lima - ${scope}`));
+    lines.push(...sublimeAssertions(input, end, 1, `source.lima - ${scope}`));
   }
 }
 
-function sublimeAssertion(start: number, length: number, scope: string): string {
-  if (start < 2) {
-    throw new Error(`Sublime caret assertions cannot start at column ${start}`);
+/**
+ * Assertions for the UTF-16 range from `start` of `input`. A Sublime syntax
+ * test counts columns in UTF-8 bytes. Native caret annotations cannot occupy
+ * columns 0 or 1, because those columns contain `# `. Column 0 has the
+ * start-of-line arrow; column 1 has none, so a range there is asserted from
+ * column 2 onward.
+ */
+function sublimeAssertions(
+  input: string,
+  start: number,
+  length: number,
+  scope: string,
+): string[] {
+  const byteColumn = (offset: number) =>
+    Buffer.byteLength(input.slice(0, offset), "utf8");
+  const assertions = start === 0 ? [`# <- ${scope}`] : [];
+  const end = byteColumn(start + Math.max(1, length));
+  const caretStart = Math.max(2, byteColumn(start));
+  if (caretStart < end) {
+    assertions.push(
+      `#${" ".repeat(caretStart - 1)}${"^".repeat(end - caretStart)} ${scope}`,
+    );
   }
-  return `#${" ".repeat(start - 1)}${"^".repeat(Math.max(1, length))} ${scope}`;
+  return assertions;
 }
 
 function generateEmacs(): string {

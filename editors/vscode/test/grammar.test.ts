@@ -15,6 +15,7 @@ import { CORPUS_GRAMMAR_CASES } from "../../shared/corpus-grammar-cases.js";
 
 const HERE = import.meta.dir;
 const GRAMMAR = join(HERE, "..", "syntaxes", "lima.tmLanguage.json");
+const INJECTION = join(HERE, "..", "syntaxes", "lima.markdown-injection.json");
 
 const wasm = readFileSync(
   join(HERE, "..", "node_modules", "vscode-oniguruma", "release", "onig.wasm"),
@@ -26,16 +27,21 @@ const onigLib = oniguruma.loadWASM(wasm.buffer).then(() => ({
 
 const registry = new textmate.Registry({
   onigLib,
-  loadGrammar: async (scopeName) =>
-    scopeName === "source.lima"
-      ? textmate.parseRawGrammar(readFileSync(GRAMMAR, "utf8"), GRAMMAR)
-      : null,
+  loadGrammar: async (scopeName) => {
+    const path = { "source.lima": GRAMMAR, "lima.frontmatter.injection": INJECTION }[
+      scopeName
+    ];
+    return path ? textmate.parseRawGrammar(readFileSync(path, "utf8"), path) : null;
+  },
 });
 
 type ScopedToken = [string, string[], number, number];
 
-async function scopesFor(code: string): Promise<ScopedToken[]> {
-  const grammar = await registry.loadGrammar("source.lima");
+async function scopesFor(
+  code: string,
+  scopeName = "source.lima",
+): Promise<ScopedToken[]> {
+  const grammar = await registry.loadGrammar(scopeName);
   if (!grammar) throw new Error("grammar failed to load");
   const out: ScopedToken[] = [];
   let ruleStack = textmate.INITIAL;
@@ -135,29 +141,87 @@ test("Core 1.2 Unicode and gendered keys use the key scope", async () => {
   }
 });
 
-test("a # need not be preceded by whitespace to start a comment", async () => {
-  const t = await scopesFor("tight-comment: hello#literal\n");
-  expect(has(t, "#", "comment.line.number-sign.lima")).toBe(true);
-  expect(has(t, "literal", "comment.line.number-sign.lima")).toBe(true);
-  expect(
-    t.some(([x, s]) => x.includes("hello") && s.some((y) => y.includes("comment"))),
-  ).toBe(false);
+test("Core 1.3: a # begins a comment at the start of a value or after whitespace", async () => {
+  const t = await scopesFor(
+    "color: #ff0000\nnote: text # trailing\n  # indented\n- # item\ntab:\t# after a tab\nnbsp: x\u00a0#after-nbsp\n",
+  );
+  for (const text of ["ff0000", " trailing", " indented", " item", " after a tab", "after-nbsp"]) {
+    expect(
+      t.some(([x, s]) => x.includes(text) && carries(s, "comment.line.number-sign.lima")),
+      text,
+    ).toBe(true);
+  }
+  // the whitespace before the # is not part of the comment
+  expect(scopesAt(await scopesFor("note: text # c"), 10)).not.toContain(
+    "comment.line.number-sign.lima",
+  );
 });
 
-test("an escaped \\# stays literal; a real # after it still starts a comment", async () => {
-  const t = await scopesFor(
-    "escaped-hash: hello\\#literal\nescaped-then-comment: hello\\#literal#actual\n",
-  );
-  expect(
-    t.some(([x, s]) => x.includes("\\#literal") && s.some((y) => y.includes("comment"))),
-  ).toBe(false);
-  expect(has(t, "#", "comment.line.number-sign.lima")).toBe(true);
+test("Core 1.3: a # after any other character is text", async () => {
+  for (const line of [
+    "link: https://example.org/x#section",
+    "lang: C#",
+    "tight: hello#literal",
+    'quoted: "x"#y',
+    "nel: foo\u0085# c",
+  ]) {
+    const t = await scopesFor(line);
+    expect(t.some(([, s]) => carries(s, "comment")), line).toBe(false);
+  }
+});
+
+test("Core 1.3: \\# stays text; a # after whitespace still begins a comment", async () => {
+  const t = await scopesFor("escaped: hello\\#literal\nspaced: hello \\#literal #actual\n");
+  expect(t.some(([x, s]) => x.includes("literal") && carries(s, "comment"))).toBe(false);
+  expect(has(t, "#", "punctuation.definition.comment.lima")).toBe(true);
   expect(has(t, "actual", "comment.line.number-sign.lima")).toBe(true);
 });
 
-test("a # inside a quoted string stays literal; one right after the closing quote is a comment", async () => {
+test("Core 1.3: in a flow value, a # after , or [ is text, after a space a comment", async () => {
+  const text = await scopesFor("k: [a,#x]\nj: [#x]\nm: {a: x#y}\n");
+  expect(text.some(([, s]) => carries(s, "comment"))).toBe(false);
+  expect(has(text, "]", "punctuation.definition.sequence.end.lima")).toBe(true);
+  expect(has(text, "}", "punctuation.definition.mapping.end.lima")).toBe(true);
+
+  const sequence = await scopesFor("k: [a, #x]\nnext: 1\n");
+  expect(has(sequence, "#", "punctuation.definition.comment.lima")).toBe(true);
+  expect(has(sequence, "x]", "comment.line.number-sign.lima")).toBe(true);
+  // the unclosed sequence ends with its line, so the next line is an entry
+  expect(sequence.find(([x]) => x === "next")?.[1]).toEqual([
+    "source.lima",
+    "entity.name.tag.lima",
+  ]);
+
+  const mapping = await scopesFor("m: {a: x #y}\nn: {b: #z}\n");
+  expect(has(mapping, "y}", "comment.line.number-sign.lima")).toBe(true);
+  expect(has(mapping, "z}", "comment.line.number-sign.lima")).toBe(true);
+  expect(has(mapping, "b", "entity.name.tag.lima")).toBe(true);
+});
+
+test("Core 1.3: a tab after the colon separates key and value; other whitespace does not", async () => {
+  const t = await scopesFor('title:\tHello\n"quoted key":\tx\nflow: {a:\tb}\n');
+  for (const key of ["title", '"quoted key"', "a"]) {
+    expect(has(t, key, "entity.name.tag.lima"), key).toBe(true);
+  }
+  const nbsp = await scopesFor("title:\u00a0Hello\nflow: {a:b}\n");
+  expect(has(nbsp, "title", "entity.name.tag.lima")).toBe(false);
+  expect(has(nbsp, "a", "entity.name.tag.lima")).toBe(false);
+});
+
+test("Core 1.3: key: # note is a key with a comment, and its block follows", async () => {
+  const t = await scopesFor("author: # who wrote it\n  name: Alice\nlist: # items\n- one\n");
+  expect(has(t, "author", "entity.name.tag.lima")).toBe(true);
+  expect(has(t, "#", "punctuation.definition.comment.lima")).toBe(true);
+  expect(has(t, " who wrote it", "comment.line.number-sign.lima")).toBe(true);
+  expect(has(t, "name", "entity.name.tag.lima")).toBe(true);
+  expect(has(t, "list", "entity.name.tag.lima")).toBe(true);
+  expect(has(t, " items", "comment.line.number-sign.lima")).toBe(true);
+  expect(has(t, "-", "punctuation.definition.list.begin.lima")).toBe(true);
+});
+
+test("a # inside a quoted string stays literal; one after the closing quote and a space is a comment", async () => {
   const t = await scopesFor(
-    'quoted-hash: "hello#not-a-comment"\nquoted-then-comment: "hello#literal"#outer\n',
+    'quoted-hash: "hello#not-a-comment"\nquoted-then-comment: "hello#literal" #outer\n',
   );
   expect(
     t.some(
@@ -170,6 +234,25 @@ test("a # inside a quoted string stays literal; one right after the closing quot
   expect(
     t.some(([x, s]) => x.includes("outer") && s.some((y) => y.includes("comment"))),
   ).toBe(true);
+});
+
+test("a string ends with its line when it does not close", async () => {
+  const t = await scopesFor('a: "open\nb: [\'x, y\nc: 1\n');
+  expect(has(t, "b", "entity.name.tag.lima")).toBe(true);
+  expect(has(t, "c", "entity.name.tag.lima")).toBe(true);
+  expect(has(t, "1", "constant.numeric.lima")).toBe(true);
+});
+
+test("keys of object items, and their block scalars, are highlighted", async () => {
+  const t = await scopesFor("items:\n  - name: Alice\n    body: |\n      text\n  - | \n");
+  expect(has(t, "name", "entity.name.tag.lima")).toBe(true);
+  expect(has(t, "body", "entity.name.tag.lima")).toBe(true);
+  expect(
+    t.filter(([x, s]) => x === "|" && carries(s, "keyword.operator.block-scalar.lima")),
+  ).toHaveLength(2);
+  expect(
+    t.filter(([x, s]) => x === "-" && carries(s, "punctuation.definition.list.begin.lima")),
+  ).toHaveLength(2);
 });
 
 test("scalars: bool, null, number, date", async () => {
@@ -210,17 +293,36 @@ test("a reference inside a double-quoted string stays literal", async () => {
 });
 
 test("literal block scalar marker is |, folded > is not a marker", async () => {
-  const t = await scopesFor("one: |\ntwo:  |\nfour:    |\ntab:\t |\n");
-  expect(has(t, "|", "keyword.operator.block-scalar.lima")).toBe(true);
+  const t = await scopesFor("one: |\ntwo:  |\nfour:    |\ntab:\t |\ntrailing: |\u00a0\n");
   expect(
     t.filter(
       ([text, scopes]) =>
         text === "|" &&
         scopes.some((scope) => scope.includes("keyword.operator.block-scalar.lima")),
     ),
-  ).toHaveLength(4);
+  ).toHaveLength(5);
   const folded = await scopesFor("text: >\n  body line\n");
   expect(has(folded, ">", "keyword.operator.block-scalar.lima")).toBe(false);
+});
+
+test("Core 1.3 §6.1.5: key: | # note is the string |, followed by a comment", async () => {
+  const t = await scopesFor("body: | # note\nmore: |x\n");
+  expect(has(t, "|", "keyword.operator.block-scalar.lima")).toBe(false);
+  expect(has(t, " note", "comment.line.number-sign.lima")).toBe(true);
+});
+
+test("scalars match whole words only", async () => {
+  const t = await scopesFor(
+    "a: non-null\nb: true-ish\nc: version 1.2.3\nd: pages 10-20\ne: x~\nf: v1\ng: [10,20]\nh: [-5,-6]\n",
+  );
+  for (const word of ["null", "true", "1.2", "1.2.3", "3", "10", "20", "~", "1"]) {
+    expect(
+      t.some(([x, s]) => x === word && carries(s, "constant") && !carries(s, "punctuation")),
+      word,
+    ).toBe(word === "10" || word === "20");
+  }
+  expect(has(t, "-5", "constant.numeric.lima")).toBe(true);
+  expect(has(t, "-6", "constant.numeric.lima")).toBe(true);
 });
 
 test("^^ continuation marker at line start", async () => {
@@ -262,4 +364,19 @@ test("a genuine single-quoted value still highlights", async () => {
 test("block sequence dash", async () => {
   const t = await scopesFor("items:\n  - one\n  - two\n");
   expect(has(t, "-", "punctuation.definition.list.begin.lima")).toBe(true);
+});
+
+test("Markdown front matter reads Core 1.3 as a .lima file does", async () => {
+  // Without VS Code's Markdown grammar, the injection grammar stands alone:
+  // its rule for the front matter block is what VS Code injects.
+  const t = await scopesFor(
+    "---\nlink: https://example.org/x#top\nauthor: # who\n  name: Alice\ntitle:\tHello\n---\nnot: front matter\n",
+    "lima.frontmatter.injection",
+  );
+  expect(t.some(([x, s]) => x.includes("top") && carries(s, "comment"))).toBe(false);
+  expect(has(t, " who", "comment.line.number-sign.lima")).toBe(true);
+  for (const key of ["link", "author", "name", "title"]) {
+    expect(has(t, key, "entity.name.tag.lima"), key).toBe(true);
+  }
+  expect(has(t, "not", "entity.name.tag.lima")).toBe(false);
 });

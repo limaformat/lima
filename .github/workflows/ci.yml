@@ -164,6 +164,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      # editors/shared/re2-syntax.test.ts checks every grammar pattern with
+      # Go's regexp/syntax.
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
       - run: bun install
         working-directory: editors/lsp
       - run: bunx tsc --noEmit

@@ -6,34 +6,26 @@ file_extensions:
 scope: source.lima
 version: 2
 
-variables:
-  # A double-quoted key's backslash escapes (Core §5.2) keep an escaped
-  # quote from closing it early; a single-quoted key is fully literal.
-  # GENERATED:sublime-key
-  key: "[\\p{L}\\p{N}_][\\p{L}\\p{M}\\p{N}_:*\\u00B7-]*|'[^']*'|\"(?:\\\\.|[^\"\\\\])*\""
+# Every pattern is RE2 syntax: no lookaround, backreference, atomic group or
+# possessive quantifier (editors/shared/grammar-fragments.ts). Patterns marked
+# GENERATED are written by editors/shared/scripts/generate-grammar-fragments.ts.
 
 contexts:
   main:
     - include: comments
-    - include: block-scalar
     - include: mapping-key
     - include: array-dash
     - include: line-continuation
     - include: values
 
   comments:
+    # Lima Core 1.3 §4, §8: outside quotes, a # begins a comment at the start
+    # of a line or after whitespace; any other #, \# too, is text.
     # GENERATED:sublime-comment
-    - match: '(?<!\\)(#).*$'
-      scope: comment.line.number-sign.lima
+    - match: '(?:^|[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}-\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}])((#).*)'
       captures:
-        1: punctuation.definition.comment.lima
-
-  block-scalar:
-    # GENERATED:sublime-block-scalar
-    - match: '(?<=:)([ \t]+)(\|)[ \t]*(?:(#).*)?$'
-      captures:
-        2: keyword.operator.block-scalar.lima
-        3: comment.line.number-sign.lima
+        1: comment.line.number-sign.lima
+        2: punctuation.definition.comment.lima
 
   line-continuation:
     - match: '^(\s*)(\^\^)'
@@ -41,38 +33,57 @@ contexts:
         2: keyword.operator.line-continuation.lima
 
   mapping-key:
-    - match: '^(\s*)({{key}})(\s*)(:)(?=\s|$)'
+    # An entry, after an object item's dash too, with its separator (a colon
+    # and a space, a tab or the end of the line) and what may start the value
+    # there: `|` alone, a literal block scalar, or a comment (Core 1.3 §4).
+    # A double-quoted key's backslash escapes (Core §5.2) keep an escaped
+    # quote from closing it early; a single-quoted key is fully literal.
+    # GENERATED:sublime-mapping-key
+    - match: '^[ \t]*(?:(-)[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}-\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]+)?([\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*\x{00B7}-]*|''[^'']*''|"(?:\\.|[^"\\])*")[ \t]*(:)(?:$|[ \t][\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}-\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]*(?:(\|)[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}-\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]*$|((#).*))?)'
       captures:
+        1: punctuation.definition.list.begin.lima
         2: entity.name.tag.lima
-        4: punctuation.separator.key-value.lima
+        3: punctuation.separator.key-value.lima
+        4: keyword.operator.block-scalar.lima
+        5: comment.line.number-sign.lima
+        6: punctuation.definition.comment.lima
 
   array-dash:
-    - match: '^(\s*)(-)(?=\s|$)'
+    # GENERATED:sublime-array-dash
+    - match: '^[ \t]*(-)(?:$|[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}-\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]+(?:(\|)[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}-\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]*$|((#).*))?)'
       captures:
-        2: punctuation.definition.list.begin.lima
+        1: punctuation.definition.list.begin.lima
+        2: keyword.operator.block-scalar.lima
+        3: comment.line.number-sign.lima
+        4: punctuation.definition.comment.lima
 
   values:
+    # A date comes before plain words and plain words before the other
+    # scalars, so that these match whole words only.
     - include: reference-document
     - include: reference-partial
     - include: flow-sequence
     - include: flow-mapping
     - include: quoted-string-double
     - include: quoted-string-single
+    - include: date
+    - include: plain-word
     - include: constant-null
     - include: constant-bool
-    - include: date
     - include: number
 
   reference-document:
     # GENERATED:sublime-document-reference
-    - match: '\$\{[\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*\u00B7-]*(?:\.[\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*\u00B7-]*)*\}'
+    - match: '\$\{[\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*\x{00B7}-]*(?:\.[\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*\x{00B7}-]*)*\}'
       scope: variable.other.reference.document.lima
 
   reference-partial:
     # GENERATED:sublime-partial-reference
-    - match: '\$\([\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*/\u00B7-]*(?:\.[\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*\u00B7-]*)*\)'
+    - match: '\$\([\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*/\x{00B7}-]*(?:\.[\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*\x{00B7}-]*)*\)'
       scope: variable.other.reference.partial.lima
 
+  # A flow collection ends on its line (Core §7.4, §7.5), so an unclosed one
+  # ends with the line.
   flow-sequence:
     - match: '\['
       scope: punctuation.definition.sequence.begin.lima
@@ -81,6 +92,8 @@ contexts:
   flow-sequence-body:
     - match: '\]'
       scope: punctuation.definition.sequence.end.lima
+      pop: true
+    - match: '$'
       pop: true
     - include: comments
     - include: values
@@ -96,22 +109,32 @@ contexts:
     - match: '\}'
       scope: punctuation.definition.mapping.end.lima
       pop: true
+    - match: '$'
+      pop: true
     - include: comments
-    - match: '({{key}})(\s*)(:)(?=\s)'
+    # A key and its separator, a colon and a space or a tab (Core 1.3 §7.5).
+    # GENERATED:sublime-flow-mapping-key
+    - match: '([\p{L}\p{N}_][\p{L}\p{M}\p{N}_:*\x{00B7}-]*|''[^'']*''|"(?:\\.|[^"\\])*")[ \t]*(:)[ \t][\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}-\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]*((#).*)?'
       captures:
         1: entity.name.tag.lima
-        3: punctuation.separator.key-value.lima
+        2: punctuation.separator.key-value.lima
+        3: comment.line.number-sign.lima
+        4: punctuation.definition.comment.lima
     - include: values
     - match: ','
       scope: punctuation.separator.mapping.lima
 
+  # A quote opens a string only where no word character precedes it (\B),
+  # not in YAML's; a string ends on its line.
   quoted-string-double:
-    - match: '(?<!\w)"'
+    - match: '\B"'
       scope: punctuation.definition.string.begin.lima
       push:
         - meta_scope: string.quoted.double.lima
         - match: '"'
           scope: punctuation.definition.string.end.lima
+          pop: true
+        - match: '$'
           pop: true
         - match: '\\(?:["\\/nrtbf]|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|x[0-9a-fA-F]{2})'
           scope: constant.character.escape.lima
@@ -119,30 +142,41 @@ contexts:
           scope: invalid.illegal.unknown-escape.lima
 
   quoted-string-single:
-    - match: "(?<!\\w)'"
+    - match: "\\B'"
       scope: punctuation.definition.string.begin.lima
       push:
         - meta_scope: string.quoted.single.lima
         - match: "'"
           scope: punctuation.definition.string.end.lima
           pop: true
+        - match: '$'
+          pop: true
         - match: '\\\\'
           scope: constant.character.escape.lima
         - match: "\\\\'"
           scope: constant.character.escape.lima
 
+  plain-word:
+    # Words joined by `-` (non-null, 10-20) and versions (1.2.3) hold no scalar.
+    # GENERATED:sublime-plain-word
+    - match: '\w+(?:-\w+)+|\d+(?:\.\d+){2,}'
+
   constant-null:
-    - match: '(?<![\w\-])(null|~)(?![\w\-])'
+    # GENERATED:sublime-null
+    - match: '\bnull\b|\B~\B'
       scope: constant.language.null.lima
 
   constant-bool:
-    - match: '(?<![\w\-])(true|false)(?![\w\-])'
+    # GENERATED:sublime-boolean
+    - match: '\b(?:true|false)\b'
       scope: constant.language.boolean.lima
 
   date:
-    - match: '(?<![\w\-])(?:\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:Z|[+\-]\d{2}:\d{2})?)?|\d{1,2}[.\/]\d{1,2}[.\/]\d{4}(?:[T ]\d{2}:\d{2}(?::\d{2})?)?)(?![\w])'
+    # GENERATED:sublime-date
+    - match: '\b(?:\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:Z|[+\-]\d{2}:\d{2})?)?|\d{1,2}[./]\d{1,2}[./]\d{4}(?:[T ]\d{2}:\d{2}(?::\d{2})?)?)\b'
       scope: constant.other.date.lima
 
   number:
-    - match: '(?<![\w\-.])-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+\-]?\d+)?(?![\w\-.])'
+    # GENERATED:sublime-number
+    - match: '(?:\B-|\b)(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+\-]?\d+)?\b'
       scope: constant.numeric.lima

@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- The Sublime Text and Emacs grammars follow Lima Core 1.3: a `#` begins a
+  comment only at the start of a value or after whitespace, in flow values
+  too (`https://example.org/x#top` and `[a,#x]` keep their `#`); a tab after
+  the colon separates key and value; `key: # note` is a key with a comment,
+  whose block follows; `key: | # note` is the string `|`, not a block scalar.
+- The Sublime grammar is written in RE2 syntax, as the TextMate grammar of
+  vscode-lima is: no lookaround or backreference. An unterminated string or
+  flow collection ends with its line; keys of object items are highlighted;
+  booleans, `null`, numbers and dates are whole words, so `non-null`, `10-20`
+  and `1.2.3` hold none.
+- Emacs highlights keys and references that hold `·` (`autor·in`): the
+  pattern held the six characters of the escape `\u00B7` in its place.
+
 ## 0.4.1
 
 - The bundled parser is that of `@limaformat/lima` 0.7.1, with the fixes from
