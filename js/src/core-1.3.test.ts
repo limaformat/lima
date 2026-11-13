@@ -181,6 +181,8 @@ describe('Errata to Core 1.2', () => {
 		expect(parseCore('k: a\u2028\tb')).toEqual({ k: 'a\u2028\tb' })
 		expect(parseCore('k: |\n  \u00a0\tx')).toEqual({ k: '\u00a0\tx' })
 		expect(parseCore('x: 1 \nk: a \u2028b')).toEqual({ x: 1, k: 'a \u2028b' })
+		// a document that starts with an empty line still expands the tabs of the next
+		expect(failure('\n\tk: v')).toMatchObject({ code: 'INVALID_INDENTATION', line: 2 })
 	})
 
 	it('§3: keeps References token columns after U+2028', () => {

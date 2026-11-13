@@ -54,6 +54,9 @@ const VALUES = [
 	'[a, b, c]', '[1, "two", 3.5, true, null]', '[{x: 1}, {y: 2}]', '[a, , b]', '[a, b,]', '[, a]', '[[1]]',
 	'[{a: [1]}]', '[a', '[a, "b]', '{}', '{a: 1, b: two}', '{a: [x]}', '{a: {b: 1}}', '{a 1}', '{a: 1', '{a: 1,}',
 	'${ref}', '$(partial)', '($old)', 'line ^^', '>', '>-', '|-', '|+', '| # c', '&anchor', '*alias', '!!str x',
+	// Core 1.3: a # after text, flows decided as a whole, {k: }, more block scalar headers, a tab after U+2028
+	'x#y', 'C#', 'a #b', '[a#b, c]', '[a,#x]', '[a, #x]', '[#x]', '{a: x#y}', '{a: x #y}', '{k: }', '{k:\t}', '{k:}',
+	'[!x]', '{a: &x}', '>2-', '|2', '> #c', '>#c', 'a\u2028\tb', '"x"#y',
 ]
 
 /** Lines that belong to no structure, or only to some: what strict mode must reject and non-strict mode skip. */
@@ -66,10 +69,18 @@ const ATOMS = [
 	'', 'k8: [a, b]', 'k9: "q"', 'x: y', '- - z', '^^ cont', 'k10: |-', '"q k": v', '...', 'k11:value', '  ', '\tk12: v',
 	'k13: v\r', '\u00a0k14: v', '  body', '    deep: 1', '- [a, b]', '- {a: 1}', 'k15: {a: 1}', '\u00a0', '\t- t',
 	'k16: | # c', '"open: v', '  k17: w', '    k18: w', '-\ta', '- 2026-10-28', 'k19: 1e400',
+	'k20:\t1', 'k21: # c', '- # c', '- k22: #c', 'k23: {k: }', 'k24: x#y', 'k25: &a', 'k26: >2',
 ]
 
+// Core 1.3: a tab separates as a space does (§5.1)
+const separator = (rng: Rng): string => chance(rng, 0.1) ? '\t' : pad(chance(rng, 0.1) ? 3 : 1)
+
 const inlineEntry = (rng: Rng, indent: number, key: string): string =>
-	pad(indent) + key + ':' + pad(chance(rng, 0.1) ? 3 : 1) + pick(rng, VALUES) + (chance(rng, 0.1) ? ' # note' : '')
+	pad(indent) + key + ':' + separator(rng) + pick(rng, VALUES) + (chance(rng, 0.1) ? ' # note' : '')
+
+// a bare key, or one by a value that is only a comment, whose block may follow just the same (Core 1.3 §4)
+const bareKey = (rng: Rng, indent: number, key: string): string =>
+	pad(indent) + key + ':' + (chance(rng, 0.2) ? pick(rng, [' # c', '\t#c', ' #']) : '')
 
 function entry(rng: Rng, indent: number, depth: number, lines: string[]): void {
 	const key = pick(rng, KEYS)
@@ -77,11 +88,11 @@ function entry(rng: Rng, indent: number, depth: number, lines: string[]): void {
 	if (r < 0.45 || depth >= 3) {
 		lines.push(inlineEntry(rng, indent, key))
 	} else if (r < 0.6) {
-		lines.push(pad(indent) + key + ':')
+		lines.push(bareKey(rng, indent, key))
 		const child = indent + 1 + below(rng, 4)
 		for (let n = 1 + below(rng, 3); n > 0; n--) entry(rng, child, depth + 1, lines)
 	} else if (r < 0.75) {
-		lines.push(pad(indent) + key + ':')
+		lines.push(bareKey(rng, indent, key))
 		// a compact sequence (Core 1.1 §7.2) at the key's own column, or a deeper one
 		sequence(rng, chance(rng, 0.35) ? indent : indent + 1 + below(rng, 3), depth + 1, lines)
 	} else if (r < 0.85) {
@@ -113,7 +124,7 @@ function sequence(rng: Rng, indent: number, depth: number, lines: string[]): voi
 			for (let m = below(rng, 3); m > 0; m--) lines.push(pad(column + below(rng, 3)) + pick(rng, VALUES))
 			if (chance(rng, 0.6)) lines.push(inlineEntry(rng, column, pick(rng, KEYS)))
 		} else if (r < 0.87) {
-			lines.push(dash + pick(rng, KEYS) + ':')
+			lines.push(bareKey(rng, 0, dash + pick(rng, KEYS)))
 			if (chance(rng, 0.4)) sequence(rng, indent + 2, depth + 1, lines)
 			else for (let m = 1 + below(rng, 2); m > 0; m--) entry(rng, indent + 3 + below(rng, 2), depth + 1, lines)
 		} else {

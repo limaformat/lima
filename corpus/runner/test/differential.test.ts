@@ -42,7 +42,11 @@ describe('generateDocument', () => {
 
 	it('writes the constructs the comparison is for', () => {
 		const all = documents(1, 2000).join('\n')
-		for (const construct of ['\n- ', ': |', '\t', '\r\n', '[', '{', '2026-10-28', '# ', '---', '\n \u00a0', '\n\u00a0']) {
+		for (const construct of [
+			'\n- ', ': |', '\t', '\r\n', '[', '{', '2026-10-28', '# ', '---', '\n \u00a0', '\n\u00a0',
+			// Core 1.3
+			':\t', ': # c\n', 'x#y', '{k: }', '[!x]', '>2-',
+		]) {
 			expect(all).toContain(construct)
 		}
 		// a compact sequence: an item at the column of the bare key before it

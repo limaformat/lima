@@ -85,6 +85,30 @@ const depthOfNative = (v: NativeValue): number => {
 	return 0
 }
 
+/**
+ * Core §3 step 2: each tab in the run of spaces and tabs at the start of a line becomes two spaces; `adjust` receives
+ * the columns each line grew. A line ends at U+000A only, which step 1 made the one line terminator — a regex `^`
+ * under the `m` flag would also start a line after U+2028 and U+2029.
+ */
+const expandLeadingTabs = (source: string, adjust: number[]): string => {
+	let out = ''
+	let copied = 0
+	for (let lineStart = 0; ;) {
+		let runEnd = lineStart
+		let tabs = 0
+		for (let c = source.charCodeAt(runEnd); c === 32 || c === 9; c = source.charCodeAt(++runEnd)) if (c === 9) tabs++
+		adjust.push(tabs)
+		if (tabs > 0) {
+			out += source.slice(copied, lineStart) + source.slice(lineStart, runEnd).replace(/\t/g, '  ')
+			copied = runEnd
+		}
+		const newline = source.indexOf('\n', runEnd)
+		if (newline === -1) break
+		lineStart = newline + 1
+	}
+	return out + source.slice(copied)
+}
+
 const SPACE_BEFORE_COLON_RE = /^(?:'[^']*'|"(?:[^"\\]|\\.)*")[ \t]+:/
 
 const lineAt = (s: string, pos: number): number => {
@@ -151,14 +175,8 @@ const parseCoreGeneric = <V, M>(
 	if (frontMatter.includes('\t')) {
 		// Record how many columns each line's leading whitespace grew, so a
 		// References 2.0 token can be reported at its *original* column (§2.4).
-		// A line ends at U+000A only (§3 step 1 made it the one line terminator): no `m` flag, under which `^` would
-		// also match after U+2028 and U+2029 and expand a tab there.
 		ctx.tabAdjust = []
-		frontMatter = frontMatter.replace(/(^|\n)([ \t]*)/g, (_, lineStart: string, leading: string) => {
-			const expanded = leading.includes('\t') ? leading.replace(/\t/g, '  ') : leading
-			ctx.tabAdjust!.push(expanded.length - leading.length)
-			return lineStart + expanded
-		})
+		frontMatter = expandLeadingTabs(frontMatter, ctx.tabAdjust)
 	}
 	if (frontMatter.includes(' \n') || frontMatter.endsWith(' ')) {
 		// Capture-and-reinsert instead of a lookahead: `( +)(\n|$)` replaced
