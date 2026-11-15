@@ -363,7 +363,10 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             (tk.value_start, Some(tk.value_start))
         } else {
             let value_start = inline_value_start(front_matter, tk.value_start, span_end);
-            (value_start, bare_key_block_start(front_matter, value_start, span_end))
+            (
+                value_start,
+                bare_key_block_start(front_matter, value_start, span_end),
+            )
         };
         // an inline value's line end and whether it is a `|` marker, for the
         // strict check below
