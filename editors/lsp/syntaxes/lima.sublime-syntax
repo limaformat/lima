@@ -58,8 +58,9 @@ contexts:
         4: punctuation.definition.comment.lima
 
   values:
-    # A date comes before plain words and plain words before the other
-    # scalars, so that these match whole words only.
+    # Scalars match as whole words: a run of word characters, `.` and `-`. A
+    # date comes before plain words, plain words before the other scalars,
+    # and any other word after them.
     - include: reference-document
     - include: reference-partial
     - include: flow-sequence
@@ -71,6 +72,7 @@ contexts:
     - include: constant-null
     - include: constant-bool
     - include: number
+    - include: word
 
   reference-document:
     # GENERATED:sublime-document-reference
@@ -157,9 +159,10 @@ contexts:
           scope: constant.character.escape.lima
 
   plain-word:
-    # Words joined by `-` (non-null, 10-20) and versions (1.2.3) hold no scalar.
+    # A word that starts as a scalar starts and goes on with a character that
+    # scalar cannot continue with (1., 1.5GB, 1.2.3, 10-20, true-ish).
     # GENERATED:sublime-plain-word
-    - match: '\w+(?:-\w+)+|\d+(?:\.\d+){2,}'
+    - match: '(?:\B-|\b)(?:0|[1-9]\d*)[\w.\-]*[^\W\deE][\w.\-]*|(?:\B-|\b)(?:0|[1-9]\d*)[\w\-]*\.(?:\B|[^\W\d]|[\w\-]*\.)[\w.\-]*|(?:\B-|\b)(?:0|[1-9]\d*)(?:[\w.]*[^\WeE])?-[\w.\-]*|\b(?:null|true|false)[.\-][\w.\-]*'
 
   constant-null:
     # GENERATED:sublime-null
@@ -180,3 +183,9 @@ contexts:
     # GENERATED:sublime-number
     - match: '(?:\B-|\b)(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+\-]?\d+)?\b'
       scope: constant.numeric.lima
+
+  word:
+    # Any other word, whole, so that no scalar starts inside one (v1.2,
+    # non-null).
+    # GENERATED:sublime-word
+    - match: '[\w.\-]+'

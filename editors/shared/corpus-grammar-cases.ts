@@ -101,21 +101,34 @@ function readCorpusDirectory(directory: string): CorpusGrammarCase[] {
 }
 
 function findCommentStart(input: string): number | null {
-  const value = stripCommentKeepEscapes(input);
-  if (value === input.trimEnd()) return null;
+  const start = afterQuotedKey(input);
+  const text = input.slice(start);
+  const value = stripCommentKeepEscapes(text);
+  if (value === text.trimEnd()) return null;
 
   // stripCommentKeepEscapes trims whitespace immediately before a comment.
   // Let the oracle decide whether a comment exists, then locate the `#` whose
   // preceding text normalizes to the oracle's returned value.
-  for (let index = value.length; index < input.length; index++) {
-    if (
-      input[index] === "#" &&
-      input.slice(0, index).trimEnd() === value
-    ) {
-      return index;
+  for (let index = value.length; index < text.length; index++) {
+    if (text[index] === "#" && text.slice(0, index).trimEnd() === value) {
+      return start + index;
     }
   }
   throw new Error(`comment oracle returned an unlocatable boundary: ${input}`);
+}
+
+/**
+ * Where the parser looks for a line's comment: after the separator's colon of
+ * a quoted key at the line's start, after an item's dash too, since it reads
+ * the key by the key rules first (Core §5.2: a single-quoted key has no
+ * escape, so `'a\': # c` holds a comment); otherwise from the start.
+ */
+function afterQuotedKey(input: string): number {
+  const key = /^[ \t]*(?:-[ \t]+)?/.exec(input)![0].length;
+  if (input[key] !== "'" && input[key] !== '"') return 0;
+  const close = closingQuoteIndex(input.slice(key), false);
+  const colon = key + close + 1;
+  return close >= 0 && /^:[ \t]/.test(input.slice(colon)) ? colon + 1 : 0;
 }
 
 function findQuoteRanges(input: string): CorpusQuoteRange[] {

@@ -25,8 +25,9 @@
 - The Sublime grammar is written in RE2 syntax, as the TextMate grammar of
   vscode-lima is: no lookaround or backreference. An unterminated string or
   flow collection ends with its line; keys of object items are highlighted;
-  booleans, `null`, numbers and dates are whole words, so `non-null`, `10-20`
-  and `1.2.3` hold none.
+  booleans, `null`, numbers and dates are whole words, runs of word
+  characters, `.` and `-`: `1e-3` is a number, and `non-null`, `10-20`,
+  `1.2.3`, `1.`, `true-`, `null.` and `v1.2` hold none.
 - Emacs highlights keys and references that hold `·` (`autor·in`): the
   pattern held the six characters of the escape `\u00B7` in its place.
 

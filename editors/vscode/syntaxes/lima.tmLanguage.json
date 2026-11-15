@@ -54,7 +54,7 @@
     },
 
     "value": {
-      "comment": "Scalars match where the scan stands; a date comes before plain words and plain words before the other scalars, so that these match whole words only.",
+      "comment": "Scalars match where the scan stands, as whole words: a run of word characters, `.` and `-`. A date comes before plain words, plain words before the other scalars, and any other word after them.",
       "patterns": [
         { "include": "#reference-document" },
         { "include": "#reference-partial" },
@@ -66,7 +66,8 @@
         { "include": "#plain-word" },
         { "include": "#constant-null" },
         { "include": "#constant-bool" },
-        { "include": "#number" }
+        { "include": "#number" },
+        { "include": "#word" }
       ]
     },
 
@@ -147,8 +148,8 @@
     },
 
     "plain-word": {
-      "comment": "Words that hold no scalar although a part of one looks like it: joined by `-` (non-null, 10-20) or digits joined by two or more dots (1.2.3). No scope. GENERATED:textmate-plain-word",
-      "match": "\\w+(?:-\\w+)+|\\d+(?:\\.\\d+){2,}"
+      "comment": "A word that starts as a scalar starts and goes on with a character that scalar cannot continue with (1., 1.5GB, 1.2.3, 10-20, true-ish). No scope. GENERATED:textmate-plain-word",
+      "match": "(?:\\B-|\\b)(?:0|[1-9]\\d*)[\\w.\\-]*[^\\W\\deE][\\w.\\-]*|(?:\\B-|\\b)(?:0|[1-9]\\d*)[\\w\\-]*\\.(?:\\B|[^\\W\\d]|[\\w\\-]*\\.)[\\w.\\-]*|(?:\\B-|\\b)(?:0|[1-9]\\d*)(?:[\\w.]*[^\\WeE])?-[\\w.\\-]*|\\b(?:null|true|false)[.\\-][\\w.\\-]*"
     },
 
     "constant-null": {
@@ -173,6 +174,11 @@
       "comment": "GENERATED:textmate-number",
       "match": "(?:\\B-|\\b)(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+\\-]?\\d+)?\\b",
       "name": "constant.numeric.lima"
+    },
+
+    "word": {
+      "comment": "Any other word, whole, so that no scalar starts inside one (v1.2, non-null). No scope. GENERATED:textmate-word",
+      "match": "[\\w.\\-]+"
     }
   }
 }

@@ -108,6 +108,17 @@ words: non-null true-ish 1.2.3 10-20
 #                        ^^^^^ source.lima - constant
 #                              ^^^^^ source.lima - constant
 
+scalar-words: 1e-3 1.5e10 -1e3 true 1. true- null. 42-x v1.2
+#             ^^^^ constant.numeric.lima
+#                  ^^^^^^ constant.numeric.lima
+#                         ^^^^ constant.numeric.lima
+#                              ^^^^ constant.language.boolean.lima
+#                                   ^^ source.lima - constant
+#                                      ^^^^^ source.lima - constant
+#                                            ^^^^^ source.lima - constant
+#                                                  ^^^^ source.lima - constant
+#                                                       ^^^^ source.lima - constant
+
 double: "\n \q"
 #        ^^ constant.character.escape.lima
 #           ^^ invalid.illegal.unknown-escape.lima

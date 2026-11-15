@@ -16,6 +16,7 @@ import {
   NUMBER,
   PARTIAL_REFERENCE,
   PLAIN_WORD,
+  WORD,
 } from "../grammar-fragments.js";
 
 const ROOT = resolve(__dirname, "../../..");
@@ -52,6 +53,7 @@ function generateTextMate(source: string): string {
     ["textmate-boolean", BOOLEAN],
     ["textmate-date", DATE],
     ["textmate-number", NUMBER],
+    ["textmate-word", WORD],
   ].reduce(
     (current, [marker, pattern]) =>
       replaceLineAfterMarker(
@@ -79,6 +81,7 @@ function generateSublime(source: string): string {
     ["sublime-boolean", BOOLEAN],
     ["sublime-date", DATE],
     ["sublime-number", NUMBER],
+    ["sublime-word", WORD],
   ].reduce(
     (current, [marker, pattern]) =>
       replaceLineAfterMarker(

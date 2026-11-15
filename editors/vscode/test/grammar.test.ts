@@ -329,6 +329,26 @@ test("scalars match whole words only", async () => {
   }
 });
 
+test("a scalar is a whole word of word characters, . and -", async () => {
+  // a number with an exponent, a sign or a fraction, and a boolean, each whole
+  for (const [line, text, scope] of [
+    ["k: 1e-3", "1e-3", "constant.numeric.lima"],
+    ["k: 1.5e10", "1.5e10", "constant.numeric.lima"],
+    ["k: -1e3", "-1e3", "constant.numeric.lima"],
+    ["k: true", "true", "constant.language.boolean.lima"],
+  ]) {
+    const t = await scopesFor(line);
+    expect(has(t, text, scope), line).toBe(true);
+  }
+  // a word that goes on after a scalar's shape, or holds one inside, is a string
+  for (const line of ["k: 1.", "k: true-", "k: null.", "k: 42-x", "k: 1.5GB", "k: v1.2", "k: x.5", "k: [1.]"]) {
+    const t = await scopesFor(line);
+    expect(t.some(([, s]) => carries(s, "constant")), line).toBe(false);
+  }
+  const closed = await scopesFor("k: [1.]");
+  expect(has(closed, "]", "punctuation.definition.sequence.end.lima")).toBe(true);
+});
+
 test("^^ continuation marker at line start", async () => {
   const t = await scopesFor("text: |\n  first\n  ^^second\n");
   expect(has(t, "^^", "keyword.operator.line-continuation.lima")).toBe(true);

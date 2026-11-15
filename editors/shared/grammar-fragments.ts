@@ -96,13 +96,28 @@ export const ARRAY_DASH = `^[ \\t]*(-)(?:$|${WHITESPACE}+${VALUE_START})`;
 export const FLOW_MAPPING_KEY = `(${KEY})[ \\t]*(:)[ \\t]${WHITESPACE}*${COMMENT_BODY}?`;
 
 /**
- * Words that hold no scalar although a part of one looks like it: words
- * joined by `-` (`non-null`, `true-ish`, `10-20`) and digits joined by two or
- * more dots (a version, `1.2.3`). A grammar tries it after dates and before
- * the other scalars, which then match whole words only, as lookarounds once
- * made them.
+ * A scalar is a whole word (Core §6): a run of word characters, `.` and `-`,
+ * as lookarounds once made it. Without them two rules share the work.
+ * PLAIN_WORD, tried after dates and before the other scalars, takes a word
+ * that starts as a scalar starts and goes on with a character that scalar
+ * cannot continue with: a letter or `_` other than an exponent's `e`, a `.`
+ * that no digit follows or a second `.`, a `-` that follows no `e`, or a `.`
+ * or `-` after `null`, `true` or `false` (`1.`, `1.5GB`, `1.2.3`, `10-20`,
+ * `true-ish`). WORD, tried after all scalars, takes any other word whole, so
+ * that no scalar starts inside one (`v1.2`, `non-null`). A number such as
+ * `1e-3` is neither.
  */
-export const PLAIN_WORD = String.raw`\w+(?:-\w+)+|\d+(?:\.\d+){2,}`;
+const WORD_CHARACTER = String.raw`[\w.\-]`;
+const NUMBER_START = String.raw`(?:\B-|\b)(?:0|[1-9]\d*)`;
+export const PLAIN_WORD = [
+  String.raw`${NUMBER_START}[\w.\-]*[^\W\deE]`,
+  String.raw`${NUMBER_START}[\w\-]*\.(?:\B|[^\W\d]|[\w\-]*\.)`,
+  String.raw`${NUMBER_START}(?:[\w.]*[^\WeE])?-`,
+  String.raw`\b(?:null|true|false)[.\-]`,
+]
+  .map((start) => `${start}${WORD_CHARACTER}*`)
+  .join("|");
+export const WORD = `${WORD_CHARACTER}+`;
 
 /** Core §6.2, §6.3: `null`, `~`, `true` and `false` as whole words. */
 export const NULL = String.raw`\bnull\b|\B~\B`;
@@ -112,7 +127,7 @@ export const BOOLEAN = String.raw`\b(?:true|false)\b`;
 export const DATE = String.raw`\b(?:\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:Z|[+\-]\d{2}:\d{2})?)?|\d{1,2}[./]\d{1,2}[./]\d{4}(?:[T ]\d{2}:\d{2}(?::\d{2})?)?)\b`;
 
 /** Core §6.4.1; a sign starts the number only where no word precedes it. */
-export const NUMBER = String.raw`(?:\B-|\b)(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+\-]?\d+)?\b`;
+export const NUMBER = String.raw`${NUMBER_START}(?:\.\d+)?(?:[eE][+\-]?\d+)?\b`;
 
 /** A fragment as the source of a JavaScript RegExp with the `u` flag, which writes a code point `\u{…}`. */
 export function fragmentToJavaScript(fragment: string): string {

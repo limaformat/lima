@@ -39,8 +39,9 @@ Go's `regexp/syntax`. With that:
   instead of colouring the lines after it.
 - Keys of object items (`- name: Alice`) are highlighted, and a `|` after
   them or after a dash is a block scalar marker.
-- A boolean, `null`, a number or a date is highlighted as a whole word;
-  words joined by `-` (`non-null`, `10-20`) and versions (`1.2.3`) are not.
+- A boolean, `null`, a number or a date is highlighted as a whole word, a
+  run of word characters, `.` and `-`: `1e-3` and `-1e3` are numbers;
+  `non-null`, `10-20`, `1.2.3`, `1.`, `true-`, `null.` and `v1.2` hold none.
 
 ## [0.4.1] — 2026-11-02
 
