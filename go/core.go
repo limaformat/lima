@@ -275,7 +275,7 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 		}
 		*idx++
 		var cv *pvalue
-		rv, bareValue := inlineValue(cc[keyEnd+1:])
+		rv, bareValue := inlineValue(cc[min(keyEnd+2, len(cc)):])
 		if bareValue {
 			cv, e = bareNestedValue(lineStructuralIndent(cl), cl.number, lines, idx, strict, onWarning, captureReferences)
 		} else {
@@ -300,13 +300,13 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 	return nil
 }
 
-// inlineValue is the value after an entry's colon, trimmed (§4 step 3), and
-// whether it leaves the key bare: a value that is empty after comment removal
-// and trimming, none or a comment, does (Core 1.3 §4). afterColon starts with
-// the space or tab of an inline separator, which the trim removes, or is
-// empty after a colon that ends the line.
-func inlineValue(afterColon string) (raw string, bareValue bool) {
-	raw = trimWhitespace(afterColon)
+// inlineValue is an entry's value, trimmed (§4 step 3), and whether it leaves
+// the key bare: a value that is empty after comment removal and trimming,
+// none or a comment, does (Core 1.3 §4). afterSeparator is the text after the
+// colon and the space or tab that follow the key, empty after a colon that
+// ends the line: callers pass c[min(sep+2, len(c)):].
+func inlineValue(afterSeparator string) (raw string, bareValue bool) {
+	raw = trimWhitespace(afterSeparator)
 	return raw, raw == "" || raw[0] == '#'
 }
 
@@ -538,7 +538,7 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 			*idx++
 			var v *pvalue
 			var e error
-			raw, bareValue := inlineValue(c[sep+1:])
+			raw, bareValue := inlineValue(c[min(sep+2, len(c)):])
 			if bareValue {
 				// deeper than the key, or a sequence at its column (Core 1.1
 				// §7.2); bareNestedValue skips blank and comment lines first
@@ -664,7 +664,7 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 		i++
 		var v *pvalue
 		var e error
-		raw, bareValue := inlineValue(c[sep+1:])
+		raw, bareValue := inlineValue(c[min(sep+2, len(c)):])
 		if bareValue {
 			afterInline = false
 			j := i
