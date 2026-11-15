@@ -515,8 +515,13 @@ static bool scan_quoted_fallback(Scanner *s, TSLexer *lexer, const bool *valid_s
   int32_t quote = lexer->lookahead;
   if (quote != '\'' && quote != '"') return false;
 
-  // Where only a key can begin, a single quote opens a key, which is literal (§5.2): `\'` closes it.
   bool key_only = valid_symbols[KEY] && !valid_symbols[PLAIN_TEXT];
+  // Where a key may begin, a single quote is read twice in one pass: as a key, which is literal (§5.2), so that its
+  // first `'` closes it and `'a\'` is the key `a\`; and as a value, with its escapes (§6.1.3), which decides where
+  // the value ends and whether a comment follows. The key reading alone decides whether a key begins.
+  bool key_reading = valid_symbols[KEY] && quote == '\'';
+  bool key_closed = false;
+  bool key_trailing = false;
   bool escaped = false;
   bool closed = false;
   bool trailing = false;
@@ -533,15 +538,24 @@ static bool scan_quoted_fallback(Scanner *s, TSLexer *lexer, const bool *valid_s
       break;
     }
     lexer->advance(lexer, false);
+    if (key_reading && !key_trailing) {
+      if (!key_closed) {
+        key_closed = c == '\'';
+      } else if (c == ':') {
+        return false;
+      } else if (c != ' ' && c != '\t') {
+        key_trailing = true;
+      }
+    }
     if (closed) {
-      if (c == ':' && valid_symbols[KEY] && !trailing) return false;
+      if (c == ':' && valid_symbols[KEY] && !key_reading && !trailing) return false;
       if (c != ' ' && c != '\t') trailing = true;
       after_whitespace = is_trim_ws(c);
       continue;
     }
     if (escaped) {
       escaped = false;
-    } else if (c == '\\' && !(key_only && quote == '\'')) {
+    } else if (c == '\\') {
       escaped = true;
     } else if (c == quote) {
       closed = true;
