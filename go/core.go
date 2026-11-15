@@ -307,6 +307,21 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 	return nil
 }
 
+// uncommentItem is an item's text after "- " with its comment removed
+// (Core 1.3 §4). A quoted key is read by the key rules (§5.2), in which a
+// single-quoted key has no escape, so the comment is looked for after its
+// separator only: in `'a\': # c` the key is `a\` and its value is only a
+// comment, which leaves the key bare.
+func uncommentItem(s string) string {
+	if s != "" && (s[0] == '\'' || s[0] == '"') {
+		close := closingQuoteIndex(s, false)
+		if close >= 0 && close+2 < len(s) && s[close+1] == ':' && (s[close+2] == ' ' || s[close+2] == '\t') {
+			return s[:close+2] + stripComment(s[close+2:])
+		}
+	}
+	return stripComment(s)
+}
+
 // itemKeyColumn is the column of an object item's first key, after `- `
 // (§7.2), where its later keys stand. Codepoints: a multi-byte space after
 // the dash counts as one column, matching the TypeScript reference (CR-M2).
@@ -391,8 +406,8 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				*idx++
 				continue
 			}
-			rest := trimWhitespace(strings.TrimPrefix(c, "-"))
-			rest = stripComment(rest)
+			afterDash := trimWhitespace(strings.TrimPrefix(c, "-"))
+			rest := uncommentItem(afterDash)
 			if isSequenceItem(rest) {
 				if strict {
 					return nil, limaError(InvalidIndentation, l.number, fmt.Sprintf("Lima: nested block sequence at line %d: %q", l.number, c))
@@ -415,14 +430,14 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 					return nil, e0
 				}
 				rawVal := trimWhitespace(rest[sep+2:])
-				// `|` alone is a block scalar marker; `| # c` is the string `|` (§6.1.5)
-				afterDash := trimWhitespace(strings.TrimPrefix(c, "-"))
-				commented := trimWhitespace(stripCommentKeepEscapes(afterDash)) != afterDash
 				*idx++
 				var v *pvalue
 				var e error
-				// a `|` scalar's lines are deeper than its key's column, after `- `
-				if rawVal == "|" && !commented {
+				// `|` alone is a block scalar marker; `| # c` is the string `|`
+				// (§6.1.5). rest and afterDash agree up to the separator, so the
+				// value as written follows it in afterDash. A `|` scalar's lines
+				// are deeper than its key's column, after `- `
+				if rawVal == "|" && trimWhitespace(afterDash[sep+2:]) == "|" {
 					v, _, e = blockScalarValue(rawVal, itemKeyColumn(l, c), l.number, lines, idx, captureReferences)
 				} else {
 					restByteInC := 1 + leadingWsBytes(c[1:])

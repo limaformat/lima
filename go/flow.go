@@ -131,7 +131,10 @@ func flowParts(s string) []flowPart {
 }
 
 // findSep is the byte index of the colon of the key-value separator: the
-// first colon outside quotes followed by a space or a tab (§5.1), or -1.
+// first colon outside quotes followed by a space or a tab (§5.1), or -1. The
+// text starts with the key, so quotes are read by the key rules (§5.2): a
+// single-quoted key has no escape, and its first `'` after the opening one
+// closes it, as in `'a\': 1`.
 func findSep(s string) int {
 	q := byte(0)
 	esc := false
@@ -142,7 +145,7 @@ func findSep(s string) int {
 			continue
 		}
 		if q != 0 {
-			if c == '\\' {
+			if c == '\\' && q == '"' {
 				esc = true
 			} else if c == q {
 				q = 0
