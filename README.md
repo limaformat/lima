@@ -93,7 +93,7 @@ sizes further down are their evidence, not the point.
   Strict mode checks a closed list of conditions (Core §10.1) and nothing else; non-strict mode skips what it cannot
   read, and the same list says what that is.
 - **One answer in every language.** TypeScript, Rust and Go implement the same specification independently. They
-  pass the same <!-- facts:corpus.default.core_cases -->640<!-- /facts --> Core <!-- facts:language.core_version -->1.3<!-- /facts --> and <!-- facts:corpus.default.references_cases -->156<!-- /facts --> References <!-- facts:language.references_version -->2.1<!-- /facts --> conformance cases — values, error codes and source lines alike —
+  pass the same <!-- facts:corpus.default.core_cases -->646<!-- /facts --> Core <!-- facts:language.core_version -->1.3<!-- /facts --> and <!-- facts:corpus.default.references_cases -->156<!-- /facts --> References <!-- facts:language.references_version -->2.1<!-- /facts --> conformance cases — values, error codes and source lines alike —
   and in every CI run they parse the same <!-- facts:differential_test.documents -->100,000<!-- /facts --> random documents in both modes and must agree on every value,
   warning and error. A disagreement is a defect or a gap in the specification, and once decided it becomes a corpus
   case.
@@ -215,7 +215,7 @@ The specifications are self-contained; no design-history documents are part of t
 
 ## Conformance corpus
 
-Lima ships an implementation-independent conformance test corpus so that every implementation can be verified against the same normative cases. TypeScript, Rust, and Go each pass all <!-- facts:corpus.default.core_cases -->640<!-- /facts --> Core <!-- facts:language.core_version -->1.3<!-- /facts --> and <!-- facts:corpus.default.references_cases -->156<!-- /facts --> References <!-- facts:language.references_version -->2.1<!-- /facts --> cases, plus a frozen <!-- facts:corpus.suites.references_1_0.cases -->101<!-- /facts -->-case References 1.0 regression corpus (see Status). The corpus itself lives in [`corpus/`](corpus/); its architecture, diagnostic model, and coverage matrix are documented in [`docs/corpus-design/README.md`](docs/corpus-design/README.md).
+Lima ships an implementation-independent conformance test corpus so that every implementation can be verified against the same normative cases. TypeScript, Rust, and Go each pass all <!-- facts:corpus.default.core_cases -->646<!-- /facts --> Core <!-- facts:language.core_version -->1.3<!-- /facts --> and <!-- facts:corpus.default.references_cases -->156<!-- /facts --> References <!-- facts:language.references_version -->2.1<!-- /facts --> cases, plus a frozen <!-- facts:corpus.suites.references_1_0.cases -->101<!-- /facts -->-case References 1.0 regression corpus (see Status). The corpus itself lives in [`corpus/`](corpus/); its architecture, diagnostic model, and coverage matrix are documented in [`docs/corpus-design/README.md`](docs/corpus-design/README.md).
 
 ## Measured repository facts
 

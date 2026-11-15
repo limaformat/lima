@@ -2,9 +2,9 @@
   "suite": "core-1.3",
   "frozen": true,
   "baselineVersion": "1.3.0",
-  "baselineCaseCount": 157,
+  "baselineCaseCount": 163,
   "specVersion": "1.3.0",
-  "caseCount": 157,
+  "caseCount": 163,
   "supersedes": [
     "core.block-scalar.chomping-indicator.strict",
     "core.block-scalar.folded-marker.strict",
@@ -432,6 +432,18 @@
       "since": "1.3.0"
     },
     {
+      "path": "core-1.3/keys-single-quoted-key-before-later-item-flow-mapping-strict.json",
+      "id": "core.keys.single-quoted-key-before-later-item-flow-mapping.strict",
+      "sha256": "20f310c0041a9ac7bffed3aa92fdced79c1c3ae427144f98a5357c2ac35b2d9c",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-before-later-item-flow-mapping.json",
+      "id": "core.keys.single-quoted-key-before-later-item-flow-mapping",
+      "sha256": "aef995e0fbb8082f7a87bee72af8b5494c73639bcead6ccad56f58498fd6379c",
+      "since": "1.3.0"
+    },
+    {
       "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-block-contexts-strict.json",
       "id": "core.keys.single-quoted-key-ends-in-backslash-block-contexts.strict",
       "sha256": "b5935f60a86de9ee36aa4b395531247bfd3ee35a16dbd41347f265a386ff2358",
@@ -489,6 +501,30 @@
       "path": "core-1.3/keys-single-quoted-key-no-escape-item.json",
       "id": "core.keys.single-quoted-key-no-escape-item",
       "sha256": "86cda8c8be32df435ba13e5071c45a2e396ba779cac19744d8b83e624d0819a7",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-with-text-after-quote-flow-mapping-strict.json",
+      "id": "core.keys.single-quoted-key-with-text-after-quote-flow-mapping.strict",
+      "sha256": "ac82e521c6ead7506e95f36ef3a7e516ff37109041e6dee8cc284e3edb5707ee",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-with-text-after-quote-flow-mapping.json",
+      "id": "core.keys.single-quoted-key-with-text-after-quote-flow-mapping",
+      "sha256": "be66a5c43f3cf0c3144de5311e40ba4a7d6ba8552c7e59f15933674e4f92e8a1",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-unclosed-single-quoted-key-flow-mapping-strict.json",
+      "id": "core.keys.unclosed-single-quoted-key-flow-mapping.strict",
+      "sha256": "0dbaea259cf8f68f89ab8cf2a600780e7612b86b1c4adfe9198d4281e9874eae",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-unclosed-single-quoted-key-flow-mapping.json",
+      "id": "core.keys.unclosed-single-quoted-key-flow-mapping",
+      "sha256": "4d2f254e51d17504dbcaadb6178ec2b1cd3cbb529e01b35db9b955597ac1eedb",
       "since": "1.3.0"
     },
     {

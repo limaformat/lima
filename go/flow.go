@@ -160,6 +160,29 @@ func findSep(s string) int {
 	}
 	return -1
 }
+
+// flowItemSeparator is the byte index of the key-value separator of a flow
+// mapping item (§5.1, §7.5), or -1: a leading quoted key is skipped by the
+// key rules (§5.2), so a single-quoted key's first `'` after the opening one
+// closes it, and then the first colon that a space or a tab follows
+// separates. An unclosed quoted key has no separator.
+func flowItemSeparator(item string) int {
+	scan := 0
+	if item[0] == '"' || item[0] == '\'' {
+		closing := closingQuoteIndex(item, false)
+		if closing < 0 {
+			return -1
+		}
+		scan = closing + 1
+	}
+	for i := scan; i+1 < len(item); i++ {
+		if item[i] == ':' && (item[i+1] == ' ' || item[i+1] == '\t') {
+			return i
+		}
+	}
+	return -1
+}
+
 func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnostic), captureReferences bool, src *referenceSource) (*pvalue, error) {
 	if strings.HasPrefix(raw, "[") {
 		if !strings.HasSuffix(raw, "]") {
@@ -218,13 +241,11 @@ func parseFlowOrScalar(raw string, strict bool, line int, onWarning func(Diagnos
 					}
 					continue
 				}
-				sep := findSep(part)
 				// Core 1.3 §7.5: the separator is found before the item is
-				// trimmed, so a colon that ends the item separates when a space
-				// or a tab followed it: `{k: }` is `{k: null}`
-				if after := innerOff + fp.start + len(part); sep < 0 && strings.HasSuffix(part, ":") && (raw[after] == ' ' || raw[after] == '\t') {
-					sep = len(part) - 1
-				}
+				// trimmed, so the byte after the item counts: `{k: }` is
+				// `{k: null}`. raw ends with `}`, so that byte exists.
+				itemStart := innerOff + fp.start
+				sep := flowItemSeparator(raw[itemStart : itemStart+len(part)+1])
 				if sep < 0 {
 					if strict {
 						return nil, limaError(InvalidFlowSyntax, line, fmt.Sprintf("Lima: invalid flow mapping item (missing \": \") at line %d: %q", line, part))

@@ -108,9 +108,9 @@ describe('loadCorpus', () => {
 		expect(failures).toEqual([])
 		// 149 Core 1.0.0 + 62 Core 1.0.1-1.0.9 (2026-09 review errata) + 7 Core 1.0.10, without the 8 Core 1.1
 		// supersedes, + 126 Core 1.1.0 + 136 References 2.0 + 150 Core 1.2 (19 for Unicode keys and documents, 124 for
-		// the lines of §7.1) + 5 References 2.1, without the 3 Core 1.3 supersedes, + 157 Core 1.3 + 12 References 2.1
+		// the lines of §7.1) + 5 References 2.1, without the 3 Core 1.3 supersedes, + 163 Core 1.3 + 12 References 2.1
 		// under Core 1.3.
-		expect(cases.length).toBe(796)
+		expect(cases.length).toBe(802)
 	})
 
 	it('drops the Core 1.0 and 1.1 cases Core 1.3 supersedes, which their own suites still hold', () => {
@@ -120,7 +120,7 @@ describe('loadCorpus', () => {
 		for (const id of superseded) expect(earlier).toContain(id)
 		const current = loadCorpus(corpusRoot, ['core-1.0', 'core-1.1', 'core-1.3']).cases.map((c) => c.id)
 		for (const id of superseded) expect(current).not.toContain(id)
-		expect(current).toHaveLength(earlier.length - 3 + 157)
+		expect(current).toHaveLength(earlier.length - 3 + 163)
 		expect(loadCorpus(corpusRoot, ['core-1.3']).cases.every((c) => c.specVersion === '1.3')).toBe(true)
 	})
 
