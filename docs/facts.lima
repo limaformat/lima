@@ -66,7 +66,7 @@ word_counts:
     yaml_ratio_to_lima_core: 1.8
   implementations:
     lima_core_code: 9498
-    lima_core_comments: 5996
+    lima_core_comments: 5991
     lima_core_comment_percentage: 38.7
     lima_references_code: 4359
     lima_references_comments: 1582

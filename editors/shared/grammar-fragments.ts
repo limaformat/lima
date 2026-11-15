@@ -110,7 +110,7 @@ export const FLOW_MAPPING_KEY = `(${KEY})[ \\t]*(:)[ \\t]${WHITESPACE}*${COMMENT
 const WORD_CHARACTER = String.raw`[\w.\-]`;
 const NUMBER_START = String.raw`(?:\B-|\b)(?:0|[1-9]\d*)`;
 export const PLAIN_WORD = [
-  String.raw`${NUMBER_START}[\w.\-]*[^\W\deE]`,
+  String.raw`${NUMBER_START}${WORD_CHARACTER}*[^\W\deE]`,
   String.raw`${NUMBER_START}[\w\-]*\.(?:\B|[^\W\d]|[\w\-]*\.)`,
   String.raw`${NUMBER_START}(?:[\w.]*[^\WeE])?-`,
   String.raw`\b(?:null|true|false)[.\-]`,

@@ -77,7 +77,7 @@ Current as of Core <!-- facts:language.core_version -->1.3<!-- /facts --> and `@
 | Lima Core <!-- facts:language.core_version -->1.3<!-- /facts --> specification | <!-- facts:word_counts.specifications.lima_core -->12,251<!-- /facts --> |
 | Lima References <!-- facts:language.references_version -->2.1<!-- /facts --> specification | <!-- facts:word_counts.specifications.lima_references -->3,281<!-- /facts --> |
 | Lima Core implementation code | <!-- facts:word_counts.implementations.lima_core_code -->9,498<!-- /facts --> |
-| Lima Core implementation comments | <!-- facts:word_counts.implementations.lima_core_comments -->5,996<!-- /facts --> |
+| Lima Core implementation comments | <!-- facts:word_counts.implementations.lima_core_comments -->5,991<!-- /facts --> |
 | Lima References additions code | <!-- facts:word_counts.implementations.lima_references_code -->4,359<!-- /facts --> |
 | Lima References additions comments | <!-- facts:word_counts.implementations.lima_references_comments -->1,582<!-- /facts --> |
 | npm tarball (`@limaformat/lima` <!-- facts:packages.version -->0.8.1<!-- /facts -->) | <!-- facts:package_sizes.lima_npm_tarball_bytes -->84,117<!-- /facts --> bytes (<!-- facts:package_sizes.lima_npm_tarball_kilobytes_decimal -->84.1<!-- /facts --> KB) |

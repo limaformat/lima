@@ -178,10 +178,9 @@ fn has_space_before_colon(line: &str) -> bool {
     i > ws_start && b.get(i) == Some(&b':')
 }
 
-/// §4 step 3: where an inline value begins, from `start` after its
-/// separator: after the whitespace (§1) that follows `: `, however many
-/// characters there are, before `end`. The newline that ends the line is not
-/// skipped.
+/// §4 step 3: the byte offset where an inline value begins, after the
+/// whitespace (§1) that follows its separator at `start`, however much there
+/// is, and at most `end`. The newline that ends the line is not skipped.
 fn inline_value_start(source: &str, start: usize, end: usize) -> usize {
     source[start..end]
         .char_indices()

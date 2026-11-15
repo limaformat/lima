@@ -5,8 +5,7 @@ export const isTrimWhitespace = (c: number): boolean =>
 	c === 0x202f || c === 0x205f || c === 0x3000 || c === 0xfeff
 
 /**
- * `s` without the whitespace (§1) it ends with — `s` itself, not a copy, when its last character is none, as a value's
- * mostly is.
+ * `s` without the whitespace (§1) it ends with. A value mostly ends otherwise, and then `s` itself is returned, no copy.
  */
 export const trimEndWhitespace = (s: string): string =>
 	isTrimWhitespace(s.charCodeAt(s.length - 1)) ? s.trimEnd() : s
