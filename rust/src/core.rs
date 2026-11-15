@@ -178,24 +178,28 @@ fn has_space_before_colon(line: &str) -> bool {
     i > ws_start && b.get(i) == Some(&b':')
 }
 
+/// §4 step 3: where an inline value begins, from `start` after its
+/// separator: after the whitespace (§1) that follows `: `, however many
+/// characters there are, before `end`. The newline that ends the line is not
+/// skipped.
+fn inline_value_start(source: &str, start: usize, end: usize) -> usize {
+    source[start..end]
+        .char_indices()
+        .find(|&(_, c)| c == '\n' || !is_trim_whitespace(c))
+        .map_or(end, |(i, _)| start + i)
+}
+
 /// Core 1.3 §4: where the block of a top-level entry starts when its inline
-/// value, from `value_start` up to the next key at `end`, is empty after
-/// comment removal and trimming, which makes the entry a bare key; `None`
-/// for any other value. Reads only the whitespace before the value, and the
-/// comment of a bare key.
+/// value, from `value_start` (see [`inline_value_start`]) up to the next key
+/// at `end`, is empty after comment removal and trimming, which makes the
+/// entry a bare key; `None` for any other value. Reads only the comment of a
+/// bare key.
 fn bare_key_block_start(source: &str, value_start: usize, end: usize) -> Option<usize> {
-    let mut pos = value_start;
-    for c in source[value_start..end].chars() {
-        if c == '\n' || !is_trim_whitespace(c) {
-            break;
-        }
-        pos += c.len_utf8();
-    }
-    let rest = &source[pos..end];
+    let rest = &source[value_start..end];
     if !(rest.is_empty() || rest.starts_with(['\n', '#'])) {
         return None;
     }
-    let line_end = rest.find('\n').map_or(end, |p| pos + p);
+    let line_end = rest.find('\n').map_or(end, |p| value_start + p);
     Some((line_end + 1).min(end))
 }
 
@@ -350,13 +354,17 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             check_duplicate_key(B::m_has_key(&root, &tk.key), &tk.key, tk.line, strict)?;
         }
 
-        // Core 1.3 §4: an inline value that is empty after comment removal and
+        // §4 step 3: an inline value begins after the whitespace that follows
+        // `: `, as in a block mapping, so that the bare-key test and the scalar
+        // paths below, and the source column, see the value itself. Core 1.3
+        // §4: an inline value that is empty after comment removal and
         // trimming makes a bare key, whose block starts on the next line
         let span_end = next_start.min(front_matter.len());
-        let block_start = if tk.is_block {
-            Some(tk.value_start)
+        let (value_start, block_start) = if tk.is_block {
+            (tk.value_start, Some(tk.value_start))
         } else {
-            bare_key_block_start(front_matter, tk.value_start, span_end)
+            let value_start = inline_value_start(front_matter, tk.value_start, span_end);
+            (value_start, bare_key_block_start(front_matter, value_start, span_end))
         };
         // an inline value's line end and whether it is a `|` marker, for the
         // strict check below
@@ -372,14 +380,6 @@ fn parse_core_generic<B: Builder, const CHECK_DUPLICATES: bool>(
             )?
             .unwrap_or(B::v_null(tk.line))
         } else {
-            // §4 step 3: an inline value begins after the spaces that follow `: `, however many there are — as
-            // in a block mapping — so that the scalar paths below and the source column see the value itself.
-            // The newline that ends the line is not skipped.
-            let value_start = tk.value_start
-                + front_matter[tk.value_start..span_end]
-                    .char_indices()
-                    .find(|&(_, c)| c == '\n' || !is_trim_whitespace(c))
-                    .map_or(span_end - tk.value_start, |(i, _)| i);
             let first_newline = front_matter[value_start..span_end]
                 .find('\n')
                 .map(|p| p + value_start);
