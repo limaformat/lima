@@ -51,6 +51,14 @@ read (Core §10.2, Appendix E).
   threw an internal error: the position map took every `#` for `\#`.
 - `outline()` follows the new comment boundary, bare keys after a comment,
   and a tab separator.
+- A value is trimmed after comment removal also when no comment is removed
+  (Core §4): `x\#y` or `'#x'` followed by a tab, and a value followed by
+  U+00A0 before a comment line, kept that whitespace, and `'#x'` followed by
+  a tab was no quoted value.
+- In a sequence item, a single-quoted key that ends in `\` kept the comment
+  of its value: `- 'a\': x # c` read `x # c`, and `- 'a\': # c` was no bare
+  key. The key is read by the key rules first, which know no escape in
+  single quotes (Core §5.2).
 
 ## [0.8.1] — 2026-11-06
 

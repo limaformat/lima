@@ -49,6 +49,11 @@ read (Core §10.2, Appendix E).
 - `{k: }` was the string `{k: }`, and an error in strict mode (Core §7.5).
 - A flow value with a `#` after text took every `#` for `\#` in the position
   map of its References tokens.
+- A single-quoted key that ends in `\`, as in `'a\': 1`, was no entry, at
+  the top level, in blocks and in flow mappings: its `\'` was read as an
+  escape, which a single-quoted key does not know (Core §5.2, Core 1.2
+  erratum). In a sequence item such a key also kept the comment of its
+  value: `- 'a\': x # c` read `x # c`.
 
 ## [0.8.1] — 2026-11-06
 

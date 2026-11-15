@@ -48,6 +48,13 @@ read (Core §10.2, Appendix E).
 - `{k: }` was the string `{k: }`, and an error in strict mode (Core §7.5).
 - A flow value with a `#` after text took every `#` for `\#` in the position
   map of its References tokens.
+- A value is trimmed after comment removal also when no comment is removed
+  (Core §4): `x\#y` or `'#x'` followed by a tab kept the tab, and `'#x'`
+  followed by a tab was no quoted value.
+- In a sequence item, a single-quoted key that ends in `\` kept the comment
+  of its value: `- 'a\': x # c` read `x # c`, and `- 'a\': # c` was no bare
+  key. The key is read by the key rules first, which know no escape in
+  single quotes (Core §5.2).
 
 ## [0.8.1] — 2026-11-06
 
