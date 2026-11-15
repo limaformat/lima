@@ -602,6 +602,11 @@ static bool scan_flow_fallback(Scanner *s, TSLexer *lexer, const bool *valid_sym
   bool key_space = false;
   bool after_whitespace = false;
   bool comment = false;
+  // A single-quoted key that opens a mapping item is literal (§5.2): its first `'` after the opening one closes it.
+  // The commas and the comment are still found with the escapes of a quoted string (§4, §7.5), so the key is read a
+  // second time alongside; text other than its separator after it makes the item no entry.
+  bool key_quote = false;
+  bool key_closed = false;
 
   for (;;) {
     int32_t c = lexer->lookahead;
@@ -614,6 +619,16 @@ static bool scan_flow_fallback(Scanner *s, TSLexer *lexer, const bool *valid_sym
     }
     lexer->advance(lexer, false);
     after_whitespace = is_trim_ws(c);
+    if (key_quote) {
+      if (!key_closed) {
+        key_closed = c == '\'';
+      } else if (c == ':') {
+        key_quote = false;
+      } else if (c != ' ' && c != '\t') {
+        invalid_mapping_item = true;
+        key_quote = false;
+      }
+    }
     if (quote) {
       if (escaped) escaped = false;
       else if (c == '\\') escaped = true;
@@ -621,6 +636,10 @@ static bool scan_flow_fallback(Scanner *s, TSLexer *lexer, const bool *valid_sym
       continue;
     }
     if (c == '\'' || c == '"') {
+      if (c == '\'' && depth == 1 && opening == '{' && !item_content && !item_colon) {
+        key_quote = true;
+        key_closed = false;
+      }
       quote = c;
       item_content = true;
       continue;
