@@ -246,7 +246,6 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 		cl := lines[*idx]
 		cc := lineContent(cl)
 		s := findSep(cc)
-		bare := false
 		keyEnd := s
 		if s < 0 {
 			if !strings.HasSuffix(cc, ":") || len(cc) < 2 {
@@ -260,7 +259,6 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 				break
 			}
 			keyEnd = len(cc) - 1
-			bare = true
 		}
 		ckRaw := trimRightWhitespace(cc[:keyEnd]) // leading whitespace makes it no key (Core 1.1 §7.1)
 		if !isValidKey(ckRaw) {
@@ -277,13 +275,8 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 		}
 		*idx++
 		var cv *pvalue
-		var rv string
-		if !bare {
-			rv = trimWhitespace(cc[s+2:])
-		}
-		// Core 1.3 §4: a value that is empty after comment removal and
-		// trimming, none or a comment, leaves the key bare
-		if rv == "" || rv[0] == '#' {
+		rv, bareValue := inlineValue(cc[keyEnd+1:])
+		if bareValue {
 			cv, e = bareNestedValue(lineStructuralIndent(cl), cl.number, lines, idx, strict, onWarning, captureReferences)
 		} else {
 			rvRaw := cc[s+2:]
@@ -305,6 +298,16 @@ func parseArrayItemContinuationKeys(item *[]pentry, lines []sourceLine, idx *int
 		setP(item, ck, cv)
 	}
 	return nil
+}
+
+// inlineValue is the value after an entry's colon, trimmed (§4 step 3), and
+// whether it leaves the key bare: a value that is empty after comment removal
+// and trimming, none or a comment, does (Core 1.3 §4). afterColon starts with
+// the space or tab of an inline separator, which the trim removes, or is
+// empty after a colon that ends the line.
+func inlineValue(afterColon string) (raw string, bareValue bool) {
+	raw = trimWhitespace(afterColon)
+	return raw, raw == "" || raw[0] == '#'
 }
 
 // uncommentItem is an item's text after "- " with its comment removed
@@ -498,10 +501,8 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 				continue
 			}
 			sep := findSep(c)
-			bare := false
 			if sep < 0 && strings.HasSuffix(c, ":") {
 				sep = len(c) - 1
-				bare = true
 			}
 			if sep < 0 {
 				if strict {
@@ -537,13 +538,8 @@ func parseBlock(lines []sourceLine, idx *int, indent int, strict bool, onWarning
 			*idx++
 			var v *pvalue
 			var e error
-			var raw string
-			if !bare {
-				raw = trimWhitespace(c[sep+2:])
-			}
-			// Core 1.3 §4: a value that is empty after comment removal and
-			// trimming, none or a comment, leaves the key bare
-			if raw == "" || raw[0] == '#' {
+			raw, bareValue := inlineValue(c[sep+1:])
+			if bareValue {
 				// deeper than the key, or a sequence at its column (Core 1.1
 				// §7.2); bareNestedValue skips blank and comment lines first
 				v, e = bareNestedValue(indent, l.number, lines, idx, strict, onWarning, captureReferences)
@@ -621,10 +617,8 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 			continue
 		}
 		sep := findSep(c)
-		bare := false
 		if sep < 0 && strings.HasSuffix(c, ":") && len(c) > 1 {
 			sep = len(c) - 1
-			bare = true
 		}
 		if sep < 0 {
 			if strict && !isBlankOrComment(c) {
@@ -670,13 +664,8 @@ func parseCorePositioned(input string, strict bool, onWarning func(Diagnostic), 
 		i++
 		var v *pvalue
 		var e error
-		var raw string
-		if !bare {
-			raw = trimWhitespace(c[sep+2:])
-		}
-		// Core 1.3 §4: a value that is empty after comment removal and
-		// trimming, none or a comment, leaves the key bare
-		if raw == "" || raw[0] == '#' {
+		raw, bareValue := inlineValue(c[sep+1:])
+		if bareValue {
 			afterInline = false
 			j := i
 			// Core §4 rule 7 / §6.1.3: comment lines do not affect base
