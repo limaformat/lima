@@ -736,6 +736,16 @@ k:
 # Corpus fixture: core.keys.single-quoted-key-ends-in-backslash-comment-only-value.strict:3
       x: 1
 
+# Corpus fixture: core.keys.single-quoted-key-ends-in-backslash-flow-comma
+k: {'a\': 1, b: 2}
+#   ^^^^ entity.name.tag.lima
+#       ^ source.lima - entity.name.tag.lima
+
+# Corpus fixture: core.keys.single-quoted-key-ends-in-backslash-flow-comma.strict
+k: {'a\': 1, b: 2}
+#   ^^^^ entity.name.tag.lima
+#       ^ source.lima - entity.name.tag.lima
+
 # Corpus fixture: core.keys.single-quoted-key-ends-in-backslash-flow-mapping
 k: {'a\': 1}
 #   ^^^^ entity.name.tag.lima

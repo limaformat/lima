@@ -625,6 +625,14 @@
 (ert-deftest lima-mode-corpus-core-keys-single-quoted-key-ends-in-backslash-comment-only-value-strict-3 ()
   (should t))
 
+(ert-deftest lima-mode-corpus-core-keys-single-quoted-key-ends-in-backslash-flow-comma ()
+  (should (eq (lima-test--face-at "k: {'a\\': 1, b: 2}" "k: {'a\\': 1, b: 2}" 4) 'font-lock-string-face))
+  (should-not (eq (lima-test--face-at "k: {'a\\': 1, b: 2}" "k: {'a\\': 1, b: 2}" 8) 'font-lock-string-face)))
+
+(ert-deftest lima-mode-corpus-core-keys-single-quoted-key-ends-in-backslash-flow-comma-strict ()
+  (should (eq (lima-test--face-at "k: {'a\\': 1, b: 2}" "k: {'a\\': 1, b: 2}" 4) 'font-lock-string-face))
+  (should-not (eq (lima-test--face-at "k: {'a\\': 1, b: 2}" "k: {'a\\': 1, b: 2}" 8) 'font-lock-string-face)))
+
 (ert-deftest lima-mode-corpus-core-keys-single-quoted-key-ends-in-backslash-flow-mapping ()
   (should (eq (lima-test--face-at "k: {'a\\': 1}" "k: {'a\\': 1}" 4) 'font-lock-string-face))
   (should-not (eq (lima-test--face-at "k: {'a\\': 1}" "k: {'a\\': 1}" 8) 'font-lock-string-face)))
