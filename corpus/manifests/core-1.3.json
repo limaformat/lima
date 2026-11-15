@@ -2,9 +2,9 @@
   "suite": "core-1.3",
   "frozen": true,
   "baselineVersion": "1.3.0",
-  "baselineCaseCount": 163,
+  "baselineCaseCount": 167,
   "specVersion": "1.3.0",
-  "caseCount": 163,
+  "caseCount": 167,
   "supersedes": [
     "core.block-scalar.chomping-indicator.strict",
     "core.block-scalar.folded-marker.strict",
@@ -465,6 +465,30 @@
       "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-comment-only-value.json",
       "id": "core.keys.single-quoted-key-ends-in-backslash-comment-only-value",
       "sha256": "6d9da2ea4517df5973b4e75b88e5cc0c295a025446f0507fb727d085da97f9f6",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-flow-comma-strict.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash-flow-comma.strict",
+      "sha256": "7f39b81cb435eb1291df0ef43d51cc47be4ae33a1f1c887ace606fa3feed7814",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-flow-comma.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash-flow-comma",
+      "sha256": "9dfcb82bffab396357bc78b4dce5df8cb3d9a8687cbb68b61295cf7bbfef7b31",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-flow-comment-strict.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash-flow-comment.strict",
+      "sha256": "a32a7c4a5cc798439fc4595dcf5d38e04e9cbc9a05f5d0738e4c1a5a8017a7bc",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-flow-comment.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash-flow-comment",
+      "sha256": "d0505019c045122bf24a1d7475e8cce2625e4560c249ffd17304df3b3570fc01",
       "since": "1.3.0"
     },
     {

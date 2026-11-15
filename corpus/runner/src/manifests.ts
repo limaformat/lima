@@ -73,8 +73,9 @@ export const BASELINE_DIGESTS: Record<SuiteManifest['suite'], string> = {
 	// strict mode rejects; it replaces three cases of core-1.0 and core-1.1, which stay in their own baselines.
 	// Extended before release, 2026-11-15, by 22 cases from the review of the implementations: the trim after a #
 	// that begins no comment, and a single-quoted key that ends in a backslash; then by 6 cases from the second review:
-	// the separator of a flow mapping item after a single-quoted key.
-	'core-1.3': '0ad2981d0042abfff30e83e6558fd3601dd21b3d323bf2eae02d34cd9cf8d241',
+	// the separator of a flow mapping item after a single-quoted key; then by 4 cases for the clarification of §7.5:
+	// the commas and the comment are found with a quoted string's escapes, a quote that opens a key included.
+	'core-1.3': '1d946899a9c49c72af905fb3a44c865b23385e8e349fa509a6e9fe3084a0046d',
 	// References 1.0 baseline amended once, 2026-09: the §5.1 key-grammar fix
 	// (MAJOR 1) drops the unquoted `{($a): v}` flow key in
 	// references/unsupported-references-in-keys-remain-literal.json — a case

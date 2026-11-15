@@ -696,7 +696,7 @@ author: {name: Alice, role: editor}
 **Parsing rules:**
 
 - A comment is removed from the whole value before it is split into items, by the rule of §4: `{a: x#y}` has the value `x#y`; `{a: x #y}` is unclosed.
-- Items are separated by commas at the current flow depth, outside quoted strings.
+- Items are separated by commas at the current flow depth, outside quoted strings. Both this split and the comment scan of §4 read every quote by the rules of a quoted string (§6.1.2, §6.1.3), a quote that opens a key included; §5.2 applies once the key is taken from its item: `{'a\': 1, b: 2}` is one item, whose key is `a\`.
 - Each item must have the form `key: value` — the separator is a colon followed by a space or a tab (§5.1). A colon followed by anything else is no separator: before the first separator it is part of an unquoted key (§5.1), after it part of the value.
 - The separator is found in the item's source text before its whitespace is trimmed: `{k: }` and `{k:\t}` have a separator and the value `null`; `{k:}` has none.
 - Whitespace around items and commas is trimmed.

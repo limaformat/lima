@@ -74,7 +74,7 @@ Current as of Core <!-- facts:language.core_version -->1.3<!-- /facts --> and `@
 
 | Measurement | Words |
 |---|---:|
-| Lima Core <!-- facts:language.core_version -->1.3<!-- /facts --> specification | <!-- facts:word_counts.specifications.lima_core -->12,251<!-- /facts --> |
+| Lima Core <!-- facts:language.core_version -->1.3<!-- /facts --> specification | <!-- facts:word_counts.specifications.lima_core -->12,300<!-- /facts --> |
 | Lima References <!-- facts:language.references_version -->2.1<!-- /facts --> specification | <!-- facts:word_counts.specifications.lima_references -->3,281<!-- /facts --> |
 | Lima Core implementation code | <!-- facts:word_counts.implementations.lima_core_code -->9,498<!-- /facts --> |
 | Lima Core implementation comments | <!-- facts:word_counts.implementations.lima_core_comments -->5,991<!-- /facts --> |

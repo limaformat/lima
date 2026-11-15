@@ -39,8 +39,8 @@ corpus:
       cases: 150
       cases_in_default: 150
     core_1_3:
-      cases: 163
-      cases_in_default: 163
+      cases: 167
+      cases_in_default: 167
       superseded_earlier_cases: 3
     references_1_0:
       cases: 101
@@ -51,12 +51,12 @@ corpus:
       cases: 20
       cases_in_default: 20
   default:
-    cases: 802
-    core_cases: 646
+    cases: 806
+    core_cases: 650
     references_cases: 156
 word_counts:
   specifications:
-    lima_core: 12251
+    lima_core: 12300
     lima_references: 3281
     json_rfc_8259: 3998
     toml: 4254
