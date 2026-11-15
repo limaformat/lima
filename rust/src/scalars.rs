@@ -838,7 +838,9 @@ pub fn strip_comment_keep_escapes(val: &str) -> String {
 /// only). Inside `"..."` / `'...'` the backslash is left intact: `\#` there
 /// is an unknown double-quoted escape (§6.1.2) or a literal backslash in a
 /// single-quoted string (§6.1.3). Finds the same comment boundary as
-/// `strip_comment_keep_escapes`. Mirrors `js/src/scalars.ts`'s `stripComment`.
+/// `strip_comment_keep_escapes`, and trims the end of what remains whether a
+/// comment was removed or not (§4). Mirrors `js/src/scalars.ts`'s
+/// `stripComment`.
 pub fn strip_comment(val: &str) -> String {
     let chars: Vec<char> = val.chars().collect();
     let mut quote: Option<char> = None;
@@ -867,6 +869,11 @@ pub fn strip_comment(val: &str) -> String {
         i += 1;
     }
     out.extend(&chars[seg..]);
+    // §4 step 3: the value is trimmed whether a comment was removed or not —
+    // a `#` that begins none, as in `[#x]`, keeps no whitespace after it in
+    // the value. `truncate` copies nothing.
+    let end = out.trim_end_matches(is_trim_whitespace).len();
+    out.truncate(end);
     out
 }
 
@@ -1042,6 +1049,10 @@ mod tests {
         assert_eq!(strip_comment("\"a # b\" # real comment"), "\"a # b\"");
         assert_eq!(strip_comment("escaped \\# hash"), "escaped # hash");
         assert_eq!(strip_comment("no comment here"), "no comment here");
+        // §4 step 3: trimmed when the `#` begins no comment, too
+        assert_eq!(strip_comment("[#x]\t"), "[#x]");
+        assert_eq!(strip_comment("x#y\u{a0}"), "x#y");
+        assert_eq!(strip_comment("x\\#y\t"), "x#y");
         // FR-5: `\#` inside a quoted string keeps its backslash (§6.1.2/§6.1.3)
         assert_eq!(strip_comment("\"a\\#b\""), "\"a\\#b\"");
         assert_eq!(strip_comment("'a\\#b'"), "'a\\#b'");

@@ -114,6 +114,26 @@ fn find_key_sep(s: &str) -> Option<usize> {
     separator_index(s)
 }
 
+/// An item's text after `- ` with its comment removed and its end trimmed
+/// (Core 1.3 §4). A quoted key is read by the key rules (§5.2), in which a
+/// single-quoted key has no escape, so the comment is looked for after its
+/// separator only: in `'a\': # c` the key is `a\` and its value is only a
+/// comment, which leaves the key bare. Mirrors `js/src/block.ts`'s
+/// `uncommentItem`.
+fn uncomment_item(text: &str) -> String {
+    if !text.contains('#') {
+        return text.trim_end_matches(is_trim_whitespace).to_string();
+    }
+    let value_start = match text.as_bytes()[0] {
+        b'\'' | b'"' => find_key_sep(text).map_or(0, |colon| colon + 1),
+        _ => 0,
+    };
+    if value_start == 0 {
+        return strip_comment(text);
+    }
+    text[..value_start].to_string() + &strip_comment(&text[value_start..])
+}
+
 fn trim_slice(source: &str, start: usize, end: usize) -> &str {
     source[start..end].trim_matches(is_trim_whitespace)
 }
@@ -260,7 +280,8 @@ fn block_of_bare_key<B: Builder, const CHECK_DUPLICATES: bool>(
 /// a `key:` that ends the line). An inline value that is empty after comment
 /// removal and trimming makes a bare key, whose block may follow (Core 1.3
 /// §4, §7.1); `|` alone is a block scalar (§6.1.5). Leaves the cursor on the
-/// next unread line. Mirrors `js/src/block.ts`'s `entryValue`.
+/// next unread line. `js/src/block.ts` reads it in each entry branch of
+/// `parseCursorBlock`.
 fn entry_value<B: Builder, const CHECK_DUPLICATES: bool>(
     cursor: &mut BlockCursor,
     content: &str,
@@ -431,13 +452,7 @@ fn parse_cursor_block<B: Builder, const CHECK_DUPLICATES: bool>(
             let items = items.get_or_insert_with(Vec::new);
 
             let after_dash_raw = cursor_after_dash(cursor);
-            let after_dash = if after_dash_raw.contains('#') {
-                strip_comment(after_dash_raw)
-            } else {
-                after_dash_raw
-                    .trim_end_matches(is_trim_whitespace)
-                    .to_string()
-            };
+            let after_dash = uncomment_item(after_dash_raw);
             let dash_src = |col: usize| {
                 B::POSITIONED.then(|| ReferenceSource {
                     raw: Some(physical_raw(after_dash_raw)),
