@@ -2,9 +2,9 @@
   "suite": "core-1.3",
   "frozen": true,
   "baselineVersion": "1.3.0",
-  "baselineCaseCount": 135,
+  "baselineCaseCount": 157,
   "specVersion": "1.3.0",
-  "caseCount": 135,
+  "caseCount": 157,
   "supersedes": [
     "core.block-scalar.chomping-indicator.strict",
     "core.block-scalar.folded-marker.strict",
@@ -138,6 +138,18 @@
       "since": "1.3.0"
     },
     {
+      "path": "core-1.3/comments-escaped-hash-trailing-tab-strict.json",
+      "id": "core.comments.escaped-hash-trailing-tab.strict",
+      "sha256": "b946f2489d2474ae422125d4fa6865f7595283d42032ddaf1545d49e59d1eace",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-escaped-hash-trailing-tab.json",
+      "id": "core.comments.escaped-hash-trailing-tab",
+      "sha256": "1eee5f198031ca57b259a0550de447921ba7d49d0f6f30be98b932d506efe07a",
+      "since": "1.3.0"
+    },
+    {
       "path": "core-1.3/comments-escaped-hash.json",
       "id": "core.comments.escaped-hash",
       "sha256": "f50bec6ddb88df4a44cf4feac3c663b2f5e2573705dc4b165e84737eea64702d",
@@ -177,6 +189,18 @@
       "path": "core-1.3/comments-flow-sequence-hash-after-space.json",
       "id": "core.comments.flow-sequence-hash-after-space",
       "sha256": "ccfecaaef411d44260e1798a74a900974a6dfe6fdf962cc325f2c2f96f4915f2",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-bracket-trailing-tab-strict.json",
+      "id": "core.comments.hash-after-bracket-trailing-tab.strict",
+      "sha256": "38f305745580cf5d481b20f0ffd231bb111a88d3b0fbc8cdf60b5e299fae0023",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-bracket-trailing-tab.json",
+      "id": "core.comments.hash-after-bracket-trailing-tab",
+      "sha256": "0b6d29cbecad5892ffee34918e9183d26dc24973253f962a0bb4c11465f24094",
       "since": "1.3.0"
     },
     {
@@ -234,6 +258,30 @@
       "since": "1.3.0"
     },
     {
+      "path": "core-1.3/comments-hash-after-text-trailing-nbsp-strict.json",
+      "id": "core.comments.hash-after-text-trailing-nbsp.strict",
+      "sha256": "fd2d026a91ae382d8185c91a45085c81b37b4180d9c46e80bc1fa4142915625e",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-text-trailing-nbsp.json",
+      "id": "core.comments.hash-after-text-trailing-nbsp",
+      "sha256": "807376eec17fc273f347a2e83774e4941b866c9d61d8a18b249ceec533f47e0f",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-text-trailing-whitespace-in-blocks-strict.json",
+      "id": "core.comments.hash-after-text-trailing-whitespace-in-blocks.strict",
+      "sha256": "475dcd929a483fa42a4dc0908addf5d81d3b376f6b008370c91613404da60a34",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-hash-after-text-trailing-whitespace-in-blocks.json",
+      "id": "core.comments.hash-after-text-trailing-whitespace-in-blocks",
+      "sha256": "e2b19041dbdcec0f0404b0782e252490776a71521df2456cfd5e43039ad61a17",
+      "since": "1.3.0"
+    },
+    {
       "path": "core-1.3/comments-hash-after-text.json",
       "id": "core.comments.hash-after-text",
       "sha256": "2cb70a535fca15004f6f0296b05874d7f56333be4b15e15c1be63506e3273eae",
@@ -249,6 +297,18 @@
       "path": "core-1.3/comments-hash-in-quotes.json",
       "id": "core.comments.hash-in-quotes",
       "sha256": "1934fd8660787a81178f236c7f58c8f374f64110002a151460aa19b6938845fb",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-trailing-whitespace-after-comment-and-quote-strict.json",
+      "id": "core.comments.trailing-whitespace-after-comment-and-quote.strict",
+      "sha256": "19917ae55c03c73920d5592b0c1353857fce3f2f2b0d34a74d0ec78f181303b1",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/comments-trailing-whitespace-after-comment-and-quote.json",
+      "id": "core.comments.trailing-whitespace-after-comment-and-quote",
+      "sha256": "746899531fcf4a50ed19b6e3de9bc5b0da03498482e5ebe0b358aa7bd8852c02",
       "since": "1.3.0"
     },
     {
@@ -297,6 +357,18 @@
       "path": "core-1.3/errata-tab-after-nbsp-kept.json",
       "id": "core.errata.tab-after-nbsp-kept",
       "sha256": "aa2fd0489acb9d4d66240bd9174d949f2975572742f9a89b0d073de34bbd27ee",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/errata-trim-nbsp-before-comment-line-strict.json",
+      "id": "core.errata.trim-nbsp-before-comment-line.strict",
+      "sha256": "8b81f4b0010938159e4efc71e2d24c5c17f34cc47f4407bd1f2e3402dec655e0",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/errata-trim-nbsp-before-comment-line.json",
+      "id": "core.errata.trim-nbsp-before-comment-line",
+      "sha256": "d741e58a73019da95faf6a7548c3a96761701208d527bf075856765e9cfff535",
       "since": "1.3.0"
     },
     {
@@ -357,6 +429,66 @@
       "path": "core-1.3/flow-mapping-flow-mapping-empty-value.json",
       "id": "core.flow-mapping.flow-mapping-empty-value",
       "sha256": "6b6f329582a05859590292d576da61cc4cb087099f79c7062487d4574be46cfc",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-block-contexts-strict.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash-block-contexts.strict",
+      "sha256": "b5935f60a86de9ee36aa4b395531247bfd3ee35a16dbd41347f265a386ff2358",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-block-contexts.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash-block-contexts",
+      "sha256": "81eabfd5891615c0faa132588c5a28de7b03154d5291fd3d0c36a977ccfaa344",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-comment-only-value-strict.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash-comment-only-value.strict",
+      "sha256": "0f76cf3a4703e65ac5b2060fe0d9a3230a6dab5da0ed496a9dd0087d28bb9145",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-comment-only-value.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash-comment-only-value",
+      "sha256": "6d9da2ea4517df5973b4e75b88e5cc0c295a025446f0507fb727d085da97f9f6",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-flow-mapping-strict.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash-flow-mapping.strict",
+      "sha256": "261523ba54caeb8f2b34daeac6816c93f788797c3bf15c3dc8a10c544ac40752",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-flow-mapping.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash-flow-mapping",
+      "sha256": "9432630bced47e499dd829817f4952b2154a5997ba8a12c5f4d3eb24c3513702",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash-strict.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash.strict",
+      "sha256": "f6aea8371dc347a747908533595afc1cdc950054a8888575898fda42228b6ab2",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-ends-in-backslash.json",
+      "id": "core.keys.single-quoted-key-ends-in-backslash",
+      "sha256": "8497d83d8a353139738f6b0e1ea95d5ed38c9e273a1f5b9c6db9fcad852288e7",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-no-escape-item-strict.json",
+      "id": "core.keys.single-quoted-key-no-escape-item.strict",
+      "sha256": "8d1e1768c755d0bd1c63a10eb1e8306bee46553e1d8d2799cc7ef6c6009fb0db",
+      "since": "1.3.0"
+    },
+    {
+      "path": "core-1.3/keys-single-quoted-key-no-escape-item.json",
+      "id": "core.keys.single-quoted-key-no-escape-item",
+      "sha256": "86cda8c8be32df435ba13e5071c45a2e396ba779cac19744d8b83e624d0819a7",
       "since": "1.3.0"
     },
     {

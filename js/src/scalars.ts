@@ -10,7 +10,7 @@ import { type ParseContext, checkStringLimit } from './normalize.js'
 import { LimaError } from './errors.js'
 import type { ValueBuilder } from './builder.js'
 import { scanReferenceTokens2, type ReferenceSource, type ReferenceToken2 } from './reference-tokens2.js'
-import { isTrimWhitespace } from './chars.js'
+import { isTrimWhitespace, trimEndWhitespace } from './chars.js'
 
 /**
  * `insertedAt` is never set by Core — it's a References-only annotation
@@ -534,14 +534,17 @@ const checkYamlValue = (raw: string, first: number, line: number): void => {
  * the value (so its `${…}`-shaped text must not be scanned as a token),
  * but a `\#` before a token still occupies its two source columns.
  *
- * `trimEnd()` is exactly the project whitespace set (ECMAScript WhiteSpace
- * + LineTerminator = `isTrimWhitespace`) — a U+00A0 / FEFF between the
- * value and the `#` is not part of the value. The Rust and Go ports must
- * use `is_trim_whitespace` here, not a host `trim_end` or `" \t"`.
+ * The text is trimmed at its end whether a comment is removed or not (§4
+ * step 3): a `#` that begins none, as in `[#x]` or `x#y`, does not keep the
+ * whitespace after it in the value. `trimEnd()` is exactly the project
+ * whitespace set (ECMAScript WhiteSpace + LineTerminator =
+ * `isTrimWhitespace`) — a U+00A0 / FEFF between the value and the `#` is not
+ * part of the value. The Rust and Go ports must use `is_trim_whitespace`
+ * here, not a host `trim_end` or `" \t"`.
  */
 export const stripCommentKeepEscapes = (val: string): string => {
 	const start = commentStart(val)
-	return start === -1 ? val : val.slice(0, start).trimEnd()
+	return trimEndWhitespace(start === -1 ? val : val.slice(0, start))
 }
 
 /**
@@ -551,8 +554,8 @@ export const stripCommentKeepEscapes = (val: string): string => {
  * is left intact: `\#` there is an unknown double-quoted escape (§6.1.2:
  * strict throws, non-strict keeps it) or a literal backslash in a
  * single-quoted string (§6.1.3). Finds the same comment boundary as
- * `stripCommentKeepEscapes` — the two must agree, they annotate the same
- * value.
+ * `stripCommentKeepEscapes` and trims the end as it does — the two must
+ * agree, they annotate the same value.
  */
 export const stripComment = (val: string): string => {
 	let quote = 0
@@ -570,10 +573,10 @@ export const stripComment = (val: string): string => {
 			i++
 			seg = i + 1
 		} else if (cc === 35 && isCommentHash(val, i)) {
-			return (out + val.slice(seg, i)).trimEnd()
+			return trimEndWhitespace(out + val.slice(seg, i))
 		}
 	}
-	return out + val.slice(seg)
+	return trimEndWhitespace(out + val.slice(seg))
 }
 
 /**

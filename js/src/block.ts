@@ -20,7 +20,7 @@ import { buildBlockScalar } from './block-scalar.js'
 import { LimaError, MULTILINE_VALUE_HINT, printableLine } from './errors.js'
 import type { SourcePositions, ValueBuilder } from './builder.js'
 import type { ReferenceSource } from './reference-tokens2.js'
-import { isTrimWhitespace } from './chars.js'
+import { isTrimWhitespace, trimEndWhitespace } from './chars.js'
 import { BlockCursor, SourceBlockCursor } from './block-cursor.js'
 
 const DASH_PREFIX_RE = /^-\s+/
@@ -138,6 +138,18 @@ const isSequenceItem = (cursor: BlockCursor): boolean => {
 	if (cursor.firstCode !== 45) return false
 	const next = cursor.contentStart + 1
 	return next === cursor.lineEnd || isTrimWhitespace(cursor.source.charCodeAt(next))
+}
+
+/**
+ * An item's text after `- ` with its comment removed and its end trimmed (Core 1.3 §4). A quoted key is read by the key
+ * rules (§5.2), in which a single-quoted key has no escape, so the comment is looked for after its separator only: in
+ * `'a\': # c` the key is `a\` and its value is only a comment, which leaves the key bare.
+ */
+const uncommentItem = (text: string, uncomment: typeof stripComment): string => {
+	if (!text.includes('#')) return trimEndWhitespace(text)
+	const first = text.charCodeAt(0)
+	const valueStart = first === 34 || first === 39 ? findKeySep(text) + 1 : 0
+	return valueStart === 0 ? uncomment(text) : text.slice(0, valueStart) + uncomment(text.slice(valueStart))
 }
 
 const cursorAfterDash = (cursor: BlockCursor): string => {
@@ -293,7 +305,7 @@ const blockParser = (
 				if (items === null) items = []
 
 				const afterDashRaw = cursorAfterDash(cursor)
-				const afterDash = afterDashRaw.includes('#') ? uncomment(afterDashRaw) : afterDashRaw.trimEnd()
+				const afterDash = uncommentItem(afterDashRaw, uncomment)
 				const afterDashCol = wantSource ? cursor.indent + dashPrefixLen(cursor) : 0
 				const afterDashTab = wantSource && ctx.tabAdjust ? [ctx.tabAdjust[line - 1] ?? 0] : undefined
 				const dashSource: ReferenceSource | undefined = wantSource ? ({

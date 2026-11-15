@@ -29,7 +29,7 @@ import {
 	type PositionedValue, unescapeDQ, stripComment, stripCommentKeepEscapes, positionedBuilder,
 	NO_SPAN_VALUE, parseSimpleScalarSpan, isEmptyInlineValue,
 } from './scalars.js'
-import { isTrimWhitespace } from './chars.js'
+import { isTrimWhitespace, trimEndWhitespace } from './chars.js'
 import { parseFlowOrScalarValue } from './flow.js'
 import { parseBlockRange, type BlockDepthRisk } from './block.js'
 import { buildBlockScalar } from './block-scalar.js'
@@ -281,7 +281,7 @@ const parseCoreGeneric = <V, M>(
 			}
 			const val = frontMatter.slice(rawStart, valueEnd)
 			const hasHash = val.includes('#')
-			const uncommented = hasHash ? stripComment(val) : val.trimEnd()
+			const uncommented = hasHash ? stripComment(val) : trimEndWhitespace(val)
 			// The physical anchor keeps `\#` but drops a real comment, so a
 			// `${…}`-shaped token inside a trailing comment is not scanned (§2.4).
 			const source = wantSource ? {
@@ -313,7 +313,7 @@ const parseCoreGeneric = <V, M>(
 		}
 		const line0 = lines[0]
 		const hasHash = line0.includes('#')
-		const val = hasHash ? stripComment(line0) : line0
+		const val = hasHash ? stripComment(line0) : trimEndWhitespace(line0)
 		const source = wantSource ? {
 			raw: hasHash ? stripCommentKeepEscapes(line0) : line0,
 			line, col: valueCol, tabAdjust: lineTabAdjust,

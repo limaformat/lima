@@ -1,0 +1,21 @@
+{
+  "id": "core.comments.escaped-hash-trailing-tab.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "6.1.4",
+  "description": "Core 1.3: a value whose # is escaped is trimmed after comment removal as any other: x\\#y followed by a tab is x#y. Strict mode.",
+  "input": "k: x\\#y\t\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "k": "x#y"
+    }
+  },
+  "tags": [
+    "comments",
+    "whitespace",
+    "strict"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "core.comments.hash-after-text-trailing-nbsp",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: a value is trimmed after comment removal also when its # begins no comment: x#y followed by U+00A0 is x#y. Non-strict mode.",
+  "input": "k: x#y \n",
+  "expect": {
+    "result": {
+      "k": "x#y"
+    }
+  },
+  "tags": [
+    "comments",
+    "whitespace"
+  ]
+}

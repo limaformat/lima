@@ -1,0 +1,24 @@
+{
+  "id": "core.comments.hash-after-bracket-trailing-tab.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: a value is trimmed after comment removal also when its # begins no comment: [#x] followed by a tab is the sequence of #x. Strict mode.",
+  "input": "k: [#x]\t\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "k": [
+        "#x"
+      ]
+    }
+  },
+  "tags": [
+    "comments",
+    "flow",
+    "whitespace",
+    "strict"
+  ]
+}

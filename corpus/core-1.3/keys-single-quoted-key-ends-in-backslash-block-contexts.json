@@ -1,0 +1,31 @@
+{
+  "id": "core.keys.single-quoted-key-ends-in-backslash-block-contexts",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "5.2",
+  "description": "Core 1.3: a single-quoted key that ends in \\ in a block mapping, as an item's first key and as its later key, with a comment after the separator. Non-strict mode.",
+  "input": "m:\n  'a\\': # c\n    y: 1\ns:\n  - 'a\\': x # c\n    'b\\': # c\n      y: 1\n",
+  "expect": {
+    "result": {
+      "m": {
+        "a\\": {
+          "y": 1
+        }
+      },
+      "s": [
+        {
+          "a\\": "x",
+          "b\\": {
+            "y": 1
+          }
+        }
+      ]
+    }
+  },
+  "tags": [
+    "keys",
+    "quoting",
+    "bare-key",
+    "comments"
+  ]
+}

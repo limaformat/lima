@@ -1,0 +1,29 @@
+{
+  "id": "core.keys.single-quoted-key-ends-in-backslash-comment-only-value.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: an item's single-quoted key is read by the key rules before its value's comment, so 'a\\': # c is a bare key, whose block follows. Strict mode.",
+  "input": "k:\n  - 'a\\': # c\n      x: 1\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "k": [
+        {
+          "a\\": {
+            "x": 1
+          }
+        }
+      ]
+    }
+  },
+  "tags": [
+    "keys",
+    "quoting",
+    "bare-key",
+    "comments",
+    "strict"
+  ]
+}

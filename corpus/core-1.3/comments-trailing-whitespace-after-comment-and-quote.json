@@ -1,0 +1,20 @@
+{
+  "id": "core.comments.trailing-whitespace-after-comment-and-quote",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: what the trim leaves after a comment and after a quoted #: x # c is x, '#x' followed by a space or a tab is #x. Non-strict mode.",
+  "input": "a: x # c\nb: '#x' \nc: '#x'\t\n",
+  "expect": {
+    "result": {
+      "a": "x",
+      "b": "#x",
+      "c": "#x"
+    }
+  },
+  "tags": [
+    "comments",
+    "quoting",
+    "whitespace"
+  ]
+}

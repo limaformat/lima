@@ -71,7 +71,9 @@ export const BASELINE_DIGESTS: Record<SuiteManifest['suite'], string> = {
 	'core-1.1': 'ef987f6e0bb667dedf1baa56ddb40bad5492cc91503ec96e9d103a4fc0ebca99',
 	// Core 1.3 (Draft, 2026-11-12): the comment boundary, bare keys after a comment, the tab separator, and YAML forms
 	// strict mode rejects; it replaces three cases of core-1.0 and core-1.1, which stay in their own baselines.
-	'core-1.3': '00c9feec989385c40cc1269bf940f149e7de5f4bc689808595f2cebe60c30352',
+	// Extended once before release, 2026-11-15, by 22 cases from the review of the implementations: the trim after a #
+	// that begins no comment, and a single-quoted key that ends in a backslash.
+	'core-1.3': '13d08c5b1fc9110c1db83e5a0e1c09fced1c75799e065aa9e7bdc47c35b43150',
 	// References 1.0 baseline amended once, 2026-09: the §5.1 key-grammar fix
 	// (MAJOR 1) drops the unquoted `{($a): v}` flow key in
 	// references/unsupported-references-in-keys-remain-literal.json — a case

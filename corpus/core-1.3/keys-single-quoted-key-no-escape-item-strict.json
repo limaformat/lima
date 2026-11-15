@@ -1,0 +1,24 @@
+{
+  "id": "core.keys.single-quoted-key-no-escape-item.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "15.6",
+  "description": "Core 1.3: in an item 'a\\'b': x # c the second ' closes the key, so the item is no entry but a value whose quoted part 'a\\'b' is followed by more text. Strict mode.",
+  "input": "k:\n  - 'a\\'b': x # c\n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "error": {
+      "code": "INVALID_QUOTE",
+      "line": 2
+    }
+  },
+  "tags": [
+    "keys",
+    "quoting",
+    "comments",
+    "strict",
+    "error"
+  ]
+}

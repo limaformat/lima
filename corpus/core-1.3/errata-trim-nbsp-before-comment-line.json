@@ -1,0 +1,16 @@
+{
+  "id": "core.errata.trim-nbsp-before-comment-line",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.2 erratum: inline value processing trims the whitespace of §1 also when a comment line follows the entry, so false followed by U+00A0 is the boolean. Non-strict mode.",
+  "input": "draft: false \n# note\n",
+  "expect": {
+    "result": {
+      "draft": false
+    }
+  },
+  "tags": [
+    "whitespace"
+  ]
+}

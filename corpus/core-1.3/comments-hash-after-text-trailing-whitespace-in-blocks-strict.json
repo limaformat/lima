@@ -1,0 +1,29 @@
+{
+  "id": "core.comments.hash-after-text-trailing-whitespace-in-blocks.strict",
+  "spec": "core",
+  "specVersion": "1.3",
+  "section": "4",
+  "description": "Core 1.3: an item, a flow mapping as an item and a block mapping's value are trimmed after comment removal also when their # begins no comment. Strict mode.",
+  "input": "s:\n  - x#y \n  - {a: x#y}\t\nm:\n  a: x#y \n",
+  "options": {
+    "strict": true
+  },
+  "expect": {
+    "result": {
+      "s": [
+        "x#y",
+        {
+          "a": "x#y"
+        }
+      ],
+      "m": {
+        "a": "x#y"
+      }
+    }
+  },
+  "tags": [
+    "comments",
+    "whitespace",
+    "strict"
+  ]
+}
