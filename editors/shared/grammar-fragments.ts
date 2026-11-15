@@ -101,18 +101,20 @@ export const FLOW_MAPPING_KEY = `(${KEY})[ \\t]*(:)[ \\t]${WHITESPACE}*${COMMENT
  * PLAIN_WORD, tried after dates and before the other scalars, takes a word
  * that starts as a scalar starts and goes on with a character that scalar
  * cannot continue with: a letter or `_` other than an exponent's `e`, a `.`
- * that no digit follows or a second `.`, a `-` that follows no `e`, or a `.`
- * or `-` after `null`, `true` or `false` (`1.`, `1.5GB`, `1.2.3`, `10-20`,
- * `true-ish`). WORD, tried after all scalars, takes any other word whole, so
- * that no scalar starts inside one (`v1.2`, `non-null`). A number such as
- * `1e-3` is neither.
+ * that no digit follows or a second `.`, a `-` that follows no `e`, a `.` or
+ * `-` after an exponent, or a `.` or `-` after `null`, `true` or `false`
+ * (`1.`, `1.5GB`, `1.2.3`, `10-20`, `1e+3.`, `true-ish`). WORD, tried after
+ * all scalars, takes any other word whole, so that no scalar starts inside
+ * one (`v1.2`, `non-null`). A number such as `1e-3` is neither.
  */
 const WORD_CHARACTER = String.raw`[\w.\-]`;
 const NUMBER_START = String.raw`(?:\B-|\b)(?:0|[1-9]\d*)`;
+const EXPONENT = String.raw`[eE][+\-]?\d+`;
 export const PLAIN_WORD = [
   String.raw`${NUMBER_START}${WORD_CHARACTER}*[^\W\deE]`,
   String.raw`${NUMBER_START}[\w\-]*\.(?:\B|[^\W\d]|[\w\-]*\.)`,
   String.raw`${NUMBER_START}(?:[\w.]*[^\WeE])?-`,
+  String.raw`${NUMBER_START}(?:\.\d+)?${EXPONENT}[.\-]`,
   String.raw`\b(?:null|true|false)[.\-]`,
 ]
   .map((start) => `${start}${WORD_CHARACTER}*`)
@@ -127,7 +129,7 @@ export const BOOLEAN = String.raw`\b(?:true|false)\b`;
 export const DATE = String.raw`\b(?:\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:Z|[+\-]\d{2}:\d{2})?)?|\d{1,2}[./]\d{1,2}[./]\d{4}(?:[T ]\d{2}:\d{2}(?::\d{2})?)?)\b`;
 
 /** Core §6.4.1; a sign starts the number only where no word precedes it. */
-export const NUMBER = String.raw`${NUMBER_START}(?:\.\d+)?(?:[eE][+\-]?\d+)?\b`;
+export const NUMBER = String.raw`${NUMBER_START}(?:\.\d+)?(?:${EXPONENT})?\b`;
 
 /** A fragment as the source of a JavaScript RegExp with the `u` flag, which writes a code point `\u{…}`. */
 export function fragmentToJavaScript(fragment: string): string {

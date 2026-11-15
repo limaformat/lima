@@ -335,13 +335,18 @@ test("a scalar is a whole word of word characters, . and -", async () => {
     ["k: 1e-3", "1e-3", "constant.numeric.lima"],
     ["k: 1.5e10", "1.5e10", "constant.numeric.lima"],
     ["k: -1e3", "-1e3", "constant.numeric.lima"],
+    ["k: 1e+3", "1e+3", "constant.numeric.lima"],
+    ["k: -1e+3", "-1e+3", "constant.numeric.lima"],
     ["k: true", "true", "constant.language.boolean.lima"],
   ]) {
     const t = await scopesFor(line);
     expect(has(t, text, scope), line).toBe(true);
   }
   // a word that goes on after a scalar's shape, or holds one inside, is a string
-  for (const line of ["k: 1.", "k: true-", "k: null.", "k: 42-x", "k: 1.5GB", "k: v1.2", "k: x.5", "k: [1.]"]) {
+  for (const line of [
+    "k: 1.", "k: true-", "k: null.", "k: 42-x", "k: 1.5GB", "k: v1.2", "k: x.5", "k: [1.]",
+    "k: 1e+3.", "k: 1e+3-", "k: 1E+3x", "k: 1e-3-",
+  ]) {
     const t = await scopesFor(line);
     expect(t.some(([, s]) => carries(s, "constant")), line).toBe(false);
   }

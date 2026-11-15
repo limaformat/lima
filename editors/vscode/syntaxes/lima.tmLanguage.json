@@ -149,7 +149,7 @@
 
     "plain-word": {
       "comment": "A word that starts as a scalar starts and goes on with a character that scalar cannot continue with (1., 1.5GB, 1.2.3, 10-20, true-ish). No scope. GENERATED:textmate-plain-word",
-      "match": "(?:\\B-|\\b)(?:0|[1-9]\\d*)[\\w.\\-]*[^\\W\\deE][\\w.\\-]*|(?:\\B-|\\b)(?:0|[1-9]\\d*)[\\w\\-]*\\.(?:\\B|[^\\W\\d]|[\\w\\-]*\\.)[\\w.\\-]*|(?:\\B-|\\b)(?:0|[1-9]\\d*)(?:[\\w.]*[^\\WeE])?-[\\w.\\-]*|\\b(?:null|true|false)[.\\-][\\w.\\-]*"
+      "match": "(?:\\B-|\\b)(?:0|[1-9]\\d*)[\\w.\\-]*[^\\W\\deE][\\w.\\-]*|(?:\\B-|\\b)(?:0|[1-9]\\d*)[\\w\\-]*\\.(?:\\B|[^\\W\\d]|[\\w\\-]*\\.)[\\w.\\-]*|(?:\\B-|\\b)(?:0|[1-9]\\d*)(?:[\\w.]*[^\\WeE])?-[\\w.\\-]*|(?:\\B-|\\b)(?:0|[1-9]\\d*)(?:\\.\\d+)?[eE][+\\-]?\\d+[.\\-][\\w.\\-]*|\\b(?:null|true|false)[.\\-][\\w.\\-]*"
     },
 
     "constant-null": {
