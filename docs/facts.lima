@@ -2,7 +2,7 @@
 # Regenerate with: bun scripts/facts.ts
 
 packages:
-  version: "0.8.1"
+  version: "0.9.0"
   runtime_dependencies: 0
   runtime_dependencies_by_package:
     typescript: 0
@@ -76,7 +76,7 @@ word_counts:
     js_yaml_tag_implementations: 21
     js_yaml_exposed_schemas: 4
 package_sizes:
-  lima_npm_tarball_bytes: 84103
+  lima_npm_tarball_bytes: 84106
   lima_npm_tarball_kilobytes_decimal: 84.1
   js_yaml_npm_tarball_bytes: 338050
   js_yaml_npm_tarball_kilobytes_decimal: 338

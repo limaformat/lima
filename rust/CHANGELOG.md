@@ -12,7 +12,9 @@ carry their own.
 
 ## [Unreleased]
 
-Lima Core 1.3 (Draft): Lima reads five forms as YAML front matter writes
+## [0.9.0] — 2026-11-16
+
+Lima Core 1.3: Lima reads five forms as YAML front matter writes
 them, and strict mode names what to write for the YAML forms it does not
 read (Core §10.2, Appendix E).
 

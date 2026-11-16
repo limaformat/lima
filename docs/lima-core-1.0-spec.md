@@ -1,6 +1,6 @@
 # Lima Core 1.3 — Normative Specification
 
-> **Status:** Draft · **Version:** 1.3.0 · **Date:** 2026-11-12
+> **Status:** Final · **Version:** 1.3.0 · **Date:** 2026-11-16
 
 This document is the normative specification for Lima Core 1.3. It defines the syntax, semantics, and error behaviour of the Lima frontmatter format. All conforming implementations must produce identical output for any given valid input.
 
