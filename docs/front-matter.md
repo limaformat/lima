@@ -29,7 +29,7 @@ description: |
 - **A list** is one `- ` item per line, or `[a, b]` on one line; an item may be a group of fields.
 - **Several lines** follow a `|` and are indented under it. A line that begins with `^^` continues the line before it,
   joined by a space.
-- **A comment** begins with `#`, on a line of its own or after a value.
+- **A comment** begins with `#`, on a line of its own or after a value and a space.
 - **An empty value** is `null`.
 
 ### What a value is
@@ -45,8 +45,6 @@ description: |
 
 ## Where Lima differs from YAML
 
-- **`#` in a value starts a comment**, also inside an address: `https://example.org/page#section` is read as
-  `https://example.org/page`. Write `\#`, or put the value in quotes.
 - **`yes`, `no`, `on`, `off`, `True` are text**, not yes or no; only `true` and `false` are. `Null` and `NULL` are
   text too; only `null`, `~` and nothing are empty.
 - **`01`, `+42`, `0xFF`, `.inf` and `.nan` are text**, not numbers, so nothing is read as a number that was not meant as
